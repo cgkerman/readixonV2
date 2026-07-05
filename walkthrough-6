@@ -1,0 +1,39 @@
+# Kimlik Doğrulama (Auth) Arayüzleri Tamamlandı
+
+Bu aşamada Firebase State Management altyapısını kullanan şık ve modern kimlik doğrulama arayüzlerini hem Web hem de Mobil için inşa ettik. `@readixon/ui` bileşen kütüphanemiz kullanılarak iki platformda da ortak bir tasarım dili elde edildi.
+
+## Neler Yapıldı?
+
+### Web Uygulaması (`apps/web`)
+1. **[Auth Layout](file:///c:/dev/readixondev/apps/web/src/app/(auth)/layout.tsx)**
+   - Özel bir layout oluşturularak arka plana "Glassmorphism" odaklı ışık yansımaları (`bg-primary/20` ve `bg-purple-600/10` ile glow efektleri) eklendi.
+   - Sayfa geçişlerine `animate-fade-in` ve `animate-slide-up` efektleri tanımlandı.
+2. **[Giriş Ekranı (Login)](file:///c:/dev/readixondev/apps/web/src/app/(auth)/login/page.tsx) & [Kayıt Ekranı (Register)](file:///c:/dev/readixondev/apps/web/src/app/(auth)/register/page.tsx)**
+   - Ortak `Card`, `Input`, `Button` ve `Typography` bileşenleri kullanılarak formlar oluşturuldu.
+   - Form doğrulama, Firebase entegrasyonu ve yükleme (loading) durumları aktifleştirildi.
+   - Başarılı girişte doğrudan ana sayfaya yönlendirme eklendi (`router.push('/')`).
+3. **[Root Layout Wrapper](file:///c:/dev/readixondev/apps/web/src/app/providers.tsx)**
+   - `providers.tsx` içerisine `useAuthListener()` kancası (hook) eklenerek uygulamanın her yerinde Firebase Auth durumunun takip edilmesi sağlandı.
+
+### Mobil Uygulama (`apps/mobile`)
+1. **[Giriş (LoginScreen)](file:///c:/dev/readixondev/apps/mobile/src/screens/auth/LoginScreen.tsx) & [Kayıt (SignupScreen)](file:///c:/dev/readixondev/apps/mobile/src/screens/auth/SignupScreen.tsx)**
+   - Önceden oluşturulmuş, React Native `TextInput` bileşenleriyle tasarlanan eski kod tamamen baştan yazıldı.
+   - Web ile aynı olması adına `@readixon/ui` içerisindeki `<Input>`, `<Button>`, ve `<Typography>` bileşenlerine geçirildi.
+2. **[Yönlendirme (RootNavigator)](file:///c:/dev/readixondev/apps/mobile/src/navigation/RootNavigator.tsx)**
+   - Eskiden projenin içerisinde bulunan `useAuth.ts` hook'u silinerek, `@readixon/core` kütüphanesindeki `useAuthStore` ve `useAuthListener` yapısına geçildi.
+   - Kullanıcı oturum açtığında Splash Screen benzeri yükleme ekranından otomatik olarak `AppStack`'e geçmesi sağlandı.
+
+## Nasıl Test Edebilirsiniz?
+
+Web için:
+```bash
+pnpm run dev --filter web
+```
+Mobil için:
+```bash
+pnpm run ios --filter mobile
+```
+
+Giriş ve Kayıt ekranlarını ziyaret ettiğinizde iki platformda da aynı tasarım dilini, aynı butonları ve aynı giriş animasyonlarını göreceksiniz. Hatalı şifre denemelerinde uyarıları test edebilir, başarılı girişte ise Firebase üzerinden yönlendirildiğinizi gözlemleyebilirsiniz.
+
+Bu aşamayla birlikte temel Auth altyapımız ve arayüzümüz uçtan uca tamamlanmıştır! Sırada hikaye okuma ekranı, profil veya anasayfa feed akışı olabilir. Hazır olduğunuzda yeni bir hedef belirleyebiliriz.

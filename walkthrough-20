@@ -1,0 +1,39 @@
+# Bildirimler Sistemi Tamamlandı 🔔✨
+
+Uygulamamızdaki tüm kritik etkileşimleri anlık olarak yakalayan ve kullanıcıya sunan **Bildirim Sistemi** yayında!
+
+## Neler Yaptık?
+
+### 1. Kapsamlı Core Altyapısı (`@readixon/core`)
+- Firestore tabanlı, gerçek zamanlı çalışan, yüksek performanslı bir bildirim servisi (`notificationService.ts`) oluşturduk.
+- Tüm etkileşimleri desteklemek üzere **6 farklı bildirim tipi** tanımladık:
+  - `follow` (Yeni Takipçi)
+  - `story_like` (Hikaye Beğenisi)
+  - `story_comment` (Hikaye Yorumu)
+  - `readix_like` (Readix Beğenisi)
+  - `readix_comment` (Readix Yanıtı)
+  - `readix_mention` (Readix Bahsetmesi)
+
+### 2. Otomatik Tetikleyiciler
+Kullanıcıların ekstra bir şey yapmasına gerek kalmadan, uygulama içinde gerçekleşen etkileşimler anında karşı tarafa bildirim olarak gidiyor:
+- `userService`: Biri sizi takip ettiğinde tetikleniyor.
+- `storyService`: Biri hikayenizi beğendiğinde veya bölüm sonuna yorum yaptığında tetikleniyor.
+- `readixService`: Biri gönderinizi beğendiğinde veya yanıt verdiğinde anında tetikleniyor.
+
+### 3. Gerçek Zamanlı Rozet (Badge) Yönetimi
+- Global state yönetimi (Zustand tabanlı `useAuthStore`) güncellendi.
+- `useAuthListener` içerisine anlık okuma ekledik. Böylece okunmamış bildirim sayısı, sayfayı yenilemeye gerek kalmadan **anında menüye** yansıyor. (Örneğin: `99+`)
+
+### 4. Şık ve İşlevsel Kullanıcı Arayüzü
+- Hem masaüstü sol menüye, hem de mobil alt menüye (Bottom Nav) **Bildirimler** sekmesi eklendi. Okunmamış bildirim sayısı dinamik bir kırmızı rozet ile gösteriliyor.
+- Yepyeni `/notifications` sayfası tasarlandı:
+  - Okunmamış bildirimleri belirgin renklerle vurgulayan liste tasarımı.
+  - "Tümünü Okundu İşaretle" butonu.
+  - Her bildirim tipine özel renkli ikonlar (Kalp, Mesaj, Kullanıcı vb.).
+  - "Az önce", "2 saat önce" şeklinde okunabilir zaman formatları.
+  - Bildirime tıklanıldığında doğrudan ilgili hikayeye, profile veya Readix sekmesine **dinamik yönlendirme**. (Hikaye url'leri için slug altyapısını kullandık!)
+
+## Nasıl Test Edebilirsiniz?
+- Farklı bir hesaptan ana hesabınızı takip edin veya hikayenizi beğenin. 
+- Bildirim ikonunun üzerinde anında **Kırmızı Rozet** belirdiğini göreceksiniz.
+- Bildirimler sayfasına tıklayıp içeriği görebilir, tıklayarak doğrudan ilgili sayfaya uçabilirsiniz! 🚀

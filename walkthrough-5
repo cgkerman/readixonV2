@@ -1,0 +1,26 @@
+# State Management ve React Query Entegrasyonu Tamamlandı
+
+`packages/core` modülümüz artık sadece tipleri ve Firebase bağlantısını içermekle kalmıyor, aynı zamanda bu yapıyı **Next.js** ve **React Native** projelerimizde kullanmamızı sağlayacak **Hook**'ları ve **Zustand** store'larını da içeriyor.
+
+## Neler Yaptık?
+
+### 1. Global Auth Store (Zustand)
+Firebase oturumunu ve aktif kullanıcının Firestore profil verilerini global olarak saklamak için [useAuthStore.ts](file:///c:/dev/readixondev/packages/core/src/store/useAuthStore.ts) oluşturduk.
+- `firebaseUser`: Firebase'in arka planda tuttuğu kimlik bilgisi.
+- `userProfile`: Uygulamamızın kendi veritabanı şemasına uyan (Kullanıcı adı, avatar vb.) profil nesnesi.
+
+### 2. Otomatik Auth Dinleyicisi (React Hook)
+Oturum açıldığında/kapandığında sistemi haberdar edecek [useAuthListener.ts](file:///c:/dev/readixondev/packages/core/src/hooks/useAuthListener.ts) hook'unu yazdık.
+- Bu hook, `onAuthStateChanged` tetiklendiğinde Firestore'dan anında kullanıcı profilini çeker ve `useAuthStore`'a kaydeder.
+- Yükleme (`isLoading`) ve başlangıç (`isInitialized`) durumlarını otomatik yönetir. Ekranlarda yüklenme (spinner) animasyonları göstermek için bunu kullanacağız.
+
+### 3. Profil Çekme Aracı (React Query)
+Kullanıcı profil verilerini anlık ve önbellekli (cached) olarak getirmek için [useUserProfile.ts](file:///c:/dev/readixondev/packages/core/src/hooks/useUserProfile.ts) adında bir React Query kancası oluşturduk. Bu sayede uygulamanın 5 farklı yerinde profil fotoğrafı gösterilmek istenirse, Firebase'e sadece 1 kez sorgu atılacaktır.
+
+### 4. Dışa Aktarma (Export) ve Doğrulama
+Yeni oluşturduğumuz bu yapıları diğer uygulamaların (`apps/web` ve `apps/mobile`) kullanabilmesi için [index.ts](file:///c:/dev/readixondev/packages/core/src/index.ts) üzerinden dışa aktardık ve `pnpm --filter @readixon/core type-check` ile tüm tiplerin hatasız çalıştığını doğruladık.
+
+## Sırada Ne Var?
+Artık uygulamanın "veri okuma ve durum" iskeleti tamamen hazır. 
+
+Bir sonraki aşamada **Giriş Yap / Kayıt Ol (Auth)** arayüzlerini kodlayarak, yeni kurduğumuz bu Zustand yapısını gerçek bir arayüz üzerinde çalıştırabiliriz. Hazır olduğunuzda lütfen bildirin!

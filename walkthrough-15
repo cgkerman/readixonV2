@@ -1,0 +1,33 @@
+# Ayarlar, Temalar ve Kapsamlı Hesap Yönetimi
+
+Platforma yepyeni bir görünüm katmanı ve önemli yönetim araçları eklendi. Yapılan tüm geliştirmeler ve detayları aşağıdadır:
+
+## 🎨 Dinamik Tema Motoru (Color Theming)
+Uygulama genelinde sadece siyah mod kullanılmasından vazgeçilerek, CSS Variable mimarisine geçiş yapıldı.
+Arayüzdeki tüm renkler (arkaplanlar, metinler, kartlar, butonlar vb.) artık tek bir noktadan dinamik olarak değiştirilebiliyor.
+
+Ayarlar sayfasından seçebileceğiniz 4 yeni tema eklendi:
+1. **Tema 1 (Koyu & Canlı):** (Ana Tema) Şık siyah arkaplan, koyu lacivert kartlar ve neon canlılığında turkuaz/mavi vurgular.
+2. **Tema 2 (Pastel & Sıcak):** Krem/şampanya rengi arkaplan, petrol mavisi metinler ve canlı kiremit tonu vurgular.
+3. **Tema 3 (Klasik Siyah):** Daha önce kullandığımız varsayılan tamamen siyah, beyaz metinli ve turuncu vurgulu klasik tema.
+4. **Tema 4 (Mürdüm & Gül Kurusu):** Açık ten rengi üzerine gül kurusu kartlar, mürdüm rengi metinler ve Google mavisi butonlar.
+
+> [!TIP]
+> Seçtiğiniz tema tarayıcınızda otomatik olarak kaydedilir. Sayfayı yenileseniz dahi platform seçtiğiniz tema ile açılır.
+
+## ⚙️ Ayarlar Sayfası
+Sol menüdeki `Ayarlar` (Settings) ikonuna tıklayarak ulaşabileceğiniz yepyeni bir yönetim paneli eklendi.
+
+### Görünüm ve Tema
+- Yukarıda bahsedilen 4 temanın renk paletlerini gösteren şık kartlar üzerinden tek tıkla temanızı değiştirebilirsiniz. Temalar anında sayfa yenilenmeden uygulanır.
+
+### ⚠️ Tehlikeli Bölge (Hesap Silme)
+Ayarlar sayfasının en altında, kullanıcıların hesaplarını silebilecekleri bir alan eklendi.
+> [!CAUTION]
+> Bu işlem "Yumuşak Silme (Soft Delete)" DEĞİLDİR. Eğer hesabınızı silerseniz; tüm **okuma geçmişiniz**, yazarı olduğunuz **kitaplar ve bölümler**, attığınız tüm **Readix paylaşımları** ve yaptığınız **tüm yorumlar** veritabanından kalıcı olarak yok edilir. İşlemin onaylanması için ekrana kullanıcı adınızın veya e-postanızın manuel olarak yazılması istenir.
+
+## Teknik Değişiklikler
+- Tailwind konfigürasyonundaki hardcode hex renkler, CSS variable'lara (`var(--color-primary)` vb.) taşındı.
+- UI bileşenlerindeki (`ReadixCard`, `StoryCard`, `AuthorCard`, `Button`, `ReadixCommentModal`) spesifik `text-white`, `bg-black/50` gibi sınıf tanımlamaları, temaya duyarlı `text-text`, `bg-background/50` sınıflarıyla güncellendi.
+- Zustand store'a `useThemeStore` eklendi ve seçilen tema `<html>` elementine `data-theme` özniteliği ile anlık olarak işlendi.
+- `deleteUserAccount` adlı karmaşık (Cascade Delete) servis yazıldı.

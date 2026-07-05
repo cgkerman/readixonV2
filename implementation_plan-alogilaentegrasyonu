@@ -1,0 +1,37 @@
+# Arama (Search) Sayfası Uygulama Planı
+
+Bu plan, kullanıcıların hikayeleri başlık, yazar veya etiketlere (tags) göre arayabileceği Keşfet/Arama sayfasının geliştirilmesini içerir.
+
+## Proposed Changes
+
+### @readixon/core
+
+Firestore, varsayılan olarak "Tam Metin Arama" (Full-text search) yeteneklerine sahip değildir. Bu MVP aşaması için temel bir arama fonksiyonu yazacağız.
+
+#### [MODIFY] [storyService.ts](file:///c:/dev/readixondev/packages/core/src/services/storyService.ts)
+- `searchStories(searchTerm: string, selectedTags: string[])`: 
+  - Eğer sadece `selectedTags` (etiket) varsa Firestore'un `array-contains-any` sorgusunu kullanarak filtreleme yapacağız.
+  - Eğer bir metin araması (`searchTerm`) varsa, veritabanından güncel/popüler hikayeleri çekip istemci (client) tarafında başlık (title) veya yazar adına göre bir filtreleme işlemi (local filtering) gerçekleştireceğiz. (İlerleyen aşamalarda Algolia veya Typesense gibi bir arama motoruna geçilebilir).
+
+### @readixon/web
+
+Kullanıcıların arama yapabileceği ve popüler kategorileri görebileceği UI sayfasını oluşturacağız.
+
+#### [NEW] [apps/web/src/app/(main)/search/page.tsx](file:///c:/dev/readixondev/apps/web/src/app/(main)/search/page.tsx)
+- Üst kısımda belirgin bir Arama Kutusu (Search Input) tasarımı.
+- Popüler Türler / Etiketler (Chips): "Fantastik", "Romantik", "Bilim Kurgu" vb. gibi hızlı arama yapmayı sağlayacak etiket butonları.
+- Arama sonuçlarını `StoryCard` bileşeni ile ızgara (grid) formatında listeleme.
+- Arama yapılırken `Loader2` ile yüklenme durumu, sonuç bulunamadığında ise "Sonuç Bulunamadı" boş ekranı (empty state).
+
+## User Review Required
+
+> [!WARNING]
+> **Firebase Arama Kısıtlaması:** Firebase Firestore doğrudan `LIKE %kelime%` tarzı sorguları desteklemez. Bu nedenle MVP için aramaları ya etiketlere (tags) göre Firestore üzerinden yapacağız ya da popüler hikayeleri çekip metin aramalarını geçici olarak uygulama içinde (client-side) filtreleyeceğiz. İleride profesyonel bir arama deneyimi için Algolia entegrasyonu gerekebilir. Bu yaklaşım şu anki aşama için uygun mudur?
+
+## Verification Plan
+
+### Manual Verification
+1. `/search` sayfasına gidildiğinde arama çubuğunun ve etiketlerin görünür olması.
+2. Arama çubuğuna metin girildiğinde (örneğin mevcut bir hikayenin adının bir kısmı) listelenen hikayelerin başarıyla filtrelenmesi.
+3. Etiketlere tıklandığında sadece o etikete sahip hikayelerin gelmesi.
+4. Sonuç bulunmadığında açıklayıcı boş ekranın çıkması.

@@ -1,0 +1,36 @@
+# Stüdyo Güncellemeleri: Profesyonel İstatistikler
+
+Stüdyo paneline yazarın performansını detaylıca analiz edebilmesi için gerçek zamanlı, profesyonel bir **İstatistik (Dashboard)** sayfası ekledik ve menüyü sadeleştirdik.
+
+## Yapılan Değişiklikler
+
+1. **Menü Sadeleştirmesi**: 
+   - `apps/web/src/app/studio/layout.tsx` dosyasındaki sol menüden "Ayarlar" bağlantısı kaldırıldı. 
+
+2. **Gerçek Zamanlı İstatistik Paneli**:
+   - `apps/web/src/app/studio/stats/page.tsx` rotası altına yepyeni bir panel eklendi.
+   - Panel, veritabanından Firebase `onSnapshot` metodolojisini kullanarak (React tarafında `subscribeToAuthorStories` hook'u) **anlık (real-time)** olarak yazarın hikayelerini dinler. Bir kullanıcı hikayeyi beğendiğinde ya da okuduğunda, yazarın paneli sayfayı yenilemeye gerek kalmadan anında güncellenir.
+
+## Panel Detayları
+
+### 1. Ana Metrik Kartları
+Dört ana "Key Performance Indicator" (KPI) kartı bulunur:
+- **Toplam Okunma:** Yazarın tüm hikayelerinin toplam okunma sayısı.
+- **Toplam Beğeni:** Tüm hikayelerden alınan toplam beğeni sayısı.
+- **Toplam İnceleme (Yorum):** Yazara bırakılan inceleme sayısı.
+- **Yayınlanan Hikaye:** Sistemdeki toplam hikaye sayısı.
+
+### 2. En İyi Performans Gösterenler Tablosu
+Yazarın hikayelerini okunma sayısına göre sıralar (en çoktan en aza doğru) ve ilk 5 hikayeyi listeler.
+Bu listede her hikayenin:
+- Durumu (Yayında / Taslak)
+- Okunma sayısı
+- Beğeni sayısı
+anlık olarak listelenir.
+
+### 3. Kullanıcı Deneyimi ve Tasarım (Premium Aesthetic)
+- Cam efekti (glassmorphism), blur arkaplanlar ve "Sıcak Toprak" temasına uyumlu geçişli kartlar kullanıldı.
+- Veri yüklenirken ve veriler değişirken yumuşak solma (fade) animasyonları uygulandı.
+
+## Nasıl Test Edilir?
+Stüdyo sayfasına giriş yapın ve sol menüden **İstatistikler** sekmesine tıklayın. Hikayelerinizin performansını anlık olarak bu ekrandan izleyebilirsiniz. Başka bir cihazdan veya gizli sekmeden giriş yapıp hikayelerinizden birine tıklayarak okunma sayısını artırın, paneldeki okunma rakamının saniyeler içinde otomatik olarak yükseldiğini göreceksiniz!

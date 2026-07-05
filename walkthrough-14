@@ -1,0 +1,31 @@
+# Readix 2.0: Etkileşim Merkezi 🚀
+
+Senin yönlendirmelerinle Readix'i eksiksiz bir sosyal platforma dönüştürdük! İşte eklenen tüm yeni özellikler:
+
+## Neler Yaptık?
+
+### 1. Etiket (Hashtag) ve Bahsetme (@Mention) Sistemi
+- Artık paylaşımlarda `#` ile başlayan tüm kelimeler tıklanabilir etiket (hashtag) haline geliyor. Etikete tıkladığında akış filtreleniyor.
+- **YENİ:** Aynı şekilde `@` ile başlayan kullanıcı adları da (örneğin `@kitapkurdu`) otomatik olarak mavi renge bürünüyor ve tıklandığında o kişinin profiline gidiyor!
+- **Sıralama Algoritması:** İstediğin gibi, etiket aramalarında gönderiler sadece "yeniden eskiye" değil, **"en çok etkileşim alandan" (beğeni sayısına göre)** en aza doğru sıralanıyor. Tıpkı Twitter'ın "Popüler" sekmesi gibi!
+
+### 2. Yorum Yapma (Comments Modal) ve Genişletilmiş Tıklama
+- Paylaşımların "Yorum" butonuna tıklandığında sayfa yenilenmeden, çok şık bir **Yorum Modalı (Açılır Pencere)** geliyor.
+- Artık gönderinin yorum butonuna tıklamana gerek yok! Gönderi kutusunun (Card) herhangi bir yerine tıkladığında direkt olarak yorumları ve gönderi detayını görebileceğin bu pencere açılıyor. Sadece içindeki butonlara (beğen, profil vb.) tıklarsan o eylemler tetiklenir.
+
+### 3. Gelişmiş Yorum Sistemi (Yanıtlar, Beğeniler ve Yazar Profilleri)
+- Yorum yapan herkesin profil fotoğrafı ve adı ("Bir okuyucu" yerine) gerçek kullanıcı verileriyle gösteriliyor. Resme veya ada tıkladığında direkt profillerine gidiliyor.
+- **YENİ:** Gönderiyi asıl paylaşan kişi yorum yaptığında, isminin yanında belirgin ve çok havalı bir **"Readix Sahibi"** rozeti (badge) çıkıyor!
+- **YENİ:** Yorumları da beğenebilirsin! Her yorumun altındaki kalp ikonuna tıklayarak beğenebilirsin.
+- **YENİ:** Yorumlara yanıt verebilirsin (İç içe yorumlar / Thread)! Herhangi bir yorumun altındaki "Yanıtla" butonuna tıkladığında o yoruma özel yanıt girebilirsin ve bu yanıt ana yorumun hemen altında bir girinti ile gösterilir.
+
+### 4. Kullanıcı Profilinde Readix Sekmesi
+- Profil sayfalarına (`/profile/@kullaniciadi`) yeni bir özellik eklendi: **Readixleri** sekmesi.
+- Artık birinin profiline girdiğinde sadece yazdığı hikayeleri değil, platformda paylaştığı tüm gönderileri de listeleyebiliyorsun.
+
+## Nasıl Denenir?
+1. Kitap sayfasından "Readixle" butonuna tıkla, etiket zaten eklenecek.
+2. Yazının içine birkaç hashtag daha ekleyip (örn: `#favorikitabım`) gönderiyi paylaş.
+3. Gönderideki mavi renkli etikete tıkla ve sadece o etiketin popüler gönderilerinin geldiğini gör.
+4. "Yorum" ikonuna tıklayıp Modal üzerinden ilk yorumunu at.
+5. Kendi profiline git ve "Readixleri" sekmesinde paylaşımlarını kontrol et!

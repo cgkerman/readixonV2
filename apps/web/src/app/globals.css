@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Varsayılan Ana Tema (Tema 3: Premium Minimal) */
+:root {
+  --color-background: #000000;
+  --color-card: #0A0A0A;
+  --color-text: #FAFAFA;
+  --color-primary: #FFFFFF;
+  --color-muted: #A1A1AA;
+  --color-border: #27272A;
+}
+
+/* Tema 1: Siber Gece (Neon Cyan) */
+[data-theme="theme-1"] {
+  --color-background: #0D1117;
+  --color-card: #161B22;
+  --color-text: #C9D1D9;
+  --color-primary: #00E5FF;
+  --color-muted: #8B949E;
+  --color-border: #30363D;
+}
+
+/* Tema 2: Sıcak Toprak (Terracotta) */
+[data-theme="theme-2"] {
+  --color-background: #FAFAFA;
+  --color-card: #F3F0EA;
+  --color-text: #2D2824;
+  --color-primary: #D97757;
+  --color-muted: #8C857D;
+  --color-border: #E3DED8;
+}
+
+/* Tema 3: Premium Minimal */
+[data-theme="theme-3"] {
+  --color-background: #000000;
+  --color-card: #0A0A0A;
+  --color-text: #FAFAFA;
+  --color-primary: #FFFFFF;
+  --color-muted: #A1A1AA;
+  --color-border: #27272A;
+}
+
+/* Tema 4: Pembe Altın (Rose Gold) */
+[data-theme="theme-4"] {
+  --color-background: #FFF5F5;
+  --color-card: #FFE4E6;
+  --color-text: #4C0519;
+  --color-primary: #E11D48;
+  --color-muted: #9F1239;
+  --color-border: #FECDD3;
+}
+
+/* Tema 5: Gece Mavisi (Midnight) */
+[data-theme="theme-5"] {
+  --color-background: #0A192F;
+  --color-card: #112240;
+  --color-text: #CCD6F6;
+  --color-primary: #64FFDA;
+  --color-muted: #8892B0;
+  --color-border: #233554;
+}
+
+/* Tema 6: Adaçayı (Sage Green) */
+[data-theme="theme-6"] {
+  --color-background: #F4F5F0;
+  --color-card: #E9EBE4;
+  --color-text: #1E2920;
+  --color-primary: #2D5A27;
+  --color-muted: #5C7058;
+  --color-border: #D1D6CC;
+}
+
+body {
+  color: var(--color-text);
+  background-color: var(--color-background);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}

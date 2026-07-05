@@ -1,0 +1,22 @@
+# Topluluk Etkileşimleri (Beğeni, Okunma ve Yorum) ✨
+
+Netflix/Webtoon tarzı yapımızı harika bir Topluluk sistemine bağladık. Okuyucuların hikayelerle ve bölümlerle etkileşime girmesi için ihtiyacımız olan altyapı tamamlandı! 
+
+## Neler Eklendi?
+
+### 1. Kitap Detay Sayfası İstatistikleri
+Artık kitapların detay sayfasındaki okunma ve beğeni sayıları **gerçek verilerle** çalışıyor.
+- Sayfaya girdiğinde okunma sayısı (`views`) otomatik olarak artıyor.
+- Kalp (❤️) ikonuna tıkladığında hikayeyi **Beğenmiş** oluyorsun. Sistem arka planda senin bunu beğendiğini kaydediyor (böylece sayfayı yenilediğinde kalbi kırmızı olarak görüyorsun).
+- Tekrar tıklarsan beğeniyi geri alabiliyorsun (Unlike).
+
+### 2. Bölüm Kartlarındaki İstatistikler
+Hikayenin "Bölümler" sekmesine tıkladığında liste halinde gelen bölüm kartlarında da artık her bölümün **kendi Okunma, Beğenilme ve Yorum** sayıları görünüyor.
+
+### 3. Okuyucu Sayfası: "Bölümü Nasıl Buldun?"
+Bir bölümü sonuna kadar okuduğunda (`Hemen Oku` -> En Alt Kısım) devasa bir **Etkileşim Alanı** ile karşılaşıyorsun.
+- **Bölüm Beğenisi:** Hikayeyi sevip sevmemekten bağımsız olarak sadece o bölümü (Chapter Like) beğenebilirsin. Bölüm beğenileri, kitabın toplam beğenisine otomatik olarak pozitif katkı sağlar!
+- **Bölüm Tartışması (Yorumlar):** Okuduğun bölümle ilgili fikirlerini, teorilerini veya heyecanını alttaki tartışma kutucuğundan paylaşabilirsin. Yapılan yorumlar o bölümün altında listeleniyor ve anlık olarak diğer okuyucular tarafından da görülebiliyor!
+
+> [!TIP]
+> Hemen test edebilirsin: Geliştirme ortamında (pnpm run dev) herhangi bir kitabın içine girip "Hemen Oku"ya tıkla, sayfayı en aşağı kaydır ve ilk yorumunu bırak! 🚀

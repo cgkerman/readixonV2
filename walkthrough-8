@@ -1,0 +1,24 @@
+# Yazar Olma Özelliği ve Studio Erişimi Tamamlandı!
+
+İstediğiniz gibi sistemin artık okuyucu ve yazar hesaplarını birbirinden ayırabilmesi için gerekli altyapı ve arayüz değişiklikleri başarıyla uygulandı.
+
+## Yapılan Değişiklikler
+
+### 1. Veritabanı ve Şema Güncellemeleri (`@readixon/core`)
+- Firestore üzerindeki Kullanıcı (`User`) veri yapısına `isAuthor` adında bir `boolean` (doğru/yanlış) bayrak eklendi.
+- Yeni kayıt olan her kullanıcı artık varsayılan olarak **okuyucu** (`isAuthor: false`) olarak kaydedilecek.
+- Bir okuyucunun hesabını yazara yükseltmesi için veritabanında işlemi gerçekleştirecek olan `becomeAuthor` fonksiyonu oluşturuldu ve `@readixon/core` kütüphanesine dışarıya aktarılmak üzere eklendi.
+
+### 2. Web Uygulaması Arayüzü (`@readixon/web`)
+- Web uygulamasının sol taraftaki kalıcı menüsüne (Sidebar) kullanıcının durumuna göre değişen yeni bir işlem butonu eklendi.
+  - **Okuyucular için:** Profil bilgilerinin hemen altında "Yazar Ol" butonu görünecek. Bu butona tıklandığında anında hesap yazar statüsüne yükseltilecek.
+  - **Yazarlar için:** Aynı alanda "Studio'ya Git" butonu belirecek ve doğrudan `/studio` sayfasına kolay bir geçiş sağlayacak.
+- **Mobil Görünüm:** Ekran küçüldüğünde ekranın altında beliren alt menüye (Bottom Nav), eğer kullanıcı yazar ise "Studio" ikonunu içeren yeni bir sekme eklendi.
+
+## Nasıl Test Edebilirsiniz?
+1. Mevcut hesabınızla giriş yaptığınızda (veya yeni bir hesap açtığınızda) sol menünün alt kısmında "Yazar Ol" butonunu göreceksiniz.
+2. Butona tıkladığınızda hesabınız başarıyla yazar statüsüne geçecek ve sayfa anlık olarak güncellenerek buton "Studio'ya Git" şeklinde değişecektir.
+3. Ayrıca mobil görünümde (ekranı daralttığınızda) alttaki ikon çubuğunda Studio'ya ait kalem ikonu belirecektir.
+
+> [!TIP]
+> Mevcut açık olan hesabınız eğer bir "Yazar" olarak algılanmazsa butona tıklayarak hemen hesabı yazar yapabilirsiniz. Sayfayı yenilediğinizde (CTRL+F5) ayarlar tamamen oturmuş olacaktır.

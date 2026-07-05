@@ -1,0 +1,11 @@
+# Google ile Giriş / Kayıt Özelliği
+
+Uygulamanın web tarafında kullanıcıların daha hızlı giriş yapabilmeleri veya hesap oluşturabilmeleri için **Google ile Devam Et** özelliği aktifleştirildi.
+
+## Neler Eklendi?
+- Firebase Authentication'ın `signInWithPopup` metodunu kullanarak `authService.ts` içerisine `signInWithGoogleWeb` fonksiyonu yazıldı.
+- Google üzerinden ilk defa giriş yapan (kayıt olan) kullanıcılar tespit edilerek, onlara ait bir veritabanı profili (`users` koleksiyonu) arka planda otomatik olarak oluşturulacak şekilde ayarlandı.
+- Hem Giriş Yap (`/login`) hem de Kayıt Ol (`/register`) sayfalarına Google butonları şık bir ikonla eklendi.
+
+### Nasıl Çalışıyor?
+Kullanıcılar "Google ile Devam Et" butonuna tıkladıklarında, güvenli bir Google popup penceresi açılır. Kullanıcı Google hesabını seçip onay verdiğinde Firebase ile kimlik doğrulaması yapılır. Kullanıcı zaten sisteme kayıtlıysa anında giriş yapmış olur. Eğer kayıtlı değilse, arka planda hızlıca profil oluşturulur ve uygulamaya alınır.

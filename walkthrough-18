@@ -1,0 +1,16 @@
+# "Tümünü Gör" Sayfaları (Keşfet) Eklendi
+
+Keşfet sayfasında bulunan yatay hikaye ve yazar listelerindeki "Tümünü Gör" bağlantılarını aktif hale getirdik ve bu sayfalara tıklandığında açılan, performanslı ve geniş listeleme sayfalarını oluşturduk.
+
+## Neler Yapıldı?
+- **Dinamik "Keşfet" Sayfası (Grid & Infinite Scroll):** 
+  `explore/[category]` adında tek bir dinamik Next.js sayfası (Route) oluşturduk. Bu sayfa sayesinde; "Yeni Çıkanlar", "Haftanın En Çok Okunanları", "Sana Özel", "Tamamlanmış" gibi tüm listeler aynı optimize edilmiş sayfayı kullanır. Sadece URL'deki parametreye göre (`/explore/recent` veya `/explore/top`) doğru verileri çekip gösterir.
+- **Sonsuz Kaydırma (Infinite Scroll):** 
+  Binlerce hikaye olsa dahi ekran donmadan yüklenmesi için `react-query` ile sayfalama (`useInfiniteQuery`) sistemi kuruldu. Fare ile sayfanın altına inildiğinde hikayeler takılmadan otomatik olarak yüklenmeye devam eder.
+- **Genişletilmiş Yazar Listesi:** 
+  `/explore/authors` sayfası oluşturuldu ve sadece yazarları içeren, hikaye sayfalarına benzemeyen özel bir geniş Grid ekranı kodlandı.
+- **Tümünü Gör Bağlantıları Aktifleştirildi:** 
+  Feed sayfasındaki (Keşfet) tüm slider bileşenlerine (`CarouselRow`) tıklandığında ilgili keşfet ekranına yönlendirmesi sağlandı.
+
+> [!TIP]  
+> Keşfet sayfasındaki herhangi bir "Tümünü Gör" butonuna tıklayarak bu genişletilmiş listeleme ekranlarını test edebilirsiniz! Mobilde otomatik olarak 2 sütuna, bilgisayarda ise genişliğe göre 6 sütuna kadar genişleyerek tüm ekranı doldurur.

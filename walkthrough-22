@@ -1,0 +1,27 @@
+# Canlıya Çıkış (Production) Hazırlıkları Tamamlandı! 🚀
+
+Readixon'un kusursuz bir şekilde production ortamında (gerçek kullanıcılara) sunulabilmesi için gerekli olan tüm profesyonel dokunuşlar başarıyla tamamlandı.
+
+## Neler Yaptık?
+
+### 1. Sosyal Medya İçin SEO & Dinamik Meta Etiketleri (Open Graph)
+Uygulamanızın linkleri WhatsApp, Twitter, Discord veya iMessage gibi yerlerde paylaşıldığında sadece boş bir link olarak görünmeyecek.
+- **Hikaye Linkleri:** Bir hikaye paylaşıldığında otomatik olarak hikayenin kapak resmi, başlığı ve özeti önizleme olarak görünecek. [story/[slug]/layout.tsx](file:///c:/dev/readixondev/apps/web/src/app/(main)/story/[slug]/layout.tsx)
+- **Profil Linkleri:** Bir kullanıcının profili paylaşıldığında, yazarın avatarı, kullanıcı adı ve biyografisi önizlemede şık bir şekilde belirecek. [profile/[username]/layout.tsx](file:///c:/dev/readixondev/apps/web/src/app/(main)/profile/[username]/layout.tsx)
+
+> [!TIP]
+> Bu sayede sosyal medyadan uygulamanıza gelecek olan tıklama (Click-through) oranları ciddi şekilde artacaktır.
+
+### 2. Özel "404 Sayfa Bulunamadı" Ekranı
+Geliştirme aşamasında olmayan bir URL'ye (örneğin silinmiş bir hikayeye) gidildiğinde siyah çirkin bir ekran çıkıyordu. Artık uygulamanın geneline hitap eden, temanıza (Sıcak Toprak - kiremit tonları) uygun, çok şık bir 404 sayfası var. [not-found.tsx](file:///c:/dev/readixondev/apps/web/src/app/not-found.tsx)
+- Kullanıcıyı kaybolduğu yerden alıp direkt "Ana Sayfa" veya "Keşfet" ekranına yönlendiren pratik butonlar içeriyor.
+
+### 3. Firebase Veritabanı ve Güvenlik Kuralları
+En kritik aşama olan veritabanı güvenliği halledildi. Sistemin dışarıdan manipüle edilmesini, başkasının hesabına mesaj gönderilmesini veya başkasının hikayesinin silinmesini engelleyen katı güvenlik kurallarını (Security Rules) hazırladım.
+- Bu kurallar, uygulamanızın mantığına (Sadece yayındaki hikayelerin herkesçe okunabilmesi, taslakların gizli kalması vb.) özel olarak yazıldı.
+
+> [!IMPORTANT]
+> Güvenlik kurallarının uygulanması için sağ taraftaki **Firebase Güvenlik Kuralları** dökümanını (firebase_rules.md) açın ve oradaki kodları **Firebase Console -> Firestore Database -> Rules** kısmına kopyalayıp yapıştırın. Aynı işlemi **Storage -> Rules** için de yapmayı unutmayın.
+
+## Sıradaki Adım
+Artık proje kaynak kodlarıyla beraber Vercel veya benzeri bir sunucuya (hosting) yüklenmek için (Deployment) %100 hazır durumda! 🎉

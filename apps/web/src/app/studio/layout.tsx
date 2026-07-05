@@ -1,0 +1,69 @@
+'use client';
+
+import React from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Typography } from '@readixon/ui';
+import { BookOpen, PenTool, BarChart3, ArrowLeft } from 'lucide-react';
+import { useAuthStore } from '@readixon/core';
+
+export default function StudioLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const { firebaseUser } = useAuthStore();
+
+  if (!firebaseUser) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center h-screen bg-background text-center p-6">
+        <Typography variant="h2" className="mb-4">Yazar Stüdyosuna Hoş Geldiniz</Typography>
+        <Typography variant="body" className="text-muted">Hikaye yazmak ve yayınlamak için lütfen giriş yapın.</Typography>
+        <Link href="/" className="mt-6 text-primary hover:underline">Ana Sayfaya Dön</Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-screen bg-background">
+      {/* Studio Sidebar */}
+      <aside className="w-64 border-r border-border/10 bg-card/30 flex flex-col hidden md:flex">
+        <div className="p-6 border-b border-border/10">
+          <Link href="/studio" className="flex items-center gap-2">
+            <PenTool className="text-primary" size={24} />
+            <Typography variant="h3" className="font-bold text-text tracking-tight">Stüdyo</Typography>
+          </Link>
+        </div>
+        
+        <nav className="flex-1 p-4 flex flex-col gap-2">
+          <Link 
+            href="/studio" 
+            className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${pathname === '/studio' ? 'bg-primary/10 text-primary' : 'text-muted hover:text-text hover:bg-muted/10'}`}
+          >
+            <BookOpen size={20} />
+            <span className="font-medium">Hikayelerim</span>
+          </Link>
+          <Link 
+            href="/studio/stats" 
+            className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${pathname.includes('/stats') ? 'bg-primary/10 text-primary' : 'text-muted hover:text-text hover:bg-muted/10'}`}
+          >
+            <BarChart3 size={20} />
+            <span className="font-medium">İstatistikler</span>
+          </Link>
+        </nav>
+        
+        <div className="p-4 border-t border-border/10">
+          <Link 
+            href="/feed" 
+            className="flex items-center gap-3 p-3 rounded-xl transition-colors text-muted hover:text-text hover:bg-muted/10"
+          >
+            <ArrowLeft size={20} />
+            <span className="font-medium">Okuyucuya Dön</span>
+          </Link>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <main className="flex-1 overflow-y-auto">
+        {children}
+      </main>
+    </div>
+  );
+}

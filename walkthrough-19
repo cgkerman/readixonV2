@@ -1,0 +1,21 @@
+# Takip Etme İşlevleri ve Yazar Arama Sistemi Tamamlandı
+
+Arayüzdeki tepkisizlikleri gidererek "Takip Et" butonlarının anında değişmesini sağladım ve uygulamaya yepyeni bir "Yazarları Ara" sekmesi kazandırdım. 
+
+## Neler Değişti?
+
+### 1. Arama Sayfasına "Yazarlar" Sekmesi Eklendi
+Arama (Ara ve Keşfet) sayfasına iki yeni sekme eklendi:
+- **Hikayeler**: Alıştığın kitap ve etiket arama deneyimi.
+- **Yazarlar**: İstediğin bir yazarın "İsim/Soyisim" (displayName) veya kullanıcı adıyla kolayca bulunmasını sağlayan yeni bölüm.
+Yazar araması yaptığında sonuçlar şık `AuthorCard` tasarımlarıyla (takipçi sayıları ve avatarı ile) karşına çıkıyor.
+
+### 2. Anında Tepki Veren (Optimistic) Takip Butonları
+Önceki durumda takip et butonuna bastığında arayüzde bir değişiklik olmuyor, işlemin gerçekleşip gerçekleşmediği anlaşılmıyordu. 
+Şu an **Keşfet (Feed)** ana sayfası, **Öne Çıkan Yazarlar** sayfası ve yeni **Arama** sayfasındaki *tüm* yazar kartları birbiriyle senkronize hale getirildi. 
+
+- **Anında Değişim:** Tıkladığın an buton "Takip Ediliyor" olarak değişir ve rengi soluk griye dönerek basılı kalır.
+- **Global Senkronizasyon:** Eğer Keşfet sayfasında birini takip edersen, Arama sayfasında onu tekrar bulduğunda veya Profiline girdiğinde zaten "Takip Ediliyor" olarak görünür. Arka planda (`useAuthStore`) takip ettiğin ID'ler sürekli olarak tutulur.
+
+> [!TIP]  
+> Sayfayı yenileyip **Ara** menüsünden "Yazarlar" sekmesine geçebilir ve arama yapmayı deneyebilirsin. Listelenen herhangi bir yazarı "Takip Et" dediğinde anında değiştiğini göreceksin!

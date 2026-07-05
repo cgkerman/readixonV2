@@ -1,0 +1,64 @@
+# Readixon Monorepo — Kurulum Tamamlandı ✅
+
+## Oluşturulan Yapı
+
+```
+readixondev/
+├── apps/
+│   ├── web/               ✅ Next.js 14 · App Router · Tailwind CSS · TypeScript
+│   └── mobile/            ✅ Expo · React Native 0.86 · NativeWind · TypeScript
+├── packages/
+│   ├── ui/                ✅ Button + Input bileşenleri · barrel export
+│   ├── core/              ✅ Firebase client iskelet (firebase.ts)
+│   └── config/            ✅ tsconfig.base.json · eslint-preset.js
+├── turbo.json             ✅ Turbo v2 (tasks pipeline)
+├── pnpm-workspace.yaml    ✅ apps/* + packages/*
+├── package.json           ✅ Root (private · turbo · prettier)
+└── .prettierrc            ✅
+```
+
+## Doğrulama Sonuçları
+
+| Kontrol | Sonuç |
+|---------|-------|
+| `pnpm install` | ✅ 625 paket çözüldü |
+| `turbo build --dry` | ✅ 5 workspace paketi tanındı |
+| Turbo monorepo tespiti | ✅ `"monorepo": true` |
+| Workspace paketleri | ✅ `@readixon/config`, `@readixon/core`, `@readixon/ui`, `@readixon/web`, `@readixon/mobile` |
+
+## Bir Sonraki Adımlar
+
+### 🔥 Firebase Bağlantısı
+1. [Firebase Console](https://console.firebase.google.com) → Yeni proje oluştur
+2. Web uygulaması ekle → config değerlerini kopyala
+3. `apps/web/.env.local` dosyası oluştur:
+   ```
+   NEXT_PUBLIC_FIREBASE_API_KEY=...
+   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=...
+   NEXT_PUBLIC_FIREBASE_PROJECT_ID=...
+   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=...
+   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
+   NEXT_PUBLIC_FIREBASE_APP_ID=...
+   ```
+4. [`packages/core/src/firebase.ts`](file:///c:/Users/cgker/OneDrive/Masaüstü/readixondev/packages/core/src/firebase.ts) içindeki `TODO` satırlarını aktif et (env değişkenleri zaten hazır)
+
+### 🌐 Web Geliştirme
+```bash
+cd apps/web && pnpm dev   # http://localhost:3000
+```
+
+### 📱 Mobil Geliştirme
+```bash
+cd apps/mobile && pnpm start   # Expo Metro Bundler
+```
+
+### 🔄 Tüm Workspace
+```bash
+pnpm turbo run dev        # Tüm uygulamaları aynı anda başlat
+pnpm turbo run build      # Tüm paketleri derle
+pnpm turbo run lint       # Tüm paketleri lint et
+```
+
+> [!NOTE]
+> `packages/ui` bileşenleri şu an web-first (HTML button/input) olarak yazıldı. 
+> React Native için platform-specific render ayrımı, tasarım aşamasında eklenecek.

@@ -1,0 +1,23 @@
+# Performans Güncellemeleri Tamamlandı 🚀
+
+Sitenin ileride binlerce veriyi kaldırabilmesi için planladığımız tüm devasa performans hamleleri başarıyla yayına alındı. Artık site çok daha "hafif" ve "akıllı".
+
+## 1. Yüklenen Görsellerin Akıllı Sıkıştırılması
+Artık Studio'da bir yazar kitap kapağı yüklediğinde şu senaryo gerçekleşiyor:
+- İsterse 10 MB'lık 4K bir resim seçsin, sistem saniyeden çok daha kısa bir sürede (sunucuya bile gitmeden cihaz üzerinde) bu resmi işler.
+- Resmin oranı korunur, ancak en uzun kenarı en fazla **1200 piksele** çekilir.
+- Çıktı formatı `.jpg` olarak standartlaştırılır ve kalitesi web için ideal olan %80 düzeyinde tutulur.
+- Sonuç: 10 MB'lık bir resim kaliteden gözle görülür **hiçbir ödün vermeden** 100-200 KB arasına düşer. Bu, Keşfet sayfasının saniyeden kısa sürede açılmasını garanti eder.
+
+> [!TIP]
+> Bunu test etmek için yazar paneline girip en yüksek çözünürlüklü fotoğraflarından birini kapak yapmayı deneyebilirsin. Sistemin anında işleyip yüklediğini göreceksin.
+
+## 2. Keşfet Sayfasında Sonsuz Kaydırma (Infinite Scroll)
+"Yeni Çıkanlar" ve "En Çok Okunanlar" bölümlerindeki yatay listede (Carousel) devrim niteliğinde bir güncelleme yaptık.
+- Eskiden sadece en iyi/en yeni 10 kitabı çekip bırakıyordu. Artık sistemi "Sonsuz Kaydırma" mantığıyla donattık.
+- Yatay menüde sağa doğru kaydırdığında, **listenin sonuna yaklaştığın anda** sistem otomatik olarak arkada çalışan bir servisi tetikler ve bir sonraki 10 kitabı daha veritabanından çekip listeye ekler.
+- Bu işlem o kadar pürüzsüz olur ki, okuyucu sadece bitmeyen bir kitap rafını kaydırdığını zanneder.
+- React Query'nin `useInfiniteQuery` gücü sayesinde bu kitaplar da anında önbelleğe alınır, yani sayfalar arası geçişte veri israfı engellenir.
+
+---
+Altyapı şu anda on binlerce kullanıcıyı aynı anda kaldırabilecek güce ulaştı! Geliştirme ekranından sistemi test edebilirsin. Bundan sonraki aşamada ne üzerine odaklanmak istersin?

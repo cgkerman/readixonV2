@@ -1,0 +1,119 @@
+# Aşama 2 — Firebase Auth & Mobil Ekranlar Tamamlandı ✅
+
+## Oluşturulan / Güncellenen Dosyalar
+
+### packages/core
+
+| Dosya | İçerik |
+|-------|--------|
+| [`src/firebase.ts`](file:///c:/Users/cgker/OneDrive/Masaüstü/readixondev/packages/core/src/firebase.ts) | `auth`, `db`, `storage` servisleri aktif; Expo + Next.js çift env desteği |
+| [`src/types/index.ts`](file:///c:/Users/cgker/OneDrive/Masaüstü/readixondev/packages/core/src/types/index.ts) | `User`, `Story`, `Chapter`, `Comment`, `ContentBlock` — mimari şemaya birebir |
+| [`src/auth/authService.ts`](file:///c:/Users/cgker/OneDrive/Masaüstü/readixondev/packages/core/src/auth/authService.ts) | 6 auth fonksiyonu + Türkçe hata mesajları |
+| [`src/services/userService.ts`](file:///c:/Users/cgker/OneDrive/Masaüstü/readixondev/packages/core/src/services/userService.ts) | `createUserProfile` (idempotent), `getUserProfile`, `updateUserProfile` |
+| [`src/index.ts`](file:///c:/Users/cgker/OneDrive/Masaüstü/readixondev/packages/core/src/index.ts) | Güncellenmiş barrel export |
+
+### apps/mobile
+
+| Dosya | İçerik |
+|-------|--------|
+| [`App.tsx`](file:///c:/Users/cgker/OneDrive/Masaüstü/readixondev/apps/mobile/App.tsx) | `NavigationContainer` + `SafeAreaProvider` |
+| [`src/hooks/useAuth.ts`](file:///c:/Users/cgker/OneDrive/Masaüstü/readixondev/apps/mobile/src/hooks/useAuth.ts) | Reaktif auth state hook |
+| [`src/hooks/useGoogleAuth.ts`](file:///c:/Users/cgker/OneDrive/Masaüstü/readixondev/apps/mobile/src/hooks/useGoogleAuth.ts) | Google OAuth akışı (expo-auth-session) |
+| [`src/navigation/RootNavigator.tsx`](file:///c:/Users/cgker/OneDrive/Masaüstü/readixondev/apps/mobile/src/navigation/RootNavigator.tsx) | Auth ↔ App stack yönlendirmesi |
+| [`src/screens/auth/LoginScreen.tsx`](file:///c:/Users/cgker/OneDrive/Masaüstü/readixondev/apps/mobile/src/screens/auth/LoginScreen.tsx) | Giriş ekranı |
+| [`src/screens/auth/SignupScreen.tsx`](file:///c:/Users/cgker/OneDrive/Masaüstü/readixondev/apps/mobile/src/screens/auth/SignupScreen.tsx) | Kayıt ekranı + şifre güç göstergesi |
+| [`src/screens/HomeScreen.tsx`](file:///c:/Users/cgker/OneDrive/Masaüstü\readixondev/apps/mobile/src/screens/HomeScreen.tsx) | Auth sonrası placeholder |
+
+---
+
+## Auth Akışı
+
+```
+Kullanıcı Email Girer
+        │
+        ▼
+signUpWithEmail()          signInWithEmail()
+        │                         │
+        ▼                         │
+createUserProfile()               │
+(Firestore /users/{uid})          │
+        │                         │
+        └──────────┬──────────────┘
+                   ▼
+         onAuthStateChanged()
+                   │
+                   ▼
+         useAuth() hook tetiklenir
+                   │
+                   ▼
+         RootNavigator → HomeScreen
+```
+
+---
+
+## Firestore Kullanıcı Dokümanı (Mimari Şema)
+
+Kayıt olunduğunda otomatik oluşturulan doküman (`/users/{uid}`):
+
+```json
+{
+  "uid": "user123",
+  "username": "",
+  "displayName": "Ayşe Yılmaz",
+  "avatarUrl": "",
+  "bio": "",
+  "preferredGenres": [],
+  "stats": { "followers": 0, "following": 0, "totalReads": 0 },
+  "createdAt": "SERVER_TIMESTAMP"
+}
+```
+
+---
+
+## Mobil Ekran Tasarımı
+
+**Renk Paleti:**
+- Arka plan: `#0A0A0A` (derin siyah)
+- Kart: `#18181B` (zinc-900)
+- Sınır: `#27272A` (zinc-800)
+- Birincil: `#A78BFA` (violet-400)
+- Metin: `#FAFAFA`, `#A1A1AA`, `#71717A`
+
+**Login:** Logo → Email input → Şifre (göster/gizle) → Hata mesajı → Giriş Yap butonu → Divider → Google butonu → Kaydol linki
+
+**Signup:** Logo → Ad → Email → Şifre + **3 çubuklu güç göstergesi** (Zayıf/Orta/Güçlü) → Hesap Oluştur → Google → KVKK notu → Giriş yap linki
+
+---
+
+## Hemen Başlamak İçin
+
+### 1. Firebase Console'dan credentials al
+```
+apps/mobile/.env dosyası oluştur:
+
+EXPO_PUBLIC_FIREBASE_API_KEY=...
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=...
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=...
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=...
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
+EXPO_PUBLIC_FIREBASE_APP_ID=...
+
+# Google Sign-in için (opsiyonel şimdilik):
+EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=...
+```
+
+### 2. Firebase Console ayarları
+- Authentication → Sign-in method → **Email/Şifre** ✓
+- Authentication → Sign-in method → **Google** ✓
+- Firestore Database → **Üretim modunda başlat**
+
+### 3. Uygulamayı çalıştır
+```bash
+cd apps/mobile
+pnpm start
+```
+
+---
+
+> [!NOTE]
+> `username` alanı kayıt sırasında boş bırakılıyor. Kullanıcı adı seçimi Aşama 3'te onboarding akışıyla eklenecek.

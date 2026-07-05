@@ -1,0 +1,13 @@
+{
+  "name": "@readixon/config",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Shared ESLint and TypeScript configurations for Readixon",
+  "files": [
+    "eslint-preset.js",
+    "tsconfig.base.json"
+  ],
+  "exports": {
+    "./tsconfig.base.json": "./tsconfig.base.json"
+  }
+}

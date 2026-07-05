@@ -1,0 +1,36 @@
+# Hikaye Akışı (Feed) Tasarımı Tamamlandı!
+
+Bu aşamada uygulamanın kalbi olan "Hikayeleri Keşfetme" akışını başarıyla inşa ettik. Firebase'deki veritabanımız henüz boş olduğu için test yapabilmemiz adına distopya/bilim kurgu ve macera temalı **Mock (Sahte) Hikayeler** ile sistemi besledik. 
+
+## Neler Yapıldı?
+
+### 1. `StoryCard` Bileşeni (Ortak UI)
+- Uygulamanın en çok kullanılacak bileşenlerinden biri olan `StoryCard`, `@readixon/ui` paketine eklendi.
+- **Web (`StoryCard.tsx`)**: Glassmorphism efektleri, resim üzerine gelindiğinde (hover) büyüme animasyonu (scale) ve istatistiklerin belirmesi (opacity) eklendi.
+- **Mobil (`StoryCard.native.tsx`)**: React Native `TouchableOpacity` ve `Image` kullanılarak mobil donanımla tam uyumlu, performanslı kart tasarımı yapıldı.
+- Görsel zenginlik için `lucide-react` (Web) ve `lucide-react-native` (Mobil) ikon paketleri kuruldu; Okunma ve Beğeni istatistiklerine `Eye` ve `Heart` ikonları eklendi.
+
+### 2. Mock Servis Entegrasyonu (`@readixon/core`)
+- Firebase'den veri çeken `fetchStories` servisine küçük bir zeka eklendi: Eğer veritabanından hiçbir hikaye dönmezse (yani ilk kurulum aşamasındaysa), otomatik olarak `mockStories.ts` dosyasındaki sahte hikayeleri gösteriyor. İleride hikaye yazmaya başladığınızda bu sistem devreden çıkıp kendi hikayelerinizi gösterecek.
+
+### 3. Web İstemcisi (`apps/web`)
+- **[Keşfet Sayfası](/feed)**: Modern bir Grid yapısıyla hikaye kartlarını listeleyen sayfa tasarlandı.
+- **Responsive Sidebar**: Sol tarafa "Keşfet, Kütüphane, Ara" menülerini barındıran şık bir gezinme menüsü konuldu. Eğer ekran küçülürse (telefon/tablet görünümü), bu menü otomatik olarak **alt sekmeye (bottom nav)** dönüşüyor.
+
+### 4. Mobil İstemci (`apps/mobile`)
+- **Bottom Tab Navigator**: Mobil taraftaki `AppStack`, `@react-navigation/bottom-tabs` kullanılarak tamamen yenilendi. Artık uygulamanın en altında Keşfet, Ara ve Profil sekmeleri bulunuyor.
+- **FeedScreen**: Hikayelerin listelendiği Ana Akış ekranı `FlatList` ile sonsuz kaydırmaya (infinite scroll) hazır şekilde tasarlandı. Tabletlerde yan yana 4, telefonlarda 2 hikaye gösterecek şekilde (numColumns) dinamik ayarlandı.
+
+## Nasıl Test Edebilirsiniz?
+
+Şu an halihazırda açık olan **Web** (localhost:3000) sayfanızda "Keşfetmeye Başla" diyerek veya URL'ye doğrudan `/feed` yazarak anasayfadaki akışı test edebilirsiniz. (Giriş yaptığınız için otomatik olarak Sidebar menüsünü ve sahte hikayeleri göreceksiniz).
+
+**Mobil Uygulamayı Test Etmek İçin:**
+Yeni kurulan navigasyon paketleri (`react-native-svg` vb.) yerel (native) eklentiler olduğu için eğer `Expo Go` kullanıyorsanız sorunsuz çalışır ancak Development Build kullanıyorsanız uygulamayı yeniden derlemeniz gerekebilir.
+Mobil'i test etmek için terminalinizde:
+```bash
+pnpm run ios --filter mobile
+```
+komutunu çalıştırıp, giriş yaparak yeni Bottom Tab yapısını ve hikaye kartlarını deneyimleyebilirsiniz.
+
+Sonraki aşamalar için Hikaye Okuma Ekranı (Reading Engine) veya Yazar Stüdyosu (Creator Studio) kısımlarına geçebiliriz. Hangisinden devam etmek istersiniz?

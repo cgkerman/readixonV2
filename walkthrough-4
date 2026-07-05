@@ -1,0 +1,44 @@
+# Readixon UI Tasarım Sistemi Kurulumu
+
+Readixon için planladığımız ortak UI altyapısı başarıyla inşa edildi. Bu güncelleme ile monorepo yapısı üzerinden **Web (Next.js)** ve **Mobile (React Native/Expo)** projelerinde aynı anda kullanılabilen güçlü bir UI kütüphanesi oluşturduk.
+
+## Yapılan Değişiklikler
+
+### 1. Ortak Tema (Tailwind Preset)
+- `packages/config/tailwind-preset.js` dosyası oluşturuldu.
+- **Renk Paleti**: Tercihinize uygun olarak ana renk (`primary`) **Turuncu (`#FF9900`)** olarak ayarlandı. Koyu tema arka planları (`#0A0A0A` ve `#18181B`) ve Glassmorphism için yarı saydam renkler eklendi.
+- **Font**: "Plus Jakarta Sans" varsayılan font ailesi olarak yapılandırıldı.
+- **Animasyonlar**: İstenen mikro-animasyonlar (fade-in, slide-up, scale-up vb.) Tailwind içerisine eklendi.
+- Hem Web hem de Mobile Tailwind konfigürasyonları bu ortak preset'i kullanacak şekilde güncellendi.
+
+### 2. Akıllı UI Bileşenleri (Platform Ayrımı)
+Aynı React API'sini (`import { Button } from '@readixon/ui'`) kullanarak farklı platformlarda Native veya Web DOM elementi render edilmesini sağlayan yapı kuruldu:
+- `Button.tsx` (HTML `<button>`) ve `Button.native.tsx` (React Native `<Pressable>`)
+- `Input.tsx` (HTML `<input>`) ve `Input.native.tsx` (React Native `<TextInput>`)
+- `Typography.tsx` ve `Typography.native.tsx`
+- `Card.tsx` ve `Card.native.tsx` (Glassmorphism ve Interactive varyantları ile)
+
+### 3. Font Yüklemeleri
+- **Web**: Next.js'in yerleşik `next/font/google` modülü ile "Plus Jakarta Sans" optimize edildi ve layout.tsx dosyasına eklendi.
+- **Mobil**: `@expo-google-fonts/plus-jakarta-sans` bağımlılıkları eklendi (Pnpm sanal mağaza sorunu çözülerek kurulum tamamlandı).
+
+### 4. Örnek Kullanım (Web)
+`apps/web/src/app/page.tsx` sayfası güncellendi. Yeni oluşturduğumuz `Typography`, `Button`, `Input` ve `Card` bileşenlerini içeren şık bir karşılama ekranı oluşturuldu. `pnpm dev` ile web projesini başlattığınızda bu bileşenlerin mikro-animasyonlarını test edebilirsiniz.
+
+## Nasıl Test Edilir?
+
+Aşağıdaki komutu projenin kök dizininde (root) çalıştırarak Next.js uygulamasını başlatabilirsiniz:
+
+```bash
+pnpm run dev --filter web
+```
+
+Veya mobil uygulamayı başlatmak için:
+
+```bash
+pnpm run ios --filter mobile
+# veya
+pnpm run android --filter mobile
+```
+
+Görünümle ilgili veya bileşenlere eklememizi istediğiniz yeni bir özellik var mıdır? (Örneğin; Modallar, Tab Bar, veya Drawer vb.)

@@ -1,0 +1,14 @@
+# Kullanıcı Adı Belirleme Sistemi (Onboarding)
+
+Kullanıcıların Google ile giriş yaptıktan sonra veya herhangi bir şekilde "Kullanıcı Adı" (Username) eksikliği yaşadıkları durumlarda profil sisteminin hatasız çalışmasını sağlamak için **Global Kullanıcı Adı Kurulum Modalı** devreye alındı.
+
+## Neler Yapıldı?
+- **Global Kapsayıcı (Providers) Entegrasyonu:** Kullanıcı uygulamada hangi sayfada olursa olsun, eğer giriş yapmışsa ve veritabanında henüz bir kullanıcı adı (`username`) yoksa, ekranı kaplayan ve **kapatılamayan** bir zorunlu modal karşısına çıkacaktır.
+- **Benzersiz Kullanıcı Adı Doğrulaması:** 
+  - Kullanıcı adının boşluk içerip içermediği veya özel karakter durumu kontrol edilir. Sadece harf, rakam ve alt çizgi (`_`) kabul edilir.
+  - Anlık olarak veritabanına sorgu atılır (`getUserByUsername`), eğer o kullanıcı adı başkası tarafından alınmışsa uyarı verilir.
+- **Kesintisiz Geçiş:** Kullanıcı adını başarılı bir şekilde belirleyen kullanıcının arka planda profili güncellenir ve modal anında kaybolarak uygulamayı kaldığı yerden kullanmasına olanak tanır.
+- **Fast Refresh (Sözdizimi) Hatası:** Terminalde görünen noktalı virgül (syntax) kaynaklı ufak bir Fast Refresh hatası tespit edilerek düzeltildi.
+
+> [!IMPORTANT]  
+> Bu global yaklaşım sayesinde, gelecekte sadece Google değil, Apple veya Twitter gibi farklı giriş yöntemleri eklense dahi, "kullanıcı adı olmayan" her hesap güvenli bir şekilde onboarding (kurulum) sürecinden geçirilmiş olacaktır.

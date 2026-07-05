@@ -1,0 +1,28 @@
+# Readix: Platformun Sosyal Kalbi 🌟
+
+Uygulamaya yep yeni bir soluk getirecek olan "Readix" özelliğini baştan sona inşa ettim. Artık sol menüde "Readix" adında yeni bir sayfa göreceksin!
+
+## Neler Yaptık?
+
+### 1. Yeni Veritabanı ve Mimari
+Firestore üzerinde tamamen bu sosyal akış için optimize edilmiş yepyeni bir `readixes` koleksiyonu kurdum.
+Gönderiler sadece metin değil, **görselleri**, **beğenileri** ve **yorum sayılarını** da tutacak şekilde genişletilebilir modellendi. 
+
+### 2. Akıllı Gönderi (Post) Oluşturma
+- Profil sayfasında kullandığımız resim optimizasyonunu (`compressImage`) burada da kullandım. 
+- Kullanıcı yüksek boyutlu bir resim yüklese bile, sistem bunu sunucuya yüklemeden önce küçültüp sıkıştıracak. Böylece sayfa her zaman inanılmaz hızlı açılacak.
+- Paylaşırken bir önizleme görebilir ve fikrini değiştirip resmi kaldırabilirsin.
+
+### 3. Dinamik Haber Akışı (Feed)
+- **İki Farklı Akış:** "Sana Özel" (Platformdaki en yeni gönderiler) ve "Takip Ettiklerin" (Sadece senin takip ettiğin kullanıcıların gönderileri).
+- **Gerçek Zamanlı Beğeni:** Gönderiyi beğen butonuna bastığında sayı anında artar, geri çekersen düşer (Optimistic UI - Kullanıcıyı hiç bekletmez).
+- **Yazar Önizlemesi:** Paylaşımı yapan kişinin profiline resmi tıklayarak gidebilirsin.
+
+### 4. Gündem (Trending) Paneli
+Sağ tarafa Twitter tarzı bir "Gündem" paneli yerleştirdim. Şimdilik statik görünüyor ancak gelecekte o gün en çok konuşulan kitapları listeleyecek.
+
+## Nasıl Denenir?
+1. Sol menüden **Readix (Kare Diyez ikonu #)** sekmesine tıkla.
+2. "Hangi kitaptan bahsediyoruz?" kutusuna bir şeyler yaz.
+3. Resim butonuna tıklayıp bir resim seç ve "Paylaş"a bas.
+4. Anında gönderinin akışa düştüğünü göreceksin! Beğenmeyi deneyebilirsin.
