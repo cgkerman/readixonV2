@@ -9,6 +9,7 @@ import { useReaderStore } from '@readixon/core/src/store/useReaderStore';
 import { useAuthStore } from '@readixon/core/src/store/useAuthStore';
 import { ContentRenderer, ReadingSettingsPanel, Button, Typography } from '@readixon/ui';
 import { ArrowLeft, Settings, List, ChevronLeft, ChevronRight, CheckCircle, X, Heart, MessageSquare } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function ReadPage() {
   const params = useParams();
