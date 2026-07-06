@@ -11,10 +11,9 @@ export async function GET(request: Request) {
   try {
     const now = Timestamp.now();
     
-    // 2. Collection Group ile durumu 'scheduled' olan ve yayınlanma vakti gelmiş olan tüm chapter'ları bul
+    // 2. Collection Group ile durumu 'scheduled' olan tüm chapter'ları bul
     const scheduledChaptersQuery = adminDb.collectionGroup('chapters')
-      .where('status', '==', 'scheduled')
-      .where('publishDate', '<=', now);
+      .where('status', '==', 'scheduled');
       
     const chaptersSnapshot = await scheduledChaptersQuery.get();
 
@@ -22,12 +21,24 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: 'Yayına alınacak planlı bölüm bulunamadı.' });
     }
 
-    const batch = adminDb.batch();
+    // 3. Tarihi gelmiş olanları bellekte filtrele (Composite Index hatasını önlemek için)
+    const readyToPublishDocs = chaptersSnapshot.docs.filter(doc => {
+      const data = doc.data();
+      if (!data.publishDate) return false;
+      
+      // publishDate bir Timestamp olabilir veya string olabilir
+      const publishDate = data.publishDate.toDate ? data.publishDate.toDate() : new Date(data.publishDate);
+      return publishDate <= now.toDate();
+    });
+
+    if (readyToPublishDocs.length === 0) {
+      return NextResponse.json({ message: 'Planlı bölümler var ancak henüz yayınlanma vakti gelmemiş.' });
+    }
+
     const notificationsToCreate: any[] = [];
-    
     let publishedCount = 0;
 
-    for (const chapterDoc of chaptersSnapshot.docs) {
+    for (const chapterDoc of readyToPublishDocs) {
       const chapterData = chapterDoc.data();
       const chapterRef = chapterDoc.ref;
       
@@ -49,8 +60,8 @@ export async function GET(request: Request) {
       if (!authorSnap.exists) continue;
       const authorData = authorSnap.data();
 
-      // Durumu 'published' olarak güncelle
-      batch.update(chapterRef, { status: 'published' });
+      // Durumu 'published' olarak güncellemeyi operations'a ekleyeceğiz
+
       publishedCount++;
 
       // Takipçileri bulup bildirimlerini hazırla
@@ -93,7 +104,7 @@ export async function GET(request: Request) {
     const allOperations = [];
     
     // Update chapters
-    for (const chapterDoc of chaptersSnapshot.docs) {
+    for (const chapterDoc of readyToPublishDocs) {
       allOperations.push(() => chapterDoc.ref.update({ status: 'published' }));
     }
     
