@@ -46,6 +46,30 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     try {
       await becomeAuthor(firebaseUser.uid);
       setUserProfile({ ...userProfile, isAuthor: true });
+      
+      // Tebrik e-postası gönder
+      try {
+        await fetch('/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: firebaseUser.email,
+            subject: 'Readixon Yazar Stüdyosuna Hoş Geldiniz! 🎉',
+            html: `
+              <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+                <h1 style="color: #6366f1;">Tebrikler, artık bir Readixon yazarısınız!</h1>
+                <p>Merhaba ${userProfile.displayName},</p>
+                <p>Yazar başvurunuz başarıyla onaylandı. Artık Yazar Stüdyosu üzerinden kendi hikayelerinizi yazmaya ve yayımlamaya başlayabilirsiniz.</p>
+                <p>Milyonlarca okurun hikayelerinizle buluşması için sabırsızlanıyoruz.</p>
+                <p>Sevgiler,<br>Readixon Ekibi</p>
+              </div>
+            `,
+          })
+        });
+      } catch (emailError) {
+        console.error('Karşılama e-postası gönderilemedi:', emailError);
+      }
+
       router.push('/studio');
     } catch (error) {
       console.error('Yazar olma hatası:', error);

@@ -1,0 +1,45 @@
+import { NextResponse } from 'next/server';
+import nodemailer from 'nodemailer';
+
+export async function POST(request: Request) {
+  try {
+    const { to, subject, html } = await request.json();
+
+    if (!to || !subject || !html) {
+      return NextResponse.json(
+        { error: 'Gerekli alanlar (to, subject, html) eksik.' },
+        { status: 400 }
+      );
+    }
+
+    // Nodemailer SMTP taşıyıcısını oluştur
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 465, // SSL için 465, TLS için 587
+      secure: true, 
+      auth: {
+        user: process.env.SMTP_EMAIL, // Örn: noreply@readixon.com
+        pass: process.env.SMTP_PASSWORD, // Google'dan alınan Uygulama Şifresi (16 haneli)
+      },
+    });
+
+    // E-postayı gönder
+    const info = await transporter.sendMail({
+      from: `"Readixon" <${process.env.SMTP_EMAIL}>`,
+      to,
+      subject,
+      html,
+    });
+
+    return NextResponse.json(
+      { success: true, messageId: info.messageId },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('Mail gönderme hatası:', error);
+    return NextResponse.json(
+      { error: 'Mail gönderilirken sunucu hatası oluştu.' },
+      { status: 500 }
+    );
+  }
+}
