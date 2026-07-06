@@ -29,20 +29,53 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     });
   }, [firebaseUser]);
 
+  const [isVerifyModalOpen, setIsVerifyModalOpen] = React.useState(false);
+  const [isVerifying, setIsVerifying] = React.useState(false);
+  const [verifySuccess, setVerifySuccess] = React.useState(false);
+
   const handleBecomeAuthor = async () => {
     if (!firebaseUser || !userProfile) return;
     
     if (!firebaseUser.emailVerified) {
-      try {
-        await sendVerificationEmail(firebaseUser);
-        toast('Yazar olabilmek için e-posta adresinizi doğrulamanız gerekmektedir. E-posta kutunuza bir onay linki gönderdik.');
-      } catch (error) {
-        console.error('Doğrulama e-postası gönderme hatası:', error);
-        toast.error('Doğrulama e-postası gönderilirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
-      }
+      setIsVerifyModalOpen(true);
       return;
     }
 
+    await upgradeToAuthor();
+  };
+
+  const sendEmailAndStartPolling = async () => {
+    if (!firebaseUser) return;
+    setIsVerifying(true);
+    
+    try {
+      await sendVerificationEmail(firebaseUser);
+      toast('Doğrulama e-postası gönderildi. Lütfen gelen kutunuzu (ve gereksiz kutusunu) kontrol edin.');
+      
+      const pollInterval = setInterval(async () => {
+        await firebaseUser.reload();
+        if (firebaseUser.emailVerified) {
+          clearInterval(pollInterval);
+          setVerifySuccess(true);
+          
+          setTimeout(async () => {
+             await upgradeToAuthor();
+             setIsVerifyModalOpen(false);
+             setVerifySuccess(false);
+             setIsVerifying(false);
+          }, 3000); // Başarı mesajını 3 saniye göster
+        }
+      }, 3000);
+      
+    } catch (error) {
+      console.error('Doğrulama e-postası gönderme hatası:', error);
+      toast.error('E-posta gönderilirken bir hata oluştu. Daha sonra tekrar deneyin.');
+      setIsVerifying(false);
+    }
+  };
+
+  const upgradeToAuthor = async () => {
+    if (!firebaseUser || !userProfile) return;
     try {
       await becomeAuthor(firebaseUser.uid);
       setUserProfile({ ...userProfile, isAuthor: true });
@@ -71,6 +104,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       }
 
       router.push('/studio');
+      toast.success("Tebrikler! Yazar Stüdyosuna yönlendiriliyorsunuz.");
     } catch (error) {
       console.error('Yazar olma hatası:', error);
     }
@@ -197,6 +231,62 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           {pathname === '/profile' && <div className="w-1 h-1 rounded-full bg-primary mt-1" />}
         </Link>
       </div>
+
+      {/* ── Email Verification Modal ── */}
+      {isVerifyModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
+          <div className="w-full max-w-md bg-card border border-border/50 rounded-3xl p-8 flex flex-col items-center text-center shadow-2xl relative overflow-hidden animate-in zoom-in-95 duration-300">
+            {/* Modal İçeriği */}
+            {!isVerifying && !verifySuccess ? (
+              <>
+                <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6 text-primary">
+                  <PenTool size={40} />
+                </div>
+                <Typography variant="h3" className="mb-2">Yazar Ol</Typography>
+                <Typography variant="body" className="text-muted mb-8">
+                  Yazar olabilmek için e-posta adresinizi doğrulamanız gerekmektedir. E-mail doğrulama işleminizden sonra yazar olabilirsiniz.
+                </Typography>
+                
+                <div className="flex flex-col w-full gap-3">
+                  <Button variant="primary" onPress={sendEmailAndStartPolling} className="w-full">
+                    Doğrulama E-postası Gönder
+                  </Button>
+                  <Button variant="ghost" onPress={() => setIsVerifyModalOpen(false)} className="w-full text-muted">
+                    İptal
+                  </Button>
+                </div>
+              </>
+            ) : verifySuccess ? (
+              <>
+                <div className="w-24 h-24 rounded-full bg-green-500/10 flex items-center justify-center mb-6 text-green-500 animate-in zoom-in duration-500">
+                  <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <Typography variant="h3" className="mb-2 text-green-500">Doğrulama Başarılı!</Typography>
+                <Typography variant="body" className="text-muted">
+                  Harika! E-posta adresiniz doğrulandı. Yazar stüdyosuna yönlendiriliyorsunuz...
+                </Typography>
+              </>
+            ) : (
+              <>
+                {/* Özgün Yükleme Animasyonu */}
+                <div className="relative w-32 h-32 mb-8 flex items-center justify-center mt-4">
+                  <div className="absolute inset-0 rounded-full border-2 border-primary/20"></div>
+                  <div className="absolute inset-0 rounded-full border-t-2 border-l-2 border-primary animate-spin" style={{ animationDuration: '1.5s' }}></div>
+                  <div className="absolute inset-2 rounded-full border-r-2 border-b-2 border-primary/60 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '2s' }}></div>
+                  <PenTool size={32} className="text-primary animate-pulse" />
+                </div>
+                <Typography variant="h3" className="mb-2">Onay Bekleniyor...</Typography>
+                <Typography variant="body" className="text-muted">
+                  Gelen kutunuzu (veya spam klasörünü) kontrol edin ve onay linkine tıklayın. Siz onayladığınız an bu ekran otomatik olarak kapanacaktır.
+                </Typography>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

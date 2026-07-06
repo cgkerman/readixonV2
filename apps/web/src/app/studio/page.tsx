@@ -77,7 +77,9 @@ export default function StudioDashboard() {
           <FileText size={48} className="mx-auto text-muted/50 mb-4" />
           <Typography variant="h3" className="mb-2">Henüz hikayeniz yok</Typography>
           <Typography variant="body" className="text-muted mb-6">İlk başyapıtınızı yazmaya hemen başlayın.</Typography>
-          <Button variant="outline" onPress={() => setIsModalOpen(true)}>Hemen Başla</Button>
+          <div className="flex justify-center">
+            <Button variant="outline" onPress={() => setIsModalOpen(true)}>Hemen Başla</Button>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

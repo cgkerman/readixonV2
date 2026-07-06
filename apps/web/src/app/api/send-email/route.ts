@@ -21,6 +21,9 @@ export async function POST(request: Request) {
         user: process.env.SMTP_EMAIL, // Örn: noreply@readixon.com
         pass: process.env.SMTP_PASSWORD, // Google'dan alınan Uygulama Şifresi (16 haneli)
       },
+      tls: {
+        rejectUnauthorized: false
+      }
     });
 
     // E-postayı gönder
@@ -38,7 +41,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Mail gönderme hatası:', error);
     return NextResponse.json(
-      { error: 'Mail gönderilirken sunucu hatası oluştu.' },
+      { error: 'Mail gönderilirken sunucu hatası oluştu.', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }
