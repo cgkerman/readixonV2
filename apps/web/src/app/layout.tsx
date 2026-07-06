@@ -12,9 +12,25 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Readixon — Yeni Nesil Okuma & Yazma Platformu",
+  title: {
+    default: "Readixon | Powered by Turixon",
+    template: "%s | Readixon"
+  },
   description:
     "Readixon, okurları ve yazarları tek bir ekosistemde buluşturan, dijital hikaye anlatıcılığını modern sosyal medya dinamikleriyle harmanlayan yeni nesil bir içerik ve topluluk platformudur.",
+  keywords: ["kitap", "hikaye", "yazar", "okur", "readixon", "turixon", "sosyal medya", "e-kitap", "dijital yayıncılık"],
+  openGraph: {
+    title: "Readixon | Powered by Turixon",
+    description: "Readixon, okurları ve yazarları tek bir ekosistemde buluşturan yeni nesil içerik ve topluluk platformudur.",
+    url: "https://readixon.com",
+    siteName: "Readixon",
+    locale: "tr_TR",
+    type: "website",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  }
 };
 
 export default function RootLayout({
