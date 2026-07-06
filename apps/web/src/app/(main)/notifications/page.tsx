@@ -71,6 +71,7 @@ export default function NotificationsPage() {
         break;
       case 'story_like':
       case 'story_comment':
+      case 'new_chapter':
         if (notif.entityTitle && notif.entityId) {
           router.push(`/story/${generateStorySlug(notif.entityTitle, notif.entityId)}`);
         }
@@ -135,7 +136,8 @@ export default function NotificationsPage() {
       case 'readix_mention':
         return <>{actor}, {entity} gönderisinde senden bahsetti.</>;
       case 'new_chapter':
-        return <>{actor}, yeni bir bölüm yayınladı: {entity}</>;
+        const chapter = notif.subEntityTitle ? <span className="font-medium text-primary">"{notif.subEntityTitle}"</span> : null;
+        return <>{actor}, {entity} kitabında yeni bir bölüm yayınladı: {chapter}</>;
       default:
         return <>Yeni bir bildiriminiz var.</>;
     }

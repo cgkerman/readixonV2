@@ -86,6 +86,7 @@ export async function GET(request: Request) {
             type: 'new_chapter',
             entityId: storyId,
             entityTitle: storyData.title,
+            subEntityTitle: chapterData.title || 'Yeni Bölüm',
             isRead: false,
             createdAt: FieldValue.serverTimestamp()
           }

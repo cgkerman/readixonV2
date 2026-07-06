@@ -214,6 +214,7 @@ export interface AppNotification {
   type: NotificationType;
   entityId?: string; // e.g. storyId or readixId
   entityTitle?: string; // optional context, e.g. "Yüzüklerin Efendisi"
+  subEntityTitle?: string; // e.g. chapter title
   isRead: boolean;
   createdAt: Timestamp;
 }
