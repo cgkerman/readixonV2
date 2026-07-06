@@ -164,7 +164,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   ];
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex h-[100dvh] bg-background overflow-hidden">
       {/* ── Sidebar (Desktop) ── */}
       <aside className="hidden md:flex w-64 flex-col border-r border-border/50 bg-card/20 p-6">
         <Typography variant="h2" className="font-bold text-primary tracking-tighter mb-10">readixon</Typography>
@@ -236,8 +236,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       </main>
 
       {/* ── Bottom Nav (Mobile) ── */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-card/90 backdrop-blur-xl border-t border-border/50 flex items-center justify-around px-2 z-50 pb-safe">
-        {navItems.filter(item => ['/feed', '/search', '/readix', '/messages'].includes(item.href)).map((item) => {
+      {!(pathname.startsWith('/messages/') && pathname.split('/').length > 2) && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-card/90 backdrop-blur-xl border-t border-border/50 flex items-center justify-around px-2 z-50 pb-safe">
+          {navItems.filter(item => ['/feed', '/search', '/readix', '/messages'].includes(item.href)).map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link key={item.href} href={item.href} className="flex flex-col items-center justify-center w-16 h-full relative">
@@ -264,7 +265,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           </div>
           {pathname === '/profile' && <div className="w-1 h-1 rounded-full bg-primary mt-1" />}
         </Link>
-      </div>
+        </div>
+      )}
 
       {/* ── Email Verification Modal ── */}
       {isVerifyModalOpen && (

@@ -219,7 +219,7 @@ export default function ActiveChatPage() {
               className="w-12 h-12 rounded-full flex items-center justify-center p-0 flex-shrink-0"
               disabled={!inputText.trim() || sending}
             >
-              {sending ? <Loader2 size={20} className="animate-spin" /> : <Send size={18} className="-ml-1" />}
+              {sending ? <Loader2 size={20} className="animate-spin text-white" /> : <Send size={18} className="-ml-1 text-white" />}
             </Button>
           </form>
         </div>
