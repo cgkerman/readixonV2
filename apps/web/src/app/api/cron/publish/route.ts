@@ -73,7 +73,7 @@ export async function GET(request: Request) {
       const followerIds = followersQuery.docs.map(doc => doc.id);
 
       followerIds.forEach(followerId => {
-        const notificationRef = adminDb.collection('notifications').doc();
+        const notificationRef = adminDb.collection('users').doc(followerId).collection('notifications').doc();
         notificationsToCreate.push({
           ref: notificationRef,
           data: {
