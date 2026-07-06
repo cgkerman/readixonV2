@@ -72,6 +72,16 @@
   --color-border: #D1D6CC;
 }
 
+/* Tema 7: Yazar Moru (Indigo) */
+[data-theme="theme-7"] {
+  --color-background: #0F172A;
+  --color-card: #1E293B;
+  --color-text: #F8FAFC;
+  --color-primary: #6366F1;
+  --color-muted: #94A3B8;
+  --color-border: #334155;
+}
+
 body {
   color: var(--color-text);
   background-color: var(--color-background);
