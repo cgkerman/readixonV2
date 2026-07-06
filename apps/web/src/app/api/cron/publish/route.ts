@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
-import * as admin from 'firebase-admin';
-
+import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 export async function GET(request: Request) {
   // 1. Cron Secret Kontrolü (Güvenlik için sadece Vercel veya yetkili kişiler çağırabilir)
   const authHeader = request.headers.get('authorization');
@@ -10,7 +9,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const now = admin.firestore.Timestamp.now();
+    const now = Timestamp.now();
     
     // 2. Collection Group ile durumu 'scheduled' olan ve yayınlanma vakti gelmiş olan tüm chapter'ları bul
     const scheduledChaptersQuery = adminDb.collectionGroup('chapters')
@@ -73,7 +72,7 @@ export async function GET(request: Request) {
             entityId: storyId,
             entityTitle: storyData.title,
             isRead: false,
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
+            createdAt: FieldValue.serverTimestamp()
           }
         });
       });
