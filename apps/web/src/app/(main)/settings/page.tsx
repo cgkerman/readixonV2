@@ -14,7 +14,7 @@ const themes: { id: Theme; name: string; colors: string[] }[] = [
   { id: 'theme-4', name: 'Tema 4 (Pembe Altın)', colors: ['#FFF5F5', '#FFE4E6', '#E11D48', '#4C0519'] },
   { id: 'theme-5', name: 'Tema 5 (Gece Mavisi)', colors: ['#0A192F', '#112240', '#64FFDA', '#CCD6F6'] },
   { id: 'theme-6', name: 'Tema 6 (Adaçayı)', colors: ['#F4F5F0', '#E9EBE4', '#2D5A27', '#1E2920'] },
-  { id: 'theme-7', name: 'Tema 7 (Yazar Moru)', colors: ['#0F172A', '#1E293B', '#6366F1', '#F8FAFC'] },
+  { id: 'theme-7', name: 'Tema 7 (Yazar Moru)', colors: ['#FAFAFA', '#FFFFFF', '#6366F1', '#1E293B'] },
 ];
 
 export default function SettingsPage() {

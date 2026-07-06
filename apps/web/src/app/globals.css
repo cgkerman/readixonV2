@@ -74,12 +74,12 @@
 
 /* Tema 7: Yazar Moru (Indigo) */
 [data-theme="theme-7"] {
-  --color-background: #0F172A;
-  --color-card: #1E293B;
-  --color-text: #F8FAFC;
+  --color-background: #FAFAFA;
+  --color-card: #FFFFFF;
+  --color-text: #1E293B;
   --color-primary: #6366F1;
-  --color-muted: #94A3B8;
-  --color-border: #334155;
+  --color-muted: #64748B;
+  --color-border: #E2E8F0;
 }
 
 body {
