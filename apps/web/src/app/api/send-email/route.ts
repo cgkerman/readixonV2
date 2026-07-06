@@ -29,6 +29,7 @@ export async function POST(request: Request) {
     // E-postayı gönder
     const info = await transporter.sendMail({
       from: `"Readixon" <${process.env.SMTP_EMAIL}>`,
+      replyTo: process.env.SMTP_EMAIL, // noreply@readixon.com adresine yönlendir (cevapları kabul etmemek için)
       to,
       subject,
       html,

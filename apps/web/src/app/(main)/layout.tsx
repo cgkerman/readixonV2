@@ -89,13 +89,47 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             to: firebaseUser.email,
             subject: 'Readixon Yazar Stüdyosuna Hoş Geldiniz! 🎉',
             html: `
-              <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-                <h1 style="color: #6366f1;">Tebrikler, artık bir Readixon yazarısınız!</h1>
-                <p>Merhaba ${userProfile.displayName},</p>
-                <p>Yazar başvurunuz başarıyla onaylandı. Artık Yazar Stüdyosu üzerinden kendi hikayelerinizi yazmaya ve yayımlamaya başlayabilirsiniz.</p>
-                <p>Milyonlarca okurun hikayelerinizle buluşması için sabırsızlanıyoruz.</p>
-                <p>Sevgiler,<br>Readixon Ekibi</p>
-              </div>
+              <!DOCTYPE html>
+              <html>
+              <head>
+                <style>
+                  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f9fafb; margin: 0; padding: 0; }
+                  .container { max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+                  .header { background-color: #6366f1; padding: 40px 20px; text-align: center; }
+                  .header h1 { color: #ffffff; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+                  .content { padding: 40px 30px; color: #374151; line-height: 1.6; font-size: 16px; }
+                  .content h2 { color: #111827; font-size: 20px; margin-top: 0; }
+                  .button-container { text-align: center; margin: 35px 0; }
+                  .button { background-color: #6366f1; color: #ffffff !important; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block; }
+                  .footer { background-color: #f3f4f6; padding: 25px 30px; text-align: center; font-size: 13px; color: #6b7280; border-top: 1px solid #e5e7eb; }
+                  .footer a { color: #6366f1; text-decoration: none; }
+                </style>
+              </head>
+              <body>
+                <div class="container">
+                  <div class="header">
+                    <h1>readixon</h1>
+                  </div>
+                  <div class="content">
+                    <h2>Tebrikler ${userProfile.displayName}, artık resmi bir yazarımızsınız! 🎉</h2>
+                    <p>Yazar başvurunuz başarıyla onaylandı. Sizi aramızda görmekten inanılmaz heyecan duyuyoruz.</p>
+                    <p>Yüz binlerce kelimelik hikayeler, benzersiz karakterler ve sonsuz dünyalar yaratacağınız bu yolculukta kaleminiz her zaman güçlü olsun.</p>
+                    <p>Okurlarınızla buluşmaya hazırsanız, Yazar Stüdyosu sizi bekliyor.</p>
+                    
+                    <div class="button-container">
+                      <a href="https://www.readixon.com/studio" class="button">Stüdyo'ya Git ve Yazmaya Başla</a>
+                    </div>
+                    
+                    <p>Sevgilerimizle,<br><strong>Readixon Ekibi</strong></p>
+                  </div>
+                  <div class="footer">
+                    <p>Bu e-posta sistem tarafından otomatik olarak gönderilmiştir. Lütfen bu mesaja yanıt vermeyin.</p>
+                    <p>Herhangi bir sorunuz veya desteğe ihtiyacınız olursa bize her zaman <a href="mailto:support@readixon.com">support@readixon.com</a> adresinden ulaşabilirsiniz.</p>
+                    <p>&copy; ${new Date().getFullYear()} Readixon. Tüm hakları saklıdır.</p>
+                  </div>
+                </div>
+              </body>
+              </html>
             `,
           })
         });
