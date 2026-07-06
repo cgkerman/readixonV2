@@ -1,0 +1,22 @@
+# Mobil Navigasyon Güncellemesi 📱
+
+Mobilde yaşadığımız eksik menü ve logo sorununu çözmek için yepyeni bir arayüz bileşeni ekledik.
+
+## Neler Değişti?
+
+### 1. Üst Navigasyon Çubuğu (Top Bar)
+- Sadece mobil cihazlarda görünecek, aşağı kaydırdıkça sayfada sabit kalan (sticky) cam efektli bir üst bar eklendi.
+- Sol köşeye uygulamanın marka kimliğini vurgulamak için **"readixon"** logosu eklendi.
+- Sağ köşeye sizin de mantıklı bulduğunuz gibi bildirim zili ve bildirim sayısı eklendi. Hemen yanına ise Hamburger menü butonu konuldu.
+
+### 2. Yana Açılır Çekmece Menü (Slide-out Drawer)
+- Hamburger ikonuna tıklandığında sağdan pürüzsüz bir animasyonla açılan bir menü tasarlandı.
+- Kütüphane (`/library`) ve Ayarlar (`/settings`) gibi alt barda yeri olmayan seçenekler bu menüye alındı.
+- Yazar Ol / Studio'ya Git ve Çıkış Yap gibi önemli aksiyon butonları, dokunmatiğe uygun büyüklükte (büyük butonlar olarak) en alta eklendi.
+- Menünün üstünde kullanıcının güncel profil resmi ve kullanıcı adı yer alıyor.
+
+> [!TIP]
+> Sağdan kayarak açılan (Drawer) tasarımlar, başparmak erişimine çok uygun olduğu için modern mobil UX (Kullanıcı Deneyimi) standartlarında altın standart olarak kabul edilir.
+
+## Test Etme
+Lütfen projenizin mobil görünümünü açarak (veya tarayıcınızı daraltarak) sağ üstteki hamburger ikonuna tıklayıp yeni tasarımı deneyimleyin!

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from "sonner";
 import { useRouter } from 'next/navigation';
-import { Bell, Heart, MessageCircle, UserPlus, CheckCircle2, Circle, Loader2 } from 'lucide-react';
+import { Bell, Heart, MessageCircle, UserPlus, CheckCircle2, Circle, Loader2, BookOpen } from 'lucide-react';
 import { Typography, Button } from '@readixon/ui';
 import { 
   useAuthStore, 
@@ -110,6 +110,8 @@ export default function NotificationsPage() {
       case 'readix_comment':
       case 'readix_mention':
         return <div className="w-10 h-10 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center shrink-0"><MessageCircle size={20} /></div>;
+      case 'new_chapter':
+        return <div className="w-10 h-10 rounded-full bg-purple-500/20 text-purple-500 flex items-center justify-center shrink-0"><BookOpen size={20} /></div>;
       default:
         return <div className="w-10 h-10 rounded-full bg-muted/20 text-muted flex items-center justify-center shrink-0"><Bell size={20} /></div>;
     }
@@ -132,6 +134,8 @@ export default function NotificationsPage() {
         return <>{actor}, {entity} gönderine yanıt verdi.</>;
       case 'readix_mention':
         return <>{actor}, {entity} gönderisinde senden bahsetti.</>;
+      case 'new_chapter':
+        return <>{actor}, yeni bir bölüm yayınladı: {entity}</>;
       default:
         return <>Yeni bir bildiriminiz var.</>;
     }

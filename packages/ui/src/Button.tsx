@@ -11,7 +11,7 @@ export interface ButtonProps {
   size?: ButtonSize;
   disabled?: boolean;
   loading?: boolean;
-  onPress?: () => void;
+  onPress?: (e?: any) => void;
   type?: 'button' | 'submit' | 'reset';
   className?: string;
   testID?: string;

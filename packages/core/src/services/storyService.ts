@@ -272,6 +272,30 @@ export const updateChapter = async (storyId: string, chapterId: string, data: Pa
   }
 };
 
+/**
+ * Bölümü tamamen siler.
+ */
+export const deleteChapter = async (storyId: string, chapterId: string) => {
+  try {
+    const chapterRef = doc(db, 'stories', storyId, 'chapters', chapterId);
+    await deleteDoc(chapterRef);
+    
+    // Hikayedeki chapterCount değerini güncelle
+    const storyRef = doc(db, 'stories', storyId);
+    const storySnap = await getDoc(storyRef);
+    if (storySnap.exists()) {
+      const stats = storySnap.data().stats;
+      await updateDoc(storyRef, {
+        'stats.chapterCount': Math.max(0, (stats?.chapterCount || 0) - 1),
+        updatedAt: serverTimestamp()
+      });
+    }
+  } catch (error) {
+    console.error("Bölüm silinirken hata:", error);
+    throw error;
+  }
+};
+
 // ─────────────────────────────────────────────
 // BÖLÜM (CHAPTER) İŞLEMLERİ
 // ─────────────────────────────────────────────
@@ -287,7 +311,11 @@ export const getPublishedChapters = async (storyId: string): Promise<Chapter[]> 
     const snap = await getDocs(q);
     const chapters: Chapter[] = [];
     snap.forEach((docSnap) => {
-      chapters.push({ chapterId: docSnap.id, ...docSnap.data() } as Chapter);
+      const data = docSnap.data() as Chapter;
+      // Eski bölümlerde status alanı yoksa veya "published" veya "scheduled" ise listeye ekle
+      if (!data.status || data.status === 'published' || data.status === 'scheduled') {
+        chapters.push({ ...data, chapterId: docSnap.id });
+      }
     });
     
     // Client-side sıralama (önce order, yoksa publishDate veya oluşturma sırası)

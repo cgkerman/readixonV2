@@ -17,7 +17,7 @@ export default function ReadPage() {
   const storyId = params.storyId as string;
   const chapterId = params.chapterId as string;
 
-  const { firebaseUser } = useAuthStore();
+  const { firebaseUser, isInitialized } = useAuthStore();
   const [chapter, setChapter] = useState<Chapter | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +42,20 @@ export default function ReadPage() {
         fetchChapter(storyId, chapterId),
         getChapterComments(storyId, chapterId)
       ]);
+
+      if (chap && chap.status === 'scheduled' && chap.publishDate) {
+        const pubDate = chap.publishDate.toDate ? chap.publishDate.toDate() : new Date(chap.publishDate as any);
+        if (pubDate > new Date()) {
+          // Check if user is the author
+          const { getStoryById } = await import('@readixon/core');
+          const storyData = await getStoryById(storyId);
+          if (!firebaseUser || storyData?.authorId !== firebaseUser.uid) {
+            toast.error("Bu bölüm henüz yayınlanmadı.");
+            router.push(`/story/${storyId}`);
+            return;
+          }
+        }
+      }
       
       // View sayısını 1 artır (Arka planda çalışsın, beklemeye gerek yok)
       incrementChapterView(storyId, chapterId);
@@ -56,10 +70,10 @@ export default function ReadPage() {
       setComments(fetchedComments);
       setLoading(false);
     };
-    if (storyId && chapterId) {
+    if (storyId && chapterId && isInitialized) {
       loadData();
     }
-  }, [storyId, chapterId, firebaseUser]);
+  }, [storyId, chapterId, firebaseUser, isInitialized]);
 
   const handleToggleLike = async () => {
     if (!firebaseUser) {
@@ -86,18 +100,29 @@ export default function ReadPage() {
       });
       
       // Update story lists cache so feed/explore pages reflect total story likes
-      queryClient.setQueryData(['stories', 'recent'], (oldData: any) => {
+      const updateStoryLikes = (oldData: any) => {
         if (!oldData) return oldData;
-        return oldData.map((s: any) => 
-          s.storyId === storyId ? { ...s, stats: { ...s.stats, likes: (s.stats?.likes || 0) + likeDelta } } : s
-        );
-      });
-      queryClient.setQueryData(['stories', 'top'], (oldData: any) => {
-        if (!oldData) return oldData;
-        return oldData.map((s: any) => 
-          s.storyId === storyId ? { ...s, stats: { ...s.stats, likes: (s.stats?.likes || 0) + likeDelta } } : s
-        );
-      });
+        if (oldData.pages) {
+          return {
+            ...oldData,
+            pages: oldData.pages.map((page: any) => ({
+              ...page,
+              stories: page.stories ? page.stories.map((s: any) => 
+                s.storyId === storyId ? { ...s, stats: { ...s.stats, likes: (s.stats?.likes || 0) + likeDelta } } : s
+              ) : []
+            }))
+          };
+        }
+        if (Array.isArray(oldData)) {
+          return oldData.map((s: any) => 
+            s.storyId === storyId ? { ...s, stats: { ...s.stats, likes: (s.stats?.likes || 0) + likeDelta } } : s
+          );
+        }
+        return oldData;
+      };
+
+      queryClient.setQueryData(['stories', 'recent'], updateStoryLikes);
+      queryClient.setQueryData(['stories', 'top'], updateStoryLikes);
       
     } catch (err) {
       console.error("Beğeni işlemi başarısız:", err);

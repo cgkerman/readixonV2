@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Typography, Button, BlockEditor, Input } from '@readixon/ui';
-import { ArrowLeft, Save } from 'lucide-react';
-import { fetchChapter, updateChapter, type Chapter } from '@readixon/core';
+import { ArrowLeft, Save, PlusCircle, CheckCircle, FileText, Globe, Calendar, GripVertical, Trash2 } from 'lucide-react';
+import { fetchChapter, updateChapter, compressImage, fetchChapters, createChapter, deleteChapter, createNotification, getUserFollowerIds, getStoryById, useAuthStore, type Chapter } from '@readixon/core';
 import { uploadFile } from '@readixon/core/src/services/storageService';
 import { toast } from "sonner";
+import Link from 'next/link';
 
 export default function ChapterEditorPage() {
   const params = useParams();
@@ -14,27 +15,41 @@ export default function ChapterEditorPage() {
   const storyId = params.storyId as string;
   const chapterId = params.chapterId as string;
 
+  const { userProfile } = useAuthStore();
   const [chapter, setChapter] = useState<Chapter | null>(null);
+  const [allChapters, setAllChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  
+  const isInitialLoad = useRef(true);
+  const publishedRef = useRef(false);
 
   useEffect(() => {
-    loadChapter();
+    loadData();
   }, [storyId, chapterId]);
 
-  const loadChapter = async () => {
+  const loadData = async () => {
     setLoading(true);
     try {
-      const data = await fetchChapter(storyId, chapterId);
+      const [data, chaps] = await Promise.all([
+        fetchChapter(storyId, chapterId),
+        fetchChapters(storyId)
+      ]);
+      
+      setAllChapters(chaps || []);
+
       if (data) {
+        if (!data.status) data.status = 'draft';
+        if (data.status === 'published') publishedRef.current = true;
         setChapter(data);
       } else {
-        // Yeni bir bölüm ise mock state oluşturalım
         setChapter({
           chapterId,
           title: 'Yeni Bölüm',
-          order: 1,
+          order: chaps.length + 1,
           contentBlocks: [],
+          status: 'draft',
           publishDate: new Date().toISOString() as any
         });
       }
@@ -45,21 +60,136 @@ export default function ChapterEditorPage() {
     }
   };
 
-  const handleSave = async () => {
+  const getDatetimeLocal = (timestamp: any) => {
+    if (!timestamp) return '';
+    if (timestamp.toDate) {
+      const d = timestamp.toDate();
+      d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+      return d.toISOString().slice(0, 16);
+    }
+    if (typeof timestamp === 'string' || timestamp instanceof Date) {
+      const d = new Date(timestamp);
+      if (isNaN(d.getTime())) return '';
+      d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+      return d.toISOString().slice(0, 16);
+    }
+    return '';
+  };
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const dateStr = e.target.value;
+    if (!dateStr) return;
+    const date = new Date(dateStr);
+    setChapter(prev => prev ? { ...prev, publishDate: date as any } : null);
+  };
+
+  const handleSave = async (manual = false) => {
     if (!chapter) return;
-    setSaving(true);
+    
+    // Check if status changed from draft to published
+    const isPublishingNow = chapter.status === 'published';
+    const shouldNotify = !publishedRef.current && isPublishingNow;
+
+    if (shouldNotify) {
+      publishedRef.current = true;
+    }
+
+    if (manual) setSaving(true);
+    else setAutoSaveStatus('saving');
+    
     try {
       await updateChapter(storyId, chapterId, chapter);
-      toast.success('Bölüm başarıyla kaydedildi!');
+
+      if (shouldNotify && userProfile) {
+        const storyData = await getStoryById(storyId);
+        if (storyData) {
+          const followerIds = await getUserFollowerIds(userProfile.uid);
+          const notificationsPromises = followerIds.map(fId => 
+            createNotification({
+              userId: fId,
+              actorId: userProfile.uid,
+              actorName: userProfile.displayName || userProfile.username,
+              actorAvatar: userProfile.avatarUrl,
+              actorUsername: userProfile.username,
+              type: 'new_chapter',
+              entityId: storyId,
+              entityTitle: `${storyData.title}`
+            }).catch(e => console.error("Notification send error", e))
+          );
+          await Promise.all(notificationsPromises);
+          if (followerIds.length > 0) {
+            toast.success("Takipçilerinize yeni bölüm bildirimi gönderildi.");
+          }
+        }
+      }
+
+      if (manual) {
+        toast.success('Bölüm başarıyla kaydedildi!');
+      } else {
+        setAutoSaveStatus('saved');
+        setTimeout(() => setAutoSaveStatus('idle'), 2000);
+      }
+      
+      // Update local chapters list to reflect title changes instantly
+      setAllChapters(prev => prev.map(c => c.chapterId === chapterId ? { ...c, title: chapter.title, status: chapter.status } : c));
     } catch (error) {
-      toast.error('Kaydetme başarısız oldu.');
+      if (manual) toast.error('Kaydetme başarısız oldu.');
+      else setAutoSaveStatus('idle');
     } finally {
-      setSaving(false);
+      if (manual) setSaving(false);
+    }
+  };
+
+  // Auto-Save Effect
+  useEffect(() => {
+    if (isInitialLoad.current) {
+      if (!loading && chapter) {
+        isInitialLoad.current = false;
+      }
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      handleSave(false);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [chapter, loading]);
+
+  const handleCreateNewChapter = async () => {
+    try {
+      const newChapId = await createChapter(storyId, {
+        title: `Bölüm ${allChapters.length + 1}`,
+        order: allChapters.length + 1,
+        contentBlocks: [],
+        status: 'draft'
+      });
+      router.push(`/studio/story/${storyId}/chapter/${newChapId}`);
+    } catch (e) {
+      toast.error("Yeni bölüm oluşturulamadı.");
+    }
+  };
+
+  const handleDeleteChapter = async () => {
+    if (!window.confirm("Bu bölümü kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.")) return;
+    try {
+      await deleteChapter(storyId, chapterId);
+      toast.success("Bölüm başarıyla silindi.");
+      
+      const remainingChapters = allChapters.filter(c => c.chapterId !== chapterId);
+      if (remainingChapters.length > 0) {
+        router.push(`/studio/story/${storyId}/chapter/${remainingChapters[0].chapterId}`);
+      } else {
+        router.push(`/studio/story/${storyId}`);
+      }
+    } catch (e) {
+      toast.error("Bölüm silinemedi. Lütfen yetkilerinizi kontrol edin.");
     }
   };
 
   const handleUploadImage = async (file: File) => {
-    return await uploadFile(file, `stories/${storyId}/${chapterId}-${Date.now()}`);
+    const compressedFile = await compressImage(file, 1200, 1200, 0.85);
+    return await uploadFile(compressedFile, `stories/${storyId}/${chapterId}-${Date.now()}`);
   };
 
   if (loading || !chapter) {
@@ -67,37 +197,165 @@ export default function ChapterEditorPage() {
   }
 
   return (
-    <div className="p-8 max-w-4xl mx-auto w-full">
-      <div className="flex justify-between items-center mb-8">
-        <Button variant="ghost" onPress={() => router.back()} className="-ml-4">
-          <ArrowLeft className="mr-2" /> Geri Dön
+    <div className="flex flex-col lg:flex-row min-h-[calc(100vh-64px)] w-full bg-background">
+      
+      {/* ── Sidebar (Sol Sütun) ── */}
+      <aside className="w-full lg:w-80 flex-shrink-0 border-r border-border/50 bg-card/30 p-6 flex flex-col hidden lg:flex">
+        <Button variant="ghost" onPress={() => router.push(`/studio/story/${storyId}`)} className="mb-6 self-start -ml-2">
+          <ArrowLeft className="mr-2" size={18} /> Hikayeye Dön
         </Button>
-        <Button variant="primary" onPress={handleSave} disabled={saving}>
-          <Save size={18} className="mr-2" /> {saving ? 'Kaydediliyor...' : 'Kaydet'}
+        
+        <div className="flex items-center justify-between mb-6">
+          <Typography variant="h3" className="font-bold">Bölümler ({allChapters.length})</Typography>
+          <Button variant="ghost" className="p-2 text-primary" onPress={handleCreateNewChapter}>
+            <PlusCircle size={20} />
+          </Button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto pr-2 space-y-2">
+          {allChapters.sort((a,b) => a.order - b.order).map(c => {
+            const isActive = c.chapterId === chapterId;
+            return (
+              <Link key={c.chapterId} href={`/studio/story/${storyId}/chapter/${c.chapterId}`}>
+                <div className={`p-4 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${isActive ? 'bg-primary/10 border-primary shadow-sm' : 'bg-card border-border/40 hover:border-primary/50'}`}>
+                  <div className="flex flex-col gap-1 overflow-hidden">
+                    <Typography variant="body" className={`font-semibold truncate ${isActive ? 'text-primary' : 'text-text'}`}>
+                      {c.title || 'İsimsiz Bölüm'}
+                    </Typography>
+                    <div className="flex items-center gap-2">
+                      <Typography variant="caption" className="text-muted">Bölüm {c.order}</Typography>
+                      <span className="text-muted/30">•</span>
+                      <Typography variant="caption" className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-sm ${c.status === 'published' ? 'bg-green-500/10 text-green-500' : c.status === 'scheduled' ? 'bg-blue-500/10 text-blue-500' : 'bg-muted/20 text-muted'}`}>
+                        {c.status === 'published' ? 'YAYINDA' : c.status === 'scheduled' ? 'PLANLI' : 'TASLAK'}
+                      </Typography>
+                    </div>
+                  </div>
+                  <GripVertical size={16} className="text-muted/30" />
+                </div>
+              </Link>
+            )
+          })}
+        </div>
+      </aside>
+
+      {/* ── Mobil için Üst Bar (Sidebar yerine) ── */}
+      <div className="lg:hidden w-full p-4 border-b border-border/50 bg-card/30 flex items-center justify-between">
+         <Button variant="ghost" onPress={() => router.push(`/studio/story/${storyId}`)} className="-ml-2">
+          <ArrowLeft className="mr-2" size={18} /> Geri
+        </Button>
+        <Typography variant="body" className="font-bold truncate">{chapter.title || 'Bölüm Düzenle'}</Typography>
+        <Button variant="ghost" className="p-2 text-primary" onPress={handleCreateNewChapter}>
+            <PlusCircle size={20} />
         </Button>
       </div>
 
-      <div className="bg-card p-6 rounded-2xl border border-border/20 mb-8">
-        <Typography variant="caption" className="text-muted uppercase font-bold tracking-wider mb-2 block">
-          Bölüm Başlığı
-        </Typography>
-        <Input 
-          value={chapter.title} 
-          onChangeText={(title) => setChapter({ ...chapter, title })} 
-          placeholder="Örn: Bölüm 1 - Yeni Başlangıçlar"
-        />
-      </div>
+      {/* ── Main Content (Sağ Sütun) ── */}
+      <main className="flex-1 p-4 md:p-8 lg:p-12 overflow-y-auto">
+        <div className="max-w-4xl mx-auto w-full">
+          
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+            <div>
+              <Typography variant="h2" className="mb-2">Bölüm Düzenle</Typography>
+              <div className="flex items-center gap-4 h-6">
+                {autoSaveStatus === 'saving' && (
+                  <Typography variant="caption" className="text-muted flex items-center gap-1">
+                    <span className="w-3 h-3 border-2 border-muted border-t-primary rounded-full animate-spin" />
+                    Kaydediliyor...
+                  </Typography>
+                )}
+                {autoSaveStatus === 'saved' && (
+                  <Typography variant="caption" className="text-green-500 font-bold flex items-center gap-1 animate-in fade-in zoom-in duration-300">
+                    <CheckCircle size={14} /> Kaydedildi
+                  </Typography>
+                )}
+              </div>
+            </div>
 
-      <div className="mb-4">
-        <Typography variant="h3" className="mb-2">İçerik Editörü</Typography>
-        <Typography variant="caption" className="text-muted">Blokları ekleyip sürükleyerek sıralarını değiştirebilirsiniz.</Typography>
-      </div>
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Status Select UI */}
+              <div className="bg-card border border-border/40 rounded-full flex items-center p-1 shadow-sm">
+                <button 
+                  onClick={() => setChapter({ ...chapter, status: 'draft' })}
+                  className={`flex items-center gap-1.5 px-3 md:px-4 py-2 rounded-full text-xs font-bold transition-all ${chapter.status === 'draft' ? 'bg-muted text-background' : 'text-muted hover:bg-muted/10'}`}
+                >
+                  <FileText size={14} /> Taslak
+                </button>
+                <button 
+                  onClick={() => setChapter({ ...chapter, status: 'published' })}
+                  className={`flex items-center gap-1.5 px-3 md:px-4 py-2 rounded-full text-xs font-bold transition-all ${chapter.status === 'published' ? 'bg-green-500 text-white shadow-md' : 'text-muted hover:bg-muted/10'}`}
+                >
+                  <Globe size={14} /> Yayınla
+                </button>
+                <button 
+                  onClick={() => setChapter({ ...chapter, status: 'scheduled' })}
+                  className={`flex items-center gap-1.5 px-3 md:px-4 py-2 rounded-full text-xs font-bold transition-all ${chapter.status === 'scheduled' ? 'bg-blue-500 text-white shadow-md' : 'text-muted hover:bg-muted/10'}`}
+                >
+                  <Calendar size={14} /> Planlı
+                </button>
+              </div>
 
-      <BlockEditor 
-        initialBlocks={chapter.contentBlocks}
-        onChange={(blocks) => setChapter({ ...chapter, contentBlocks: blocks })}
-        onUploadImage={handleUploadImage}
-      />
+              <Button variant="ghost" onPress={handleDeleteChapter} className="rounded-full p-2 text-red-500 hover:bg-red-500/10 hover:text-red-600 transition-colors">
+                <Trash2 size={20} />
+              </Button>
+
+              <Button variant="primary" onPress={() => handleSave(true)} disabled={saving || autoSaveStatus === 'saving'} className="rounded-full px-6">
+                <Save size={16} className="mr-2 hidden md:inline-block" /> Kaydet
+              </Button>
+            </div>
+          </div>
+
+          {chapter.status === 'scheduled' && (
+            <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl flex flex-col md:flex-row md:items-center gap-4 mb-8 animate-in fade-in slide-in-from-top-2">
+              <div className="flex items-center gap-3 text-blue-500">
+                <Calendar size={24} />
+                <div>
+                  <Typography variant="body" className="font-bold">Yayınlanma Tarihi</Typography>
+                  <Typography variant="caption" className="opacity-80">Bu bölüm belirlediğiniz tarih ve saatte otomatik olarak yayınlanacaktır.</Typography>
+                </div>
+              </div>
+              <input 
+                type="datetime-local" 
+                className="bg-background border border-border/50 text-foreground text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 md:ml-auto outline-none transition-all"
+                value={getDatetimeLocal(chapter.publishDate)}
+                onChange={handleDateChange}
+              />
+            </div>
+          )}
+
+          <div className="bg-card p-4 md:p-8 rounded-2xl border border-border/20 shadow-sm mb-8">
+            <Typography variant="caption" className="text-muted uppercase font-bold tracking-wider mb-2 block">
+              Bölüm Başlığı
+            </Typography>
+            <Input 
+              value={chapter.title} 
+              onChangeText={(title) => setChapter({ ...chapter, title })} 
+              placeholder="Örn: Bölüm 1 - Yeni Başlangıçlar"
+              className="text-lg md:text-xl font-bold bg-transparent border-b-2 border-border/50 focus:border-primary rounded-none px-0 pb-2 shadow-none"
+            />
+          </div>
+
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <Typography variant="h3" className="mb-1 flex items-center gap-2">
+                <FileText className="text-primary" /> İçerik Editörü
+              </Typography>
+              <Typography variant="caption" className="text-muted">Blokları ekleyip sürükleyerek sıralarını değiştirebilirsiniz.</Typography>
+            </div>
+            <Typography variant="caption" className="text-primary bg-primary/10 px-3 py-1 rounded-full font-bold">
+              {chapter.contentBlocks.length} Blok
+            </Typography>
+          </div>
+
+          <div className="bg-background rounded-2xl border border-border/30 shadow-inner p-2 md:p-6 min-h-[500px]">
+            <BlockEditor 
+              initialBlocks={chapter.contentBlocks}
+              onChange={(blocks) => setChapter({ ...chapter, contentBlocks: blocks })}
+              onUploadImage={handleUploadImage}
+            />
+          </div>
+          
+        </div>
+      </main>
     </div>
   );
 }

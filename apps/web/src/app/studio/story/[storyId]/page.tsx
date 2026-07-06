@@ -3,12 +3,16 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Typography, Button, Input } from '@readixon/ui';
-import { ArrowLeft, PlusCircle, Save, GripVertical } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Save, GripVertical, CheckCircle } from 'lucide-react';
 import { 
   getStoryById, 
   updateStory, 
   createChapter, 
   fetchChapters,
+  updateChapter,
+  createNotification,
+  getUserFollowerIds,
+  useAuthStore,
   compressImage,
   type Story, 
   type Chapter, 
@@ -27,6 +31,8 @@ export default function StoryDetailAdminPage() {
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const isInitialLoad = React.useRef(true);
 
   // Form states
   const [title, setTitle] = useState('');
@@ -37,6 +43,8 @@ export default function StoryDetailAdminPage() {
   const [backCover, setBackCover] = useState('');
   const [contributors, setContributors] = useState<Contributor[]>([]);
 
+  const { userProfile } = useAuthStore();
+
   useEffect(() => {
     loadData();
   }, [storyId]);
@@ -44,10 +52,11 @@ export default function StoryDetailAdminPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const chaps = await fetchChapters(storyId);
+      const realStory = await getStoryById(storyId);
+      let chaps = await fetchChapters(storyId);
+      
       setChapters(chaps);
       
-      const realStory = await getStoryById(storyId);
       if (realStory) {
         setStory(realStory);
         setTitle(realStory.title || '');
@@ -97,6 +106,42 @@ export default function StoryDetailAdminPage() {
     }
   };
 
+  const handleAutoSave = async () => {
+    setAutoSaveStatus('saving');
+    try {
+      const validContributors = contributors.filter(c => c.name.trim().length > 0);
+      await updateStory(storyId, { 
+        title, 
+        summary, 
+        coverImage, 
+        status,
+        foreword,
+        backCover,
+        contributors: validContributors
+      });
+      setAutoSaveStatus('saved');
+      setTimeout(() => setAutoSaveStatus('idle'), 2000);
+    } catch (e) {
+      console.error(e);
+      setAutoSaveStatus('idle');
+    }
+  };
+
+  useEffect(() => {
+    if (isInitialLoad.current) {
+      if (!loading && story) {
+        isInitialLoad.current = false;
+      }
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      handleAutoSave();
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [title, summary, coverImage, status, foreword, backCover, contributors, loading, story]);
+
   const handleAddChapter = async () => {
     try {
       const newChapId = await createChapter(storyId, {
@@ -143,9 +188,22 @@ export default function StoryDetailAdminPage() {
           <Typography variant="h1">{title || 'İsimsiz Hikaye'}</Typography>
           <Typography variant="caption" className="text-muted mt-2">Hikaye detaylarını ve bölümleri buradan yönetebilirsiniz.</Typography>
         </div>
-        <Button variant="primary" onPress={handleSave} disabled={saving}>
-          <Save size={18} className="mr-2" /> {saving ? 'Kaydediliyor...' : 'Kaydet'}
-        </Button>
+        <div className="flex items-center gap-4">
+          {autoSaveStatus === 'saving' && (
+            <Typography variant="caption" className="text-muted flex items-center gap-1">
+              <span className="w-3 h-3 border-2 border-muted border-t-primary rounded-full animate-spin" />
+              Kaydediliyor...
+            </Typography>
+          )}
+          {autoSaveStatus === 'saved' && (
+            <Typography variant="caption" className="text-green-500 font-bold flex items-center gap-1 animate-in fade-in zoom-in duration-300">
+              <CheckCircle size={14} /> Kaydedildi
+            </Typography>
+          )}
+          <Button variant="primary" onPress={handleSave} disabled={saving || autoSaveStatus === 'saving'}>
+            <Save size={18} className="mr-2" /> Kaydet
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

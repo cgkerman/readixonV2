@@ -65,6 +65,7 @@ export {
   checkIsFollowing,
   searchUsers,
   getUserFollowingIds,
+  getUserFollowerIds,
   deleteUserAccount,
 } from './services/userService';
 

@@ -343,6 +343,22 @@ export async function getUserFollowingIds(userId: string): Promise<string[]> {
 }
 
 /**
+ * Kullanıcının takipçilerinin ID listesini döndürür.
+ */
+export async function getUserFollowerIds(userId: string): Promise<string[]> {
+  if (!userId) return [];
+  try {
+    const followersSnapshot = await getDocs(
+      collection(db, `${USERS_COLLECTION}/${userId}/followers`)
+    );
+    return followersSnapshot.docs.map(doc => doc.id);
+  } catch (error) {
+    console.error("Takipçileri çekerken hata:", error);
+    return [];
+  }
+}
+
+/**
  * Kullanıcı arama (displayName alanında prefix arama yapar).
  */
 export async function searchUsers(searchTerm: string): Promise<User[]> {

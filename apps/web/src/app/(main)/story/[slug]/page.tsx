@@ -21,9 +21,11 @@ import {
 import type { Story, User, Chapter, Review } from '@readixon/core';
 import { 
   BookOpen, Heart, Eye, List, Play, BookmarkPlus, BookmarkCheck, 
-  ArrowLeft, Loader2, Star, MessageSquare, Users, Award, PenTool, Hash
+  ArrowLeft, Loader2, Star, MessageSquare, Users, Award, PenTool, Hash,
+  Lock, Calendar, Bell
 } from 'lucide-react';
 import Link from 'next/link';
+import { toast } from "sonner";
 
 export default function StoryDetailPage() {
   const params = useParams();
@@ -54,6 +56,31 @@ export default function StoryDetailPage() {
   const [reviewText, setReviewText] = useState('');
   const [reviewRating, setReviewRating] = useState<number>(10);
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [reminders, setReminders] = useState<string[]>([]);
+
+  useEffect(() => {
+    // Load reminders from local storage
+    try {
+      const stored = localStorage.getItem('chapterReminders');
+      if (stored) setReminders(JSON.parse(stored));
+    } catch (e) {}
+  }, []);
+
+  const handleToggleReminder = (chapterId: string) => {
+    const isCurrentlyReminded = reminders.includes(chapterId);
+
+    setReminders(prev => {
+      const newReminders = prev.includes(chapterId) ? prev.filter(id => id !== chapterId) : [...prev, chapterId];
+      localStorage.setItem('chapterReminders', JSON.stringify(newReminders));
+      return newReminders;
+    });
+
+    if (!isCurrentlyReminded) {
+      toast.success("Bildirimler açıldı! Bölüm yayınlandığında haber vereceğiz.");
+    } else {
+      toast.info("Bu bölüm için bildirimler kapatıldı.");
+    }
+  };
 
   useEffect(() => {
     const fetchStoryData = async () => {
@@ -510,28 +537,72 @@ export default function StoryDetailPage() {
               
               <div className="space-y-2">
                 {chapters.length > 0 ? (
-                  chapters.map((chapter, index) => (
-                    <button
-                      key={chapter.chapterId}
-                      onClick={() => router.push(`/read/${storyId}?chapterId=${chapter.chapterId}`)}
-                      className="w-full text-left p-4 md:p-5 rounded-2xl hover:bg-primary/10 transition-colors group flex items-center gap-4 border border-transparent hover:border-primary/20"
-                    >
-                      <div className="w-10 h-10 rounded-full bg-text/5 group-hover:bg-primary/20 flex items-center justify-center text-muted group-hover:text-primary font-bold transition-colors">
-                        {index + 1}
-                      </div>
-                      <div className="flex-1">
-                        <span className="text-text/90 group-hover:text-primary font-bold text-lg block mb-1">
-                          {chapter.title}
-                        </span>
-                        <div className="text-muted/60 text-sm flex items-center gap-4 mt-1">
-                          <span className="flex items-center gap-1.5"><Eye size={14}/> {chapter.stats?.views || 0}</span>
-                          <span className="flex items-center gap-1.5"><Heart size={14} className={chapter.stats?.likes ? "text-red-400/70" : ""} /> {chapter.stats?.likes || 0}</span>
-                          <span className="flex items-center gap-1.5"><MessageSquare size={14}/> {chapter.stats?.commentCount || 0}</span>
+                  chapters.map((chapter, index) => {
+                    let isScheduled = false;
+                    let publishDateObj = null;
+                    if (chapter.status === 'scheduled' && chapter.publishDate) {
+                      publishDateObj = chapter.publishDate.toDate ? chapter.publishDate.toDate() : new Date(chapter.publishDate as any);
+                      if (publishDateObj > new Date()) {
+                        isScheduled = true;
+                      }
+                    }
+
+                    return (
+                      <div
+                        key={chapter.chapterId}
+                        className={`w-full text-left p-4 md:p-5 rounded-2xl transition-colors group flex flex-col md:flex-row md:items-center gap-4 border ${isScheduled ? 'bg-background/50 border-white/5 opacity-80 cursor-default' : 'hover:bg-primary/10 border-transparent hover:border-primary/20 cursor-pointer'}`}
+                        onClick={() => {
+                          if (!isScheduled) router.push(`/read/${storyId}?chapterId=${chapter.chapterId}`);
+                        }}
+                      >
+                        <div className="flex items-center gap-4 flex-1 w-full">
+                          <div className={`w-10 h-10 min-w-[40px] rounded-full flex items-center justify-center font-bold transition-colors ${isScheduled ? 'bg-text/5 text-muted' : 'bg-text/5 group-hover:bg-primary/20 text-muted group-hover:text-primary'}`}>
+                            {isScheduled ? <Lock size={16} /> : index + 1}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <span className={`font-bold text-lg block mb-1 truncate ${isScheduled ? 'text-text/70' : 'text-text/90 group-hover:text-primary'}`}>
+                              {chapter.title}
+                            </span>
+                            <div className="text-muted/60 text-sm flex items-center gap-4 mt-1">
+                              {!isScheduled ? (
+                                <>
+                                  <span className="flex items-center gap-1.5"><Eye size={14}/> {chapter.stats?.views || 0}</span>
+                                  <span className="flex items-center gap-1.5"><Heart size={14} className={chapter.stats?.likes ? "text-red-400/70" : ""} /> {chapter.stats?.likes || 0}</span>
+                                  <span className="flex items-center gap-1.5"><MessageSquare size={14}/> {chapter.stats?.commentCount || 0}</span>
+                                </>
+                              ) : (
+                                <span className="text-blue-400/80 font-medium flex items-center gap-1.5">
+                                  <Calendar size={14} /> Planlı
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {!isScheduled ? (
+                            <Play size={20} className="text-muted/30 group-hover:text-primary transition-colors hidden md:block" />
+                          ) : null}
                         </div>
+                        
+                        {isScheduled && publishDateObj && (
+                          <div className="flex flex-col md:items-end w-full md:w-auto mt-3 md:mt-0 pt-3 md:pt-0 border-t border-white/5 md:border-0">
+                            <Typography variant="caption" className="text-muted text-xs mb-2 md:mb-1">
+                              {publishDateObj.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })} yayında
+                            </Typography>
+                            <Button 
+                              variant="outline" 
+                              className="w-full md:w-auto text-xs py-1 h-8 rounded-full border-blue-500/30 text-blue-400 hover:bg-blue-500/10 flex items-center justify-center gap-1.5"
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                handleToggleReminder(chapter.chapterId);
+                              }}
+                            >
+                              <Bell size={12} /> Bildirimleri Aç
+                            </Button>
+                          </div>
+                        )}
                       </div>
-                      <Play size={20} className="text-muted/30 group-hover:text-primary transition-colors" />
-                    </button>
-                  ))
+                    );
+                  })
                 ) : (
                   <div className="py-12 text-center">
                     <BookOpen size={48} className="mx-auto text-muted/20 mb-4" />

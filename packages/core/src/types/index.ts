@@ -104,6 +104,7 @@ export interface Chapter {
   order: number;
   contentBlocks: ContentBlock[];
   publishDate: Timestamp;
+  status?: 'draft' | 'published' | 'scheduled';
   stats?: ChapterStats;
 }
 
@@ -200,7 +201,8 @@ export type NotificationType =
   | 'story_comment' 
   | 'readix_like' 
   | 'readix_comment' 
-  | 'readix_mention';
+  | 'readix_mention'
+  | 'new_chapter';
 
 export interface AppNotification {
   id: string;

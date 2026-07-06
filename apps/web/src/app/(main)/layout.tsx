@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { BookOpen, Compass, Search, User, LogOut, PenTool, Hash, Settings, Bell, MessageCircle } from 'lucide-react';
+import { BookOpen, Compass, Search, User, LogOut, PenTool, Hash, Settings, Bell, MessageCircle, Menu, X } from 'lucide-react';
 import { Typography, Button } from '@readixon/ui';
 import { useAuthStore, signOut, becomeAuthor, sendVerificationEmail, subscribeToChats } from '@readixon/core';
 import { toast } from "sonner";
@@ -13,6 +13,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const router = useRouter();
   const { firebaseUser, userProfile, setUserProfile, unreadNotificationCount } = useAuthStore();
   const [unreadMessageCount, setUnreadMessageCount] = React.useState(0);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   React.useEffect(() => {
     if (!firebaseUser) return;
@@ -232,6 +233,25 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       {/* ── Main Content ── */}
       <main className="flex-1 flex flex-col overflow-y-auto relative">
         <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none -z-10" />
+        
+        {/* ── Mobile Top Header ── */}
+        <div className="md:hidden sticky top-0 z-40 flex items-center justify-between p-4 bg-background/80 backdrop-blur-md border-b border-border/50 shrink-0">
+          <Typography variant="h3" className="font-bold text-primary tracking-tighter">readixon</Typography>
+          <div className="flex items-center gap-5">
+            <Link href="/notifications" className="relative">
+              <Bell size={24} className={pathname === '/notifications' ? 'text-primary' : 'text-muted'} />
+              {unreadNotificationCount > 0 && (
+                <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full absolute -top-1 -right-1 border-2 border-background">
+                  {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                </span>
+              )}
+            </Link>
+            <button onClick={() => setIsMobileMenuOpen(true)} className="text-muted hover:text-text transition-colors">
+              <Menu size={28} />
+            </button>
+          </div>
+        </div>
+
         {children}
       </main>
 
@@ -319,6 +339,74 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 </Typography>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Mobile Slide-out Drawer ── */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-[100] flex justify-end">
+          <div className="absolute inset-0 bg-background/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsMobileMenuOpen(false)} />
+          <div className="relative w-[80%] max-w-sm h-[100dvh] bg-card shadow-2xl flex flex-col border-l border-border/50 animate-in slide-in-from-right duration-300">
+            <div className="flex items-center justify-between p-4 border-b border-border/50 shrink-0">
+              <Typography variant="h3" className="font-bold text-primary tracking-tighter">readixon</Typography>
+              <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-muted/10 rounded-full text-muted hover:text-text transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2 pb-safe">
+              <Link href="/profile" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20 mb-4 shrink-0">
+                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden border border-transparent">
+                  {userProfile?.avatarUrl ? (
+                    <img src={userProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-xl font-bold text-primary uppercase">
+                      {userProfile?.displayName?.charAt(0) || 'U'}
+                    </span>
+                  )}
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <Typography variant="body" className="font-bold truncate text-text">
+                    {userProfile?.displayName || 'Yükleniyor...'}
+                  </Typography>
+                  <Typography variant="caption" className="text-muted truncate block mt-0.5">
+                    {userProfile?.username ? `@${userProfile.username}` : `@${userProfile?.uid?.substring(0,6)}`}
+                  </Typography>
+                </div>
+              </Link>
+              
+              {navItems.filter(item => ['/library', '/settings'].includes(item.href)).map((item) => (
+                <Link 
+                  key={item.href} 
+                  href={item.href}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`flex items-center gap-4 px-4 py-4 rounded-xl transition-colors shrink-0 ${
+                    pathname === item.href ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-muted/10 hover:text-text'
+                  }`}
+                >
+                  <item.icon size={22} />
+                  <Typography variant="body" className="font-medium text-lg flex-1">{item.name}</Typography>
+                </Link>
+              ))}
+
+              <div className="mt-8 mb-4 shrink-0">
+                <div className="h-px w-full bg-border/50 mb-4" />
+                {userProfile?.isAuthor ? (
+                  <Link href="/studio" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button variant="outline" className="w-full justify-start border-primary/20 text-primary hover:bg-primary/10 py-6">
+                      <PenTool size={20} className="mr-3" /> <span className="text-lg">Studio'ya Git</span>
+                    </Button>
+                  </Link>
+                ) : (
+                  <Button variant="outline" className="w-full justify-start border-primary/20 text-primary hover:bg-primary/10 py-6" onPress={() => { setIsMobileMenuOpen(false); handleBecomeAuthor(); }}>
+                    <PenTool size={20} className="mr-3" /> <span className="text-lg">Yazar Ol</span>
+                  </Button>
+                )}
+              </div>
+              <Button variant="ghost" className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-950/30 py-6 shrink-0" onPress={() => { setIsMobileMenuOpen(false); handleSignOut(); }}>
+                <LogOut size={20} className="mr-3" /> <span className="text-lg">Çıkış Yap</span>
+              </Button>
+            </div>
           </div>
         </div>
       )}

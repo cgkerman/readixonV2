@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Typography, StoryCard, Button } from '@readixon/ui';
 import { getRecentStoriesPaginated, getTopStoriesPaginated, getFeaturedAuthors, getRecommendedStories, getCompletedStories, getMostLikedStories, POPULAR_TAGS, generateStorySlug, toggleStoryLike, followUser, unfollowUser, useAuthStore, type Story, type User } from '@readixon/core';
@@ -64,8 +64,82 @@ export default function FeedPage() {
 
   const isLoading = recentLoading || topLoading || authorsLoading || recLoading || compLoading || likedLoading;
 
-  // Öne Çıkan Hikaye (Hero) - Şimdilik en popüler ilk hikayeyi alıyoruz
-  const heroStory = topStories.length > 0 ? topStories[0] : null;
+  // Öne Çıkan Slaytlar (Carousel Verisi)
+  const slides = useMemo(() => {
+    const arr: any[] = [];
+    if (topStories.length > 0) {
+      arr.push({
+        id: `slide-top-${topStories[0].storyId}`,
+        type: 'story',
+        badge: 'Günün Öne Çıkanı',
+        badgeIcon: Sparkles,
+        title: topStories[0].title,
+        summary: topStories[0].summary,
+        image: topStories[0].coverImage,
+        primaryLabel: 'Hemen Oku',
+        primaryAction: () => router.push(`/read/${topStories[0].storyId}`),
+        secondaryLabel: 'Detaylar',
+        secondaryAction: () => router.push(`/story/${generateStorySlug(topStories[0].title, topStories[0].storyId)}`)
+      });
+    }
+    if (mostLikedStories.length > 0 && mostLikedStories[0].storyId !== topStories[0]?.storyId) {
+      arr.push({
+        id: `slide-liked-${mostLikedStories[0].storyId}`,
+        type: 'story',
+        badge: 'En Çok Beğenilen',
+        badgeIcon: Heart,
+        title: mostLikedStories[0].title,
+        summary: mostLikedStories[0].summary,
+        image: mostLikedStories[0].coverImage,
+        primaryLabel: 'Hemen Oku',
+        primaryAction: () => router.push(`/read/${mostLikedStories[0].storyId}`),
+        secondaryLabel: 'Detaylar',
+        secondaryAction: () => router.push(`/story/${generateStorySlug(mostLikedStories[0].title, mostLikedStories[0].storyId)}`)
+      });
+    }
+    if (topStories.length > 1) {
+      arr.push({
+        id: `slide-week-${topStories[1].storyId}`,
+        type: 'story',
+        badge: 'Haftanın En İyisi',
+        badgeIcon: Flame,
+        title: topStories[1].title,
+        summary: topStories[1].summary,
+        image: topStories[1].coverImage,
+        primaryLabel: 'Hemen Oku',
+        primaryAction: () => router.push(`/read/${topStories[1].storyId}`),
+        secondaryLabel: 'Detaylar',
+        secondaryAction: () => router.push(`/story/${generateStorySlug(topStories[1].title, topStories[1].storyId)}`)
+      });
+    }
+    if (featuredAuthors.length > 0) {
+      const author = featuredAuthors[0];
+      arr.push({
+        id: `slide-author-${author.uid}`,
+        type: 'author',
+        badge: 'En Sevilen Yazar',
+        badgeIcon: Users,
+        title: author.displayName || 'Bilinmeyen Yazar',
+        summary: author.bio || 'Muhteşem hikayeleriyle platformda fırtınalar estiriyor. Yazarın tüm eserlerini keşfetmek için profiline göz atın!',
+        image: author.avatarUrl,
+        primaryLabel: 'Profile Git',
+        primaryAction: () => router.push(`/profile/@${author.username || author.uid}`)
+      });
+    }
+    return arr;
+  }, [topStories, mostLikedStories, featuredAuthors, router]);
+
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+
+  useEffect(() => {
+    if (slides.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentSlideIndex((prev) => (prev + 1) % slides.length);
+    }, 5000); // 5 saniyede bir dön
+    return () => clearInterval(interval);
+  }, [slides.length]);
+
+  const activeSlide = slides[currentSlideIndex] || null;
 
   const handleLikePress = async (e: React.MouseEvent, storyId: string) => {
     e.stopPropagation();
@@ -146,12 +220,17 @@ export default function FeedPage() {
   return (
     <div className="flex flex-col w-full pb-24 md:pb-10 bg-background overflow-x-hidden">
       
-      {/* ── 1. Hero Banner ── */}
-      <div className="relative w-full min-h-[60vh] md:min-h-[70vh] flex flex-col justify-center mb-12">
+      {/* ── 1. Hero Banner (Carousel) ── */}
+      <div className="relative w-full min-h-[65vh] md:min-h-[70vh] flex flex-col justify-center mb-16 overflow-hidden">
         {/* Bulanık Arka Plan Görseli */}
-        {heroStory?.coverImage ? (
+        {activeSlide?.image ? (
           <div className="absolute inset-0 z-0 overflow-hidden">
-            <img src={heroStory.coverImage} alt="Background" className="w-full h-full object-cover opacity-20 blur-3xl scale-125" />
+            <img 
+              key={`bg-${activeSlide.id}`}
+              src={activeSlide.image} 
+              alt="Background" 
+              className="w-full h-full object-cover opacity-20 blur-3xl scale-125 animate-in fade-in duration-1000" 
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
             <div className="absolute inset-0 bg-gradient-to-r from-background via-background/60 to-transparent" />
           </div>
@@ -160,55 +239,84 @@ export default function FeedPage() {
         )}
 
         {/* Hero İçerik (Kapak Resmi + Metinler) */}
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 md:px-16 py-12 flex flex-col md:flex-row items-center gap-10 md:gap-16">
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 md:px-16 pt-16 pb-24 md:py-24 flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16">
           
           {/* Sol/Üst Kısım: Net Kapak Resmi */}
-          <div className="w-48 md:w-72 flex-shrink-0 aspect-[2/3] rounded-xl overflow-hidden shadow-2xl shadow-black/50 border border-white/10 animate-fade-in-up">
-            {heroStory?.coverImage ? (
-              <img src={heroStory.coverImage} alt={heroStory.title} className="w-full h-full object-cover" />
+          <div 
+            key={`img-${activeSlide?.id}`}
+            className={`flex-shrink-0 shadow-2xl shadow-black/50 border border-white/10 animate-in fade-in slide-in-from-bottom-4 duration-700 ${
+              activeSlide?.type === 'author' 
+                ? 'w-40 h-40 md:w-64 md:h-64 rounded-full object-cover' 
+                : 'w-40 md:w-72 aspect-[2/3] rounded-xl'
+            } overflow-hidden`}
+          >
+            {activeSlide?.image ? (
+              <img src={activeSlide.image} alt={activeSlide.title} className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full bg-muted/20 flex items-center justify-center">
-                <Typography variant="body" className="text-muted/50">Kapak Yok</Typography>
+                <Typography variant="body" className="text-muted/50">Görsel Yok</Typography>
               </div>
             )}
           </div>
 
           {/* Sağ/Alt Kısım: Metinler ve Butonlar */}
-          <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+          <div key={`content-${activeSlide?.id}`} className="flex-1 flex flex-col items-center md:items-start text-center md:text-left animate-in fade-in slide-in-from-bottom-8 duration-700" style={{ animationDelay: '100ms' }}>
             <div className="flex items-center gap-2 mb-4">
-              <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-1 border border-primary/30 shadow-lg">
-                <Sparkles size={12} />
-                Günün Öne Çıkanı
-              </span>
+              {activeSlide?.badge && (
+                <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-1.5 border border-primary/30 shadow-lg">
+                  {activeSlide.badgeIcon && <activeSlide.badgeIcon size={14} />}
+                  {activeSlide.badge}
+                </span>
+              )}
             </div>
             
             <Typography variant="h1" className="text-3xl md:text-5xl lg:text-6xl font-black text-text mb-4 leading-tight drop-shadow-2xl">
-              {heroStory?.title || "Okunmaya Değer Başyapıtlar"}
+              {activeSlide?.title || "Okunmaya Değer Başyapıtlar"}
             </Typography>
             
-            <Typography variant="body" className="text-base md:text-lg lg:text-xl text-text/80 mb-8 line-clamp-4 drop-shadow-md max-w-2xl">
-              {heroStory?.summary || "Farklı dünyalara yelken açmak ve yeni serüvenlere atılmak için binlerce hikaye arasından sizin için seçtiklerimizi keşfedin."}
+            <Typography variant="body" className="text-sm md:text-lg lg:text-xl text-text/80 mb-8 line-clamp-4 drop-shadow-md max-w-2xl">
+              {activeSlide?.summary || "Farklı dünyalara yelken açmak ve yeni serüvenlere atılmak için binlerce hikaye arasından sizin için seçtiklerimizi keşfedin."}
             </Typography>
 
-            <div className="flex flex-wrap justify-center md:justify-start gap-4">
-              <Button 
-                variant="primary" 
-                className="rounded-full px-8 py-4 md:py-6 text-base md:text-lg shadow-primary/30 shadow-lg font-bold flex items-center gap-2"
-                onPress={() => heroStory && router.push(`/read/${heroStory.storyId}`)}
-              >
-                <Play size={20} className="fill-current" />
-                Hemen Oku
-              </Button>
-              <Button 
-                variant="secondary" 
-                className="rounded-full px-8 py-4 md:py-6 text-base md:text-lg font-semibold bg-text/5 hover:bg-text/10 text-text border border-text/20 backdrop-blur-md transition-colors"
-                onPress={() => heroStory && router.push(`/story/${generateStorySlug(heroStory.title, heroStory.storyId)}`)}
-              >
-                Detaylar
-              </Button>
+            <div className="flex flex-row flex-wrap justify-center md:justify-start gap-3 md:gap-4 w-full">
+              {activeSlide?.primaryLabel && (
+                <Button 
+                  variant="primary" 
+                  className="rounded-full flex-1 md:flex-none min-w-[140px] px-6 py-3.5 md:py-6 text-sm md:text-lg shadow-primary/30 shadow-lg font-bold flex items-center justify-center gap-2"
+                  onPress={activeSlide.primaryAction}
+                >
+                  {activeSlide.type === 'story' && <Play size={20} className="fill-current" />}
+                  {activeSlide.primaryLabel}
+                </Button>
+              )}
+              {activeSlide?.secondaryLabel && (
+                <Button 
+                  variant="secondary" 
+                  className="rounded-full flex-1 md:flex-none min-w-[140px] px-6 py-3.5 md:py-6 text-sm md:text-lg font-semibold bg-text/5 hover:bg-text/10 text-text border border-text/20 backdrop-blur-md transition-colors"
+                  onPress={activeSlide.secondaryAction}
+                >
+                  {activeSlide.secondaryLabel}
+                </Button>
+              )}
             </div>
           </div>
         </div>
+        
+        {/* Carousel Indicators (Dots) */}
+        {slides.length > 1 && (
+          <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2 z-20">
+            {slides.map((_, idx) => (
+              <button 
+                key={idx}
+                onClick={() => setCurrentSlideIndex(idx)}
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  currentSlideIndex === idx ? 'w-8 bg-primary' : 'w-2 bg-white/30 hover:bg-white/50'
+                }`}
+                aria-label={`Slayt ${idx + 1}`}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {isLoading && (
