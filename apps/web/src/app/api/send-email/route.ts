@@ -41,7 +41,16 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Mail gönderme hatası:', error);
     return NextResponse.json(
-      { error: 'Mail gönderilirken sunucu hatası oluştu.', details: error instanceof Error ? error.message : String(error) },
+      { 
+        error: 'Mail gönderilirken sunucu hatası oluştu.', 
+        details: error instanceof Error ? error.message : String(error),
+        debug: {
+          hasEmail: !!process.env.SMTP_EMAIL,
+          hasPassword: !!process.env.SMTP_PASSWORD,
+          emailValue: process.env.SMTP_EMAIL ? "Mevcut" : "Yok",
+          passLength: process.env.SMTP_PASSWORD ? process.env.SMTP_PASSWORD.length : 0
+        }
+      },
       { status: 500 }
     );
   }
