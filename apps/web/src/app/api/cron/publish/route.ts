@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   // 1. Cron Secret Kontrolü (Güvenlik için sadece Vercel veya yetkili kişiler çağırabilir)
   const authHeader = request.headers.get('authorization');
