@@ -25,6 +25,7 @@ import {
   type Unsubscribe,
   type UserCredential,
 } from 'firebase/auth';
+import { serverTimestamp } from 'firebase/firestore';
 
 import { auth } from '../firebase';
 import { createUserProfile } from '../services/userService';
@@ -78,6 +79,8 @@ export async function signUpWithEmail(
     username,
     displayName,
     avatarUrl: user.photoURL ?? '',
+    termsAcceptedAt: serverTimestamp() as any,
+    privacyAcceptedAt: serverTimestamp() as any,
   });
 
   return { user, isNewUser: true };

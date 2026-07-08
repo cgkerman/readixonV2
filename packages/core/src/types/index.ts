@@ -28,11 +28,13 @@ export interface User {
   stats: UserStats;
   createdAt: Timestamp;
   isAuthor?: boolean;
+  termsAcceptedAt?: Timestamp; // Yasal onay timestamp
+  privacyAcceptedAt?: Timestamp; // Gizlilik onay timestamp
 }
 
 /** Yeni kullanıcı oluşturulurken kullanılan kısmi tip */
 export type CreateUserInput = Pick<User, 'uid' | 'displayName'> &
-  Partial<Pick<User, 'username' | 'avatarUrl' | 'bio' | 'preferredGenres'>>;
+  Partial<Pick<User, 'username' | 'avatarUrl' | 'bio' | 'preferredGenres' | 'termsAcceptedAt' | 'privacyAcceptedAt'>>;
 
 // ─────────────────────────────────────────────
 // 3.2. Hikayeler (/stories)

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Typography, Input, Button } from '@readixon/ui';
 import { useAuthStore, getUserByUsername, updateUserProfile, getUserProfile, uploadFile, compressImage } from '@readixon/core';
 import { UserPlus, Upload, Image as ImageIcon } from 'lucide-react';
+import { serverTimestamp } from 'firebase/firestore';
 
 export default function UsernameSetupModal() {
   const { firebaseUser, userProfile, setUserProfile } = useAuthStore();
@@ -13,6 +14,10 @@ export default function UsernameSetupModal() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // Yasal onay state'leri
+  const [isTermsAccepted, setIsTermsAccepted] = useState(false);
+  const [isPrivacyAccepted, setIsPrivacyAccepted] = useState(false);
 
   // If user profile is fully loaded and has a username, do not render
   if (!firebaseUser || !userProfile || userProfile.username) return null;
@@ -20,6 +25,11 @@ export default function UsernameSetupModal() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!isTermsAccepted || !isPrivacyAccepted) {
+      setError("Lütfen devam etmeden önce yasal metinleri onaylayın.");
+      return;
+    }
+
     const cleanUsername = username.trim().toLowerCase();
     
     if (!cleanUsername) {
@@ -55,7 +65,12 @@ export default function UsernameSetupModal() {
         avatarUrl = await uploadFile(compressedFile, path);
       }
       
-      await updateUserProfile(firebaseUser.uid, { username: cleanUsername, ...(avatarUrl ? { avatarUrl } : {}) });
+      await updateUserProfile(firebaseUser.uid, { 
+        username: cleanUsername, 
+        ...(avatarUrl ? { avatarUrl } : {}),
+        termsAcceptedAt: serverTimestamp() as any,
+        privacyAcceptedAt: serverTimestamp() as any
+      });
 
       // Store'u güncelle
       const updatedProfile = await getUserProfile(firebaseUser.uid);
@@ -129,8 +144,38 @@ export default function UsernameSetupModal() {
             />
           </div>
 
+          <div className="space-y-3 mt-6 mb-2">
+            <label className="flex items-start gap-3 cursor-pointer group">
+              <div className="mt-0.5">
+                <input 
+                  type="checkbox" 
+                  className="w-4 h-4 rounded border-border bg-background text-primary focus:ring-primary/50 cursor-pointer accent-primary" 
+                  checked={isTermsAccepted}
+                  onChange={(e) => { setIsTermsAccepted(e.target.checked); setError(''); }}
+                />
+              </div>
+              <span className="text-xs text-muted leading-relaxed select-none">
+                <a href="/terms" target="_blank" className="font-bold text-text hover:text-primary transition-colors">Kullanım Koşulları</a>, <a href="/copyright" target="_blank" className="font-bold text-text hover:text-primary transition-colors">Telif Hakkı Politikası</a> ve <a href="/guidelines" target="_blank" className="font-bold text-text hover:text-primary transition-colors">Topluluk Kuralları</a>'nı okudum, kabul ediyorum. <span className="text-red-500">*</span>
+              </span>
+            </label>
+
+            <label className="flex items-start gap-3 cursor-pointer group">
+              <div className="mt-0.5">
+                <input 
+                  type="checkbox" 
+                  className="w-4 h-4 rounded border-border bg-background text-primary focus:ring-primary/50 cursor-pointer accent-primary" 
+                  checked={isPrivacyAccepted}
+                  onChange={(e) => { setIsPrivacyAccepted(e.target.checked); setError(''); }}
+                />
+              </div>
+              <span className="text-xs text-muted leading-relaxed select-none">
+                Kişisel verilerimin işlenmesine ilişkin <a href="/privacy" target="_blank" className="font-bold text-text hover:text-primary transition-colors">Gizlilik Politikası ve KVKK Aydınlatma Metni</a>'ni onaylıyorum. <span className="text-red-500">*</span>
+              </span>
+            </label>
+          </div>
+
           {error && (
-            <div className="p-3 rounded-lg bg-red-950/50 border border-red-900/50 text-red-200 text-sm">
+            <div className="p-3 rounded-lg bg-red-950/50 border border-red-900/50 text-red-200 text-sm mt-4">
               {error}
             </div>
           )}
@@ -138,7 +183,7 @@ export default function UsernameSetupModal() {
           <Button 
             type="submit" 
             variant="primary" 
-            className="w-full mt-4" 
+            className="w-full mt-6" 
             loading={loading}
             disabled={loading}
           >

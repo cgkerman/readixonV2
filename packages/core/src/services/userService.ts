@@ -84,6 +84,8 @@ export async function createUserProfile(input: CreateUserInput): Promise<void> {
     },
     createdAt: serverTimestamp(),
     isAuthor: false,
+    ...(input.termsAcceptedAt ? { termsAcceptedAt: input.termsAcceptedAt } : {}),
+    ...(input.privacyAcceptedAt ? { privacyAcceptedAt: input.privacyAcceptedAt } : {}),
   };
 
   await setDoc(userRef, newUser);
@@ -126,7 +128,7 @@ export async function getUserProfile(uid: string): Promise<User | null> {
  */
 export async function updateUserProfile(
   uid: string,
-  data: Partial<Pick<User, 'username' | 'displayName' | 'avatarUrl' | 'bio' | 'preferredGenres'>>,
+  data: Partial<Pick<User, 'username' | 'displayName' | 'avatarUrl' | 'bio' | 'preferredGenres' | 'termsAcceptedAt' | 'privacyAcceptedAt'>>,
 ): Promise<void> {
   const userRef = doc(db, USERS_COLLECTION, uid);
   await updateDoc(userRef, data);
