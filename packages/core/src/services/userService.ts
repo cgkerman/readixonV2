@@ -424,41 +424,32 @@ export async function searchUsers(searchTerm: string): Promise<User[]> {
 
 /**
  * Kullanıcının hesabını ve ilişkili tüm verilerini (kitaplar, bölümler, readixler, yorumlar) siler.
+ * Bu işlem güvenlik kurallarını (Firestore Security Rules) aşmak için Server-Side (API) üzerinden yapılır.
  */
 export async function deleteUserAccount(): Promise<boolean> {
   const currentUser = auth.currentUser;
   if (!currentUser) return false;
-  const uid = currentUser.uid;
 
   try {
-    const batch = writeBatch(db);
+    // ID token'ı al
+    const idToken = await currentUser.getIdToken();
 
-    // 1. Kullanıcının Readix'lerini bul ve sil
-    const readixesQuery = query(collection(db, 'readixes'), where('authorId', '==', uid));
-    const readixesSnap = await getDocs(readixesQuery);
-    for (const docSnap of readixesSnap.docs) {
-      batch.delete(docSnap.ref);
+    // API rotasına istek at (Admin SDK ile silme)
+    const response = await fetch('/api/user/delete', {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${idToken}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Bilinmeyen bir hata oluştu');
     }
 
-    // 2. Kullanıcının Yorumlarını bul ve sil
-    const storiesQuery = query(collection(db, 'stories'), where('authorId', '==', uid));
-    const storiesSnap = await getDocs(storiesQuery);
-    for (const docSnap of storiesSnap.docs) {
-      batch.delete(docSnap.ref);
-      const chaptersQuery = query(collection(db, 'stories', docSnap.id, 'chapters'));
-      const chaptersSnap = await getDocs(chaptersQuery);
-      chaptersSnap.forEach(ch => batch.delete(ch.ref));
-    }
+    // Auth state client-side'da otomatik olarak temizlenecektir, ancak garanti olsun diye signOut da çağrılabilir.
+    await auth.signOut();
 
-    // 3. Kullanıcının Profil Dokümanını Sil
-    const userRef = doc(db, USERS_COLLECTION, uid);
-    batch.delete(userRef);
-
-    // Commit changes
-    await batch.commit();
-
-    // 4. Firebase Auth'dan sil
-    await deleteUser(currentUser);
     return true;
   } catch (error) {
     console.error('Hesap silme işlemi başarısız:', error);

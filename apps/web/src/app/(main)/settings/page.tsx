@@ -43,7 +43,15 @@ export default function SettingsPage() {
   };
 
   const handleDeleteAccount = async () => {
-    if (deleteConfirmation !== userProfile?.username && deleteConfirmation !== firebaseUser?.email) {
+    const confirmedText = deleteConfirmation.trim().toLowerCase();
+    const expectedUsername = userProfile?.username?.toLowerCase();
+    const expectedEmail = firebaseUser?.email?.toLowerCase();
+
+    if (
+      confirmedText !== expectedUsername && 
+      confirmedText !== expectedEmail && 
+      confirmedText !== `@${expectedUsername}`
+    ) {
       toast.error("Lütfen onay için kullanıcı adınızı veya e-posta adresinizi doğru girin.");
       return;
     }
