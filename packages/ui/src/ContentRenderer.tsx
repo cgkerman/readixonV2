@@ -14,17 +14,22 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ blocks, fontSi
       {blocks.map((block, index) => {
         switch (block.type) {
           case 'paragraph':
+            const htmlContent = (block.text || '\u00A0')
+              .replace(/\n/g, '<br/>')
+              .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+              .replace(/\*(.*?)\*/g, '<i>$1</i>');
+
             return (
               <div key={index} className="flex flex-col gap-2">
-                {block.text?.split('\n').map((line, i) => (
-                  <Typography 
-                    key={i} 
-                    variant="body" 
-                    style={{ fontSize: `${fontSize}px`, lineHeight: 1.6, color: textColor }}
-                  >
-                    {line || '\u00A0'}
-                  </Typography>
-                ))}
+                <Typography 
+                  variant="body" 
+                  style={{ 
+                    fontSize: `${fontSize}px`, 
+                    lineHeight: 1.6, 
+                    color: textColor
+                  }}
+                  dangerouslySetInnerHTML={{ __html: htmlContent }}
+                />
               </div>
             );
           case 'quote':
@@ -54,8 +59,20 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ blocks, fontSi
             );
           case 'divider':
             return (
-              <div key={index} className="flex justify-center my-6">
-                <div className="w-16 h-1 rounded-full bg-border/50" />
+              <div key={index} className="flex justify-center my-6 w-full">
+                <div className="w-full h-[1px]" style={{ backgroundColor: textColor || 'currentColor', opacity: 0.2 }} />
+              </div>
+            );
+          case 'end_of_chapter':
+            return (
+              <div key={index} className="flex justify-center my-12 w-full">
+                <Typography 
+                  variant="body" 
+                  style={{ fontSize: `${fontSize}px`, color: textColor, fontWeight: 'bold' }}
+                  className="text-center tracking-widest uppercase opacity-80"
+                >
+                  • • • Bölüm Sonu • • •
+                </Typography>
               </div>
             );
           default:

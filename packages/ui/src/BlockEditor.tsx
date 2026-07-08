@@ -19,7 +19,7 @@ import {
 import type { ContentBlock, ContentBlockType } from '@readixon/core/src/types';
 import { SortableBlockItem } from './SortableBlockItem';
 import { Button } from './Button';
-import { PlusCircle, Type, Quote, Image as ImageIcon, Minus } from 'lucide-react';
+import { PlusCircle, Type, Quote, Image as ImageIcon, Minus, Flag } from 'lucide-react';
 
 export interface BlockEditorProps {
   initialBlocks?: ContentBlock[];
@@ -106,6 +106,9 @@ export function BlockEditor({ initialBlocks = [], onChange, onUploadImage }: Blo
         </Button>
         <Button variant="outline" onPress={() => addBlock('divider')} className="flex flex-row items-center gap-2">
           <Minus size={16} /> Ayırıcı
+        </Button>
+        <Button variant="outline" onPress={() => addBlock('end_of_chapter')} className="flex flex-row items-center gap-2">
+          <Flag size={16} /> Bölüm Sonu
         </Button>
       </div>
     </div>

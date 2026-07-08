@@ -3,7 +3,7 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Trash2 } from 'lucide-react';
+import { GripVertical, Trash2, Bold, Italic, Type } from 'lucide-react';
 import type { ContentBlock } from '@readixon/core';
 
 export interface SortableBlockItemProps {
@@ -13,6 +13,35 @@ export interface SortableBlockItemProps {
   onDelete: () => void;
   onUploadImage?: (file: File) => Promise<string>;
 }
+
+const ParagraphEditor = ({ block, onChange }: { block: ContentBlock, onChange: (b: ContentBlock) => void }) => {
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (ref.current && ref.current.innerHTML !== (block.text || '')) {
+      ref.current.innerHTML = block.text || '';
+    }
+  }, [block.text]);
+
+  const handleInput = React.useCallback(() => {
+    if (ref.current) {
+      onChange({ ...block, text: ref.current.innerHTML });
+    }
+  }, [block, onChange]);
+
+  return (
+    <div
+      ref={ref}
+      contentEditable
+      suppressContentEditableWarning
+      onInput={handleInput}
+      onBlur={handleInput}
+      className="w-full bg-background border border-border/50 rounded-lg p-3 min-h-[100px] text-text focus:outline-none focus:border-primary transition-all focus:empty:before:hidden empty:before:content-[attr(data-placeholder)] empty:before:text-muted/50"
+      style={{ scrollMarginBottom: '150px', outline: 'none' }}
+      data-placeholder="Metninizi yazın (Kısmı formatlamak için seçip yukarıdaki butonları kullanın)..."
+    />
+  );
+};
 
 export function SortableBlockItem({ id, block, onChange, onDelete, onUploadImage }: SortableBlockItemProps) {
   const {
@@ -31,7 +60,6 @@ export function SortableBlockItem({ id, block, onChange, onDelete, onUploadImage
     opacity: isDragging ? 0.8 : 1,
   };
 
-  const paragraphRef = React.useRef<HTMLTextAreaElement>(null);
   const quoteRef = React.useRef<HTMLTextAreaElement>(null);
 
   React.useEffect(() => {
@@ -42,15 +70,12 @@ export function SortableBlockItem({ id, block, onChange, onDelete, onUploadImage
         const newHeight = element.scrollHeight;
         element.style.height = `${newHeight}px`;
         
-        // Eğer kullanıcı bu alanda yazıyorsa ve kutu büyüdüyse, 
-        // sayfayı (veya kaydırma alanını) da o kadar aşağı kaydır.
         if (document.activeElement === element && newHeight > oldHeight) {
           const scrollContainer = element.closest('.overflow-y-auto') || window;
           scrollContainer.scrollBy(0, newHeight - oldHeight);
         }
       }
     };
-    resizeTextarea(paragraphRef.current);
     resizeTextarea(quoteRef.current);
   }, [block.text]);
 
@@ -58,14 +83,31 @@ export function SortableBlockItem({ id, block, onChange, onDelete, onUploadImage
     switch (block.type) {
       case 'paragraph':
         return (
-          <textarea
-            ref={paragraphRef}
-            className="w-full bg-background border border-border/50 rounded-lg p-3 min-h-[100px] text-text focus:outline-none focus:border-primary resize-none overflow-hidden transition-all"
-            style={{ scrollMarginBottom: '150px' }}
-            placeholder="Metninizi yazın (Satır atlamak için Enter'a basın)..."
-            value={block.text || ''}
-            onChange={(e) => onChange({ ...block, text: e.target.value })}
-          />
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-1 bg-muted/10 p-1 rounded-lg w-fit border border-border/50">
+              <button 
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  document.execCommand('bold', false, undefined);
+                }}
+                className="p-1.5 rounded-md hover:bg-muted/20 transition-colors text-muted hover:text-primary"
+                title="Seçili metni kalın yap"
+              >
+                <Bold size={16} />
+              </button>
+              <button 
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  document.execCommand('italic', false, undefined);
+                }}
+                className="p-1.5 rounded-md hover:bg-muted/20 transition-colors text-muted hover:text-primary"
+                title="Seçili metni italik yap"
+              >
+                <Italic size={16} />
+              </button>
+            </div>
+            <ParagraphEditor block={block} onChange={onChange} />
+          </div>
         );
       case 'quote':
         return (
@@ -116,8 +158,16 @@ export function SortableBlockItem({ id, block, onChange, onDelete, onUploadImage
         );
       case 'divider':
         return (
-          <div className="flex justify-center py-4">
-            <div className="w-32 h-1 rounded-full bg-border/50" />
+          <div className="flex justify-center py-4 w-full">
+            <div className="w-full h-[2px] rounded-full bg-border opacity-50" />
+          </div>
+        );
+      case 'end_of_chapter':
+        return (
+          <div className="flex justify-center py-6 w-full">
+            <div className="text-center font-bold text-muted uppercase tracking-widest text-sm">
+              • • • BÖLÜM SONU • • •
+            </div>
           </div>
         );
       default:
@@ -137,7 +187,7 @@ export function SortableBlockItem({ id, block, onChange, onDelete, onUploadImage
       
       <div className="flex-1 min-w-0">
         <div className="text-xs font-bold text-muted uppercase tracking-wider mb-2">
-          {block.type}
+          {block.type === 'end_of_chapter' ? 'bölüm sonu' : block.type}
         </div>
         {renderEditor()}
       </div>

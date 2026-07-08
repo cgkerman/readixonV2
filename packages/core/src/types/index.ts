@@ -80,7 +80,7 @@ export interface Story {
 // 3.3. Bölümler (/stories/{storyId}/chapters/{chapterId})
 // ─────────────────────────────────────────────
 
-export type ContentBlockType = 'paragraph' | 'quote' | 'image' | 'divider';
+export type ContentBlockType = 'paragraph' | 'quote' | 'image' | 'divider' | 'end_of_chapter';
 
 /**
  * Bölüm içeriği JSON blok formatında tutulur.
@@ -90,6 +90,7 @@ export interface ContentBlock {
   type: ContentBlockType;
   text?: string;
   url?: string; // image blokları için
+  textStyle?: 'normal' | 'bold' | 'italic';
 }
 
 export interface ChapterStats {

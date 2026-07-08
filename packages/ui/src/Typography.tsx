@@ -3,7 +3,7 @@ import React from 'react';
 export type TypographyVariant = 'h1' | 'h2' | 'h3' | 'body' | 'caption';
 
 export interface TypographyProps extends React.HTMLAttributes<HTMLElement> {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   variant?: TypographyVariant;
   className?: string;
   testID?: string;
@@ -29,6 +29,16 @@ export function Typography({
   };
 
   const Component = (variant.startsWith('h') ? variant : 'p') as 'h1' | 'h2' | 'h3' | 'p';
+
+  if (props.dangerouslySetInnerHTML) {
+    return (
+      <Component
+        data-testid={testID}
+        className={`${baseClasses} ${variantClasses[variant]} ${className}`}
+        {...props}
+      />
+    );
+  }
 
   return (
     <Component

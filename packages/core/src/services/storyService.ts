@@ -662,10 +662,7 @@ export const getTopStoriesPaginated = async (limitCount: number = 10, lastDoc?: 
     }
     
     const snap = await getDocs(q);
-    const stories: Story[] = [];
-    snap.forEach((docSnap) => {
-      stories.push({ storyId: docSnap.id, ...docSnap.data() } as Story);
-    });
+    const stories = await enrichStories(snap.docs);
     
     const newLastDoc = snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : undefined;
     
@@ -701,10 +698,7 @@ export const getRecommendedStories = async (preferredGenres?: string[], limitCou
     );
     
     const snap = await getDocs(q);
-    const stories: Story[] = [];
-    snap.forEach((docSnap) => {
-      stories.push({ storyId: docSnap.id, ...docSnap.data() } as Story);
-    });
+    const stories = await enrichStories(snap.docs);
     
     // Eğer önerilen hiç hikaye yoksa, yine en popülerleri dön
     if (stories.length === 0) {
