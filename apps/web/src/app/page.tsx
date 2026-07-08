@@ -1,12 +1,23 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { Typography, Button, Card, Footer } from "@readixon/ui";
+import Image from "next/image";
+import { Typography, Button } from "@readixon/ui";
 import { useAuthStore } from "@readixon/core";
-import { Sparkles, Users, BookOpen, TrendingUp } from "lucide-react";
+import { Sparkles, Users, BookOpen, TrendingUp, MessageCircle, Feather } from "lucide-react";
 
 export default function Home() {
   const { firebaseUser, isInitialized, userProfile } = useAuthStore();
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    // Sadece desktop/tablet'te mouse hareketi olduğu için içerde hesaplama yapalım
+    if (window.innerWidth < 768) return; 
+    const x = (e.clientX / window.innerWidth - 0.5) * 2;
+    const y = (e.clientY / window.innerHeight - 0.5) * 2;
+    setMousePos({ x, y });
+  };
 
   if (!isInitialized) {
     return (
@@ -17,100 +28,214 @@ export default function Home() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background items-center justify-center relative overflow-hidden">
-      {/* Arka Plan Süslemeleri */}
-      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-primary/10 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-purple-900/10 blur-[120px] rounded-full" />
-      </div>
+    <div 
+      className="flex min-h-screen w-full bg-background flex-col md:flex-row overflow-hidden"
+      onMouseMove={handleMouseMove}
+    >
+      {/* Sol Taraf - İçerik ve Aksiyon */}
+      <div className="w-full md:w-1/2 shrink-0 flex flex-col justify-between px-8 md:px-12 lg:px-20 py-8 relative z-10 bg-card/30">
 
-      <div className="relative z-10 w-full max-w-4xl px-6 py-12 flex flex-col items-center text-center gap-10 animate-fade-in-up">
-        
-        {/* Başlık Alanı */}
-        <div className="space-y-4">
-          <Typography variant="h1" className="text-text font-bold tracking-tight text-5xl md:text-6xl">
-            {firebaseUser && userProfile ? (
-              <>Hoşgeldin, <span className="text-primary">{userProfile.username}</span>!</>
-            ) : (
-              <>readixon'a <span className="text-primary">Hoş Geldiniz</span></>
-            )}
-          </Typography>
-          
-          <Typography variant="body" className="text-muted text-lg md:text-xl max-w-2xl mx-auto">
-            Sınırları aşan hikayeler, derin etkileşimler ve yeni nesil yazarlık deneyimi.
-          </Typography>
+        {/* Üst Kısım: Marka Logosu */}
+        <div className="flex items-center">
+          <Image src="/brand-logo.png" alt="Readixon Logo" width={80} height={80} className="object-contain" />
         </div>
 
-        {/* Benzersiz Özellikler */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full text-left mt-6">
-          <Card className="bg-card/40 backdrop-blur-md border-border/40 p-6 flex gap-4 items-start hover:border-primary/30 transition-colors">
-            <div className="w-12 h-12 shrink-0 rounded-2xl bg-primary/20 flex items-center justify-center text-primary">
-              <Sparkles size={24} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Typography variant="h3" className="font-semibold">Özgür Yaratıcılık</Typography>
-              <Typography variant="caption" className="text-muted/90 text-sm">Gelişmiş stüdyo araçlarıyla hikayeni sınır tanımadan yaz ve anında binlerce okurla paylaş.</Typography>
-            </div>
-          </Card>
-          
-          <Card className="bg-card/40 backdrop-blur-md border-border/40 p-6 flex gap-4 items-start hover:border-purple-500/30 transition-colors">
-            <div className="w-12 h-12 shrink-0 rounded-2xl bg-purple-500/20 flex items-center justify-center text-purple-500">
-              <Users size={24} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Typography variant="h3" className="font-semibold">Derin Etkileşim</Typography>
-              <Typography variant="caption" className="text-muted/90 text-sm">Paragraf bazlı satır içi yorumlar ve tartışmalarla yazar-okur arasındaki duvarları tamamen kaldırın.</Typography>
-            </div>
-          </Card>
+        {/* Orta Kısım: Karşılama ve Özellikler */}
+        <div className="flex flex-col justify-center flex-1 my-8 md:my-0 max-w-lg mx-auto w-full">
+          <div className="mb-10 text-center md:text-left animate-fade-in-up">
+            <Typography variant="h1" className="text-4xl md:text-5xl font-extrabold mb-4 tracking-tight leading-tight">
+              {firebaseUser && userProfile ? (
+                <>Hoşgeldin,<br /><span className="text-primary">{userProfile.username}</span>!</>
+              ) : (
+                <>Sınırları Aşan <br /><span className="text-primary">Hikayeler</span></>
+              )}
+            </Typography>
+            <Typography variant="body" className="text-muted text-lg">
+              Derin etkileşimler ve yeni nesil yazarlık deneyimi ile hikayeni milyonlarla paylaş.
+            </Typography>
+          </div>
 
-          <Card className="bg-card/40 backdrop-blur-md border-border/40 p-6 flex gap-4 items-start hover:border-blue-500/30 transition-colors">
-            <div className="w-12 h-12 shrink-0 rounded-2xl bg-blue-500/20 flex items-center justify-center text-blue-500">
-              <BookOpen size={24} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Typography variant="h3" className="font-semibold">Readix Formatı</Typography>
-              <Typography variant="caption" className="text-muted/90 text-sm">Sadece kitap değil, anlık duygu ve düşüncelerinizi mikro blog tarzında paylaşarak kitlenizle bağ kurun.</Typography>
-            </div>
-          </Card>
-
-          <Card className="bg-card/40 backdrop-blur-md border-border/40 p-6 flex gap-4 items-start hover:border-green-500/30 transition-colors">
-            <div className="w-12 h-12 shrink-0 rounded-2xl bg-green-500/20 flex items-center justify-center text-green-500">
-              <TrendingUp size={24} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Typography variant="h3" className="font-semibold">Sınırsız Keşif</Typography>
-              <Typography variant="caption" className="text-muted/90 text-sm">Sana özel akıllı öneriler, trendler ve en çok okunan başyapıtlarla dolu zengin kütüphanede kaybol.</Typography>
-            </div>
-          </Card>
-        </div>
-
-        {/* Aksiyon Alanı */}
-        <div className="mt-8 w-full max-w-sm flex flex-col gap-4">
+          {/* Özellikler veya Kurucu Mesajı */}
           {firebaseUser ? (
-            <Link href="/feed" className="w-full">
-              <Button variant="primary" className="w-full h-14 text-lg font-bold shadow-[0_0_40px_rgba(var(--primary),0.3)] hover:shadow-[0_0_60px_rgba(var(--primary),0.5)] transition-all hover:-translate-y-1 rounded-2xl">
-                Keşfetmeye Başla
-              </Button>
-            </Link>
+            <div className="mb-12 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+              <div className="relative p-6 md:p-8 rounded-3xl bg-primary/5 border border-primary/10">
+                <p style={{ color: '#000' }} className="text-lg italic leading-relaxed mb-6">
+                  "Readixon’ı kurarken ki hayalim; kelimelerin gücüne inanan, hikayeleri derinlemesine paylaşan saf bir edebiyat topluluğu yaratmaktı. Burası sadece yazıp geçtiğin değil, satır aralarında gerçek bağlar kurduğun bir yuva. Hikayen ve fikirlerinle burayı zenginleştirdiğin için teşekkürler. İlhamın bol olsun."
+                </p>
+                <div className="flex items-center gap-4">
+                  <div className="relative w-14 h-14 rounded-full overflow-hidden shadow-sm ring-2 ring-primary/20">
+                    <Image src="/cagri.jpeg" alt="Çağrı Kerman" fill className="object-cover" />
+                  </div>
+                  <div>
+                    <p style={{ color: '#000' }} className="font-medium">Çağrı Kerman - Kurucu</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : (
-            <div className="flex flex-col gap-4 w-full">
-              <Link href="/register" className="w-full">
-                <Button variant="primary" className="w-full h-14 text-lg font-bold shadow-[0_0_40px_rgba(var(--primary),0.3)] hover:shadow-[0_0_60px_rgba(var(--primary),0.5)] transition-all hover:-translate-y-1 rounded-2xl">
-                  Kayıt Ol & Keşfet
-                </Button>
-              </Link>
-              <Link href="/login" className="w-full text-center group">
-                <Typography variant="caption" className="text-muted group-hover:text-primary transition-colors cursor-pointer text-sm font-medium">
-                  Zaten hesabın var mı? Giriş yap.
-                </Typography>
-              </Link>
+            <div className="grid gap-6 mb-12 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+              <div className="flex gap-4 items-start">
+                <div className="w-12 h-12 shrink-0 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+                  <Sparkles size={24} />
+                </div>
+                <div className="flex flex-col justify-center h-12">
+                  <Typography variant="h3" className="font-semibold text-lg">Özgür Yaratıcılık</Typography>
+                  <Typography variant="caption" className="text-muted text-sm">Gelişmiş araçlarla hikayeni yaz ve anında paylaş.</Typography>
+                </div>
+              </div>
+
+              <div className="flex gap-4 items-start">
+                <div className="w-12 h-12 shrink-0 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+                  <Users size={24} />
+                </div>
+                <div className="flex flex-col justify-center h-12">
+                  <Typography variant="h3" className="font-semibold text-lg">Derin Etkileşim</Typography>
+                  <Typography variant="caption" className="text-muted text-sm">Satır içi yorumlarla okurlarınla duvarları kaldır.</Typography>
+                </div>
+              </div>
+
+              <div className="flex gap-4 items-start">
+                <div className="w-12 h-12 shrink-0 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+                  <BookOpen size={24} />
+                </div>
+                <div className="flex flex-col justify-center h-12">
+                  <Typography variant="h3" className="font-semibold text-lg">Readix Formatı</Typography>
+                  <Typography variant="caption" className="text-muted text-sm">Mikro blog tarzında anlık duygu ve düşüncelerini paylaş.</Typography>
+                </div>
+              </div>
+
+              <div className="flex gap-4 items-start">
+                <div className="w-12 h-12 shrink-0 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+                  <TrendingUp size={24} />
+                </div>
+                <div className="flex flex-col justify-center h-12">
+                  <Typography variant="h3" className="font-semibold text-lg">Sınırsız Keşif</Typography>
+                  <Typography variant="caption" className="text-muted text-sm">Akıllı önerilerle dolu zengin kütüphanede kaybol.</Typography>
+                </div>
+              </div>
             </div>
           )}
+
+          {/* Aksiyon Alanı */}
+          <div className="w-full animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+            {firebaseUser ? (
+              <Link href="/feed" className="w-full block">
+                <Button variant="primary" className="w-full h-14 text-lg font-bold shadow-[0_0_40px_rgba(var(--primary),0.3)] hover:shadow-[0_0_60px_rgba(var(--primary),0.5)] transition-all hover:-translate-y-1 rounded-2xl">
+                  Keşfetmeye Başla
+                </Button>
+              </Link>
+            ) : (
+              <div className="flex flex-col gap-4">
+                <Link href="/register" className="w-full block">
+                  <Button variant="primary" className="w-full h-14 text-lg font-bold shadow-[0_0_40px_rgba(var(--primary),0.3)] hover:shadow-[0_0_60px_rgba(var(--primary),0.5)] transition-all hover:-translate-y-1 rounded-2xl">
+                    Kayıt Ol & Keşfet
+                  </Button>
+                </Link>
+                <div className="flex items-center justify-center gap-2 text-sm mt-2">
+                  <Typography variant="caption" className="text-muted text-base">
+                    Zaten hesabın var mı?
+                  </Typography>
+                  <Link href="/login">
+                    <Typography variant="caption" className="text-primary font-semibold text-base hover:underline">
+                      Giriş Yap
+                    </Typography>
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
+        {/* Alt Kısım */}
+        <div className="text-center md:text-left mt-8">
+          <Typography variant="caption" className="text-muted/60 text-sm">
+            © {new Date().getFullYear()} readixon. Tüm hakları saklıdır.
+          </Typography>
+        </div>
       </div>
 
-      <Footer />
+      {/* Sağ Taraf - Görsel Alan */}
+      <div className="hidden md:flex w-full md:w-1/2 shrink-0 relative items-center justify-center bg-gradient-to-br from-purple-50/50 to-indigo-50/50 dark:from-purple-950/20 dark:to-indigo-950/20 overflow-hidden">
+        
+        {/* Orta Kısım Geçiş Efekti (Keskinliği Yumuşatmak İçin) */}
+        <div className="absolute inset-y-0 left-0 w-24 md:w-32 lg:w-48 bg-gradient-to-r from-background via-background/80 to-transparent z-30 pointer-events-none" />
+
+        {/* Zarif Degrade Işıklar */}
+        <div className="absolute top-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-primary/10 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-purple-500/10 blur-[120px] rounded-full pointer-events-none" />
+        
+        {/* Platformu Yansıtan Süslemeler - Parallax Etkili */}
+        
+        {/* Yorum / Etkileşim İkonu */}
+        <div 
+          className="absolute top-[20%] left-[20%] text-primary/20 dark:text-primary/30 transition-transform duration-75 pointer-events-none"
+          style={{ transform: `translate(${mousePos.x * 20}px, ${mousePos.y * 20}px) rotate(-12deg)` }}
+        >
+          <MessageCircle size={80} strokeWidth={1} />
+        </div>
+
+        {/* Yazarlık İkonu */}
+        <div 
+          className="absolute bottom-[25%] right-[15%] text-purple-500/20 dark:text-purple-500/30 transition-transform duration-75 pointer-events-none"
+          style={{ transform: `translate(${mousePos.x * -15}px, ${mousePos.y * -15}px) rotate(15deg)` }}
+        >
+          <Feather size={100} strokeWidth={1} />
+        </div>
+
+        {/* Minik Readix (Mikro Blog) Kartı Temsili */}
+        <div 
+          className="absolute top-[45%] left-[10%] w-48 p-4 rounded-2xl bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 backdrop-blur-md shadow-xl transition-transform duration-75 pointer-events-none"
+          style={{ transform: `translate(${mousePos.x * 15}px, ${mousePos.y * -25}px) rotate(-5deg)` }}
+        >
+          <div className="flex gap-3 items-center mb-3">
+            <div className="w-8 h-8 rounded-full bg-primary/20" />
+            <div className="flex flex-col gap-1 flex-1">
+              <div className="h-2 w-16 bg-primary/30 rounded-full" />
+              <div className="h-1.5 w-10 bg-primary/20 rounded-full" />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <div className="h-2 w-full bg-slate-300/50 dark:bg-slate-700/50 rounded-full" />
+            <div className="h-2 w-5/6 bg-slate-300/50 dark:bg-slate-700/50 rounded-full" />
+            <div className="h-2 w-4/6 bg-slate-300/50 dark:bg-slate-700/50 rounded-full" />
+          </div>
+        </div>
+
+        {/* Başka Bir Ufak Kart */}
+        <div 
+          className="absolute top-[15%] right-[25%] w-32 p-3 rounded-2xl bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 backdrop-blur-md shadow-lg transition-transform duration-75 pointer-events-none"
+          style={{ transform: `translate(${mousePos.x * -10}px, ${mousePos.y * 15}px) rotate(8deg)` }}
+        >
+          <div className="space-y-1.5">
+            <div className="h-1.5 w-full bg-purple-400/30 rounded-full" />
+            <div className="h-1.5 w-full bg-purple-400/30 rounded-full" />
+            <div className="h-1.5 w-2/3 bg-purple-400/30 rounded-full" />
+          </div>
+        </div>
+        
+        {/* Maskot Zemin Gölgesi (Derinlik algısı için) */}
+        <div 
+          className="absolute top-[65%] left-1/2 w-64 h-12 bg-black/5 dark:bg-black/30 blur-2xl rounded-[100%] pointer-events-none transition-transform duration-75"
+          style={{ transform: `translateX(calc(-50% + ${mousePos.x * -8}px))` }}
+        />
+
+        {/* Maskot - Parallax Etkili */}
+        <div 
+          className="relative z-10 w-4/5 max-w-[500px] aspect-square drop-shadow-[0_20px_40px_rgba(0,0,0,0.1)] transition-transform duration-75"
+          style={{ transform: `translate(${mousePos.x * -25}px, ${mousePos.y * -25}px)` }}
+        >
+          <div className="w-full h-full transition-transform duration-700 hover:scale-105">
+            <Image 
+              src="/panda-mascot.png" 
+              alt="Readixon Panda Mascot" 
+              fill
+              className="object-contain"
+              priority
+            />
+          </div>
+        </div>
+        
+      </div>
     </div>
   );
 }

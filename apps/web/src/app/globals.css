@@ -2,14 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Varsayılan Ana Tema (Tema 3: Premium Minimal) */
+/* Varsayılan Ana Tema (Tema 7: Yazar Moru) */
 :root {
-  --color-background: #000000;
-  --color-card: #0A0A0A;
-  --color-text: #FAFAFA;
-  --color-primary: #FFFFFF;
-  --color-muted: #A1A1AA;
-  --color-border: #27272A;
+  --color-background: #FAFAFA;
+  --color-card: #FFFFFF;
+  --color-text: #1E293B;
+  --color-primary: #6366F1;
+  --color-muted: #64748B;
+  --color-border: #E2E8F0;
 }
 
 /* Tema 1: Siber Gece (Neon Cyan) */
