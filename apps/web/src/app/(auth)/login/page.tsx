@@ -80,6 +80,11 @@ export default function LoginPage() {
             disabled={loading}
             required
           />
+          <div className="flex justify-end mt-1">
+            <Link href="/forgot-password" className="text-xs text-primary hover:underline transition-colors">
+              Şifremi unuttum?
+            </Link>
+          </div>
         </div>
 
         {error && (

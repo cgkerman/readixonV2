@@ -17,6 +17,7 @@ export default function StudioDashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newTags, setNewTags] = useState<string[]>([]);
+  const [isAdultContent, setIsAdultContent] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
@@ -46,6 +47,7 @@ export default function StudioDashboard() {
         summary: '',
         coverImage: '',
         tags: newTags,
+        isAdultContent,
         status: 'draft'
       });
       router.push(`/studio/story/${newStoryId}`);
@@ -165,6 +167,28 @@ export default function StudioDashboard() {
                     En fazla 3 tür seçebilirsiniz.
                   </Typography>
                 )}
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-border/50">
+                <div className="flex items-start gap-3">
+                  <div className="pt-0.5">
+                    <input 
+                      type="checkbox" 
+                      id="isAdultContent" 
+                      className="w-5 h-5 rounded accent-primary cursor-pointer border-border"
+                      checked={isAdultContent}
+                      onChange={(e) => setIsAdultContent(e.target.checked)}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="isAdultContent" className="font-semibold text-text cursor-pointer select-none block">
+                      Yetişkin İçerik (+18)
+                    </label>
+                    <Typography variant="caption" className="text-muted block mt-1">
+                      Bu hikaye yoğun argo, şiddet veya yetişkinlere yönelik edebi temalar içeriyor mu?
+                    </Typography>
+                  </div>
+                </div>
               </div>
             </div>
 

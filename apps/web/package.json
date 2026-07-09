@@ -10,6 +10,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@readixon/core": "workspace:*",
     "@readixon/ui": "workspace:*",
     "@tanstack/react-query": "^5.101.2",

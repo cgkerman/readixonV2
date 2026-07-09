@@ -3,8 +3,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Typography, Button, BlockEditor, Input } from '@readixon/ui';
-import { ArrowLeft, Save, PlusCircle, CheckCircle, FileText, Globe, Calendar, GripVertical, Trash2 } from 'lucide-react';
+import { ArrowLeft, Save, PlusCircle, CheckCircle, FileText, Globe, Calendar, GripVertical, Trash2, Sparkles } from 'lucide-react';
 import { fetchChapter, updateChapter, compressImage, fetchChapters, createChapter, deleteChapter, createNotification, getUserFollowerIds, getStoryById, useAuthStore, type Chapter } from '@readixon/core';
+import { ReadixonAIAssistant } from '@/components/ReadixonAIAssistant';
 import { uploadFile } from '@readixon/core/src/services/storageService';
 import { toast } from "sonner";
 import Link from 'next/link';
@@ -21,6 +22,7 @@ export default function ChapterEditorPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
   
   const isInitialLoad = useRef(true);
   const publishedRef = useRef(false);
@@ -298,6 +300,14 @@ export default function ChapterEditorPage() {
                 <Trash2 size={20} />
               </Button>
 
+              <Button 
+                variant="outline" 
+                onPress={() => setIsAIAssistantOpen(true)} 
+                className="rounded-full px-4 border-primary/20 text-primary hover:bg-primary/5 hover:border-primary/40 transition-colors"
+              >
+                <Sparkles size={16} className="mr-2" /> AI Asistan
+              </Button>
+
               <Button variant="primary" onPress={() => handleSave(true)} disabled={saving || autoSaveStatus === 'saving'} className="rounded-full px-6">
                 <Save size={16} className="mr-2 hidden md:inline-block" /> Kaydet
               </Button>
@@ -356,6 +366,12 @@ export default function ChapterEditorPage() {
           
         </div>
       </main>
+
+      <ReadixonAIAssistant 
+        isOpen={isAIAssistantOpen} 
+        onClose={() => setIsAIAssistantOpen(false)} 
+        currentContent={chapter.contentBlocks?.map((b: any) => b.text).join('\n') || ''} 
+      />
     </div>
   );
 }

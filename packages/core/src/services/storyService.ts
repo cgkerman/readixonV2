@@ -392,6 +392,24 @@ export const getReadingProgress = async (userId: string, storyId: string): Promi
   }
 };
 
+/**
+ * Yetişkin içerik okuma onayını veritabanına kaydeder.
+ */
+export const acceptAdultContent = async (userId: string, storyId: string) => {
+  try {
+    const progressRef = doc(db, 'users', userId, 'readingProgress', storyId);
+    await setDoc(progressRef, {
+      userId,
+      storyId,
+      isAdultContentAccepted: true,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (error) {
+    console.error("Yetişkin içerik onayı kaydedilirken hata:", error);
+    throw error;
+  }
+};
+
 // ─────────────────────────────────────────────
 // KÜTÜPHANE (LIBRARY) OPERASYONLARI
 // ─────────────────────────────────────────────

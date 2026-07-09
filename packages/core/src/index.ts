@@ -49,6 +49,7 @@ export {
   getCurrentUser,
   getAuthErrorMessage,
   sendVerificationEmail,
+  sendPasswordReset,
 } from './auth/authService';
 export type { AuthResult, AuthError } from './auth/authService';
 

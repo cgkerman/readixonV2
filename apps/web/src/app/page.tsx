@@ -64,7 +64,7 @@ export default function Home() {
                 </p>
                 <div className="flex items-center gap-4">
                   <div className="relative w-14 h-14 rounded-full overflow-hidden shadow-sm ring-2 ring-primary/20">
-                    <Image src="/cagri.jpeg" alt="Çağrı Kerman" fill className="object-cover" />
+                    <Image src="/cagri.jpeg" alt="Çağrı Kerman" fill sizes="56px" className="object-cover" />
                   </div>
                   <div>
                     <p style={{ color: '#000' }} className="font-medium">Çağrı Kerman - Kurucu</p>
@@ -224,11 +224,12 @@ export default function Home() {
           className="relative z-10 w-4/5 max-w-[500px] aspect-square drop-shadow-[0_20px_40px_rgba(0,0,0,0.1)] transition-transform duration-75"
           style={{ transform: `translate(${mousePos.x * -25}px, ${mousePos.y * -25}px)` }}
         >
-          <div className="w-full h-full transition-transform duration-700 hover:scale-105">
+          <div className="relative w-full h-full transition-transform duration-700 hover:scale-105">
             <Image 
               src="/panda-mascot.png" 
               alt="Readixon Panda Mascot" 
               fill
+              sizes="(max-width: 768px) 100vw, 500px"
               className="object-contain"
               priority
             />

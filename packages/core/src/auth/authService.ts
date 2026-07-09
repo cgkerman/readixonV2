@@ -21,6 +21,7 @@ import {
   updateProfile,
   signInWithPopup,
   sendEmailVerification as firebaseSendEmailVerification,
+  sendPasswordResetEmail as firebaseSendPasswordResetEmail,
   type User as FirebaseUser,
   type Unsubscribe,
   type UserCredential,
@@ -265,6 +266,22 @@ export async function sendVerificationEmail(user: FirebaseUser): Promise<void> {
     await firebaseSendEmailVerification(user);
   } catch (error: any) {
     console.error('Doğrulama e-postası gönderme hatası:', error);
+    throw error;
+  }
+}
+
+// ─────────────────────────────────────────────
+// Şifre Sıfırlama
+// ─────────────────────────────────────────────
+
+/**
+ * Kullanıcıya şifre sıfırlama e-postası gönderir.
+ */
+export async function sendPasswordReset(email: string): Promise<void> {
+  try {
+    await firebaseSendPasswordResetEmail(auth, email);
+  } catch (error: any) {
+    console.error('Şifre sıfırlama e-postası gönderme hatası:', error);
     throw error;
   }
 }

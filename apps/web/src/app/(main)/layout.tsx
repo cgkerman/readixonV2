@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { BookOpen, Compass, Search, User, LogOut, PenTool, Hash, Settings, Bell, MessageCircle, Menu, X } from 'lucide-react';
+import { BookOpen, Compass, Search, User, LogOut, PenTool, Hash, Settings, Bell, MessageCircle, Menu, X, LifeBuoy } from 'lucide-react';
 import { Typography, Button } from '@readixon/ui';
 import { useAuthStore, signOut, becomeAuthor, sendVerificationEmail, subscribeToChats } from '@readixon/core';
 import { toast } from "sonner";
@@ -50,7 +50,17 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     setIsVerifying(true);
     
     try {
-      await sendVerificationEmail(firebaseUser);
+      const res = await fetch('/api/auth/send-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: firebaseUser.email }),
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Doğrulama maili gönderilemedi.');
+      }
+
       toast('Doğrulama e-postası gönderildi. Lütfen gelen kutunuzu (ve gereksiz kutusunu) kontrol edin.');
       
       const pollInterval = setInterval(async () => {
@@ -161,6 +171,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     { name: 'Readix', href: '/readix', icon: Hash },
     { name: 'Ara', href: '/search', icon: Search },
     { name: 'Bildirimler', href: '/notifications', icon: Bell, badge: unreadNotificationCount },
+    { name: 'Destek', href: '/support', icon: LifeBuoy },
     { name: 'Ayarlar', href: '/settings', icon: Settings },
   ];
 

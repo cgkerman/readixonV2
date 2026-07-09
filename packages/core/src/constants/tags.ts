@@ -9,4 +9,5 @@ export const POPULAR_TAGS = [
   { id: 'adventure', label: 'Macera' },
   { id: 'historical', label: 'Tarihi Kurgu' },
   { id: 'literary-fiction', label: 'Edebi Kurgu' },
+  { id: 'adult', label: 'Yetişkin (+18)' },
 ];

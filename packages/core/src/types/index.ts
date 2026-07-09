@@ -30,6 +30,10 @@ export interface User {
   isAuthor?: boolean;
   termsAcceptedAt?: Timestamp; // Yasal onay timestamp
   privacyAcceptedAt?: Timestamp; // Gizlilik onay timestamp
+  aiUsage?: {
+    date: string; // YYYY-MM-DD
+    requestCount: number;
+  };
 }
 
 /** Yeni kullanıcı oluşturulurken kullanılan kısmi tip */
@@ -65,6 +69,7 @@ export interface Story {
   summary: string;
   coverImage: string;
   tags: string[];
+  isAdultContent?: boolean;
   stats: StoryStats;
   
   // Yayınevi/Platform Ek Detayları
@@ -159,6 +164,7 @@ export interface ReadingProgress {
   currentChapterId: string;
   scrollPercentage: number; // 0-100
   completedChapters: string[]; // Tamamlanan bölüm ID'leri
+  isAdultContentAccepted?: boolean; // Yetişkin içerik okuma onayı
   updatedAt: Timestamp;
 }
 
