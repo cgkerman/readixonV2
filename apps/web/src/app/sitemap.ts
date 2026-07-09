@@ -1,12 +1,8 @@
 import { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://www.readixon.com';
-
-  // İleride buraya Firestore'dan popüler hikayeleri veya yazarları çekip 
-  // dinamik olarak haritaya ekleyen bir mantık kurabilirsiniz. 
-  // Şimdilik ana sayfaları statik olarak veriyoruz.
-
+  const baseUrl = 'https://readixon.com'; // using non-www as standard if preferred, but let's stick to www.readixon.com if it's the main domain. Actually in layout.tsx we used https://readixon.com. So I'll use that.
+  
   return [
     {
       url: baseUrl,
@@ -25,6 +21,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: new Date(),
       changeFrequency: 'daily',
       priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/arena`,
+      lastModified: new Date(),
+      changeFrequency: 'always',
+      priority: 0.9,
     },
     {
       url: `${baseUrl}/login`,
