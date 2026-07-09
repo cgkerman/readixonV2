@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from "sonner";
 import { useRouter } from 'next/navigation';
-import { Bell, Heart, MessageCircle, UserPlus, CheckCircle2, Circle, Loader2, BookOpen } from 'lucide-react';
+import { Bell, Heart, MessageCircle, UserPlus, CheckCircle2, Circle, Loader2, BookOpen, Feather, XCircle } from 'lucide-react';
 import { Typography, Button } from '@readixon/ui';
 import { 
   useAuthStore, 
@@ -81,6 +81,15 @@ export default function NotificationsPage() {
       case 'readix_mention':
         router.push('/readix');
         break;
+      case 'duel_challenge':
+      case 'duel_rejected':
+        router.push('/arena');
+        break;
+      case 'duel_accepted':
+        if (notif.entityId) {
+          router.push(`/arena/${notif.entityId}`);
+        }
+        break;
     }
   };
 
@@ -113,6 +122,11 @@ export default function NotificationsPage() {
         return <div className="w-10 h-10 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center shrink-0"><MessageCircle size={20} /></div>;
       case 'new_chapter':
         return <div className="w-10 h-10 rounded-full bg-purple-500/20 text-purple-500 flex items-center justify-center shrink-0"><BookOpen size={20} /></div>;
+      case 'duel_challenge':
+      case 'duel_accepted':
+        return <div className="w-10 h-10 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center shrink-0"><Feather size={20} /></div>;
+      case 'duel_rejected':
+        return <div className="w-10 h-10 rounded-full bg-red-950/20 text-red-700 flex items-center justify-center shrink-0"><XCircle size={20} /></div>;
       default:
         return <div className="w-10 h-10 rounded-full bg-muted/20 text-muted flex items-center justify-center shrink-0"><Bell size={20} /></div>;
     }
@@ -138,8 +152,14 @@ export default function NotificationsPage() {
       case 'new_chapter':
         const chapter = notif.subEntityTitle ? <span className="font-medium text-primary">"{notif.subEntityTitle}"</span> : null;
         return <>{actor}, {entity} kitabında yeni bir bölüm yayınladı: {chapter}</>;
+      case 'duel_challenge':
+        return <>{actor} sana düello için meydan okudu!</>;
+      case 'duel_accepted':
+        return <>{actor} meydan okumanı kabul etti. Düello başladı!</>;
+      case 'duel_rejected':
+        return <>{actor} meydan okumanı reddetti.</>;
       default:
-        return <>Yeni bir bildiriminiz var.</>;
+        return <span>Yeni bir bildiriminiz var.</span>;
     }
   };
 

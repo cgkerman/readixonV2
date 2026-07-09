@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { BookOpen, Compass, Search, User, LogOut, PenTool, Hash, Settings, Bell, MessageCircle, Menu, X, LifeBuoy } from 'lucide-react';
+import { BookOpen, Compass, Search, User, LogOut, PenTool, Hash, Settings, Bell, MessageCircle, Menu, X, LifeBuoy, Feather } from 'lucide-react';
 import { Typography, Button } from '@readixon/ui';
 import { useAuthStore, signOut, becomeAuthor, sendVerificationEmail, subscribeToChats } from '@readixon/core';
 import { toast } from "sonner";
@@ -164,12 +164,18 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     }
   };
 
-  const navItems = [
+  type NavItem = { name: string; href: string; icon: any; badge?: number };
+
+  const topNavItems: NavItem[] = [
     { name: 'Keşfet', href: '/feed', icon: Compass },
-    { name: 'Kütüphane', href: '/library', icon: BookOpen },
-    { name: 'Mesajlar', href: '/messages', icon: MessageCircle, badge: unreadMessageCount },
+    { name: 'Arena', href: '/arena', icon: Feather },
     { name: 'Readix', href: '/readix', icon: Hash },
     { name: 'Ara', href: '/search', icon: Search },
+  ];
+
+  const bottomNavItems: NavItem[] = [
+    { name: 'Kütüphane', href: '/library', icon: BookOpen },
+    { name: 'Mesajlar', href: '/messages', icon: MessageCircle, badge: unreadMessageCount },
     { name: 'Bildirimler', href: '/notifications', icon: Bell, badge: unreadNotificationCount },
     { name: 'Destek', href: '/support', icon: LifeBuoy },
     { name: 'Ayarlar', href: '/settings', icon: Settings },
@@ -182,8 +188,24 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         <Typography variant="h2" className="font-bold text-primary tracking-tighter mb-10">readixon</Typography>
         
         <nav className="flex-1 flex flex-col gap-2">
-          {navItems.map((item) => {
+          {topNavItems.map((item) => {
             const isActive = pathname === item.href;
+            return (
+              <Link 
+                key={item.href} 
+                href={item.href}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors relative ${
+                  isActive ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-card hover:text-text'
+                }`}
+              >
+                <item.icon size={20} />
+                <Typography variant="body" className="font-medium flex-1">{item.name}</Typography>
+              </Link>
+            );
+          })}
+
+          {bottomNavItems.map((item) => {
+            const isActive = pathname === item.href || (item.href === '/messages' && pathname.startsWith('/messages'));
             return (
               <Link 
                 key={item.href} 
@@ -249,6 +271,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         <div className="md:hidden sticky top-0 z-40 flex items-center justify-between p-4 bg-background/80 backdrop-blur-md border-b border-border/50 shrink-0">
           <Typography variant="h3" className="font-bold text-primary tracking-tighter">readixon</Typography>
           <div className="flex items-center gap-5">
+            <Link href="/messages" className="relative">
+              <MessageCircle size={24} className={pathname.startsWith('/messages') ? 'text-primary' : 'text-muted'} />
+              {unreadMessageCount > 0 && (
+                <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full absolute -top-1 -right-1 border-2 border-background">
+                  {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
+                </span>
+              )}
+            </Link>
             <Link href="/notifications" className="relative">
               <Bell size={24} className={pathname === '/notifications' ? 'text-primary' : 'text-muted'} />
               {unreadNotificationCount > 0 && (
@@ -269,7 +299,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       {/* ── Bottom Nav (Mobile) ── */}
       {!(pathname.startsWith('/messages/') && pathname.split('/').length > 2) && (
         <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-card/90 backdrop-blur-xl border-t border-border/50 flex items-center justify-around px-2 z-50 pb-safe">
-          {navItems.filter(item => ['/feed', '/search', '/readix', '/messages'].includes(item.href)).map((item) => {
+          {topNavItems.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link key={item.href} href={item.href} className="flex flex-col items-center justify-center w-16 h-full relative">
@@ -386,7 +416,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 </div>
               </Link>
               
-              {navItems.filter(item => ['/library', '/settings'].includes(item.href)).map((item) => (
+              {bottomNavItems.filter(item => ['/library', '/support', '/settings'].includes(item.href)).map((item) => (
                 <Link 
                   key={item.href} 
                   href={item.href}

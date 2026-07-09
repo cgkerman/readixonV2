@@ -1,0 +1,34 @@
+# Edebi Arena MVP Geliştirmesi Tamamlandı ⚔️
+
+Edebi Arena (Literary Duel System) MVP versiyonunun temel bileşenlerini tamamladım. Bu özellik sayesinde yazarlar birbirlerine meydan okuyabilir, sırayla hikayeye katkıda bulunabilir ve rakiplerine kelime ambargoları uygulayarak oyunu zorlaştırabilirler.
+
+## Tamamlanan Özellikler
+
+### 1. Veri Modeli ve Servisler (`packages/core`)
+- **Veri Tipleri**: `Duel`, `DuelTurn`, `DuelAuthor`, `DuelStatus` gibi Arena yapısını temsil edecek TypeScript arayüzleri eklendi.
+- **DuelService**: Firestore üzerinde `createDuelChallenge`, `acceptDuelChallenge`, `submitDuelTurn` ve `finishDuel` operasyonlarını yürüten, gerçek zamanlı dinleme imkanı sunan servis yazıldı.
+
+### 2. Arena Lobisi (`/arena`)
+- **Bekleyen Meydan Okumalar**: Size meydan okuyan kullanıcıların listesi görünür. Kabul ederek düelloyu başlatabilirsiniz.
+- **Meydan Okuma**: "Meydan Oku" butonuna basarak bir kullanıcının kullanıcı adını yazıp konu belirleyerek davetiye gönderebilirsiniz.
+- **Canlı Düellolar**: Platformdaki tüm aktif ve tamamlanmış (oylamada olan) düellolar ana ekranda listelenir.
+- **Mobil Entegrasyon**: Mobil menünün alt gezinti çubuğuna (Bottom Nav) Arena (Kılıçlar) ikonu eklendi.
+
+### 3. Canlı Düello Odası (`/arena/[duelId]`)
+- **Sıralı Tur Sistemi (Turn-based)**: Firestore `onSnapshot` sayesinde gerçek zamanlı olarak tur durumu izlenir. Sadece sırası gelen yazar ekleme yapabilir.
+- **Geçmiş Turlar**: Tarafların yazdıkları sırayla ekranda listelenir.
+- **Kelime Ambargosu (Word Embargo)**:
+  - Yazar hamlesini yaparken rakibinin bir sonraki turda kullanamayacağı **en fazla 3 kelime** belirleyebilir (opsiyonel).
+  - Sıra rakibe geçtiğinde, yasaklı kelimeler ekranda kırmızı renkte yanıp sönerek gösterilir.
+  - Eğer kullanıcı yasaklı kelimeyi metninde barındırıyorsa, gönderime izin verilmez (Penalty/Soft-check yaklaşımı onayladığınız şekilde kurgulandı).
+- **Düelloyu Bitir**: Düelloyu başlatan taraf (veya herhangi bir taraf), yeterince tur döndüğüne kanaat getirdiğinde düelloyu tamamlayarak "Oylama" (Voting) statüsüne geçirebilir. Oylama ekranı MVP sonrasına bırakılmıştır ancak altyapısı hazırdır.
+
+## Test Adımları
+
+Geliştirme sunucusunda (/arena) sayfasına giderek test edebilirsiniz:
+1. İki farklı tarayıcı penceresinden iki farklı hesapla giriş yapın.
+2. Birinci hesaptan "Meydan Oku" diyerek ikinci hesabın kullanıcı adını yazın.
+3. İkinci hesapta bildirimi/bekleyen meydan okumayı görüp "Kabul Et" diyin.
+4. Karşılıklı olarak yazın ve "Kelime Ambargosu" özelliğini test edin. (Yasaklanan kelimeyi yazmaya çalıştığınızda hata vermesini kontrol edin.)
+
+Sıradaki adımlara geçmeden önce tasarımı veya akışı test edip istediğiniz bir değişiklik olup olmadığını bana söyleyebilirsiniz!

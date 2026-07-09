@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Loader2, Users, BookOpen, User as UserIcon, Edit2, Bookmark, BookmarkCheck, Check, X, Hash, MessageCircle } from 'lucide-react';
+import { Loader2, Users, BookOpen, User as UserIcon, Edit2, Bookmark, BookmarkCheck, Check, X, Hash, MessageCircle, Feather } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 import { Typography, Button, StoryCard, Input, ReadixCard, ReadixCommentModal } from '@readixon/ui';
 import { 
@@ -388,6 +388,17 @@ export default function ProfilePage() {
                   </Typography>
                   <Typography variant="caption" className="text-muted font-medium uppercase">Toplam Okunma</Typography>
                 </div>
+                {profileUser.isAuthor && (
+                  <div className="col-span-2 pt-4 border-t border-border/50 text-center mt-2 flex items-center justify-center gap-2">
+                    <Feather size={20} className="text-amber-500" />
+                    <div>
+                      <Typography variant="h3" className="text-amber-500 mb-1">
+                        {profileUser.stats?.arenaScore ? Number(profileUser.stats.arenaScore).toFixed(1) : "0.0"}
+                      </Typography>
+                      <Typography variant="caption" className="text-muted font-medium uppercase">Arena Puanı</Typography>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

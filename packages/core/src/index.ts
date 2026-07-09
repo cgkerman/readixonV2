@@ -36,6 +36,10 @@ export type {
   Message,
   ChatParticipant,
   ChatStatus,
+  Duel,
+  DuelTurn,
+  DuelAuthor,
+  DuelStatus,
 } from './types';
 
 // Auth servisi
@@ -80,6 +84,7 @@ export * from './services/storyService';
 export * from './services/storageService';
 export * from './services/interactionService';
 export * from './services/readixService';
+export * from './services/duelService';
 export * from './services/notificationService';
 export * from './services/chatService';
 export * from './utils/imageUtils';

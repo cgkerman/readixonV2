@@ -16,6 +16,7 @@ export interface UserStats {
   followers: number;
   following: number;
   totalReads: number;
+  arenaScore?: number;
 }
 
 export interface User {
@@ -211,7 +212,10 @@ export type NotificationType =
   | 'readix_like' 
   | 'readix_comment' 
   | 'readix_mention'
-  | 'new_chapter';
+  | 'new_chapter'
+  | 'duel_challenge'
+  | 'duel_accepted'
+  | 'duel_rejected';
 
 export interface AppNotification {
   id: string;
@@ -279,3 +283,52 @@ export type Genre =
   | 'literary-fiction'
   | 'young-adult'
   | string; // Özel etiketlere izin ver
+
+// ─────────────────────────────────────────────
+// 3.8. Arena (Düellolar)
+// ─────────────────────────────────────────────
+
+export type DuelStatus = 'pending' | 'active' | 'voting' | 'completed';
+
+export interface DuelAuthor {
+  uid: string;
+  displayName: string;
+  username: string;
+  avatarUrl: string;
+}
+
+export interface Duel {
+  id: string; // Document ID (Opsiyonel olarak saklayabiliriz, genelde doc.id kullanılıyor)
+  title?: string; // Hikayenin özel adı
+  prompt: string; // Düellonun konusu/ilhamı
+  authorA: DuelAuthor; // Meydan okuyan (Odayı kuran)
+  authorB: DuelAuthor; // Meydan okunan
+  status: DuelStatus;
+  currentTurnUid: string; // Şu an yazma sırası kimde
+  turnCount: number; // Toplam kaç tur oynandı
+  turnTimeLimitMinutes?: number; // Tur başına verilen süre (dk)
+  embargoedWords: string[]; // Geçerli turda yasaklanan kelimeler
+  winnerUid?: string; // Oylama bitince kazanan
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  expiresAt?: Timestamp; // Eğer aktifse sıra süresi
+  votingEndsAt?: Timestamp; // Oylama bitiş zamanı
+  scores?: {
+    [authorUid: string]: {
+      totalScore: number;
+      voteCount: number;
+      average: number;
+    }
+  };
+  voters?: string[]; // Oy kullanan okurların UID'leri
+}
+
+export interface DuelTurn {
+  id?: string;
+  duelId: string;
+  authorUid: string;
+  content: string; // Yazarın bu turda yazdığı metin
+  wordCount: number;
+  embargoWordsSet: string[]; // Rakibe bir sonraki tur için koyduğu yasaklar
+  createdAt: Timestamp;
+}
