@@ -8,6 +8,20 @@ const nextConfig = {
       config.externals.push('firebase-admin', 'jwks-rsa', 'jose');
     }
     return config;
+  },
+  async redirects() {
+    return [
+      {
+        source: '/index',
+        destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/index.html',
+        destination: '/',
+        permanent: true,
+      }
+    ];
   }
 };
 
