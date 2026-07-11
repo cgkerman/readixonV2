@@ -553,7 +553,7 @@ export default function ProfilePage() {
                   value={editForm.bio}
                   onChange={(e) => setEditForm({...editForm, bio: e.target.value})}
                   placeholder="Kendinizden bahsedin..."
-                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary/50 transition-colors resize-none h-24"
+                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-text focus:outline-none focus:border-primary/50 transition-colors resize-none h-24"
                 />
               </div>
             </div>
