@@ -1,0 +1,26 @@
+# Admin Paneli Tabloları Tamamlandı 🎉
+
+Admin paneline "Kullanıcılar" ve "Hikayeler" sayfalarını detaylı tablo yapısıyla entegre ettik.
+
+## Neler Değişti?
+
+### 1. Sayfalamalı Veri Servisleri (`adminService.ts`)
+- `getAdminUsers`: Tüm kullanıcıları en yeniden en eskiye sıralayarak ve belirlenen limitlerde (sayfalayarak) çeken bir servis oluşturuldu.
+- `getAdminStories`: Platformdaki tüm hikayeleri aynı şekilde performansı yormadan çeken servis eklendi.
+
+### 2. Kullanıcılar Tablosu (`/admin/users`)
+- Kullanıcıların listelendiği modern bir arayüz yapıldı.
+- Tabloda; **Kullanıcı Avatar/Kullanıcı Adı, Rol (Admin, Yazar, Okur), Katılım Tarihi, Toplam Okuma** ve **Takipçi Sayısı** alanları yer alıyor.
+- Her kullanıcının rolüne göre (Admin ise Kırmızı, Yazar ise Primary vb.) şık rozetler (badge) eklendi.
+
+### 3. Hikayeler Tablosu (`/admin/stories`)
+- Platformdaki eserleri listeleyen tablo eklendi.
+- Tabloda; **Hikaye Kapağı/Başlığı/Etiketleri, Yazar Bilgisi, Durum (Devam Ediyor, Tamamlandı, Taslak), İstatistikler (Okunma, Beğeni, Bölüm Sayısı)** ve **Oluşturulma Tarihi** bulunuyor.
+- Durum bilgisini belirginleştiren özel renkli rozetler eklendi.
+
+### 4. Performans ve UX İyileştirmeleri
+- Sayfaların en altına **"Daha Fazla Yükle"** butonu eklendi. Veriler tek seferde 1000'lerce doküman çekmek yerine, 20'şer 20'şer (sayfalama - cursor pagination) yükleniyor. Bu sayede uygulamanın Firebase okuma kotası ve hızı korunuyor.
+- Tablo satırlarına ve elemanlarına platformun genel tasarımıyla uyumlu `hover` efektleri uygulandı.
+
+## Nasıl Test Edilir?
+- Admin paneline girdiğinizde sol menüdeki **Kullanıcılar** veya **Hikayeler** sekmelerine tıklayarak oluşturduğumuz bu yeni veri tablolarını canlı olarak inceleyebilirsiniz!

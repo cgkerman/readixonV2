@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Loader2, Users, BookOpen, User as UserIcon, Edit2, Bookmark, BookmarkCheck, Check, X, Hash, MessageCircle, Feather } from 'lucide-react';
 import Cropper from 'react-easy-crop';
-import { Typography, Button, StoryCard, Input, ReadixCard, ReadixCommentModal } from '@readixon/ui';
+import { Typography, Button, StoryCard, Input, ReadixCard, ReadixCommentModal, ReadixShareModal, ShareReadixData, EditReadixModal, ReportModal, ConfirmationDialog } from '@readixon/ui';
 import { 
   useAuthStore, 
   getUserByUsername, 
@@ -21,7 +21,11 @@ import {
   toggleReadixLike,
   addReadixComment,
   getReadixComments,
-  createOrGetChat
+  createOrGetChat,
+  updateReadix,
+  deleteReadix,
+  reportContent,
+  blockUser
 } from '@readixon/core';
 import type { User, Story, Readix } from '@readixon/core';
 import { toast } from "sonner";
@@ -44,6 +48,86 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [activeProfileTab, setActiveProfileTab] = useState<'stories' | 'readixes'>('stories');
+  
+  // Share Modal State
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [selectedReadixForShare, setSelectedReadixForShare] = useState<ShareReadixData | null>(null);
+
+  const [editReadixModalOpen, setEditReadixModalOpen] = useState(false);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [blockConfirmOpen, setBlockConfirmOpen] = useState(false);
+  const [activeReadix, setActiveReadix] = useState<Readix | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleReadixEditSave = async (newContent: string) => {
+    if (!activeReadix) return;
+    try {
+      await updateReadix(activeReadix.id, newContent);
+      setReadixes(prev => prev.map(r => r.id === activeReadix.id ? { ...r, content: newContent } : r));
+      toast.success('Gönderi güncellendi.');
+    } catch (e) {
+      toast.error('Güncelleme başarısız.');
+    }
+  };
+
+  const handleReadixDeleteConfirm = async () => {
+    if (!activeReadix) return;
+    setIsProcessing(true);
+    try {
+      await deleteReadix(activeReadix.id);
+      setReadixes(prev => prev.filter(r => r.id !== activeReadix.id));
+      setDeleteConfirmOpen(false);
+      toast.success('Gönderi silindi.');
+    } catch (e) {
+      toast.error('Silme başarısız.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleReadixReportSubmit = async (reason: string, details: string) => {
+    if (!activeReadix || !firebaseUser) return;
+    try {
+      await reportContent(activeReadix.id, 'readix', firebaseUser.uid, `${reason} ${details ? '- ' + details : ''}`);
+      toast.success('Şikayetiniz alındı, incelenecek.');
+    } catch (e) {
+      toast.error('Şikayet gönderilemedi.');
+    }
+  };
+
+  const handleBlockConfirm = async () => {
+    if (!activeReadix || !firebaseUser || !currentUser) return;
+    setIsProcessing(true);
+    try {
+      await blockUser(firebaseUser.uid, activeReadix.authorId);
+      setReadixes(prev => prev.filter(r => r.authorId !== activeReadix.authorId));
+      useAuthStore.getState().setUserProfile({
+        ...currentUser,
+        blockedUsers: [...(currentUser?.blockedUsers || []), activeReadix.authorId]
+      });
+      setBlockConfirmOpen(false);
+      toast.success('Kullanıcı engellendi.');
+    } catch (e) {
+      toast.error('Engelleme başarısız.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const openShare = (readix: Readix, author: User | null) => {
+    setSelectedReadixForShare({
+      id: readix.id,
+      content: readix.content,
+      authorName: author?.displayName || 'Bilinmeyen Kullanıcı',
+      authorUsername: author?.username || 'user',
+      authorAvatarUrl: author?.avatarUrl,
+      mediaUrls: readix.mediaUrls,
+      createdAtStr: readix.createdAt ? new Date((readix.createdAt as any).seconds ? (readix.createdAt as any).seconds * 1000 : (readix.createdAt as unknown as number)).toLocaleDateString() : 'Şimdi'
+    });
+    setShareModalOpen(true);
+  };
+
   
   // Follow States
   const [isFollowing, setIsFollowing] = useState(false);
@@ -477,10 +561,15 @@ export default function ProfilePage() {
                         createdAtStr={readix.createdAt ? new Date((readix.createdAt as any).seconds ? (readix.createdAt as any).seconds * 1000 : (readix.createdAt as unknown as number)).toLocaleDateString() : 'Şimdi'}
                         likesCount={readix.stats?.likes || 0}
                         commentsCount={readix.stats?.comments || 0}
+                        isOwner={firebaseUser?.uid === readix.authorId}
                         onLikePress={() => handleReadixLike(readix.id, readix.stats?.likes || 0)}
                         onCommentPress={() => openComments(readix)}
-                        onSharePress={() => toast('Paylaşım özelliği çok yakında!')}
+                        onSharePress={() => openShare(readix, profileUser)}
                         onPress={() => openComments(readix)}
+                        onEditPress={() => { setActiveReadix(readix); setEditReadixModalOpen(true); }}
+                        onDeletePress={() => { setActiveReadix(readix); setDeleteConfirmOpen(true); }}
+                        onReportPress={() => { setActiveReadix(readix); setReportModalOpen(true); }}
+                        onBlockPress={() => { setActiveReadix(readix); setBlockConfirmOpen(true); }}
                       />
                     ))}
                   </div>
@@ -622,6 +711,47 @@ export default function ProfilePage() {
         selectedReadix={selectedReadix}
         currentUserId={firebaseUser?.uid || null}
         onCommentAdded={handleCommentAdded}
+      />
+
+      <ReadixShareModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        readix={selectedReadixForShare}
+      />
+      
+      <EditReadixModal
+        isOpen={editReadixModalOpen}
+        onClose={() => { setEditReadixModalOpen(false); setActiveReadix(null); }}
+        initialContent={activeReadix?.content || ''}
+        onSave={handleReadixEditSave}
+      />
+      
+      <ReportModal
+        isOpen={reportModalOpen}
+        onClose={() => { setReportModalOpen(false); setActiveReadix(null); }}
+        onSubmit={handleReadixReportSubmit}
+      />
+      
+      <ConfirmationDialog
+        isOpen={deleteConfirmOpen}
+        onClose={() => { setDeleteConfirmOpen(false); setActiveReadix(null); }}
+        onConfirm={handleReadixDeleteConfirm}
+        title="Gönderiyi Sil"
+        message="Bu gönderiyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+        confirmText="Sil"
+        variant="danger"
+        isLoading={isProcessing}
+      />
+      
+      <ConfirmationDialog
+        isOpen={blockConfirmOpen}
+        onClose={() => { setBlockConfirmOpen(false); setActiveReadix(null); }}
+        onConfirm={handleBlockConfirm}
+        title="Kullanıcıyı Engelle"
+        message="Bu kullanıcıyı engellemek istediğinizden emin misiniz? Gönderilerini artık akışta görmeyeceksiniz."
+        confirmText="Engelle"
+        variant="warning"
+        isLoading={isProcessing}
       />
     </div>
   );

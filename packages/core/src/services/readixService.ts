@@ -13,7 +13,8 @@ import {
   DocumentSnapshot,
   increment,
   writeBatch,
-  deleteDoc
+  deleteDoc,
+  updateDoc
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Readix, ReadixComment } from '../types';
@@ -95,9 +96,24 @@ export async function searchTags(prefix: string): Promise<{id: string, count: nu
   }
 }
 
+export async function getReadixById(readixId: string): Promise<Readix | null> {
+  try {
+    const docRef = doc(db, READIXES_COLLECTION, readixId);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) {
+      return null;
+    }
+    return { id: snap.id, ...snap.data() } as Readix;
+  } catch (error) {
+    console.error("Readix detayı çekilirken hata:", error);
+    return null;
+  }
+}
+
 export async function getForYouReadixes(
   pageSize = 10,
-  lastDoc?: DocumentSnapshot
+  lastDoc?: DocumentSnapshot,
+  blockedUsers?: string[]
 ) {
   let q = query(
     collection(db, READIXES_COLLECTION),
@@ -110,7 +126,11 @@ export async function getForYouReadixes(
   }
 
   const snapshot = await getDocs(q);
-  const readixes = snapshot.docs.map(doc => doc.data() as Readix);
+  let readixes = snapshot.docs.map(doc => doc.data() as Readix);
+  
+  if (blockedUsers && blockedUsers.length > 0) {
+    readixes = readixes.filter(r => !blockedUsers.includes(r.authorId));
+  }
   
   return {
     readixes,
@@ -122,7 +142,8 @@ export async function getForYouReadixes(
 export async function getFollowingReadixes(
   currentUserId: string,
   pageSize = 10,
-  lastDoc?: DocumentSnapshot
+  lastDoc?: DocumentSnapshot,
+  blockedUsers?: string[]
 ) {
   // 1. Get the list of users the current user follows
   const followingSnapshot = await getDocs(
@@ -150,7 +171,11 @@ export async function getFollowingReadixes(
   }
 
   const snapshot = await getDocs(q);
-  const readixes = snapshot.docs.map(doc => doc.data() as Readix);
+  let readixes = snapshot.docs.map(doc => doc.data() as Readix);
+
+  if (blockedUsers && blockedUsers.length > 0) {
+    readixes = readixes.filter(r => !blockedUsers.includes(r.authorId));
+  }
 
   return {
     readixes,
@@ -217,7 +242,8 @@ export async function toggleReadixLike(userId: string, readixId: string): Promis
 export async function getReadixesByTag(
   tag: string,
   pageSize = 10,
-  lastDoc?: DocumentSnapshot
+  lastDoc?: DocumentSnapshot,
+  blockedUsers?: string[]
 ) {
   let q = query(
     collection(db, READIXES_COLLECTION),
@@ -232,7 +258,11 @@ export async function getReadixesByTag(
   }
 
   const snapshot = await getDocs(q);
-  const readixes = snapshot.docs.map(doc => doc.data() as Readix);
+  let readixes = snapshot.docs.map(doc => doc.data() as Readix);
+
+  if (blockedUsers && blockedUsers.length > 0) {
+    readixes = readixes.filter(r => !blockedUsers.includes(r.authorId));
+  }
 
   return {
     readixes,
@@ -378,4 +408,32 @@ export async function toggleReadixCommentLike(userId: string, readixId: string, 
     await batch.commit();
     return true; // Beğenildi
   }
+}
+
+// ─────────────────────────────────────────────
+// Düzenleme ve Silme
+// ─────────────────────────────────────────────
+
+export async function updateReadix(readixId: string, newContent: string, newMediaUrls?: string[]): Promise<void> {
+  const readixRef = doc(db, READIXES_COLLECTION, readixId);
+  
+  const tags = newContent.match(/#[\p{L}\d_]+/gu)?.map(tag => tag.slice(1).toLowerCase()) || [];
+  const mentions = newContent.match(/@[\p{L}\d_]+/gu)?.map(mention => mention.slice(1)) || [];
+  
+  const updateData: any = {
+    content: newContent,
+    tags,
+    mentions
+  };
+  
+  if (newMediaUrls) {
+    updateData.mediaUrls = newMediaUrls;
+  }
+  
+  await updateDoc(readixRef, updateData);
+}
+
+export async function deleteReadix(readixId: string): Promise<void> {
+  const readixRef = doc(db, READIXES_COLLECTION, readixId);
+  await deleteDoc(readixRef);
 }

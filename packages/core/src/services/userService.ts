@@ -33,7 +33,9 @@ import {
   increment,
   DocumentSnapshot,
   orderBy,
-  limit
+  limit,
+  arrayUnion,
+  arrayRemove
 } from 'firebase/firestore';
 
 import { db, auth } from '../firebase';
@@ -455,4 +457,26 @@ export async function deleteUserAccount(): Promise<boolean> {
     console.error('Hesap silme işlemi başarısız:', error);
     return false;
   }
+}
+
+// ─────────────────────────────────────────────
+// Kullanıcı Engelleme İşlemleri
+// ─────────────────────────────────────────────
+
+/**
+ * Kullanıcıyı engeller. Engellenen kullanıcının içerikleri akışta gizlenir.
+ */
+export async function blockUser(currentUserId: string, targetUserId: string): Promise<void> {
+  if (!currentUserId || !targetUserId || currentUserId === targetUserId) return;
+  const userRef = doc(db, USERS_COLLECTION, currentUserId);
+  await updateDoc(userRef, { blockedUsers: arrayUnion(targetUserId) });
+}
+
+/**
+ * Kullanıcının engelini kaldırır.
+ */
+export async function unblockUser(currentUserId: string, targetUserId: string): Promise<void> {
+  if (!currentUserId || !targetUserId || currentUserId === targetUserId) return;
+  const userRef = doc(db, USERS_COLLECTION, currentUserId);
+  await updateDoc(userRef, { blockedUsers: arrayRemove(targetUserId) });
 }

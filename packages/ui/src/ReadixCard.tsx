@@ -1,5 +1,7 @@
-import React from 'react';
-import { Heart, MessageCircle, Share2, MoreHorizontal } from 'lucide-react';
+"use client";
+
+import React, { useState, useRef, useEffect } from 'react';
+import { Heart, MessageCircle, Share2, MoreHorizontal, Edit, Trash2, Flag, ShieldBan } from 'lucide-react';
 import { Typography } from './Typography';
 import { Button } from './Button';
 
@@ -13,11 +15,16 @@ export interface ReadixCardProps {
   likesCount: number;
   commentsCount: number;
   isLiked?: boolean;
+  isOwner?: boolean;
   onLikePress?: () => void;
   onCommentPress?: () => void;
   onSharePress?: () => void;
   onAuthorPress?: () => void;
   onPress?: () => void;
+  onEditPress?: () => void;
+  onDeletePress?: () => void;
+  onReportPress?: () => void;
+  onBlockPress?: () => void;
   className?: string;
 }
 
@@ -31,13 +38,35 @@ export const ReadixCard: React.FC<ReadixCardProps> = ({
   likesCount,
   commentsCount,
   isLiked = false,
+  isOwner = false,
   onLikePress,
   onCommentPress,
   onSharePress,
   onAuthorPress,
   onPress,
+  onEditPress,
+  onDeletePress,
+  onReportPress,
+  onBlockPress,
   className = '',
 }) => {
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+    if (showMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showMenu]);
+
   return (
     <div 
       className={`p-5 bg-card border border-border rounded-3xl hover:bg-text/5 transition-all duration-300 ${onPress ? 'cursor-pointer' : ''} ${className}`}
@@ -78,9 +107,57 @@ export const ReadixCard: React.FC<ReadixCardProps> = ({
           </div>
         </div>
 
-        <button className="text-muted hover:text-text transition-colors p-2 rounded-full hover:bg-text/10">
-          <MoreHorizontal size={20} />
-        </button>
+        <div className="relative" ref={menuRef}>
+          <button 
+            className="text-muted hover:text-text transition-colors p-2 rounded-full hover:bg-text/10"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowMenu(!showMenu);
+            }}
+          >
+            <MoreHorizontal size={20} />
+          </button>
+          
+          {showMenu && (
+            <div className="absolute right-0 mt-2 w-48 bg-card border border-border shadow-xl rounded-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
+              {isOwner ? (
+                <>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setShowMenu(false); onEditPress?.(); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-text/90 hover:bg-muted/10 transition-colors"
+                  >
+                    <Edit size={16} />
+                    <span>Düzenle</span>
+                  </button>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setShowMenu(false); onDeletePress?.(); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-500 hover:bg-red-500/10 transition-colors"
+                  >
+                    <Trash2 size={16} />
+                    <span>Sil</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setShowMenu(false); onReportPress?.(); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-text/90 hover:bg-muted/10 transition-colors"
+                  >
+                    <Flag size={16} />
+                    <span>Şikayet Et</span>
+                  </button>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setShowMenu(false); onBlockPress?.(); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-500 hover:bg-red-500/10 transition-colors"
+                  >
+                    <ShieldBan size={16} />
+                    <span>Engelle</span>
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Metin İçeriği */}

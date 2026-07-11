@@ -1,0 +1,30 @@
+# Admin Paneli Tamamlandı 🎉
+
+Admin paneli için gerekli altyapıyı başarıyla oluşturduk ve arayüzü yayına aldık. Artık yetkili kullanıcılar platformla ilgili genel bir bakışa sahip olabilirler.
+
+## Neler Değişti?
+
+### 1. Yetkilendirme (Auth) Katmanı
+- Veritabanındaki (Firestore) `User` arayüzüne `isAdmin` (`boolean`) özelliği eklendi.
+- Böylece sadece Firestore'da `isAdmin: true` olarak işaretlenmiş olan kullanıcılar admin paneline erişebilir hale geldi.
+
+### 2. Admin Servisleri (`@readixon/core`)
+- Platformun genel verilerini güvenle ve kolayca çekebilmek için yeni bir `adminService` yazıldı.
+- `getPlatformStats()` isimli fonksiyon eklendi; bu fonksiyon Firestore'daki koleksiyonların doküman sayılarını (getCountFromServer özelliği ile optimize edilmiş şekilde) sayarak anlık; "Toplam Kullanıcı", "Hikaye", "Düello" ve "Gönderi (Readix)" istatistiklerini getiriyor.
+
+### 3. Yönetim Arayüzü (`/admin`)
+- Sadece `isAdmin` yetkisine sahip kullanıcıların erişebileceği, uygulamanın geri kalanından farklı (koyu temalı, admin odaklı) bir **Yönetim Yan Menüsü (Sidebar)** tasarlandı.
+- Yetkisi olmayan kullanıcılar `/admin` bağlantısına girmeye çalışırsa otomatik olarak ana sayfaya yönlendiren bir güvenlik (guard) kalkanı kuruldu.
+- Dashboard ekranı (`/admin/page.tsx`) eklendi. Burada, az önce yazdığımız servis üzerinden çekilen canlı istatistikler ve şık gösterge kartları (Stat Cards) yer alıyor.
+
+## Nasıl Test Edilir?
+Şu an test edebilmeniz için:
+1. Mevcut hesabınızla giriş yapın.
+2. Firebase konsolundan (Firestore Database) ilgili kullanıcı (kendi profiliniz) dokümanına gidin.
+3. Dokümana yeni bir alan (field) ekleyin: Adı `isAdmin`, türü `boolean`, değeri `true` yapın.
+4. Uygulamada sayfayı yenileyip tarayıcıdan doğrudan `/admin` URL'sine gidin. 
+
+*(Eğer `isAdmin` değerini false yaparsanız sizi ana sayfaya geri atacaktır)*
+
+> [!TIP]
+> Admin panelinin daha işlevsel olması için ilerleyen dönemlerde "Kullanıcılar" veya "Hikayeler" sayfalarının içini de detaylı bir tablo (Table) yapısıyla doldurabiliriz. İhtiyaç duyduğunuz anda bana iletebilirsiniz!

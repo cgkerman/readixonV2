@@ -19,10 +19,19 @@ export type { CardProps } from './Card';
 
 export * from './ChatListItem';
 export * from './ChatBubble';
+
 export { ReadixCard } from './ReadixCard';
 export type { ReadixCardProps } from './ReadixCard';
+
 export { ReadixCommentModal } from './ReadixCommentModal';
 export type { ReadixCommentModalProps } from './ReadixCommentModal';
+
+export { ReadixShareModal } from './ReadixShareModal';
+export type { ReadixShareModalProps, ShareReadixData } from './ReadixShareModal';
+
+export * from './ConfirmationDialog';
+export * from './EditReadixModal';
+export * from './ReportModal';
 
 export { Footer } from './Footer';
 

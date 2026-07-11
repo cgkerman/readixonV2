@@ -1,7 +1,7 @@
-import { collection, getCountFromServer, query, orderBy, limit, getDocs, startAfter, onSnapshot, type DocumentSnapshot } from 'firebase/firestore';
+import { collection, getCountFromServer, query, orderBy, limit, getDocs, startAfter, onSnapshot, type DocumentSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getUserProfile } from './userService';
-import type { User, Story } from '../types';
+import type { User, Story, Readix, Report, ReportStatus } from '../types';
 
 export interface PlatformStats {
   totalUsers: number;
@@ -123,6 +123,52 @@ export async function getAdminStories(limitCount = 50, lastDoc?: DocumentSnapsho
   }
 }
 
+/**
+ * Admin paneli için Readix gönderileri listesini getirir.
+ */
+export async function getAdminReadixes(limitCount = 50, lastDoc?: DocumentSnapshot | null): Promise<PaginatedAdminResult<Readix>> {
+  try {
+    let q = query(collection(db, 'readixes'), orderBy('createdAt', 'desc'), limit(limitCount));
+    
+    if (lastDoc) {
+      q = query(collection(db, 'readixes'), orderBy('createdAt', 'desc'), startAfter(lastDoc), limit(limitCount));
+    }
+
+    const snap = await getDocs(q);
+    const docsData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Readix));
+
+    const authorCache: Record<string, Partial<User>> = {};
+
+    const data = await Promise.all(docsData.map(async (readix) => {
+      if (readix.authorId) {
+        if (!authorCache[readix.authorId]) {
+          const profile = await getUserProfile(readix.authorId);
+          if (profile) {
+            authorCache[readix.authorId] = profile;
+          } else {
+            authorCache[readix.authorId] = { displayName: 'Bilinmeyen Yazar', username: 'unknown' } as User;
+          }
+        }
+        const profile = authorCache[readix.authorId];
+        return {
+          ...readix,
+          authorName: profile.displayName,
+          authorUsername: profile.username,
+          authorAvatarUrl: profile.avatarUrl
+        } as Readix & { authorName?: string; authorUsername?: string; authorAvatarUrl?: string; };
+      }
+      return readix;
+    }));
+
+    const newLastDoc = snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : null;
+
+    return { data, lastDoc: newLastDoc };
+  } catch (error) {
+    console.error('getAdminReadixes hatası:', error);
+    return { data: [], lastDoc: null };
+  }
+}
+
 export interface ActivityDataPoint {
   date: string; // YYYY-MM-DD
   newUsers: number;
@@ -196,4 +242,47 @@ export function listenToRecentActivity(
     unsubUsers();
     unsubStories();
   };
+}
+
+// ─────────────────────────────────────────────
+// Admin Paneli - Şikayet (Report) İşlemleri
+// ─────────────────────────────────────────────
+
+export async function getAdminReports(limitCount = 50, lastDoc?: DocumentSnapshot | null): Promise<PaginatedAdminResult<Report>> {
+  try {
+    let q = query(collection(db, 'reports'), orderBy('createdAt', 'desc'), limit(limitCount));
+    
+    if (lastDoc) {
+      q = query(collection(db, 'reports'), orderBy('createdAt', 'desc'), startAfter(lastDoc), limit(limitCount));
+    }
+
+    const snap = await getDocs(q);
+    const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Report));
+    const newLastDoc = snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : null;
+
+    return { data, lastDoc: newLastDoc };
+  } catch (error) {
+    console.error('getAdminReports hatası:', error);
+    return { data: [], lastDoc: null };
+  }
+}
+
+export async function resolveReport(reportId: string, status: ReportStatus): Promise<void> {
+  const reportRef = doc(db, 'reports', reportId);
+  await updateDoc(reportRef, { status, resolvedAt: new Date() });
+}
+
+export async function deleteReportTarget(targetId: string, targetType: string): Promise<void> {
+  let targetRef;
+  if (targetType === 'readix') {
+    targetRef = doc(db, 'readixes', targetId);
+  } else if (targetType === 'story') {
+    targetRef = doc(db, 'stories', targetId);
+  } else if (targetType === 'user') {
+    targetRef = doc(db, 'users', targetId);
+  }
+  
+  if (targetRef) {
+    await deleteDoc(targetRef);
+  }
 }

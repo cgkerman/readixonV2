@@ -1,0 +1,36 @@
+# Admin Paneli Tabloları ve Hikaye Detayı Tamamlandı 🎉
+
+Admin paneline "Kullanıcılar" ve "Hikayeler" sayfalarını detaylı tablo yapısıyla entegre ettik. Ek olarak her bir hikayenin incelenebildiği detay sayfasını yayına aldık.
+
+## Neler Değişti?
+
+### 1. Sayfalamalı Veri Servisleri (`adminService.ts`)
+- `getAdminUsers`: Tüm kullanıcıları en yeniden en eskiye sıralayarak ve belirlenen limitlerde (sayfalayarak) çeken bir servis oluşturuldu.
+- `getAdminStories`: Platformdaki tüm hikayeleri aynı şekilde performansı yormadan çeken servis eklendi. Ayrıca eksik yazar bilgilerini (isim, avatar vb.) dolduracak "zenginleştirme" mantığı eklendi.
+
+### 2. Kullanıcılar Tablosu (`/admin/users`)
+- Kullanıcıların listelendiği modern bir arayüz yapıldı.
+- Tabloda; **Kullanıcı Avatar/Kullanıcı Adı, Rol (Admin, Yazar, Okur), Katılım Tarihi, Toplam Okuma** ve **Takipçi Sayısı** alanları yer alıyor.
+
+### 3. Hikayeler Tablosu (`/admin/stories`)
+- Platformdaki eserleri listeleyen tablo eklendi.
+- Tabloda; **Hikaye Kapağı/Başlığı/Etiketleri, Yazar Bilgisi, Durum (Devam Ediyor, Tamamlandı, Taslak), İstatistikler (Okunma, Beğeni, Bölüm Sayısı)** ve **Oluşturulma Tarihi** bulunuyor.
+- Tablodaki hikaye adlarına veya görsellerine tıklayarak artık direkt o hikayenin detay sayfasına gidebilirsiniz!
+
+### 4. Hikaye Detay Sayfası (`/admin/stories/[id]`)
+Hikayelerin içeriklerini Admin olarak görüntülemek için yepyeni bir sayfa hazırladık:
+- **Genel Bilgiler:** Hikayenin kapağı, özeti, etiketleri ve güncel durumu (Yayında, Tamamlandı vb.). Ayrıca +18 Yetişkin içerik etiketi, Önsöz, Arka Kapak Yazısı ve Ekip/Katkıda Bulunanlar bilgileri eklendi.
+- **Yazar Kartı:** Hikayeyi yazan kullanıcının profiline ait şık bir görsel özet.
+- **Bölümler Tablosu:** Hikayeye ait tüm bölümlerin; sıraları, isimleri, yayınlanma tarihleri ve güncel durumlarıyla listelendiği alan.
+- **İstatistik Kartları:** Sağ kısımda eserin okuma, beğeni ve bölüm sayısını dev puntolarla vurgulayan "Dashboard" havasında gösterge kartları.
+
+### 5. Yeni: Kullanıcı Detay Sayfası (`/admin/users/[id]`)
+Kullanıcıların profil detaylarını Admin olarak detaylıca incelemek için yeni sayfa eklendi:
+- **Kullanıcı Kartı:** Avatar, Rol (Yazar/Admin/Okur), Katılım Tarihi, Bio ve Sevdiği Türler alanları yer alıyor.
+- **İstatistikler:** Takipçi, Takip edilen, Toplam okuma sayısı ve Arena Skoru görsel kartlar halinde eklendi.
+- **Sistem ve Onaylar:** Hizmet Şartları, Gizlilik Politikası kabul tarihleri ve AI asistan kullanımı listelendi.
+- **Yazdığı Eserler:** Eğer incelenen kullanıcı bir yazarsa, detay sayfasının altında otomatik olarak kaleme aldığı hikayelerin bir özeti (bölüm sayıları ve okunma istatistikleriyle birlikte) listeleniyor!
+
+## Nasıl Test Edilir?
+- Admin panelinde sol menüdeki **Hikayeler** veya **Kullanıcılar** sekmesine tıklayın.
+- Gelen tablolardan herhangi bir kullanıcının ya da hikayenin resmine/ismine tıklayarak söz konusu detaya erişin ve arka plandaki tüm verileri inceleyin!

@@ -40,6 +40,9 @@ export type {
   DuelTurn,
   DuelAuthor,
   DuelStatus,
+  Report,
+  ReportStatus,
+  ReportTargetType,
 } from './types';
 
 // Auth servisi
@@ -72,6 +75,8 @@ export {
   getUserFollowingIds,
   getUserFollowerIds,
   deleteUserAccount,
+  blockUser,
+  unblockUser,
 } from './services/userService';
 
 // Store (Zustand)
@@ -88,6 +93,7 @@ export * from './services/duelService';
 export * from './services/adminService';
 export * from './services/notificationService';
 export * from './services/chatService';
+export * from './services/reportService';
 export * from './utils/imageUtils';
 export * from './utils/cropImageUtils';
 export * from './constants/tags';

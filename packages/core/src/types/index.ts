@@ -36,6 +36,7 @@ export interface User {
     date: string; // YYYY-MM-DD
     requestCount: number;
   };
+  blockedUsers?: string[];
 }
 
 /** Yeni kullanıcı oluşturulurken kullanılan kısmi tip */
@@ -332,4 +333,22 @@ export interface DuelTurn {
   wordCount: number;
   embargoWordsSet: string[]; // Rakibe bir sonraki tur için koyduğu yasaklar
   createdAt: Timestamp;
+}
+
+// ─────────────────────────────────────────────
+// 3.9. Şikayetler (Reports)
+// ─────────────────────────────────────────────
+
+export type ReportStatus = 'pending' | 'resolved' | 'dismissed';
+export type ReportTargetType = 'readix' | 'story' | 'user' | 'comment';
+
+export interface Report {
+  id: string;
+  targetId: string;
+  targetType: ReportTargetType;
+  reporterId: string;
+  reason: string;
+  status: ReportStatus;
+  createdAt: Timestamp;
+  resolvedAt?: Timestamp;
 }

@@ -29,7 +29,7 @@ export default function AdminDashboardPage() {
     { title: 'Kullanıcılar', value: stats?.totalUsers ?? 0, icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10', href: '/admin/users' },
     { title: 'Hikayeler', value: stats?.totalStories ?? 0, icon: BookOpen, color: 'text-green-500', bg: 'bg-green-500/10', href: '/admin/stories' },
     { title: 'Düellolar', value: stats?.totalDuels ?? 0, icon: Feather, color: 'text-orange-500', bg: 'bg-orange-500/10' },
-    { title: "Readix'ler", value: stats?.totalReadixes ?? 0, icon: Hash, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+    { title: "Readix'ler", value: stats?.totalReadixes ?? 0, icon: Hash, color: 'text-purple-500', bg: 'bg-purple-500/10', href: '/admin/readixes' },
   ];
 
   return (
