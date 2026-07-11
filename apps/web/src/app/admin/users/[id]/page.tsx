@@ -112,7 +112,7 @@ export default function AdminUserDetailPage() {
               </div>
 
               <div>
-                <Typography variant="h4" className="font-semibold mb-1 text-sm text-muted">Biyografi</Typography>
+                <Typography variant="h3" className="font-semibold mb-1 text-sm text-muted">Biyografi</Typography>
                 <Typography variant="body" className="text-text text-sm leading-relaxed whitespace-pre-wrap">
                   {user.bio || 'Kullanıcı henüz bir biyografi eklememiş.'}
                 </Typography>
@@ -120,7 +120,7 @@ export default function AdminUserDetailPage() {
 
               {user.preferredGenres && user.preferredGenres.length > 0 && (
                 <div>
-                  <Typography variant="h4" className="font-semibold mb-2 text-sm text-muted">Sevdiği Türler</Typography>
+                  <Typography variant="h3" className="font-semibold mb-2 text-sm text-muted">Sevdiği Türler</Typography>
                   <div className="flex flex-wrap gap-2">
                     {user.preferredGenres.map(genre => (
                       <span key={genre} className="text-xs bg-card text-muted px-2.5 py-1 rounded-full border border-border/50">
@@ -184,7 +184,7 @@ export default function AdminUserDetailPage() {
         {/* Sağ Kolon: İstatistikler ve Onaylar */}
         <div className="space-y-6">
           <div className="bg-card/40 border border-border/50 rounded-xl p-6 shadow-sm">
-            <Typography variant="h4" className="font-bold mb-6">Etkileşim İstatistikleri</Typography>
+            <Typography variant="h3" className="font-bold mb-6">Etkileşim İstatistikleri</Typography>
             
             <div className="space-y-4">
               <div className="flex items-center gap-4 bg-background border border-border/50 p-4 rounded-xl">
@@ -220,7 +220,7 @@ export default function AdminUserDetailPage() {
           </div>
           
           <div className="bg-card/40 border border-border/50 rounded-xl p-6 shadow-sm">
-            <Typography variant="h4" className="font-bold mb-6">Sistem & Onaylar</Typography>
+            <Typography variant="h3" className="font-bold mb-6">Sistem & Onaylar</Typography>
             
             <div className="space-y-4">
               <div className="flex flex-col gap-1 pb-3 border-b border-border/50">
