@@ -141,7 +141,7 @@ export default function AdminStoryDetailPage() {
 
               <div className="pt-2 space-y-6">
                 <div>
-                  <Typography variant="h4" className="font-semibold mb-2">Özet</Typography>
+                  <Typography variant="h3" className="font-semibold mb-2">Özet</Typography>
                   <Typography variant="body" className="text-muted text-sm leading-relaxed whitespace-pre-wrap">
                     {story.summary || 'Özet eklenmemiş.'}
                   </Typography>
@@ -149,7 +149,7 @@ export default function AdminStoryDetailPage() {
 
                 {story.foreword && (
                   <div>
-                    <Typography variant="h4" className="font-semibold mb-2">Önsöz</Typography>
+                    <Typography variant="h3" className="font-semibold mb-2">Önsöz</Typography>
                     <Typography variant="body" className="text-muted text-sm leading-relaxed whitespace-pre-wrap">
                       {story.foreword}
                     </Typography>
@@ -158,7 +158,7 @@ export default function AdminStoryDetailPage() {
 
                 {story.backCover && (
                   <div>
-                    <Typography variant="h4" className="font-semibold mb-2">Arka Kapak Yazısı</Typography>
+                    <Typography variant="h3" className="font-semibold mb-2">Arka Kapak Yazısı</Typography>
                     <Typography variant="body" className="text-muted text-sm leading-relaxed whitespace-pre-wrap">
                       {story.backCover}
                     </Typography>
@@ -167,7 +167,7 @@ export default function AdminStoryDetailPage() {
 
                 {story.contributors && story.contributors.length > 0 && (
                   <div>
-                    <Typography variant="h4" className="font-semibold mb-3">Ekip / Katkıda Bulunanlar</Typography>
+                    <Typography variant="h3" className="font-semibold mb-3">Ekip / Katkıda Bulunanlar</Typography>
                     <div className="flex flex-wrap gap-2">
                       {story.contributors.map((contrib, idx) => (
                         <div key={idx} className="flex flex-col bg-card/60 border border-border/50 rounded-lg px-3 py-2 min-w-[120px]">
@@ -235,7 +235,7 @@ export default function AdminStoryDetailPage() {
         {/* Sağ Kolon: İstatistikler */}
         <div className="space-y-6">
           <div className="bg-card/40 border border-border/50 rounded-xl p-6 shadow-sm">
-            <Typography variant="h4" className="font-bold mb-6">İstatistikler</Typography>
+            <Typography variant="h3" className="font-bold mb-6">İstatistikler</Typography>
             
             <div className="space-y-4">
               <div className="flex items-center gap-4 bg-background border border-border/50 p-4 rounded-xl">

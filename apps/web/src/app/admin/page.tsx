@@ -75,7 +75,7 @@ export default function AdminDashboardPage() {
         </div>
 
         <div className="bg-card/40 border border-border/50 rounded-2xl p-6">
-          <Typography variant="h4" className="mb-4">Son İşlemler</Typography>
+          <Typography variant="h3" className="mb-4">Son İşlemler</Typography>
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 rounded-full bg-green-500"></div>
