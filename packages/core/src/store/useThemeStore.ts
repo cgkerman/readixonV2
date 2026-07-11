@@ -22,7 +22,7 @@ interface ThemeState {
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set) => ({
-      theme: 'theme-2', // Ana tema olarak Theme 2 seçildi
+      theme: 'theme-7', // Ana tema olarak Theme 7 (Yazar Moru) seçildi
       customColors: null,
       setTheme: (theme) => set({ theme }),
       setCustomColors: (colors) => set({ customColors: colors }),
