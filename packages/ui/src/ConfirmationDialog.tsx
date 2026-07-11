@@ -55,7 +55,7 @@ export function ConfirmationDialog({
             {cancelText}
           </Button>
           <Button 
-            variant={variant === 'danger' ? 'danger' : 'primary'} 
+            variant="primary" 
             className={`flex-1 rounded-full ${variant === 'danger' ? 'bg-red-500 hover:bg-red-600 text-white border-red-500' : ''}`}
             onPress={onConfirm} 
             disabled={isLoading}
