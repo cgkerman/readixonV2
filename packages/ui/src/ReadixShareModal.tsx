@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from 'react';
-import { X, Download, Share, Link2, Check } from 'lucide-react';
+import { X, Download, Share, Link2, Check, Quote } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { Typography } from './Typography';
 import { Button } from './Button';
@@ -128,43 +128,54 @@ export const ReadixShareModal: React.FC<ReadixShareModalProps> = ({
         <div className="p-6 bg-muted/5 flex justify-center items-center overflow-hidden relative">
           <div 
             ref={cardRef}
-            className="w-[300px] h-[533px] rounded-[2rem] p-6 flex flex-col relative overflow-hidden border border-white/10 shadow-xl bg-[#0a0a0a]"
+            className="w-[300px] h-[533px] rounded-[2rem] p-5 flex flex-col relative overflow-hidden border border-border/30 shadow-xl bg-background bg-gradient-to-br from-purple-50/50 to-indigo-50/50 dark:from-purple-950/20 dark:to-indigo-950/20"
           >
             
-            <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-5 flex-1 flex flex-col relative z-10 shadow-inner">
-              <div className="flex flex-col gap-3 mb-4">
+            {/* Zarif Degrade Işıklar (Anasayfadaki gibi) */}
+            <div className="absolute top-[-10%] right-[-10%] w-[150px] h-[150px] bg-primary/20 blur-[50px] rounded-full pointer-events-none" />
+            <div className="absolute bottom-[-10%] left-[-10%] w-[150px] h-[150px] bg-purple-500/20 blur-[50px] rounded-full pointer-events-none" />
+
+            <div className="bg-card/40 dark:bg-card/60 backdrop-blur-xl border border-border/50 rounded-2xl p-5 flex-1 flex flex-col relative z-10 shadow-inner overflow-hidden">
+
+
+              <div className="flex flex-col gap-2 mb-2 relative z-10">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full overflow-hidden bg-primary/30 border-2 border-white/20 shrink-0">
+                  <div className="relative w-12 h-12 rounded-full overflow-hidden bg-primary/10 border-2 border-primary/20 shrink-0 flex items-center justify-center">
                     {readix.authorAvatarUrl ? (
-                      <img src={readix.authorAvatarUrl} alt={readix.authorName} className="w-full h-full object-cover" crossOrigin="anonymous" />
+                      <img src={readix.authorAvatarUrl} alt={readix.authorName} className="absolute inset-0 w-full h-full rounded-full object-cover object-center" crossOrigin="anonymous" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-white font-bold text-lg">
+                      <div className="w-full h-full rounded-full flex items-center justify-center text-primary font-bold text-lg">
                         {readix.authorName.charAt(0).toUpperCase()}
                       </div>
                     )}
                   </div>
                   <div>
-                    <Typography variant="body" className="font-bold text-white leading-tight">
+                    <Typography variant="body" className="font-bold text-text leading-tight">
                       {readix.authorName}
                     </Typography>
-                    <Typography variant="caption" className="text-white/60">
+                    <Typography variant="caption" className="text-muted">
                       @{readix.authorUsername}
                     </Typography>
                   </div>
                 </div>
               </div>
 
-              <div className="text-white/90 whitespace-pre-wrap text-[15px] leading-relaxed flex-1 overflow-hidden">
-                <Typography variant="body" className="text-white">
-                   {cleanContent.length > 280 ? cleanContent.substring(0, 280) + '...' : cleanContent}
-                </Typography>
+              <div className="flex-1 overflow-hidden flex flex-col justify-center relative z-10">
+                <Quote className="text-primary/20 w-6 h-6 shrink-0" fill="currentColor" />
+                <div className="text-text whitespace-pre-wrap text-[14.5px] leading-snug overflow-hidden px-2 py-1">
+                  <Typography variant="body" className="text-text line-clamp-8">
+                     {cleanContent.length > 320 ? cleanContent.substring(0, 320).trim() + '...' : cleanContent}
+                  </Typography>
+                </div>
+                <div className="flex justify-end shrink-0">
+                  <Quote className="text-primary/20 w-6 h-6 rotate-180" fill="currentColor" />
+                </div>
               </div>
-
 
             </div>
             
             <div className="mt-auto pt-6 text-center relative z-10">
-              <Typography variant="caption" className="text-white font-medium tracking-wide">
+              <Typography variant="caption" className="text-muted font-medium tracking-wide">
                 www.readixon.com
               </Typography>
             </div>
