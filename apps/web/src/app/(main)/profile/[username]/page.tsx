@@ -92,6 +92,7 @@ export default function ProfilePage() {
       await reportContent(activeReadix.id, 'readix', firebaseUser.uid, `${reason} ${details ? '- ' + details : ''}`);
       toast.success('Şikayetiniz alındı, incelenecek.');
     } catch (e) {
+      console.error('Şikayet gönderilirken hata:', e);
       toast.error('Şikayet gönderilemedi.');
     }
   };

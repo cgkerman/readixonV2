@@ -127,6 +127,8 @@ export default function NotificationsPage() {
         return <div className="w-10 h-10 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center shrink-0"><Feather size={20} /></div>;
       case 'duel_rejected':
         return <div className="w-10 h-10 rounded-full bg-red-950/20 text-red-700 flex items-center justify-center shrink-0"><XCircle size={20} /></div>;
+      case 'system_message':
+        return <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center shrink-0"><Bell size={20} /></div>;
       default:
         return <div className="w-10 h-10 rounded-full bg-muted/20 text-muted flex items-center justify-center shrink-0"><Bell size={20} /></div>;
     }
@@ -158,6 +160,8 @@ export default function NotificationsPage() {
         return <>{actor} meydan okumanı kabul etti. Düello başladı!</>;
       case 'duel_rejected':
         return <>{actor} meydan okumanı reddetti.</>;
+      case 'system_message':
+        return <span>{notif.message || 'Sistemden yeni bir mesajınız var.'}</span>;
       default:
         return <span>Yeni bir bildiriminiz var.</span>;
     }

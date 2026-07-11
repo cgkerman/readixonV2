@@ -1,6 +1,7 @@
-import { collection, getCountFromServer, query, orderBy, limit, getDocs, startAfter, onSnapshot, type DocumentSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getCountFromServer, query, orderBy, limit, getDocs, startAfter, onSnapshot, type DocumentSnapshot, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getUserProfile } from './userService';
+import { createNotification } from './notificationService';
 import type { User, Story, Readix, Report, ReportStatus } from '../types';
 
 export interface PlatformStats {
@@ -269,7 +270,33 @@ export async function getAdminReports(limitCount = 50, lastDoc?: DocumentSnapsho
 
 export async function resolveReport(reportId: string, status: ReportStatus): Promise<void> {
   const reportRef = doc(db, 'reports', reportId);
+  
+  // Şikayeti gönderen kişiye bildirim göndermek için şikayet detayını çek
+  const reportSnap = await getDoc(reportRef);
+  
   await updateDoc(reportRef, { status, resolvedAt: new Date() });
+
+  if (reportSnap.exists()) {
+    const reportData = reportSnap.data() as Report;
+    
+    let message = '';
+    if (status === 'resolved') {
+      message = 'Şikayet ettiğiniz içerik incelendi ve işlem yapıldı. Topluluğumuzu güvende tuttuğunuz için teşekkür ederiz.';
+    } else if (status === 'dismissed') {
+      message = 'Şikayet ettiğiniz içerik incelendi ancak kurallarımıza aykırı bir durum tespit edilemedi.';
+    }
+    
+    if (message && reportData.reporterId) {
+      await createNotification({
+        userId: reportData.reporterId,
+        actorId: 'system',
+        actorName: 'Readixon Yönetimi',
+        type: 'system_message',
+        message,
+        entityId: reportData.targetId
+      }).catch(e => console.error('Şikayet bildirimi gönderilemedi:', e));
+    }
+  }
 }
 
 export async function deleteReportTarget(targetId: string, targetType: string): Promise<void> {

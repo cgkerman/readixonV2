@@ -17,6 +17,8 @@ export default function AdminReportsPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+
   useEffect(() => {
     fetchInitial();
   }, []);
@@ -53,6 +55,7 @@ export default function AdminReportsPage() {
       await resolveReport(reportId, status);
       setReports(prev => prev.map(r => r.id === reportId ? { ...r, status } : r));
       toast.success(status === 'resolved' ? 'Şikayet çözüldü olarak işaretlendi.' : 'Şikayet reddedildi.');
+      if (detailsModalOpen && activeReport?.id === reportId) setDetailsModalOpen(false);
     } catch (e) {
       toast.error('İşlem başarısız.');
     }
@@ -67,6 +70,7 @@ export default function AdminReportsPage() {
       
       setReports(prev => prev.map(r => r.id === activeReport.id ? { ...r, status: 'resolved' } : r));
       setDeleteConfirmOpen(false);
+      setDetailsModalOpen(false);
       toast.success('İçerik silindi ve şikayet çözüldü.');
     } catch (e) {
       toast.error('Silme başarısız.');
@@ -88,11 +92,11 @@ export default function AdminReportsPage() {
   const getStatusBadge = (status: ReportStatus) => {
     switch (status) {
       case 'pending':
-        return <span className="px-3 py-1 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-full text-xs font-semibold flex items-center gap-1"><AlertTriangle size={12} /> Bekliyor</span>;
+        return <span className="px-3 py-1 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-full text-xs font-semibold flex items-center gap-1 w-fit"><AlertTriangle size={12} /> Bekliyor</span>;
       case 'resolved':
-        return <span className="px-3 py-1 bg-green-500/10 text-green-500 border border-green-500/20 rounded-full text-xs font-semibold flex items-center gap-1"><CheckCircle size={12} /> Çözüldü</span>;
+        return <span className="px-3 py-1 bg-green-500/10 text-green-500 border border-green-500/20 rounded-full text-xs font-semibold flex items-center gap-1 w-fit"><CheckCircle size={12} /> Çözüldü</span>;
       case 'dismissed':
-        return <span className="px-3 py-1 bg-muted/20 text-muted border border-border rounded-full text-xs font-semibold flex items-center gap-1"><XCircle size={12} /> Reddedildi</span>;
+        return <span className="px-3 py-1 bg-muted/20 text-muted border border-border rounded-full text-xs font-semibold flex items-center gap-1 w-fit"><XCircle size={12} /> Reddedildi</span>;
     }
   };
 
@@ -137,7 +141,11 @@ export default function AdminReportsPage() {
                 </tr>
               ) : (
                 reports.map(report => (
-                  <tr key={report.id} className="hover:bg-muted/5 transition-colors">
+                  <tr 
+                    key={report.id} 
+                    className="hover:bg-muted/5 transition-colors cursor-pointer"
+                    onClick={() => { setActiveReport(report); setDetailsModalOpen(true); }}
+                  >
                     <td className="px-6 py-4 font-medium">
                       {getTypeLabel(report.targetType)}
                       <br/>
@@ -153,7 +161,7 @@ export default function AdminReportsPage() {
                     <td className="px-6 py-4 text-muted">
                       {report.createdAt ? new Date((report.createdAt as any).seconds ? (report.createdAt as any).seconds * 1000 : (report.createdAt as unknown as number)).toLocaleDateString() : '-'}
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-2">
                         {report.status === 'pending' && (
                           <>
@@ -198,9 +206,67 @@ export default function AdminReportsPage() {
         )}
       </div>
 
+      {detailsModalOpen && activeReport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+          <div className="bg-card border border-border w-full max-w-md rounded-3xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-6 border-b border-border/50">
+              <Typography variant="h3" className="font-bold">Şikayet Detayı</Typography>
+              <button onClick={() => setDetailsModalOpen(false)} className="text-muted hover:text-text transition-colors">
+                <XCircle size={24} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <Typography variant="caption" className="text-muted uppercase tracking-wider font-semibold mb-1">Durum</Typography>
+                {getStatusBadge(activeReport.status)}
+              </div>
+              
+              <div>
+                <Typography variant="caption" className="text-muted uppercase tracking-wider font-semibold mb-1">Hedef Türü & ID</Typography>
+                <div className="bg-muted/10 p-3 rounded-xl border border-border/50 font-mono text-sm break-all">
+                  <span className="text-primary font-bold">{getTypeLabel(activeReport.targetType)}</span><br/>
+                  {activeReport.targetId}
+                </div>
+              </div>
+
+              <div>
+                <Typography variant="caption" className="text-muted uppercase tracking-wider font-semibold mb-1">Şikayet Nedeni & Detaylar</Typography>
+                <div className="bg-red-500/5 p-3 rounded-xl border border-red-500/20 text-sm">
+                  {activeReport.reason}
+                </div>
+              </div>
+
+              <div>
+                <Typography variant="caption" className="text-muted uppercase tracking-wider font-semibold mb-1">Şikayet Eden Kullanıcı ID</Typography>
+                <div className="text-sm font-mono break-all">{activeReport.reporterId}</div>
+              </div>
+            </div>
+            
+            {activeReport.status === 'pending' && (
+              <div className="p-6 border-t border-border/50 bg-muted/5 flex gap-3">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 rounded-xl"
+                  onPress={() => handleResolve(activeReport.id!, 'dismissed')}
+                >
+                  Reddet
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="flex-1 rounded-xl border-red-500/50 text-red-500 hover:bg-red-500/10"
+                  onPress={() => setDeleteConfirmOpen(true)}
+                >
+                  İçeriği Sil
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <ConfirmationDialog
         isOpen={deleteConfirmOpen}
-        onClose={() => { setDeleteConfirmOpen(false); setActiveReport(null); }}
+        onClose={() => { setDeleteConfirmOpen(false); if (!detailsModalOpen) setActiveReport(null); }}
         onConfirm={handleDeleteTarget}
         title="İçeriği Sil ve Şikayeti Çöz"
         message="Bu şikayet edilen içeriği tamamen silmek istediğinize emin misiniz? Bu işlem geri alınamaz."

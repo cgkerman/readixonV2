@@ -217,7 +217,8 @@ export type NotificationType =
   | 'new_chapter'
   | 'duel_challenge'
   | 'duel_accepted'
-  | 'duel_rejected';
+  | 'duel_rejected'
+  | 'system_message';
 
 export interface AppNotification {
   id: string;
@@ -230,6 +231,7 @@ export interface AppNotification {
   entityId?: string; // e.g. storyId or readixId
   entityTitle?: string; // optional context, e.g. "Yüzüklerin Efendisi"
   subEntityTitle?: string; // e.g. chapter title
+  message?: string; // System message content
   isRead: boolean;
   createdAt: Timestamp;
 }
