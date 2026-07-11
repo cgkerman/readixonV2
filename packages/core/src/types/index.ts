@@ -29,6 +29,7 @@ export interface User {
   stats: UserStats;
   createdAt: Timestamp;
   isAuthor?: boolean;
+  isAdmin?: boolean;
   termsAcceptedAt?: Timestamp; // Yasal onay timestamp
   privacyAcceptedAt?: Timestamp; // Gizlilik onay timestamp
   aiUsage?: {

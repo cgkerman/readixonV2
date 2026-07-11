@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { BookOpen, Compass, Search, User, LogOut, PenTool, Hash, Settings, Bell, MessageCircle, Menu, X, LifeBuoy, Feather } from 'lucide-react';
+import { BookOpen, Compass, Search, User, LogOut, PenTool, Hash, Settings, Bell, MessageCircle, Menu, X, LifeBuoy, Feather, ShieldAlert } from 'lucide-react';
 import { Typography, Button } from '@readixon/ui';
 import { useAuthStore, signOut, becomeAuthor, sendVerificationEmail, subscribeToChats } from '@readixon/core';
 import { toast } from "sonner";
@@ -257,6 +257,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               <PenTool size={18} className="mr-2" /> Yazar Ol
             </Button>
           )}
+          {userProfile?.isAdmin && (
+            <Link href="/admin">
+              <Button variant="outline" className="w-full justify-start mb-2 border-primary/20 text-primary hover:bg-primary/10">
+                <ShieldAlert size={18} className="mr-2" /> Yönetim Paneli
+              </Button>
+            </Link>
+          )}
           <Button variant="ghost" className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-950/30" onPress={handleSignOut}>
             <LogOut size={18} className="mr-2" /> Çıkış Yap
           </Button>
@@ -442,6 +449,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   <Button variant="outline" className="w-full justify-start border-primary/20 text-primary hover:bg-primary/10 py-6" onPress={() => { setIsMobileMenuOpen(false); handleBecomeAuthor(); }}>
                     <PenTool size={20} className="mr-3" /> <span className="text-lg">Yazar Ol</span>
                   </Button>
+                )}
+                {userProfile?.isAdmin && (
+                  <Link href="/admin" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button variant="outline" className="w-full justify-start border-primary/20 text-primary hover:bg-primary/10 py-6 mb-2">
+                      <ShieldAlert size={20} className="mr-3" /> <span className="text-lg">Yönetim Paneli</span>
+                    </Button>
+                  </Link>
                 )}
               </div>
               <Button variant="ghost" className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-950/30 py-6 shrink-0" onPress={() => { setIsMobileMenuOpen(false); handleSignOut(); }}>
