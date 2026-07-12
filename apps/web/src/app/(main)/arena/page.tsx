@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Typography, Button, Input } from '@readixon/ui';
-import { Feather, Plus, X, Users, AlertCircle, Radio, Star, BookOpen } from 'lucide-react';
-import { useAuthStore, getPublicDuels, getUserPendingChallenges, getUserSentChallenges, createDuelChallenge, acceptDuelChallenge, rejectDuelChallenge, cancelDuelChallenge, Duel, DuelAuthor, getUserByUsername, searchUsers, User, LobbyRoom, getLobbyRooms } from '@readixon/core';
+import { Feather, Plus, X, Users, AlertCircle, Radio, Star, BookOpen, Info, Zap } from 'lucide-react';
+import { useAuthStore, getPublicDuels, getUserPendingChallenges, getUserSentChallenges, createDuelChallenge, acceptDuelChallenge, rejectDuelChallenge, cancelDuelChallenge, Duel, DuelAuthor, getUserByUsername, searchUsers, User, LobbyRoom, getLobbyRooms, getCurveballRooms, CurveballRoom } from '@readixon/core';
 import { toast } from 'sonner';
 
 export default function ArenaPage() {
@@ -15,6 +15,7 @@ export default function ArenaPage() {
   const [pendingDuels, setPendingDuels] = useState<Duel[]>([]);
   const [sentDuels, setSentDuels] = useState<Duel[]>([]);
   const [lobbies, setLobbies] = useState<LobbyRoom[]>([]);
+  const [curveballRooms, setCurveballRooms] = useState<CurveballRoom[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'active' | 'voting' | 'completed'>('active');
 
@@ -23,6 +24,9 @@ export default function ArenaPage() {
   const [duelTitle, setDuelTitle] = useState('');
   const [duelPrompt, setDuelPrompt] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [isLobbyInfoModalOpen, setIsLobbyInfoModalOpen] = useState(false);
+  const [isArenaInfoModalOpen, setIsArenaInfoModalOpen] = useState(false);
+  const [isCurveballInfoModalOpen, setIsCurveballInfoModalOpen] = useState(false);
 
   const [turnTimeLimit, setTurnTimeLimit] = useState<number>(15);
 
@@ -69,16 +73,18 @@ export default function ArenaPage() {
     if (!firebaseUser) return;
     setIsLoading(true);
     try {
-      const [active, pending, sent, rooms] = await Promise.all([
+      const [active, pending, sent, rooms, curveballs] = await Promise.all([
         getPublicDuels(),
         getUserPendingChallenges(firebaseUser.uid),
         getUserSentChallenges(firebaseUser.uid),
-        getLobbyRooms()
+        getLobbyRooms(),
+        getCurveballRooms()
       ]);
       setActiveDuels(active);
       setPendingDuels(pending);
       setSentDuels(sent);
       setLobbies(rooms);
+      setCurveballRooms(curveballs);
     } catch (error) {
       console.error('Error loading duels:', error);
       toast.error('Düellolar yüklenirken hata oluştu.');
@@ -248,8 +254,8 @@ export default function ArenaPage() {
             <><BookOpen size={12} /> BİTTİ</>
           )}
         </span>
-        <span className="text-sm font-bold text-primary flex items-center gap-1 bg-primary/10 px-3 py-1 rounded-full">
-          🏆 {lobby.winnerPrize} Puan
+        <span className="text-sm font-bold text-primary flex items-center gap-1 bg-primary/10 px-3 py-1 rounded-full whitespace-nowrap">
+          🏆 {lobby.winnerPrize} RX
         </span>
       </div>
 
@@ -257,8 +263,48 @@ export default function ArenaPage() {
         {lobby.title}
       </Typography>
       <div className="flex items-center gap-4 text-sm text-muted font-medium mb-4 relative z-10">
-         <span className="flex items-center gap-1"><Users size={14} /> {lobby.participantIds.length} / {lobby.maxParticipants} Katılımcı</span>
-         <span className="flex items-center gap-1 text-primary">Giriş: {lobby.entryFee} Puan</span>
+        <span className="flex items-center gap-1 whitespace-nowrap"><Users size={14} /> {lobby.participantIds.length} / {lobby.maxParticipants} Katılımcı</span>
+        <span className="flex items-center gap-1 text-primary whitespace-nowrap">Giriş: {lobby.entryFee} RX</span>
+      </div>
+    </div>
+  );
+
+  const renderCurveballCard = (room: CurveballRoom) => (
+    <div
+      key={room.id}
+      onClick={() => router.push(`/arena/curveball/${room.id}`)}
+      className="p-5 rounded-3xl bg-gradient-to-br from-primary/20 via-background to-background border-2 border-primary/30 hover:border-primary cursor-pointer transition-all hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/20 group relative overflow-hidden"
+    >
+      <div className="absolute top-0 right-0 p-4 opacity-10 text-primary pointer-events-none group-hover:scale-110 transition-transform">
+        <Zap size={80} />
+      </div>
+      <div className="flex justify-between items-center mb-4 relative z-10">
+        <span className="px-3 py-1 rounded-full bg-primary text-white text-xs font-bold tracking-widest uppercase flex items-center gap-1 shadow-lg shadow-primary/20">
+          {room.status === 'waiting' ? (
+            <><Users size={12} /> BEKLİYOR</>
+          ) : room.status === 'active' ? (
+            <><Radio size={12} className="animate-pulse" /> YAZILIYOR</>
+          ) : room.status === 'voting' ? (
+            <><Star size={12} /> OYLAMADA</>
+          ) : (
+            <><BookOpen size={12} /> BİTTİ</>
+          )}
+        </span>
+        <span className="text-sm font-bold text-primary flex items-center gap-1 bg-primary/10 px-3 py-1 rounded-full whitespace-nowrap">
+          🏆 {room.winnerPrize} RX
+        </span>
+      </div>
+
+      <Typography variant="h3" className="font-black text-text mb-1 relative z-10">
+        {room.title}
+      </Typography>
+      <Typography variant="caption" className="text-muted font-bold block mb-4 relative z-10">
+        ⚡ {room.curveball.type === 'taboo_word' ? 'Tabu Kelime' : room.curveball.type === 'forced_injection' ? 'Zorunlu Cümle' : 'Noktalama Boykotu'} Modu
+      </Typography>
+
+      <div className="flex items-center gap-4 text-sm text-muted font-medium mb-4 relative z-10">
+        <span className="flex items-center gap-1 whitespace-nowrap"><Users size={14} /> {room.participantIds.length} / {room.maxParticipants} Katılımcı</span>
+        <span className="flex items-center gap-1 text-primary whitespace-nowrap">Giriş: {room.entryFee} RX</span>
       </div>
     </div>
   );
@@ -276,7 +322,16 @@ export default function ArenaPage() {
                 <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
                   <Feather size={24} />
                 </div>
-                <Typography variant="h1" className="font-bold tracking-tight">Edebi Arena</Typography>
+                <Typography variant="h1" className="font-bold tracking-tight flex items-center gap-2">
+                  Edebi Arena
+                  <button
+                    onClick={() => setIsArenaInfoModalOpen(true)}
+                    className="text-muted hover:text-primary transition-colors focus:outline-none flex items-center justify-center p-1"
+                    title="Edebi Arena Nedir?"
+                  >
+                    <Info size={24} />
+                  </button>
+                </Typography>
               </div>
               <Typography variant="body" className="text-muted max-w-xl">
                 Zihninizin sınırlarını zorlamaya hazır mısınız? Kelimelerin savaştığı, sadece en güçlü kalemlerin ayakta kaldığı edebi tiyatroya adım atın.
@@ -350,27 +405,70 @@ export default function ArenaPage() {
 
           {/* Lobi Odaları (Yazar Lobisi) */}
           <div className="mb-16">
-             <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                   <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
-                      <Users size={16} />
-                   </div>
-                   <Typography variant="h2" className="font-bold">Yazar Lobisi (Arena)</Typography>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                  <Users size={16} />
                 </div>
-                <Typography variant="caption" className="text-muted border border-border px-3 py-1 rounded-full">Büyük Ödüllü Sistem Odaları</Typography>
-             </div>
-             
-             {isLoading ? (
-                <div className="h-32 rounded-3xl bg-card animate-pulse border border-border" />
-             ) : lobbies.length === 0 ? (
-                <div className="text-center py-10 bg-card/30 rounded-3xl border border-dashed border-border">
-                  <Typography variant="body" className="text-muted">Şu an aktif bir sistem odası bulunmuyor.</Typography>
+                <Typography variant="h2" className="font-bold flex items-center gap-2">
+                  Yazar Lobisi
+                  <button
+                    onClick={() => setIsLobbyInfoModalOpen(true)}
+                    className="text-muted hover:text-primary transition-colors focus:outline-none flex items-center justify-center p-1"
+                    title="Yazar Lobisi Nedir?"
+                  >
+                    <Info size={18} />
+                  </button>
+                </Typography>
+              </div>
+              <Typography variant="caption" className="text-muted border border-border px-3 py-1 rounded-full">Büyük Ödüllü Sistem Odaları</Typography>
+            </div>
+
+            {isLoading ? (
+              <div className="h-32 rounded-3xl bg-card animate-pulse border border-border" />
+            ) : lobbies.length === 0 ? (
+              <div className="text-center py-10 bg-card/30 rounded-3xl border border-dashed border-border">
+                <Typography variant="body" className="text-muted">Şu an aktif bir sistem odası bulunmuyor.</Typography>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {lobbies.map(renderLobbyCard)}
+              </div>
+            )}
+          </div>
+
+          {/* Sürpriz Kırılma (Curveball) */}
+          <div className="mb-16">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                  <Zap size={16} />
                 </div>
-             ) : (
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                   {lobbies.map(renderLobbyCard)}
-                </div>
-             )}
+                <Typography variant="h2" className="font-bold flex items-center gap-2">
+                  Sürpriz Kırılma
+                  <button
+                    onClick={() => setIsCurveballInfoModalOpen(true)}
+                    className="text-muted hover:text-primary transition-colors focus:outline-none flex items-center justify-center p-1"
+                    title="Sürpriz Kırılma Nedir?"
+                  >
+                    <Info size={18} />
+                  </button>
+                </Typography>
+              </div>
+              <Typography variant="caption" className="text-muted border border-border px-3 py-1 rounded-full">Dinamik Kısıtlamalı Odalar</Typography>
+            </div>
+
+            {isLoading ? (
+              <div className="h-32 rounded-3xl bg-card animate-pulse border border-border" />
+            ) : curveballRooms.length === 0 ? (
+              <div className="text-center py-10 bg-card/30 rounded-3xl border border-dashed border-border">
+                <Typography variant="body" className="text-muted">Şu an aktif bir sürpriz kırılma odası bulunmuyor.</Typography>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {curveballRooms.map(renderCurveballCard)}
+              </div>
+            )}
           </div>
 
           {/* Sekmeler */}
@@ -575,6 +673,195 @@ export default function ArenaPage() {
                 {isCreating ? 'Kalemler Bileniyor...' : 'Daveti Gönder'}
               </Button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Yazar Lobisi Bilgi Modalı */}
+      {isLobbyInfoModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-card w-full max-w-md rounded-3xl border border-border shadow-2xl p-6 relative animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setIsLobbyInfoModalOpen(false)}
+              className="absolute top-4 right-4 p-2 text-muted hover:text-text rounded-full hover:bg-background transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+                <Info size={20} />
+              </div>
+              <Typography variant="h3" className="font-bold">Yazar Lobisi Nedir?</Typography>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <Typography variant="body" className="font-bold text-text mb-1 flex items-center gap-2">
+                  <span className="text-primary">1.</span> Sistem Odaları
+                </Typography>
+                <Typography variant="caption" className="text-muted leading-relaxed">
+                  Yazar lobisi, Readixon tarafından oluşturulmuş özel düello odalarıdır. Belli bir giriş ücreti (RX) ödeyerek bu odalara katılır ve diğer yazarlarla aynı konu üzerinden yarışırsınız.
+                </Typography>
+              </div>
+
+              <div>
+                <Typography variant="body" className="font-bold text-text mb-1 flex items-center gap-2">
+                  <span className="text-primary">2.</span> Nasıl Oynanır?
+                </Typography>
+                <Typography variant="caption" className="text-muted leading-relaxed">
+                  Oda kapasitesi dolduğunda yarışma otomatik olarak başlar. Belirlenen süre içerisinde verilen konuya uygun hikayenizi yazarsınız. Süre bittiğinde yazılar oylamaya açılır.
+                </Typography>
+              </div>
+
+              <div>
+                <Typography variant="body" className="font-bold text-text mb-1 flex items-center gap-2">
+                  <span className="text-primary">3.</span> Oylama Nasıl Yapılır?
+                </Typography>
+                <Typography variant="caption" className="text-muted leading-relaxed">
+                  Tüm hikayeler yazıldıktan sonra genel okuyucular tarafından gizli bir şekilde (yazar adları gizli olarak) oylanır. En çok beğeniyi alan hikaye kazanır.
+                </Typography>
+              </div>
+
+              <div>
+                <Typography variant="body" className="font-bold text-text mb-1 flex items-center gap-2">
+                  <span className="text-primary">4.</span> Kazanılan RX'ler Ne İşe Yarar?
+                </Typography>
+                <Typography variant="caption" className="text-muted leading-relaxed">
+                  Kazanan kişi havuzda biriken büyük ödülü (RX) alır. Kazandığınız RX'leri yeni sistem odalarına girmek için kullanabilir, platform içi ayrıcalıklar elde edebilir veya belli bir seviyeye ulaştığınızda özel ödüllere dönüştürebilirsiniz.
+                </Typography>
+              </div>
+            </div>
+
+            <Button
+              onPress={() => setIsLobbyInfoModalOpen(false)}
+              className="w-full mt-8 bg-primary hover:bg-primary/90 text-primary-foreground border-0"
+            >
+              Anladım, Teşekkürler
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Edebi Arena Bilgi Modalı */}
+      {isArenaInfoModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-card w-full max-w-md rounded-3xl border border-border shadow-2xl p-6 relative animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setIsArenaInfoModalOpen(false)}
+              className="absolute top-4 right-4 p-2 text-muted hover:text-text rounded-full hover:bg-background transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+                <Info size={20} />
+              </div>
+              <Typography variant="h3" className="font-bold">Edebi Arena Nedir?</Typography>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <Typography variant="body" className="font-bold text-text mb-1 flex items-center gap-2">
+                  <span className="text-primary">1.</span> Birebir Düellolar
+                </Typography>
+                <Typography variant="caption" className="text-muted leading-relaxed">
+                  Edebi Arena, arkadaşlarınızla veya diğer platform üyeleriyle birebir (1v1) yeteneklerinizi yarıştırdığınız özel bir meydan okuma alanıdır.
+                </Typography>
+              </div>
+
+              <div>
+                <Typography variant="body" className="font-bold text-text mb-1 flex items-center gap-2">
+                  <span className="text-primary">2.</span> Nasıl Meydan Okunur?
+                </Typography>
+                <Typography variant="caption" className="text-muted leading-relaxed">
+                  "Meydan Oku" butonuna tıklayarak rakibinizi seçer, hikaye konusu ve yazım süresini belirlersiniz. Rakibiniz daveti kabul ettiğinde süre işlemeye başlar.
+                </Typography>
+              </div>
+
+              <div>
+                <Typography variant="body" className="font-bold text-text mb-1 flex items-center gap-2">
+                  <span className="text-primary">3.</span> Oylama Süreci
+                </Typography>
+                <Typography variant="caption" className="text-muted leading-relaxed">
+                  İki yazar da hikayesini tamamladığında düello "Halk Oylaması" sekmesine düşer. Okuyucular, yazarların kim olduğunu görmeden, tamamen edebi kaliteye göre oylarını kullanırlar.
+                </Typography>
+              </div>
+
+              <div>
+                <Typography variant="body" className="font-bold text-text mb-1 flex items-center gap-2">
+                  <span className="text-primary">4.</span> Neden Önemli?
+                </Typography>
+                <Typography variant="caption" className="text-muted leading-relaxed">
+                  Düelloları kazanmak, platformdaki itibarınızı artırır. Oylama sonucunda en yüksek puanı alan yazar zafer kazanır ve bu başarı doğrudan yazar profiline yansır.
+                </Typography>
+              </div>
+            </div>
+
+            <Button
+              onPress={() => setIsArenaInfoModalOpen(false)}
+              className="w-full mt-8 bg-primary hover:bg-primary/90 text-primary-foreground border-0"
+            >
+              Anladım, Teşekkürler
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Sürpriz Kırılma Bilgi Modalı */}
+      {isCurveballInfoModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-card w-full max-w-md rounded-3xl border border-border shadow-2xl p-6 relative animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setIsCurveballInfoModalOpen(false)}
+              className="absolute top-4 right-4 p-2 text-muted hover:text-text rounded-full hover:bg-background transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+                <Info size={20} />
+              </div>
+              <Typography variant="h3" className="font-bold">Sürpriz Kırılma Nedir?</Typography>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <Typography variant="body" className="font-bold text-text mb-1 flex items-center gap-2">
+                  <span className="text-primary">1.</span> Dinamik Kısıtlamalar
+                </Typography>
+                <Typography variant="caption" className="text-muted leading-relaxed">
+                  Sürpriz Kırılma odaları, yazarlara oyunun ortasında beklenmedik ve aniden ortaya çıkan kurallar (kısıtlamalar) sunar. Hikayenizi bu kurala göre şekillendirmek veya değiştirmek zorunda kalırsınız.
+                </Typography>
+              </div>
+
+              <div>
+                <Typography variant="body" className="font-bold text-text mb-1 flex items-center gap-2">
+                  <span className="text-primary">2.</span> Kural Örnekleri
+                </Typography>
+                <Typography variant="caption" className="text-muted leading-relaxed">
+                  Örneğin hikayenizin son 5 dakikasında "Ana karakterin aslında kör olduğunu belli et" veya "Son cümlede 'elma' kelimesi geçmek zorunda" gibi kurallara uyum sağlamanız gerekebilir.
+                </Typography>
+              </div>
+
+              <div>
+                <Typography variant="body" className="font-bold text-text mb-1 flex items-center gap-2">
+                  <span className="text-primary">3.</span> Oylama
+                </Typography>
+                <Typography variant="caption" className="text-muted leading-relaxed">
+                  Hikayeler tamamlandığında okuyucular, kurala ne kadar iyi uyulduğunu da göz önünde bulundurarak oylarını verirler.
+                </Typography>
+              </div>
+            </div>
+
+            <Button
+              onPress={() => setIsCurveballInfoModalOpen(false)}
+              className="w-full mt-8 bg-primary hover:bg-primary/90 text-primary-foreground border-0"
+            >
+              Anladım, Teşekkürler
+            </Button>
           </div>
         </div>
       )}

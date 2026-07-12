@@ -29,10 +29,9 @@ export async function getLobbyRooms(): Promise<LobbyRoom[]> {
   const q = query(lobbiesRef, orderBy('createdAt', 'desc'));
   const snap = await getDocs(q);
   
-  return snap.docs.map(doc => ({
-    ...doc.data(),
-    id: doc.id
-  })) as LobbyRoom[];
+  return snap.docs
+    .map(doc => ({ ...doc.data(), id: doc.id }))
+    .filter(data => (data as any).curveball === undefined) as LobbyRoom[];
 }
 
 /**

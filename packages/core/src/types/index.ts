@@ -411,3 +411,67 @@ export interface LobbyVote {
   createdAt: Timestamp;
 }
 
+// ─────────────────────────────────────────────
+// 3.11. Sürpriz Kırılma (Curveball) Odaları
+// ─────────────────────────────────────────────
+
+export type CurveballType = 'taboo_word' | 'forced_injection' | 'punctuation_boycott';
+
+export interface CurveballConfig {
+  type: CurveballType;
+  payload: string[]; // Yasaklı kelimeler, zorunlu cümle veya noktalama işaretleri
+  triggerPercentage: number; // Sürenin son % kaçında patlayacak (Örn: 25)
+}
+
+export type CurveballStatus = 'waiting' | 'active' | 'voting' | 'completed';
+
+export interface CurveballRoom {
+  id: string;
+  title: string;
+  theme: string;
+  status: CurveballStatus;
+  entryFee: number;
+  winnerPrize: number;
+  minParticipants: number;
+  maxParticipants: number;
+  wordLimit: number;
+  durationMinutes: number;
+  
+  curveball: CurveballConfig;
+  
+  participantIds: string[];
+  createdBy: string;
+  createdAt: Timestamp;
+  startedAt?: Timestamp;
+  votingEndsAt?: Timestamp;
+  winners?: string[];
+}
+
+export interface CurveballParticipant {
+  roomId: string;
+  uid: string;
+  joinedAt: Timestamp;
+  hasSubmitted: boolean;
+}
+
+export interface CurveballSubmission {
+  id: string;
+  roomId: string;
+  authorUid: string;
+  content: string;
+  wordCount: number;
+  createdAt: Timestamp;
+}
+
+export interface CurveballVote {
+  id: string;
+  roomId: string;
+  submissionId: string;
+  voterUid: string;
+  topicScore: number;
+  languageScore: number;
+  creativityScore: number;
+  totalScore: number;
+  createdAt: Timestamp;
+}
+

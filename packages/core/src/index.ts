@@ -48,6 +48,13 @@ export type {
   LobbySubmission,
   LobbyVote,
   LobbyStatus,
+  CurveballType,
+  CurveballConfig,
+  CurveballRoom,
+  CurveballParticipant,
+  CurveballSubmission,
+  CurveballVote,
+  CurveballStatus,
 } from './types';
 
 // Auth servisi
@@ -100,6 +107,7 @@ export * from './services/notificationService';
 export * from './services/chatService';
 export * from './services/reportService';
 export * from './services/lobbyService';
+export * from './services/curveballService';
 export * from './services/pointsService';
 export * from './utils/imageUtils';
 export * from './utils/cropImageUtils';

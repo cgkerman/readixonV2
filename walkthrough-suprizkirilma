@@ -1,0 +1,31 @@
+# Sürpriz Kırılma (Curveball) Tamamlandı! ⚡
+
+Edebi Arena'ya heyecan katacak yepyeni oyun modumuz **"Sürpriz Kırılma (Curveball)"** planlandığı şekilde, tamamen bağımsız bir mimariyle eklendi.
+
+## Yapılan Değişiklikler
+
+### 1. Veritabanı ve Servisler
+- `CurveballRoom`, `CurveballSubmission` ve `CurveballVote` gibi tamamen yeni veri modelleri eklendi.
+- `curveballService.ts` oluşturuldu. Tüm oda yönetimi, katılım, yazım, oylama ve kazananın RX puanını alma (ödül) işlemleri bu servisle Firestore'a bağlandı.
+
+### 2. Admin Paneli (`/admin/curveball`)
+- Sadece Sürpriz Kırılma odalarını yönetmek için yepyeni bir sayfa oluşturuldu.
+- Bu sayfadan kısıtlama tipini (Tabu, Zorunlu Cümle, Noktalama), kısıtlanacak içeriği ve bu kısıtlamanın sürenin son % kaçında devreye gireceğini ayarlayarak oda kurabilirsiniz.
+
+### 3. Ana Arena Sayfası Güncellemesi
+- "Yazar Lobisi" bölümünün hemen altına "Sürpriz Kırılma" bölümü eklendi.
+- Tasarım bütünlüğünü koruyarak, odalara kırmızı renk (neon ve şimşek ikonları) ile daha agresif bir kimlik kazandırıldı.
+
+### 4. Yeni Oyun İçi Dinamikler (Görsel Şok ve Doğrulama)
+- Odaya katılıp oyun başladığında geri sayım başlar.
+- Kalan süre, Admin'in belirlediği tetiklenme noktasına geldiğinde (Örn: Son %20);
+  - Ekran şık bir efektle siyah ağırlıklı (OLED) bir temaya bürünür.
+  - Editörün etrafı kırmızı neonla kaplanır.
+  - Sürpriz kısıtlama uyarısı kırmızı ışıklarla ekranda belirir.
+- Gönderime (Teslim Et) basıldığında sistem otomatik olarak yazıyı kontrol eder. Eğer yazar yasaklı kelime kullanmışsa veya zorunlu cümleyi geçirmemişse yazıyı **kabul etmez**.
+
+### 5. Puanlama (Halk Oylaması)
+- Okuyucular anonim hikayelere Konu, Dil ve Yaratıcılık/Kurala Uyum çerçevesinde yıldız verirler.
+- En çok oyu alan oyuncu otomatik olarak Adminin belirlediği RX havuzunu kazanır!
+
+Şu anda geliştirme sunucunuz (localhost) çalıştığı için tarayıcınızdan `/admin/curveball` adresine giderek hemen bir oda kurabilir ve test edebilirsiniz. 🚀

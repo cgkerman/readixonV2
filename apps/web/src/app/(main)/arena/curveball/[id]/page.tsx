@@ -3,30 +3,30 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Typography, Button } from '@readixon/ui';
-import { ArrowLeft, Users, AlertCircle, Clock, Star, BookOpen, Send, Trophy } from 'lucide-react';
+import { ArrowLeft, Users, AlertCircle, Clock, Star, BookOpen, Send, Trophy, Zap, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import {
    useAuthStore,
-   getLobbyRoomById,
-   joinLobbyRoom,
-   submitLobbyEntry,
-   getLobbySubmissions,
-   voteLobbyEntry,
-   hasUserVotedForSubmission,
+   getCurveballRoomById,
+   joinCurveballRoom,
+   submitCurveballEntry,
+   getCurveballSubmissions,
+   voteCurveballEntry,
+   hasUserVotedForCurveballSubmission,
    getUserProfile,
-   LobbyRoom,
-   LobbySubmission,
+   CurveballRoom,
+   CurveballSubmission,
    User
 } from '@readixon/core';
 import { ArenaEditor } from '../../../../../components/lobby/ArenaEditor';
 
-export default function LobbyRoomPage() {
+export default function CurveballRoomPage() {
    const { id } = useParams() as { id: string };
    const router = useRouter();
    const { firebaseUser, userProfile } = useAuthStore();
 
-   const [room, setRoom] = useState<LobbyRoom | null>(null);
-   const [submissions, setSubmissions] = useState<LobbySubmission[]>([]);
+   const [room, setRoom] = useState<CurveballRoom | null>(null);
+   const [submissions, setSubmissions] = useState<CurveballSubmission[]>([]);
    const [isLoading, setIsLoading] = useState(true);
 
    // Editor State
@@ -40,6 +40,10 @@ export default function LobbyRoomPage() {
    const [hasVotedFor, setHasVotedFor] = useState<Record<string, boolean>>({});
    const [authorProfiles, setAuthorProfiles] = useState<Record<string, User>>({});
 
+   // Curveball State
+   const [isCurveballActive, setIsCurveballActive] = useState(false);
+   const [remainingTimeText, setRemainingTimeText] = useState('');
+
    useEffect(() => {
       if (firebaseUser) {
          loadData();
@@ -49,17 +53,17 @@ export default function LobbyRoomPage() {
    const loadData = async () => {
       setIsLoading(true);
       try {
-         const roomData = await getLobbyRoomById(id);
+         const roomData = await getCurveballRoomById(id);
          setRoom(roomData);
 
          if (roomData && (roomData.status === 'voting' || roomData.status === 'completed')) {
-            const subs = await getLobbySubmissions(id);
+            const subs = await getCurveballSubmissions(id);
             setSubmissions(subs);
 
             if (firebaseUser) {
                const votedMap: Record<string, boolean> = {};
                await Promise.all(subs.map(async (sub) => {
-                  const voted = await hasUserVotedForSubmission(id, sub.id, firebaseUser.uid);
+                  const voted = await hasUserVotedForCurveballSubmission(id, sub.id, firebaseUser.uid);
                   votedMap[sub.id] = voted;
                }));
                setHasVotedFor(votedMap);
@@ -75,10 +79,8 @@ export default function LobbyRoomPage() {
             }
          }
 
-         // Burada aslında katılımcı objesini de çekip (hasSubmitted) kontrolü yapabiliriz.
-         // Şimdilik submission'lar üzerinden de yazarın gönderip göndermediğini anlayabiliriz:
          if (roomData && roomData.status === 'active') {
-            const subs = await getLobbySubmissions(id);
+            const subs = await getCurveballSubmissions(id);
             if (subs.find(s => s.authorUid === firebaseUser?.uid)) {
                setHasSubmitted(true);
             }
@@ -90,14 +92,43 @@ export default function LobbyRoomPage() {
       }
    };
 
+   // Curveball Timer Logic
+   useEffect(() => {
+      if (!room || room.status !== 'active' || !room.startedAt) return;
+
+      const totalDurationMs = room.durationMinutes * 60 * 1000;
+      const startedTimeMs = room.startedAt.toMillis();
+      const triggerThresholdRatio = 1 - (room.curveball.triggerPercentage / 100);
+
+      const interval = setInterval(() => {
+         const elapsedMs = Date.now() - startedTimeMs;
+         const remainingMs = Math.max(0, totalDurationMs - elapsedMs);
+
+         // Update remaining time text
+         const minutes = Math.floor(remainingMs / 60000);
+         const seconds = Math.floor((remainingMs % 60000) / 1000);
+         setRemainingTimeText(`${minutes}:${seconds < 10 ? '0' : ''}${seconds}`);
+
+         // Check if curveball should trigger
+         if (elapsedMs >= totalDurationMs * triggerThresholdRatio) {
+            if (!isCurveballActive) {
+               setIsCurveballActive(true);
+               // Sadece bir kere ses/şok için eklenebilir, şu an state yeterli
+            }
+         }
+      }, 1000);
+
+      return () => clearInterval(interval);
+   }, [room, isCurveballActive]);
+
    const handleJoin = async () => {
       if (!firebaseUser) return;
       if (!userProfile?.isAuthor) {
-         toast.error('Sadece yazarlar Edebi Arena odalarına katılabilir!');
+         toast.error('Sadece yazarlar Sürpriz Kırılma odalarına katılabilir!');
          return;
       }
       try {
-         await joinLobbyRoom(id, firebaseUser.uid);
+         await joinCurveballRoom(id, firebaseUser.uid);
          toast.success('Odaya başarıyla katıldınız!');
          loadData();
       } catch (error: any) {
@@ -105,13 +136,50 @@ export default function LobbyRoomPage() {
       }
    };
 
+   const validateContent = (text: string): { isValid: boolean, error?: string } => {
+      if (!room || !isCurveballActive) return { isValid: true };
+
+      const config = room.curveball;
+      const lowerText = text.toLowerCase();
+
+      if (config.type === 'taboo_word') {
+         for (const word of config.payload) {
+            if (lowerText.includes(word.toLowerCase())) {
+               return { isValid: false, error: `Yasaklı kelime kullandınız: "${word}"` };
+            }
+         }
+      } 
+      else if (config.type === 'forced_injection') {
+         const forcedSentence = config.payload[0].toLowerCase();
+         if (!lowerText.includes(forcedSentence)) {
+            return { isValid: false, error: `Zorunlu cümleyi tam olarak geçirmediniz: "${config.payload[0]}"` };
+         }
+      }
+      else if (config.type === 'punctuation_boycott') {
+         for (const punct of config.payload) {
+            if (text.includes(punct)) {
+               return { isValid: false, error: `Yasaklı noktalama işareti kullandınız: "${punct}"` };
+            }
+         }
+      }
+
+      return { isValid: true };
+   };
+
    const handleSubmit = async () => {
       if (!firebaseUser || !room) return;
+      
+      const validation = validateContent(content);
+      if (!validation.isValid) {
+         toast.error(`Sürpriz Kırılma Kuralı İhlali: ${validation.error}`);
+         return;
+      }
+
       const wordCount = content.trim().split(/\s+/).filter(w => w.length > 0).length;
 
       setIsSubmitting(true);
       try {
-         await submitLobbyEntry(id, firebaseUser.uid, content, wordCount);
+         await submitCurveballEntry(id, firebaseUser.uid, content, wordCount);
          toast.success('Kurgunuz arenaya teslim edildi!');
          setHasSubmitted(true);
       } catch (error: any) {
@@ -131,7 +199,7 @@ export default function LobbyRoomPage() {
 
       setIsVoting(prev => ({ ...prev, [submissionId]: true }));
       try {
-         await voteLobbyEntry(id, submissionId, firebaseUser.uid, {
+         await voteCurveballEntry(id, submissionId, firebaseUser.uid, {
             topicScore: scores.topic,
             languageScore: scores.language,
             creativityScore: scores.creativity
@@ -165,23 +233,29 @@ export default function LobbyRoomPage() {
 
    const isParticipant = room.participantIds.includes(firebaseUser?.uid || '');
 
-   return (
-      <div className="flex-1 flex flex-col h-full bg-background overflow-y-auto">
-         <div className="max-w-5xl mx-auto w-full p-4 sm:p-8 pt-8">
+   // Görsel şok için stil sınıfları
+   const containerBg = isCurveballActive ? "bg-black" : "bg-background";
+   const editorRing = isCurveballActive ? "ring-4 ring-primary shadow-primary/30 transition-all duration-700" : "";
 
-            <button onClick={() => router.push('/arena')} className="flex items-center gap-2 text-muted hover:text-text mb-6 transition-colors w-fit">
+   return (
+      <div className={`flex-1 flex flex-col h-full overflow-y-auto transition-colors duration-1000 ${containerBg}`}>
+         <div className="max-w-5xl mx-auto w-full p-4 sm:p-8 pt-8 relative">
+
+            <button onClick={() => router.push('/arena')} className={`flex items-center gap-2 mb-6 transition-colors w-fit ${isCurveballActive ? 'text-white/50 hover:text-white' : 'text-muted hover:text-text'}`}>
                <ArrowLeft size={16} />
                <Typography variant="body" className="font-medium">Arenaya Dön</Typography>
             </button>
 
-            <div className="bg-gradient-to-br from-primary/10 to-background border border-primary/20 p-8 rounded-3xl mb-8 relative overflow-hidden">
+            <div className={`bg-gradient-to-br from-primary/10 to-background border ${isCurveballActive ? 'border-primary' : 'border-primary/20'} p-8 rounded-3xl mb-8 relative overflow-hidden transition-colors duration-700`}>
                <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-                  <Users size={160} />
+                  <Zap size={160} />
                </div>
 
                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 relative z-10 gap-4">
                   <div>
-                     <Typography variant="h1" className="font-black text-text mb-2 tracking-tight">{room.title}</Typography>
+                     <Typography variant="h1" className={`font-black mb-2 tracking-tight ${isCurveballActive ? 'text-primary drop-shadow-[0_0_10px_rgba(var(--primary),0.5)]' : 'text-text'}`}>
+                        {room.title}
+                     </Typography>
                      <div className="flex items-center gap-3">
                         <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-sm font-bold flex items-center gap-1 uppercase">
                            {room.status === 'waiting' && <><Clock size={14} /> Bekliyor</>}
@@ -189,24 +263,24 @@ export default function LobbyRoomPage() {
                            {room.status === 'voting' && <><Star size={14} /> Oylama Aşamasında</>}
                            {room.status === 'completed' && <><BookOpen size={14} /> Tamamlandı</>}
                         </span>
-                        <span className="text-muted text-sm font-medium flex items-center gap-1">
+                        <span className={`${isCurveballActive ? 'text-white/70' : 'text-muted'} text-sm font-medium flex items-center gap-1`}>
                            <Users size={14} /> {room.participantIds.length} / {room.maxParticipants} Katılımcı
                         </span>
                      </div>
                   </div>
 
-                  <div className="bg-primary/10 border border-primary/30 p-4 rounded-2xl text-center min-w-[120px]">
+                  <div className={`border p-4 rounded-2xl text-center min-w-[120px] ${isCurveballActive ? 'bg-primary/20 border-primary shadow-primary/20' : 'bg-primary/5 border-primary/30'}`}>
                      <Typography variant="caption" className="text-primary font-bold uppercase tracking-wider block mb-1">ÖDÜL</Typography>
                      <Typography variant="h2" className="font-black text-primary flex items-center justify-center gap-1">
                         <Trophy size={20} />
-                        {room.winnerPrize}
+                        {room.winnerPrize} RX
                      </Typography>
                   </div>
                </div>
 
                {(room.status === 'active' || room.status === 'completed') && (
-                  <div className="bg-background/80 backdrop-blur-sm border border-border p-5 rounded-2xl relative z-10 mt-6 inline-block">
-                     <Typography variant="caption" className="text-muted font-semibold uppercase tracking-wider mb-1 block">TEMA</Typography>
+                  <div className={`bg-background/80 backdrop-blur-sm border ${isCurveballActive ? 'border-primary/50' : 'border-border'} p-5 rounded-2xl relative z-10 mt-6 inline-block`}>
+                     <Typography variant="caption" className={`${isCurveballActive ? 'text-primary' : 'text-muted'} font-semibold uppercase tracking-wider mb-1 block`}>TEMA</Typography>
                      <Typography variant="h3" className="font-bold text-text">"{room.theme}"</Typography>
                   </div>
                )}
@@ -215,22 +289,22 @@ export default function LobbyRoomPage() {
             {/* WAITING STATE */}
             {room.status === 'waiting' && (
                <div className="text-center py-20 bg-card/50 rounded-3xl border border-border border-dashed">
-                  <Users size={64} className="mx-auto text-primary/40 mb-6" />
+                  <Zap size={64} className="mx-auto text-primary/40 mb-6" />
                   <Typography variant="h2" className="mb-2 font-bold">Kayıtlar Devam Ediyor</Typography>
                   <Typography variant="body" className="text-muted max-w-lg mx-auto mb-8">
-                     Oda belirlenen kişi sayısına ulaştığında (veya süre dolduğunda) tema açıklanacak ve yazım süreci başlayacaktır. Katılım ücreti, kurgunuzu teslim ettiğinizde iade edilir.
+                     Bu bir Sürpriz Kırılma odasıdır. Oyun başladıktan sonra, sürenin son kısımlarında aniden gizli bir kural ortaya çıkar ve tüm hikayeyi o kurala göre yazmak veya değiştirmek zorunda kalırsınız.
                   </Typography>
 
                   {!isParticipant ? (
                      <div className="flex justify-center">
-                        <Button onPress={handleJoin} className="bg-primary text-white rounded-full px-8 py-3 text-lg font-bold hover:scale-105 transition-transform border-0 shadow-xl shadow-primary/20">
-                           Odaya Katıl (-{room.entryFee} Puan)
+                        <Button onPress={handleJoin} className="bg-primary hover:bg-primary text-white rounded-full px-8 py-3 text-lg font-bold hover:scale-105 transition-transform border-0 shadow-primary/30">
+                           Korkusuzca Katıl (-{room.entryFee} RX)
                         </Button>
                      </div>
                   ) : (
                      <div className="bg-primary/20 text-primary border border-primary/30 px-6 py-4 rounded-2xl inline-flex items-center gap-2 font-bold shadow-lg">
                         <AlertCircle size={20} className="animate-pulse" />
-                        Katıldınız! Tema için beklemedeyiz...
+                        Katıldınız! Tema ve kırılma anı için beklemedeyiz...
                      </div>
                   )}
                </div>
@@ -252,18 +326,46 @@ export default function LobbyRoomPage() {
                      </div>
                   ) : (
                      <div className="animate-in slide-in-from-bottom-4 duration-700">
-                        <ArenaEditor
-                           value={content}
-                           onChange={setContent}
-                           wordLimit={room.wordLimit}
-                           disabled={isSubmitting}
-                        />
+                        
+                        {/* Time indicator */}
+                        <div className="flex justify-between items-end mb-4">
+                           <div>
+                              {isCurveballActive && (
+                                 <div className="flex items-center gap-2 text-primary font-bold bg-primary/10 border border-primary/50 px-4 py-2 rounded-xl mb-4 animate-in slide-in-from-top-4 duration-500">
+                                    <AlertTriangle className="animate-pulse" />
+                                    <span>SÜRPRİZ KISITLAMA GELDİ! Kural: </span>
+                                    <span className="text-white bg-primary px-2 py-0.5 rounded">
+                                       {room.curveball.type === 'taboo_word' && `YASAKLI KELİMELER: ${room.curveball.payload.join(', ')}`}
+                                       {room.curveball.type === 'forced_injection' && `ŞU CÜMLEYİ GEÇİR: "${room.curveball.payload[0]}"`}
+                                       {room.curveball.type === 'punctuation_boycott' && `YASAKLI İŞARETLER: ${room.curveball.payload.join('  ')}`}
+                                    </span>
+                                 </div>
+                              )}
+                           </div>
+                           <div className={`text-4xl font-black tabular-nums transition-colors ${isCurveballActive ? 'text-primary drop-shadow-[0_0_10px_rgba(var(--primary),0.5)]' : 'text-text'}`}>
+                              {remainingTimeText || "00:00"}
+                           </div>
+                        </div>
 
-                        <div className="mt-6 flex justify-end">
+                        <div className={`rounded-xl overflow-hidden ${editorRing}`}>
+                           <ArenaEditor
+                              value={content}
+                              onChange={setContent}
+                              wordLimit={room.wordLimit}
+                              disabled={isSubmitting}
+                           />
+                        </div>
+
+                        <div className="mt-6 flex justify-between items-center">
+                           <div className="text-sm text-muted">
+                              {isCurveballActive && (
+                                 <span className="text-primary font-bold">⚠️ Sistem kısıtlamayı otomatik kontrol eder. Kurala uymayan kurgular teslim edilemez.</span>
+                              )}
+                           </div>
                            <Button
                               onPress={handleSubmit}
                               disabled={isSubmitting || content.length < 50}
-                              className="bg-primary text-white rounded-full px-8 py-3 text-lg font-bold border-0 shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
+                              className={`rounded-full px-8 py-3 text-lg font-bold border-0 hover:scale-105 transition-transform ${isCurveballActive ? 'bg-primary hover:bg-primary text-white shadow-primary/40' : 'bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20'}`}
                            >
                               {isSubmitting ? 'Gönderiliyor...' : 'Teslim Et'}
                            </Button>
@@ -278,9 +380,20 @@ export default function LobbyRoomPage() {
                <div className="space-y-8">
                   <div className="bg-card p-6 rounded-3xl border border-border flex items-center justify-between">
                      <div>
-                        <Typography variant="h3" className="font-bold">Oylama Başladı</Typography>
-                        <Typography variant="body" className="text-muted">Kimlerin yazdığını bilmeden en iyi hikayeyi seçin.</Typography>
+                        <Typography variant="h3" className="font-bold flex items-center gap-2">
+                           <Star className="text-amber-500" /> Halk Oylaması Başladı
+                        </Typography>
+                        <Typography variant="body" className="text-muted mt-1">Kimlerin yazdığını bilmeden en iyi hikayeyi seçin. <strong className="text-primary">Yaratıcılık puanını verirken, yazarın sürpriz kısıtlamayı ne kadar doğal yedirdiğine dikkat edin!</strong></Typography>
                      </div>
+                  </div>
+
+                  <div className="bg-primary/10 border border-primary/30 p-4 rounded-xl flex flex-col">
+                     <Typography variant="caption" className="text-primary font-bold uppercase tracking-wider mb-1">UYGULANAN KISITLAMA KURALI</Typography>
+                     <Typography variant="body" className="font-medium text-text">
+                        {room.curveball.type === 'taboo_word' && `Kullanılmaması gereken kelimeler: ${room.curveball.payload.join(', ')}`}
+                        {room.curveball.type === 'forced_injection' && `Hikayede mutlaka geçmesi gereken cümle: "${room.curveball.payload[0]}"`}
+                        {room.curveball.type === 'punctuation_boycott' && `Kullanılmaması gereken noktalama işaretleri: ${room.curveball.payload.join(' ')}`}
+                     </Typography>
                   </div>
 
                   <div className="grid gap-6">
@@ -311,7 +424,7 @@ export default function LobbyRoomPage() {
                                        {(['topic', 'language', 'creativity'] as const).map((category) => (
                                           <div key={category} className="space-y-2">
                                              <Typography variant="caption" className="font-medium text-muted uppercase tracking-wider block">
-                                                {category === 'topic' ? 'Konuya Uygunluk' : category === 'language' ? 'Dil ve Anlatım' : 'Yaratıcılık / Kurgu'}
+                                                {category === 'topic' ? 'Konuya Uygunluk' : category === 'language' ? 'Dil ve Anlatım' : 'Yaratıcılık / Kurala Uyum'}
                                              </Typography>
                                              <div className="flex items-center gap-2">
                                                 {[1, 2, 3, 4, 5].map((star) => (
@@ -352,11 +465,11 @@ export default function LobbyRoomPage() {
             {/* COMPLETED STATE */}
             {room.status === 'completed' && (
                <div className="space-y-8">
-                  <div className="bg-gradient-to-r from-primary/20 via-primary/5 to-background p-8 rounded-3xl border-l-4 border-l-primary border border-border shadow-lg shadow-primary/5">
+                  <div className="bg-gradient-to-r from-primary/20 via-primary/5 to-background p-8 rounded-3xl border-l-4 border-l-primary border border-border shadow-primary/10">
                      <Typography variant="h2" className="font-black text-primary mb-2 flex items-center gap-2">
                         <Trophy size={28} className="animate-bounce" /> Kazananlar Belli Oldu!
                      </Typography>
-                     <Typography variant="body" className="text-muted font-medium">Kazanılan Ödül: <span className="text-primary font-bold">{room.winnerPrize} Puan</span></Typography>
+                     <Typography variant="body" className="text-muted font-medium">Kazanılan Ödül: <span className="text-primary font-bold">{room.winnerPrize} RX</span></Typography>
                   </div>
 
                   <div className="grid gap-6">
@@ -364,7 +477,7 @@ export default function LobbyRoomPage() {
                         const isWinner = room.winners?.includes(sub.authorUid);
 
                         return (
-                           <div key={sub.id} className={`bg-card border ${isWinner ? 'border-primary shadow-xl shadow-primary/20 bg-primary/5 ring-1 ring-primary/20 transform hover:-translate-y-1 transition-all duration-300' : 'border-border hover:border-border/80 transition-colors'} rounded-3xl p-6 relative overflow-hidden`}>
+                           <div key={sub.id} className={`bg-card border ${isWinner ? 'border-primary shadow-primary/20 bg-primary/5 ring-1 ring-primary/20 transform hover:-translate-y-1 transition-all duration-300' : 'border-border hover:border-border/80 transition-colors'} rounded-3xl p-6 relative overflow-hidden`}>
                               {isWinner && (
                                  <div className="absolute top-0 right-0 bg-primary text-white font-bold text-xs px-5 py-1.5 rounded-bl-2xl shadow-lg shadow-primary/30 flex items-center gap-1 uppercase tracking-wider">
                                     <Star size={12} className="fill-white" /> Kazanan
