@@ -24,6 +24,7 @@ import {
   setDoc, 
   getDoc, 
   getDocs, 
+  onSnapshot,
   query, 
   where, 
   updateDoc,
@@ -112,6 +113,25 @@ export async function getUserProfile(uid: string): Promise<User | null> {
   }
 
   return { uid: snapshot.id, ...snapshot.data() } as User;
+}
+
+/**
+ * Kullanıcı profilini gerçek zamanlı (real-time) dinler.
+ * Özellikle Readix puanları gibi anlık değişmesi gereken veriler için kullanılır.
+ * 
+ * @param uid - Firebase Auth UID
+ * @param callback - Profil güncellendiğinde çağrılacak fonksiyon
+ * @returns dinlemeyi durdurmak için unsubscribe fonksiyonu
+ */
+export function onUserProfileSnapshot(uid: string, callback: (profile: User | null) => void): () => void {
+  const userRef = doc(db, USERS_COLLECTION, uid);
+  return onSnapshot(userRef, (snapshot) => {
+    if (snapshot.exists()) {
+      callback({ uid: snapshot.id, ...snapshot.data() } as User);
+    } else {
+      callback(null);
+    }
+  });
 }
 
 // ─────────────────────────────────────────────

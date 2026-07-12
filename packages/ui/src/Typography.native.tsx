@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text, TextProps } from 'react-native';
 
-export type TypographyVariant = 'h1' | 'h2' | 'h3' | 'body' | 'caption';
+export type TypographyVariant = 'h1' | 'h2' | 'h3' | 'h4' | 'body' | 'caption';
 
 export interface TypographyProps extends TextProps {
   children: React.ReactNode;
@@ -23,6 +23,7 @@ export function Typography({
     h1: 'text-4xl font-bold tracking-tight',
     h2: 'text-2xl font-semibold',
     h3: 'text-xl font-medium',
+    h4: 'text-lg font-medium',
     body: 'text-base',
     caption: 'text-sm text-muted',
   };

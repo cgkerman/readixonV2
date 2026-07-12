@@ -241,9 +241,15 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               <Typography variant="body" className="font-semibold truncate group-hover:text-primary transition-colors">
                 {userProfile?.displayName || 'Yükleniyor...'}
               </Typography>
-              <Typography variant="caption" className="text-muted truncate">
+              <Typography variant="caption" className="text-muted truncate block">
                 {userProfile?.username ? `@${userProfile.username}` : `@${userProfile?.uid?.substring(0,6)}`}
               </Typography>
+              <div className="flex items-center gap-1 mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                <Typography variant="caption" className="text-amber-500 font-bold text-[10px]">
+                  {userProfile?.readixPoints || 0} RX
+                </Typography>
+              </div>
             </div>
           </Link>
           {userProfile?.isAuthor ? (
@@ -420,6 +426,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   <Typography variant="caption" className="text-muted truncate block mt-0.5">
                     {userProfile?.username ? `@${userProfile.username}` : `@${userProfile?.uid?.substring(0,6)}`}
                   </Typography>
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                    <Typography variant="caption" className="text-amber-500 font-bold text-[11px]">
+                      {userProfile?.readixPoints || 0} RX
+                    </Typography>
+                  </div>
                 </div>
               </Link>
               

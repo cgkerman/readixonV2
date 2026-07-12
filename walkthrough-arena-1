@@ -1,0 +1,36 @@
+# Yazar Lobisi (Edebi Arena) Tamamlandı!
+
+İstemiş olduğun "Yazar Lobisi" (Edebi Arena Sistem Odaları) özelliğinin tüm teknik ve arayüz geliştirmelerini tamamladım. Platforma çok güçlü ve premium hissettiren bir rekabet ortamı ekledik.
+
+## Neler Yapıldı?
+
+### 1. Puan Ekonomisi ve Veri Yapıları
+- `packages/core/src/types/index.ts` dosyasına yeni lobi veri modelleri (`LobbyRoom`, `LobbyParticipant`, `LobbySubmission`, `LobbyVote`) eklendi.
+- `User` modeline `readixPoints` alanı dahil edildi.
+- `packages/core/src/services/pointsService.ts` oluşturuldu. Güvenli (transaction tabanlı) puan düşme ve ekleme işlemleri yazıldı.
+- Kullanıcı sisteme ilk kez girdiğinde (veya eski kullanıcı login olduğunda), `readixPoints` tanımlı değilse **50 başlangıç puanı** otomatik olarak hesaba yükleniyor (`useAuthListener` içinde).
+
+### 2. Yazar Lobisi Servisi
+- `packages/core/src/services/lobbyService.ts` oluşturuldu. Odaya katılma, yazı gönderme, anonim oylama yapma ve kazananları belirleme fonksiyonları Firestore transaction'ları kullanılarak güvenli bir şekilde inşa edildi.
+- Lobi tamamlandığında puanlar otomatik dağıtılır ve kazananlara sistem bildirimi atılır. Beraberlik durumunda büyük ödül kazananlar arasında eşit paylaştırılır.
+
+### 3. Kullanıcı Arayüzü (Arena Sayfası)
+- Lobi özelliği mevcut **Arena Sayfası** `apps/web/src/app/(main)/arena/page.tsx` içerisine yeni, dikkat çekici ve premium bir blok olarak entegre edildi. Düelloların hemen üstünde "Sistem Odaları" olarak sergileniyor.
+- Özel lobi odası sayfası `apps/web/src/app/(main)/arena/lobby/[id]/page.tsx` geliştirildi. Odanın durumuna göre (Bekliyor, Yazılıyor, Oylamada, Bitti) 4 farklı ekran dinamik olarak gösteriliyor:
+  - **Bekliyor:** Odaya katılma (Belirlenen puan düşülür).
+  - **Yazılıyor:** Kopyala-yapıştır korumalı özel `ArenaEditor.tsx`.
+  - **Oylamada:** Maskeli yazar isimleri ("Yazar 1") ve yıldızlı değerlendirme (Konu, Dil, Yaratıcılık).
+  - **Tamamlandı:** Kazananların açıklandığı şık skor tablosu.
+
+### 4. Admin Kontrol Paneli
+- Yöneticilerin yeni lobiler kurup yönetebilmesi için `apps/web/src/app/admin/lobby/page.tsx` paneli yapıldı.
+- Buradan "Oda Adı", "Tema", "Katılım Ücreti", "Ödül", "Kişi Sayısı" ve "Kelime Sınırı" detaylarıyla oda açılabiliyor.
+- Geliştirme aşamasında oylamayı başlatmak veya bitirmek şimdilik bu admin panelindeki butonlara bağlandı. (İstenirse daha sonra cron job ile tam otomatik hale getirilebilir).
+
+## Sonraki Adımlar & Test
+1. Admin hesabınızla giriş yapıp `/admin/lobby` adresine giderek yeni bir lobi odası kurabilirsiniz.
+2. Oluşturduğunuz odayı `/arena` sayfasında en üst blokta görebilirsiniz.
+3. Test hesaplarıyla girerek odaya katılın ve yazı yazmayı deneyin. Puanlarınızın düşüşünü ve kopya-yapıştır korumasını bizzat test edin.
+
+> [!TIP]
+> Özellikler beklediğin gibi çalışıyorsa, admin panelini mevcut `/admin` menüne de linkleyebilirsin! Harika bir etkileşim yaratacağına eminim!

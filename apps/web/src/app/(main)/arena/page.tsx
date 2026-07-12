@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Typography, Button, Input } from '@readixon/ui';
 import { Feather, Plus, X, Users, AlertCircle, Radio, Star, BookOpen } from 'lucide-react';
-import { useAuthStore, getPublicDuels, getUserPendingChallenges, getUserSentChallenges, createDuelChallenge, acceptDuelChallenge, rejectDuelChallenge, cancelDuelChallenge, Duel, DuelAuthor, getUserByUsername, searchUsers, User } from '@readixon/core';
+import { useAuthStore, getPublicDuels, getUserPendingChallenges, getUserSentChallenges, createDuelChallenge, acceptDuelChallenge, rejectDuelChallenge, cancelDuelChallenge, Duel, DuelAuthor, getUserByUsername, searchUsers, User, LobbyRoom, getLobbyRooms } from '@readixon/core';
 import { toast } from 'sonner';
 
 export default function ArenaPage() {
@@ -14,6 +14,7 @@ export default function ArenaPage() {
   const [activeDuels, setActiveDuels] = useState<Duel[]>([]);
   const [pendingDuels, setPendingDuels] = useState<Duel[]>([]);
   const [sentDuels, setSentDuels] = useState<Duel[]>([]);
+  const [lobbies, setLobbies] = useState<LobbyRoom[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'active' | 'voting' | 'completed'>('active');
 
@@ -68,14 +69,16 @@ export default function ArenaPage() {
     if (!firebaseUser) return;
     setIsLoading(true);
     try {
-      const [active, pending, sent] = await Promise.all([
+      const [active, pending, sent, rooms] = await Promise.all([
         getPublicDuels(),
         getUserPendingChallenges(firebaseUser.uid),
-        getUserSentChallenges(firebaseUser.uid)
+        getUserSentChallenges(firebaseUser.uid),
+        getLobbyRooms()
       ]);
       setActiveDuels(active);
       setPendingDuels(pending);
       setSentDuels(sent);
+      setLobbies(rooms);
     } catch (error) {
       console.error('Error loading duels:', error);
       toast.error('Düellolar yüklenirken hata oluştu.');
@@ -224,6 +227,42 @@ export default function ArenaPage() {
     </div>
   );
 
+  const renderLobbyCard = (lobby: LobbyRoom) => (
+    <div
+      key={lobby.id}
+      onClick={() => router.push(`/arena/lobby/${lobby.id}`)}
+      className="p-5 rounded-3xl bg-gradient-to-br from-primary/20 via-background to-background border-2 border-primary/30 hover:border-primary cursor-pointer transition-all hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/20 group relative overflow-hidden"
+    >
+      <div className="absolute top-0 right-0 p-4 opacity-10 text-primary pointer-events-none group-hover:scale-110 transition-transform">
+        <Users size={80} />
+      </div>
+      <div className="flex justify-between items-center mb-4 relative z-10">
+        <span className="px-3 py-1 rounded-full bg-primary text-white text-xs font-bold tracking-widest uppercase flex items-center gap-1 shadow-lg shadow-primary/20">
+          {lobby.status === 'waiting' ? (
+            <><Users size={12} /> BEKLİYOR</>
+          ) : lobby.status === 'active' ? (
+            <><Radio size={12} className="animate-pulse" /> YAZILIYOR</>
+          ) : lobby.status === 'voting' ? (
+            <><Star size={12} /> OYLAMADA</>
+          ) : (
+            <><BookOpen size={12} /> BİTTİ</>
+          )}
+        </span>
+        <span className="text-sm font-bold text-primary flex items-center gap-1 bg-primary/10 px-3 py-1 rounded-full">
+          🏆 {lobby.winnerPrize} Puan
+        </span>
+      </div>
+
+      <Typography variant="h3" className="font-black text-text mb-2 relative z-10">
+        {lobby.title}
+      </Typography>
+      <div className="flex items-center gap-4 text-sm text-muted font-medium mb-4 relative z-10">
+         <span className="flex items-center gap-1"><Users size={14} /> {lobby.participantIds.length} / {lobby.maxParticipants} Katılımcı</span>
+         <span className="flex items-center gap-1 text-primary">Giriş: {lobby.entryFee} Puan</span>
+      </div>
+    </div>
+  );
+
   return (
     <div className="flex-1 flex flex-col h-full bg-background overflow-hidden relative">
       <div className="absolute top-0 right-0 left-0 h-96 bg-primary/5 -z-10 blur-3xl pointer-events-none" />
@@ -243,9 +282,34 @@ export default function ArenaPage() {
                 Zihninizin sınırlarını zorlamaya hazır mısınız? Kelimelerin savaştığı, sadece en güçlü kalemlerin ayakta kaldığı edebi tiyatroya adım atın.
               </Typography>
             </div>
-            <Button onPress={() => setIsCreateModalOpen(true)} className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground border-0">
+            <Button onPress={() => setIsCreateModalOpen(true)} className="rounded-full bg-card hover:bg-card/80 text-text border border-border">
               <Plus size={18} className="mr-2" /> Meydan Oku
             </Button>
+          </div>
+
+          {/* Lobi Odaları (Yazar Lobisi) */}
+          <div className="mb-16">
+             <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                   <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                      <Users size={16} />
+                   </div>
+                   <Typography variant="h2" className="font-bold">Yazar Lobisi (Arena)</Typography>
+                </div>
+                <Typography variant="caption" className="text-muted border border-border px-3 py-1 rounded-full">Büyük Ödüllü Sistem Odaları</Typography>
+             </div>
+             
+             {isLoading ? (
+                <div className="h-32 rounded-3xl bg-card animate-pulse border border-border" />
+             ) : lobbies.length === 0 ? (
+                <div className="text-center py-10 bg-card/30 rounded-3xl border border-dashed border-border">
+                  <Typography variant="body" className="text-muted">Şu an aktif bir sistem odası bulunmuyor.</Typography>
+                </div>
+             ) : (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                   {lobbies.map(renderLobbyCard)}
+                </div>
+             )}
           </div>
 
           {/* Bekleyen Meydan Okumalar */}

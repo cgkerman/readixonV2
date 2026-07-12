@@ -37,6 +37,7 @@ export interface User {
     requestCount: number;
   };
   blockedUsers?: string[];
+  readixPoints?: number; // Edebi Arena puanları
 }
 
 /** Yeni kullanıcı oluşturulurken kullanılan kısmi tip */
@@ -350,7 +351,62 @@ export interface Report {
   targetType: ReportTargetType;
   reporterId: string;
   reason: string;
-  status: ReportStatus;
   createdAt: Timestamp;
   resolvedAt?: Timestamp;
 }
+
+// ─────────────────────────────────────────────
+// 3.10. Yazar Lobisi (Edebi Arena)
+// ─────────────────────────────────────────────
+
+export type LobbyStatus = 'waiting' | 'active' | 'voting' | 'completed';
+
+export interface LobbyRoom {
+  id: string;
+  title: string;
+  theme: string; // Yazı konusu/teması
+  status: LobbyStatus;
+  entryFee: number; // Katılım ücreti (puan)
+  winnerPrize: number; // Kazanan ödülü (puan)
+  minParticipants: number; // Min katılımcı sayısı (örn: 2)
+  maxParticipants: number; // Max katılımcı sayısı (örn: 20)
+  wordLimit: number; // Kelime sınırı (örn: 1000)
+  durationMinutes: number; // Yazım süresi (dk) (örn: 120)
+  
+  participantIds: string[]; // Hızlı sorgulama için katılımcı ID'leri
+  
+  createdBy: string; // Odayı kuran adminin UID'si
+  createdAt: Timestamp;
+  startedAt?: Timestamp; // Oyun başladığında atanır
+  votingEndsAt?: Timestamp; // Oylamanın biteceği zaman
+  winners?: string[]; // Kazanan(lar) - Beraberlik durumunda birden fazla olabilir
+}
+
+export interface LobbyParticipant {
+  roomId: string; // Parent collection ID veya Document ID
+  uid: string;
+  joinedAt: Timestamp;
+  hasSubmitted: boolean;
+}
+
+export interface LobbySubmission {
+  id: string;
+  roomId: string;
+  authorUid: string; // Kör oylama için dışarıya kapalı tutulacak (sadece server/admin)
+  content: string;
+  wordCount: number;
+  createdAt: Timestamp;
+}
+
+export interface LobbyVote {
+  id: string;
+  roomId: string;
+  submissionId: string;
+  voterUid: string;
+  topicScore: number;      // 1-5
+  languageScore: number;   // 1-5
+  creativityScore: number; // 1-5
+  totalScore: number;      // Toplam puan
+  createdAt: Timestamp;
+}
+

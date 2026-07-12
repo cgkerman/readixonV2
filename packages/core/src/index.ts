@@ -43,6 +43,11 @@ export type {
   Report,
   ReportStatus,
   ReportTargetType,
+  LobbyRoom,
+  LobbyParticipant,
+  LobbySubmission,
+  LobbyVote,
+  LobbyStatus,
 } from './types';
 
 // Auth servisi
@@ -94,6 +99,8 @@ export * from './services/adminService';
 export * from './services/notificationService';
 export * from './services/chatService';
 export * from './services/reportService';
+export * from './services/lobbyService';
+export * from './services/pointsService';
 export * from './utils/imageUtils';
 export * from './utils/cropImageUtils';
 export * from './constants/tags';
