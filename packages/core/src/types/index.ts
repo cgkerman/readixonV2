@@ -351,6 +351,7 @@ export interface Report {
   targetType: ReportTargetType;
   reporterId: string;
   reason: string;
+  status: ReportStatus;
   createdAt: Timestamp;
   resolvedAt?: Timestamp;
 }
