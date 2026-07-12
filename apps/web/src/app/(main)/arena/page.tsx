@@ -287,31 +287,6 @@ export default function ArenaPage() {
             </Button>
           </div>
 
-          {/* Lobi Odaları (Yazar Lobisi) */}
-          <div className="mb-16">
-             <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                   <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
-                      <Users size={16} />
-                   </div>
-                   <Typography variant="h2" className="font-bold">Yazar Lobisi (Arena)</Typography>
-                </div>
-                <Typography variant="caption" className="text-muted border border-border px-3 py-1 rounded-full">Büyük Ödüllü Sistem Odaları</Typography>
-             </div>
-             
-             {isLoading ? (
-                <div className="h-32 rounded-3xl bg-card animate-pulse border border-border" />
-             ) : lobbies.length === 0 ? (
-                <div className="text-center py-10 bg-card/30 rounded-3xl border border-dashed border-border">
-                  <Typography variant="body" className="text-muted">Şu an aktif bir sistem odası bulunmuyor.</Typography>
-                </div>
-             ) : (
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                   {lobbies.map(renderLobbyCard)}
-                </div>
-             )}
-          </div>
-
           {/* Bekleyen Meydan Okumalar */}
           {pendingDuels.length > 0 && (
             <div className="mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -372,6 +347,31 @@ export default function ArenaPage() {
               </div>
             </div>
           )}
+
+          {/* Lobi Odaları (Yazar Lobisi) */}
+          <div className="mb-16">
+             <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                   <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                      <Users size={16} />
+                   </div>
+                   <Typography variant="h2" className="font-bold">Yazar Lobisi (Arena)</Typography>
+                </div>
+                <Typography variant="caption" className="text-muted border border-border px-3 py-1 rounded-full">Büyük Ödüllü Sistem Odaları</Typography>
+             </div>
+             
+             {isLoading ? (
+                <div className="h-32 rounded-3xl bg-card animate-pulse border border-border" />
+             ) : lobbies.length === 0 ? (
+                <div className="text-center py-10 bg-card/30 rounded-3xl border border-dashed border-border">
+                  <Typography variant="body" className="text-muted">Şu an aktif bir sistem odası bulunmuyor.</Typography>
+                </div>
+             ) : (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                   {lobbies.map(renderLobbyCard)}
+                </div>
+             )}
+          </div>
 
           {/* Sekmeler */}
           <div className="flex border-b border-border mb-8">
