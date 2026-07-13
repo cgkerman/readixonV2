@@ -111,7 +111,7 @@ export default function CharacterEditPage() {
     setUploading(true);
     try {
       const path = `stories/${storyId}/characters/${isNew ? 'temp' : characterId}_${Date.now()}`;
-      const url = await uploadFile(path, file);
+      const url = await uploadFile(file, path);
       handleChange('avatarUrl', url);
       toast.success('Karakter resmi yüklendi.');
     } catch (error) {
