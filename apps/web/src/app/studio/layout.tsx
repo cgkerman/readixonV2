@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Typography } from '@readixon/ui';
-import { BookOpen, PenTool, BarChart3, ArrowLeft } from 'lucide-react';
+import { BookOpen, PenTool, BarChart3, ArrowLeft, Users } from 'lucide-react';
 import { useAuthStore } from '@readixon/core';
 
 export default function StudioLayout({ children }: { children: React.ReactNode }) {
@@ -46,6 +46,13 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
           >
             <BarChart3 size={20} />
             <span className="font-medium">İstatistikler</span>
+          </Link>
+          <Link 
+            href="/studio/characters" 
+            className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${pathname.includes('/characters') ? 'bg-primary/10 text-primary' : 'text-muted hover:text-text hover:bg-muted/10'}`}
+          >
+            <Users size={20} />
+            <span className="font-medium">Karakter Defteri</span>
           </Link>
         </nav>
         

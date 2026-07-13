@@ -1,16 +1,16 @@
 /**
- * Readixon — Merkezi Tip Tanımları
- * ─────────────────────────────────────────────────────────────────────────────
- * Bu dosya, readixon_architecture.md dokümanındaki Firestore JSON şemalarına
- * birebir karşılık gelen TypeScript tiplerini tanımlar.
- * ─────────────────────────────────────────────────────────────────────────────
+ * Readixon â€” Merkezi Tip TanÄ±mlarÄ±
+ * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ * Bu dosya, readixon_architecture.md dokÃ¼manÄ±ndaki Firestore JSON ÅŸemalarÄ±na
+ * birebir karÅŸÄ±lÄ±k gelen TypeScript tiplerini tanÄ±mlar.
+ * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
  */
 
 import type { Timestamp } from 'firebase/firestore';
 
-// ─────────────────────────────────────────────
-// 3.1. Kullanıcılar (/users)
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// 3.1. KullanÄ±cÄ±lar (/users)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface UserStats {
   followers: number;
@@ -30,6 +30,7 @@ export interface User {
   createdAt: Timestamp;
   isAuthor?: boolean;
   isAdmin?: boolean;
+  status?: 'free' | 'premium'; // Premium status for features like Character Book
   termsAcceptedAt?: Timestamp; // Yasal onay timestamp
   privacyAcceptedAt?: Timestamp; // Gizlilik onay timestamp
   aiUsage?: {
@@ -37,16 +38,16 @@ export interface User {
     requestCount: number;
   };
   blockedUsers?: string[];
-  readixPoints?: number; // Edebi Arena puanları
+  readixPoints?: number; // Edebi Arena puanlarÄ±
 }
 
-/** Yeni kullanıcı oluşturulurken kullanılan kısmi tip */
+/** Yeni kullanÄ±cÄ± oluÅŸturulurken kullanÄ±lan kÄ±smi tip */
 export type CreateUserInput = Pick<User, 'uid' | 'displayName'> &
   Partial<Pick<User, 'username' | 'avatarUrl' | 'bio' | 'preferredGenres' | 'termsAcceptedAt' | 'privacyAcceptedAt'>>;
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // 3.2. Hikayeler (/stories)
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type StoryStatus = 'ongoing' | 'completed' | 'draft';
 
@@ -54,8 +55,8 @@ export interface StoryStats {
   views: number;
   likes: number;
   chapterCount: number;
-  rating?: number;       // 10 üzerinden ortalama puan (Örn: 8.5)
-  reviewCount?: number;  // Toplam inceleme sayısı
+  rating?: number;       // 10 Ã¼zerinden ortalama puan (Ã–rn: 8.5)
+  reviewCount?: number;  // Toplam inceleme sayÄ±sÄ±
 }
 
 export interface Contributor {
@@ -76,10 +77,10 @@ export interface Story {
   isAdultContent?: boolean;
   stats: StoryStats;
   
-  // Yayınevi/Platform Ek Detayları
-  foreword?: string;          // Önsöz
-  backCover?: string;         // Arka Kapak Yazısı
-  contributors?: Contributor[]; // Katkıda Bulunanlar (Editör, çizer vs.)
+  // YayÄ±nevi/Platform Ek DetaylarÄ±
+  foreword?: string;          // Ã–nsÃ¶z
+  backCover?: string;         // Arka Kapak YazÄ±sÄ±
+  contributors?: Contributor[]; // KatkÄ±da Bulunanlar (EditÃ¶r, Ã§izer vs.)
 
   /** 'ongoing' | 'completed' | 'draft' */
   status: StoryStatus;
@@ -87,20 +88,20 @@ export interface Story {
   updatedAt: Timestamp;
 }
 
-// ─────────────────────────────────────────────
-// 3.3. Bölümler (/stories/{storyId}/chapters/{chapterId})
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// 3.3. BÃ¶lÃ¼mler (/stories/{storyId}/chapters/{chapterId})
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type ContentBlockType = 'paragraph' | 'quote' | 'image' | 'divider' | 'end_of_chapter';
 
 /**
- * Bölüm içeriği JSON blok formatında tutulur.
- * React Native'de kolay render edilebilir; HTML bağımlılığı yoktur.
+ * BÃ¶lÃ¼m iÃ§eriÄŸi JSON blok formatÄ±nda tutulur.
+ * React Native'de kolay render edilebilir; HTML baÄŸÄ±mlÄ±lÄ±ÄŸÄ± yoktur.
  */
 export interface ContentBlock {
   type: ContentBlockType;
   text?: string;
-  url?: string; // image blokları için
+  url?: string; // image bloklarÄ± iÃ§in
   textStyle?: 'normal' | 'bold' | 'italic';
 }
 
@@ -120,11 +121,11 @@ export interface Chapter {
   stats?: ChapterStats;
 }
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // 3.4. Yorumlar (/comments)
-// Satır-arası (inline) yorum desteği: paragraphIndex ile hangi
-// paragrafa ait olduğu tutulur.
-// ─────────────────────────────────────────────
+// SatÄ±r-arasÄ± (inline) yorum desteÄŸi: paragraphIndex ile hangi
+// paragrafa ait olduÄŸu tutulur.
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface Comment {
   commentId: string;
@@ -140,10 +141,10 @@ export interface Comment {
   createdAt: Timestamp;
 }
 
-// ─────────────────────────────────────────────
-// 3.5. İncelemeler / Yorumlar (Reviews) (/stories/{storyId}/reviews/{reviewId})
-// Kitabın geneline yapılan değerlendirmeler ve 10 üzerinden puanlama.
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// 3.5. Ä°ncelemeler / Yorumlar (Reviews) (/stories/{storyId}/reviews/{reviewId})
+// KitabÄ±n geneline yapÄ±lan deÄŸerlendirmeler ve 10 Ã¼zerinden puanlama.
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface Review {
   reviewId: string;
@@ -152,29 +153,29 @@ export interface Review {
   authorName?: string;
   authorUsername?: string;
   authorAvatarUrl?: string;
-  rating: number; // 1-10 arası
+  rating: number; // 1-10 arasÄ±
   text: string;
   createdAt: Timestamp;
   updatedAt?: Timestamp;
 }
 
-// ─────────────────────────────────────────────
-// 3.5. Okuma İlerlemesi (/users/{userId}/readingProgress/{storyId})
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// 3.5. Okuma Ä°lerlemesi (/users/{userId}/readingProgress/{storyId})
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface ReadingProgress {
   userId: string;
   storyId: string;
   currentChapterId: string;
   scrollPercentage: number; // 0-100
-  completedChapters: string[]; // Tamamlanan bölüm ID'leri
-  isAdultContentAccepted?: boolean; // Yetişkin içerik okuma onayı
+  completedChapters: string[]; // Tamamlanan bÃ¶lÃ¼m ID'leri
+  isAdultContentAccepted?: boolean; // YetiÅŸkin iÃ§erik okuma onayÄ±
   updatedAt: Timestamp;
 }
 
-// ─────────────────────────────────────────────
-// 3.6. Readix Gönderileri (Sosyal Akış) (/readixes/{readixId})
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// 3.6. Readix GÃ¶nderileri (Sosyal AkÄ±ÅŸ) (/readixes/{readixId})
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface ReadixStats {
   likes: number;
@@ -185,11 +186,11 @@ export interface ReadixStats {
 export interface Readix {
   id: string;
   authorId: string;
-  content: string; // Gönderi metni
-  mediaUrls?: string[]; // Varsa görseller
-  linkedStoryId?: string; // Gönderiye konu olan kitap/hikaye
-  tags?: string[]; // Metinden çıkarılan hashtagler
-  mentions?: string[]; // Bahsedilen kullanıcılar (@kullaniciadi)
+  content: string; // GÃ¶nderi metni
+  mediaUrls?: string[]; // Varsa gÃ¶rseller
+  linkedStoryId?: string; // GÃ¶nderiye konu olan kitap/hikaye
+  tags?: string[]; // Metinden Ã§Ä±karÄ±lan hashtagler
+  mentions?: string[]; // Bahsedilen kullanÄ±cÄ±lar (@kullaniciadi)
   stats: ReadixStats;
   createdAt: Timestamp;
 }
@@ -199,14 +200,14 @@ export interface ReadixComment {
   readixId: string;
   authorId: string;
   content: string;
-  likes?: number; // Yorum beğeni sayısı
-  replyToId?: string; // Hangi yoruma yanıt verildiği (null ise ana yorum)
+  likes?: number; // Yorum beÄŸeni sayÄ±sÄ±
+  replyToId?: string; // Hangi yoruma yanÄ±t verildiÄŸi (null ise ana yorum)
   createdAt: Timestamp;
 }
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // 3.7. Bildirimler (/users/{userId}/notifications/{notificationId})
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type NotificationType = 
   | 'follow' 
@@ -230,16 +231,16 @@ export interface AppNotification {
   actorUsername?: string; 
   type: NotificationType;
   entityId?: string; // e.g. storyId or readixId
-  entityTitle?: string; // optional context, e.g. "Yüzüklerin Efendisi"
+  entityTitle?: string; // optional context, e.g. "YÃ¼zÃ¼klerin Efendisi"
   subEntityTitle?: string; // e.g. chapter title
   message?: string; // System message content
   isRead: boolean;
   createdAt: Timestamp;
 }
 
-// ─────────────────────────────────────────────
-// 3.8. Mesajlaşma (Direct Messaging)
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// 3.8. MesajlaÅŸma (Direct Messaging)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface ChatParticipant {
   uid: string;
@@ -270,11 +271,11 @@ export interface Message {
   createdAt: Timestamp;
 }
 
-// ─────────────────────────────────────────────
-// Genel Yardımcı Tipler
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Genel YardÄ±mcÄ± Tipler
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-/** Tür (genre) listesi — preferredGenres ve tags için kullanılır */
+/** TÃ¼r (genre) listesi â€” preferredGenres ve tags iÃ§in kullanÄ±lÄ±r */
 export type Genre =
   | 'sci-fi'
   | 'dystopian'
@@ -287,11 +288,11 @@ export type Genre =
   | 'historical'
   | 'literary-fiction'
   | 'young-adult'
-  | string; // Özel etiketlere izin ver
+  | string; // Ã–zel etiketlere izin ver
 
-// ─────────────────────────────────────────────
-// 3.8. Arena (Düellolar)
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// 3.8. Arena (DÃ¼ellolar)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type DuelStatus = 'pending' | 'active' | 'voting' | 'completed';
 
@@ -303,21 +304,21 @@ export interface DuelAuthor {
 }
 
 export interface Duel {
-  id: string; // Document ID (Opsiyonel olarak saklayabiliriz, genelde doc.id kullanılıyor)
-  title?: string; // Hikayenin özel adı
-  prompt: string; // Düellonun konusu/ilhamı
-  authorA: DuelAuthor; // Meydan okuyan (Odayı kuran)
+  id: string; // Document ID (Opsiyonel olarak saklayabiliriz, genelde doc.id kullanÄ±lÄ±yor)
+  title?: string; // Hikayenin Ã¶zel adÄ±
+  prompt: string; // DÃ¼ellonun konusu/ilhamÄ±
+  authorA: DuelAuthor; // Meydan okuyan (OdayÄ± kuran)
   authorB: DuelAuthor; // Meydan okunan
   status: DuelStatus;
-  currentTurnUid: string; // Şu an yazma sırası kimde
-  turnCount: number; // Toplam kaç tur oynandı
-  turnTimeLimitMinutes?: number; // Tur başına verilen süre (dk)
-  embargoedWords: string[]; // Geçerli turda yasaklanan kelimeler
+  currentTurnUid: string; // Åu an yazma sÄ±rasÄ± kimde
+  turnCount: number; // Toplam kaÃ§ tur oynandÄ±
+  turnTimeLimitMinutes?: number; // Tur baÅŸÄ±na verilen sÃ¼re (dk)
+  embargoedWords: string[]; // GeÃ§erli turda yasaklanan kelimeler
   winnerUid?: string; // Oylama bitince kazanan
   createdAt: Timestamp;
   updatedAt: Timestamp;
-  expiresAt?: Timestamp; // Eğer aktifse sıra süresi
-  votingEndsAt?: Timestamp; // Oylama bitiş zamanı
+  expiresAt?: Timestamp; // EÄŸer aktifse sÄ±ra sÃ¼resi
+  votingEndsAt?: Timestamp; // Oylama bitiÅŸ zamanÄ±
   scores?: {
     [authorUid: string]: {
       totalScore: number;
@@ -325,22 +326,22 @@ export interface Duel {
       average: number;
     }
   };
-  voters?: string[]; // Oy kullanan okurların UID'leri
+  voters?: string[]; // Oy kullanan okurlarÄ±n UID'leri
 }
 
 export interface DuelTurn {
   id?: string;
   duelId: string;
   authorUid: string;
-  content: string; // Yazarın bu turda yazdığı metin
+  content: string; // YazarÄ±n bu turda yazdÄ±ÄŸÄ± metin
   wordCount: number;
-  embargoWordsSet: string[]; // Rakibe bir sonraki tur için koyduğu yasaklar
+  embargoWordsSet: string[]; // Rakibe bir sonraki tur iÃ§in koyduÄŸu yasaklar
   createdAt: Timestamp;
 }
 
-// ─────────────────────────────────────────────
-// 3.9. Şikayetler (Reports)
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// 3.9. Åikayetler (Reports)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type ReportStatus = 'pending' | 'resolved' | 'dismissed';
 export type ReportTargetType = 'readix' | 'story' | 'user' | 'comment';
@@ -356,30 +357,30 @@ export interface Report {
   resolvedAt?: Timestamp;
 }
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // 3.10. Yazar Lobisi (Edebi Arena)
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type LobbyStatus = 'waiting' | 'active' | 'voting' | 'completed';
 
 export interface LobbyRoom {
   id: string;
   title: string;
-  theme: string; // Yazı konusu/teması
+  theme: string; // YazÄ± konusu/temasÄ±
   status: LobbyStatus;
-  entryFee: number; // Katılım ücreti (puan)
-  winnerPrize: number; // Kazanan ödülü (puan)
-  minParticipants: number; // Min katılımcı sayısı (örn: 2)
-  maxParticipants: number; // Max katılımcı sayısı (örn: 20)
-  wordLimit: number; // Kelime sınırı (örn: 1000)
-  durationMinutes: number; // Yazım süresi (dk) (örn: 120)
+  entryFee: number; // KatÄ±lÄ±m Ã¼creti (puan)
+  winnerPrize: number; // Kazanan Ã¶dÃ¼lÃ¼ (puan)
+  minParticipants: number; // Min katÄ±lÄ±mcÄ± sayÄ±sÄ± (Ã¶rn: 2)
+  maxParticipants: number; // Max katÄ±lÄ±mcÄ± sayÄ±sÄ± (Ã¶rn: 20)
+  wordLimit: number; // Kelime sÄ±nÄ±rÄ± (Ã¶rn: 1000)
+  durationMinutes: number; // YazÄ±m sÃ¼resi (dk) (Ã¶rn: 120)
   
-  participantIds: string[]; // Hızlı sorgulama için katılımcı ID'leri
+  participantIds: string[]; // HÄ±zlÄ± sorgulama iÃ§in katÄ±lÄ±mcÄ± ID'leri
   
-  createdBy: string; // Odayı kuran adminin UID'si
+  createdBy: string; // OdayÄ± kuran adminin UID'si
   createdAt: Timestamp;
-  startedAt?: Timestamp; // Oyun başladığında atanır
-  votingEndsAt?: Timestamp; // Oylamanın biteceği zaman
+  startedAt?: Timestamp; // Oyun baÅŸladÄ±ÄŸÄ±nda atanÄ±r
+  votingEndsAt?: Timestamp; // OylamanÄ±n biteceÄŸi zaman
   winners?: string[]; // Kazanan(lar) - Beraberlik durumunda birden fazla olabilir
 }
 
@@ -393,7 +394,7 @@ export interface LobbyParticipant {
 export interface LobbySubmission {
   id: string;
   roomId: string;
-  authorUid: string; // Kör oylama için dışarıya kapalı tutulacak (sadece server/admin)
+  authorUid: string; // KÃ¶r oylama iÃ§in dÄ±ÅŸarÄ±ya kapalÄ± tutulacak (sadece server/admin)
   content: string;
   wordCount: number;
   createdAt: Timestamp;
@@ -411,16 +412,16 @@ export interface LobbyVote {
   createdAt: Timestamp;
 }
 
-// ─────────────────────────────────────────────
-// 3.11. Sürpriz Kırılma (Curveball) Odaları
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// 3.11. SÃ¼rpriz KÄ±rÄ±lma (Curveball) OdalarÄ±
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type CurveballType = 'taboo_word' | 'forced_injection' | 'punctuation_boycott';
 
 export interface CurveballConfig {
   type: CurveballType;
-  payload: string[]; // Yasaklı kelimeler, zorunlu cümle veya noktalama işaretleri
-  triggerPercentage: number; // Sürenin son % kaçında patlayacak (Örn: 25)
+  payload: string[]; // YasaklÄ± kelimeler, zorunlu cÃ¼mle veya noktalama iÅŸaretleri
+  triggerPercentage: number; // SÃ¼renin son % kaÃ§Ä±nda patlayacak (Ã–rn: 25)
 }
 
 export type CurveballStatus = 'waiting' | 'active' | 'voting' | 'completed';
@@ -475,3 +476,56 @@ export interface CurveballVote {
   createdAt: Timestamp;
 }
 
+
+// ¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦
+// 3.12. Karakter Defteri (Character Notebook)
+// ¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦
+
+export type CharacterRole = 'protagonist' | 'antagonist' | 'supporting' | 'minor';
+
+export interface CharacterRPGStats {
+  intelligence: number; // 1-10
+  strength: number;     // 1-10
+  charisma: number;     // 1-10
+  agility: number;      // 1-10
+  empathy: number;      // 1-10
+}
+
+export interface Character {
+  id: string;
+  storyId: string;
+  name: string;
+  role: CharacterRole;
+  
+  // Basic Info
+  age?: string;
+  gender?: string;
+  occupation?: string;
+  
+  // Visual
+  avatarUrl?: string;
+  
+  // Physical Appearance
+  bodyType?: string;
+  eyeColor?: string;
+  hairColor?: string;
+  clothingStyle?: string;
+  distinguishingFeatures?: string; // Scars, tattoos, etc.
+  
+  // Psychology
+  personalityTraits?: string[]; // e.g. ['Brave', 'Introverted']
+  greatestFear?: string;
+  secretDesire?: string;
+  flaws?: string;
+  
+  // Story Arc
+  startingState?: string;
+  endingState?: string;
+  coreMotivation?: string;
+  
+  // Stats
+  rpgStats?: CharacterRPGStats;
+  
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}

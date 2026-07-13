@@ -1,0 +1,26 @@
+# Yazar Akademisi Entegrasyonu Tamamlandı
+
+Stüdyo ("Hikayelerim") sayfasına yazarlar için rehberlik edecek "Yazar Akademisi" bölümünü talebiniz doğrultusunda alt kısma geniş kartlar halinde ekledim.
+
+## Yapılan Değişiklikler
+
+### 1. Geniş Kartlı UI Yerleşimi
+Stüdyo sayfasının alt kısmına (hikayeler listesinin hemen altına) **Yazar Akademisi** adında yeni bir bölüm eklendi.
+- Kartlar ekranı kaplayacak şekilde genişletildi (Grid layout kullanılarak `md:grid-cols-2` şeklinde ayarlandı).
+- Kartların üzerine gelindiğinde (hover) ikonların büyümesi, kenarlıkların ve gölgelerin aydınlanması gibi mikro-animasyonlar eklendi.
+
+### 2. Rehber İçerikleri ve Modalı
+Aşağıdaki 5 konuyu kapsayan detaylı rehberler eklendi:
+- İlk Adım: Kitap Nasıl Oluşturulur?
+- Bölüm Oluşturma ve Editör
+- Yapay Zeka (AI) Asistanı
+- Derinlikli Karakterler
+- Etkili Kurgu ve Tempo
+
+Herhangi bir karta tıklandığında ekranın üzerinde şık, yarı saydam bir arka planla "Bilgi Modalı" açılmaktadır. Bu modal, zengin metin öğeleri (italik, kalın, alıntılar vb.) kullanarak yazarın ilgisini canlı tutacak bir formatta tasarlanmıştır.
+
+### 3. İkonlar ve Tema
+Yeni özellik için lucide-react kütüphanesinden `BookOpen`, `Sparkles`, `Wand2`, `Users`, `Compass` ve `ChevronRight` ikonları eklendi. Tasarım tamamen mevcut platformun "primary" tema renkleriyle bütünleştirildi.
+
+> [!TIP]
+> Stüdyo sayfasına gidip alt kısma doğru kaydırarak "Yazar Akademisi" kartlarını inceleyebilir ve içeriklere göz atabilirsiniz! Eklemek istediğiniz yeni bir rehber başlığı olursa saniyeler içinde ekleyebiliriz.

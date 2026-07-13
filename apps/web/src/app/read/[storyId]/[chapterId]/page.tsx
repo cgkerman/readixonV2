@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { fetchChapter, fetchChapters, syncReadingProgress, incrementChapterView, checkChapterLiked, toggleChapterLike, addChapterComment, getChapterComments } from '@readixon/core';
+import { fetchChapter, getPublishedChapters, syncReadingProgress, incrementChapterView, checkChapterLiked, toggleChapterLike, addChapterComment, getChapterComments } from '@readixon/core';
 import type { Chapter, Comment } from '@readixon/core';
 import { useReaderStore } from '@readixon/core/src/store/useReaderStore';
 import { useAuthStore } from '@readixon/core/src/store/useAuthStore';
@@ -39,7 +39,7 @@ export default function ReadPage() {
     const loadData = async () => {
       setLoading(true);
       const [chaps, chap, fetchedComments] = await Promise.all([
-        fetchChapters(storyId),
+        getPublishedChapters(storyId),
         fetchChapter(storyId, chapterId),
         getChapterComments(storyId, chapterId)
       ]);

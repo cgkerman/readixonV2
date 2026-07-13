@@ -312,9 +312,15 @@ export const getPublishedChapters = async (storyId: string): Promise<Chapter[]> 
     const chapters: Chapter[] = [];
     snap.forEach((docSnap) => {
       const data = docSnap.data() as Chapter;
-      // Eski bölümlerde status alanı yoksa veya "published" veya "scheduled" ise listeye ekle
-      if (!data.status || data.status === 'published' || data.status === 'scheduled') {
+      // Eski bölümlerde status alanı yoksa veya "published" ise listeye ekle
+      if (!data.status || data.status === 'published') {
         chapters.push({ ...data, chapterId: docSnap.id });
+      } else if (data.status === 'scheduled' && data.publishDate) {
+        // "scheduled" olanlar sadece yayınlanma zamanı geldiyse listeye eklenir
+        const pubDate = data.publishDate.toDate ? data.publishDate.toDate() : new Date(data.publishDate as any);
+        if (pubDate <= new Date()) {
+          chapters.push({ ...data, chapterId: docSnap.id });
+        }
       }
     });
     

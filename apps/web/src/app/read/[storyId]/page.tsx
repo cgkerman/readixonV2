@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getStoryById, fetchChapters, getReadingProgress, type Story, type Chapter, type ReadingProgress } from '@readixon/core';
+import { getStoryById, getPublishedChapters, getReadingProgress, type Story, type Chapter, type ReadingProgress } from '@readixon/core';
 import { useAuthStore } from '@readixon/core/src/store/useAuthStore';
 import { Typography, Button } from '@readixon/ui';
 import { ArrowLeft, BookOpen, Clock, Heart, Eye, CheckCircle, Bookmark } from 'lucide-react';
@@ -25,7 +25,7 @@ export default function StoryEntryPage() {
       try {
         const [fetchedStory, fetchedChapters] = await Promise.all([
           getStoryById(storyId),
-          fetchChapters(storyId)
+          getPublishedChapters(storyId)
         ]);
         
         let progress = null;

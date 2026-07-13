@@ -55,6 +55,9 @@ export type {
   CurveballSubmission,
   CurveballVote,
   CurveballStatus,
+  Character,
+  CharacterRole,
+  CharacterRPGStats,
 } from './types';
 
 // Auth servisi
@@ -124,3 +127,4 @@ export { useUserProfile } from './hooks/useUserProfile';
 // TODO: İlerleyen aşamalarda eklenecekler:
 // export * from './store/storyStore';       // Zustand story cache
 // export * from './services/commentService'; // Yorum servisi
+export * from './services/characterService';

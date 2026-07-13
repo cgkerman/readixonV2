@@ -16,13 +16,14 @@ import {
   checkStoryLiked,
   toggleStoryLike,
   incrementStoryView,
-  useAuthStore
+  useAuthStore,
+  getCharacters
 } from '@readixon/core';
-import type { Story, User, Chapter, Review } from '@readixon/core';
+import type { Story, User, Chapter, Review, Character } from '@readixon/core';
 import { 
   BookOpen, Heart, Eye, List, Play, BookmarkPlus, BookmarkCheck, 
   ArrowLeft, Loader2, Star, MessageSquare, Users, Award, PenTool, Hash,
-  Lock, Calendar, Bell
+  Lock, Calendar, Bell, Info, X
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from "sonner";
@@ -31,7 +32,7 @@ export default function StoryDetailPage() {
   const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { firebaseUser, isInitialized } = useAuthStore();
+  const { firebaseUser, isInitialized, userProfile } = useAuthStore();
   
   const slug = params.slug as string;
   const storyId = extractStoryIdFromSlug(slug);
@@ -40,6 +41,7 @@ export default function StoryDetailPage() {
   const [author, setAuthor] = useState<User | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [characters, setCharacters] = useState<Character[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
@@ -50,7 +52,8 @@ export default function StoryDetailPage() {
   const [isLikeLoading, setIsLikeLoading] = useState(false);
 
   // Sekmeler
-  const [activeTab, setActiveTab] = useState<'about' | 'chapters' | 'reviews'>('about');
+  const [activeTab, setActiveTab] = useState<'about' | 'chapters' | 'reviews' | 'characters'>('about');
+  const [showCharacterBookInfo, setShowCharacterBookInfo] = useState(false);
 
   // İnceleme Formu
   const [reviewText, setReviewText] = useState('');
@@ -100,15 +103,20 @@ export default function StoryDetailPage() {
         incrementStoryView(storyId);
 
         // Yazar, bölümler ve incelemeleri paralel çek
-        const [fetchedAuthor, fetchedChapters, fetchedReviews] = await Promise.all([
+        const [fetchedAuthor, fetchedChapters, fetchedReviews, fetchedCharacters] = await Promise.all([
           getUserProfile(fetchedStory.authorId),
           getPublishedChapters(storyId),
-          getReviews(storyId)
+          getReviews(storyId),
+          getCharacters(storyId).catch(err => {
+            console.warn("Karakterler yüklenirken Firebase izin hatası:", err);
+            return [];
+          })
         ]);
         
         setAuthor(fetchedAuthor);
         setChapters(fetchedChapters);
         setReviews(fetchedReviews);
+        setCharacters(fetchedCharacters);
       } catch (err) {
         console.error("Hikaye yüklenirken hata:", err);
         setError('Bir hata oluştu, lütfen daha sonra tekrar deneyin.');
@@ -285,9 +293,37 @@ export default function StoryDetailPage() {
     );
   }
 
+  const isPremiumOrAdmin = userProfile?.status === 'premium' || userProfile?.isAdmin === true;
+  const isStoryAuthor = firebaseUser?.uid === story.authorId;
+  const canViewCharacters = isPremiumOrAdmin || isStoryAuthor;
+
   return (
     <div className="flex flex-col w-full min-h-screen bg-background pb-20 overflow-x-hidden">
       
+      {/* Karakter Defteri Bilgi Modalı */}
+      {showCharacterBookInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+          <div className="bg-card border border-border/50 rounded-3xl p-8 max-w-md w-full shadow-2xl relative">
+            <button 
+              onClick={() => setShowCharacterBookInfo(false)}
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/5 text-muted transition-colors"
+            >
+              <X size={20} />
+            </button>
+            <Typography variant="h2" className="text-2xl font-black text-text mb-4">Karakter Defteri</Typography>
+            <div className="space-y-4 text-muted">
+              <p>Karakter defteri, hikayedeki tüm karakterlerin fiziksel, psikolojik ve geçmişe dair derinlemesine bilgilerinin yer aldığı özel bir ansiklopedidir.</p>
+              <p>Yazarlar bu bölümü kullanarak okuyucularına karakterlerin bilinmeyen yönlerini sunabilir. Bu özellik sadece <strong className="text-yellow-500">Premium</strong> üyelere özeldir.</p>
+            </div>
+            <div className="mt-8 flex justify-end">
+              <Button variant="primary" onPress={() => setShowCharacterBookInfo(false)} className="rounded-full px-6">
+                Anladım
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Üst Bar (Geri Butonu vb.) ── */}
       <div className="absolute top-0 left-0 right-0 p-6 z-20 flex justify-between items-center pointer-events-none">
         <button 
@@ -327,10 +363,10 @@ export default function StoryDetailPage() {
           <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left animate-fade-in-up">
             
             {/* Puan Rozeti */}
-            <div className="mb-4 inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 px-4 py-1.5 rounded-full backdrop-blur-md font-bold text-sm">
-              <Star size={16} className="fill-current" /> 
-              <span>Readixon Score: {story.stats?.rating ? `${story.stats.rating}/10` : 'Puanlanmamış'}</span>
-              <span className="text-yellow-500/50 font-normal ml-1">({story.stats?.reviewCount || 0} İnceleme)</span>
+            <div className="mb-4 inline-flex items-center gap-2 bg-yellow-500 border border-yellow-600 text-black px-4 py-1.5 rounded-full shadow-lg shadow-yellow-500/20 font-bold text-sm">
+              <Star size={16} className="fill-current text-black" /> 
+              <span>Readix Skoru: {story.stats?.rating ? `${story.stats.rating}/10` : 'Puanlanmamış'}</span>
+              <span className="text-black/70 font-medium ml-1">({story.stats?.reviewCount || 0} İnceleme)</span>
             </div>
 
             <Typography variant="h1" className="text-4xl md:text-5xl lg:text-6xl font-black text-text mb-2 leading-tight drop-shadow-lg">
@@ -353,7 +389,7 @@ export default function StoryDetailPage() {
                 onClick={handleToggleLike}
                 disabled={isLikeLoading}
                 className={`flex items-center gap-1.5 border px-4 py-2 rounded-full text-sm backdrop-blur-sm shadow-lg transition-colors disabled:opacity-50
-                  ${isLiked ? 'bg-red-500/20 border-red-500/40 text-red-100' : 'bg-text/10 border-text/10 text-text/90 hover:bg-white/20'}
+                  ${isLiked ? 'bg-red-500/10 border-red-500/40 text-red-600 dark:text-red-500' : 'bg-text/10 border-text/10 text-text/90 hover:bg-white/20'}
                 `}
               >
                 <Heart size={16} className={`transition-colors ${isLiked ? 'fill-red-500 text-red-500' : 'text-text'}`} /> 
@@ -408,7 +444,7 @@ export default function StoryDetailPage() {
           <button
             onClick={() => setActiveTab('about')}
             className={`flex items-center gap-2 py-4 text-lg font-medium border-b-2 transition-all whitespace-nowrap ${
-              activeTab === 'about' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-text'
+              activeTab === 'about' ? 'border-primary text-primary' : 'border-transparent text-black hover:text-primary'
             }`}
           >
             <BookOpen size={20} /> Hakkında
@@ -416,18 +452,26 @@ export default function StoryDetailPage() {
           <button
             onClick={() => setActiveTab('chapters')}
             className={`flex items-center gap-2 py-4 text-lg font-medium border-b-2 transition-all whitespace-nowrap ${
-              activeTab === 'chapters' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-text'
+              activeTab === 'chapters' ? 'border-primary text-primary' : 'border-transparent text-black hover:text-primary'
             }`}
           >
-            <List size={20} /> Bölümler <span className="bg-text/10 text-xs px-2 py-0.5 rounded-full">{chapters.length}</span>
+            <List size={20} /> Bölümler <span className="bg-black/10 text-xs px-2 py-0.5 rounded-full">{chapters.length}</span>
           </button>
           <button
             onClick={() => setActiveTab('reviews')}
             className={`flex items-center gap-2 py-4 text-lg font-medium border-b-2 transition-all whitespace-nowrap ${
-              activeTab === 'reviews' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-text'
+              activeTab === 'reviews' ? 'border-primary text-primary' : 'border-transparent text-black hover:text-primary'
             }`}
           >
-            <MessageSquare size={20} /> İncelemeler <span className="bg-text/10 text-xs px-2 py-0.5 rounded-full">{reviews.length}</span>
+            <MessageSquare size={20} /> İncelemeler <span className="bg-black/10 text-xs px-2 py-0.5 rounded-full">{reviews.length}</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('characters')}
+            className={`flex items-center gap-2 py-4 text-lg font-medium border-b-2 transition-all whitespace-nowrap ${
+              activeTab === 'characters' ? 'border-primary text-primary' : 'border-transparent text-black hover:text-primary'
+            }`}
+          >
+            <Users size={20} /> Karakterler <span className="bg-black/10 text-xs px-2 py-0.5 rounded-full">{characters.length}</span>
           </button>
         </div>
       </div>
@@ -521,6 +565,95 @@ export default function StoryDetailPage() {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* TAB: KARAKTERLER */}
+        {activeTab === 'characters' && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+              <div className="flex items-center gap-3">
+                <Typography variant="h2" className="text-3xl font-black text-text">Karakter Defteri</Typography>
+                <button 
+                  onClick={() => setShowCharacterBookInfo(true)}
+                  className="p-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                  title="Karakter Defteri Nedir?"
+                >
+                  <Info size={20} />
+                </button>
+              </div>
+            </div>
+
+            {!canViewCharacters ? (
+              <div className="text-center py-20 bg-card/50 rounded-3xl border border-white/5 relative overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-orange-500/10 opacity-50"></div>
+                <div className="relative z-10 flex flex-col items-center">
+                  <div className="w-20 h-20 rounded-full bg-yellow-500/20 flex items-center justify-center mb-6 border border-yellow-500/30">
+                    <Lock size={32} className="text-yellow-500" />
+                  </div>
+                  <Typography variant="h3" className="mb-2 text-text font-bold">Premium Özellik</Typography>
+                  <Typography variant="body" className="text-muted max-w-md mx-auto mb-8">
+                    Karakter defteri özelliği sadece Premium üyelere ve Adminlere özeldir. Hikayedeki karakterlerin derinliklerini keşfetmek için Premium'a geçin.
+                  </Typography>
+                  <Button variant="primary" className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-none px-8 py-3 rounded-full font-bold shadow-lg shadow-yellow-500/20 hover:shadow-yellow-500/40 hover:-translate-y-1 transition-all">
+                    Premium'a Yükselt
+                  </Button>
+                </div>
+              </div>
+            ) : characters.length === 0 ? (
+              <div className="text-center py-20 bg-card/50 rounded-3xl border border-white/5">
+                <Users size={64} className="mx-auto text-muted/30 mb-6" />
+                <Typography variant="h3" className="mb-2 text-text/80">Karakterler Gizli</Typography>
+                <Typography variant="body" className="text-muted max-w-md mx-auto">
+                  Yazar henüz bu hikaye için karakter defterini paylaşmamış veya karakterler gizli tutuluyor.
+                </Typography>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {characters.map(char => (
+                  <div key={char.id} className="bg-card border border-border/40 hover:border-primary/50 rounded-3xl overflow-hidden transition-all group flex flex-col shadow-lg shadow-black/5 hover:-translate-y-1 hover:shadow-xl">
+                    <div className="relative h-72 w-full bg-muted/10 overflow-hidden">
+                      {char.avatarUrl ? (
+                        <img src={char.avatarUrl} alt={char.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-primary/5 group-hover:bg-primary/10 transition-colors">
+                          <Users size={48} className="text-primary/20" />
+                        </div>
+                      )}
+                      <div className="absolute top-4 right-4 bg-background/80 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-border/50">
+                        <span className="text-xs font-bold text-text">{
+                          char.role === 'protagonist' ? 'Baş Karakter' :
+                          char.role === 'antagonist' ? 'Düşman' :
+                          char.role === 'supporting' ? 'Yan Karakter' : 'Figüran'
+                        }</span>
+                      </div>
+                    </div>
+
+                    <div className="p-6">
+                      <Typography variant="h3" className="font-black text-text mb-1 group-hover:text-primary transition-colors">
+                        {char.name}
+                      </Typography>
+                      <Typography variant="caption" className="text-muted font-medium mb-4 block">
+                        {char.occupation || 'Meslek Belirtilmedi'} • {char.age || '?'} Yaşında
+                      </Typography>
+                      
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {char.personalityTraits?.slice(0, 3).map((trait: string, i: number) => (
+                          <span key={i} className="bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md">
+                            {trait}
+                          </span>
+                        ))}
+                        {(char.personalityTraits?.length || 0) > 3 && (
+                          <span className="bg-muted/10 text-muted text-[10px] font-bold px-2 py-1 rounded-md">
+                            +{(char.personalityTraits?.length || 0) - 3}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
