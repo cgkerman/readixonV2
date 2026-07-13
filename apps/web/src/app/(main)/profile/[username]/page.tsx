@@ -368,17 +368,38 @@ export default function ProfilePage() {
         <div className="max-w-6xl mx-auto px-6 lg:px-10 relative">
           <div className="flex flex-col md:flex-row items-center md:items-end gap-6 -mt-20 md:-mt-24 mb-10">
             {/* Avatar */}
-            <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-background bg-card flex-shrink-0 overflow-hidden shadow-2xl flex items-center justify-center">
-              {profileUser.avatarUrl ? (
-                <img src={profileUser.avatarUrl} alt={profileUser.displayName} className="w-full h-full object-cover" />
-              ) : (
-                <UserIcon size={64} className="text-muted/30" />
+            <div className="relative flex-shrink-0">
+              <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-background bg-card overflow-hidden shadow-2xl flex items-center justify-center">
+                {profileUser.avatarUrl ? (
+                  <img src={profileUser.avatarUrl} alt={profileUser.displayName} className="w-full h-full object-cover" />
+                ) : (
+                  <UserIcon size={64} className="text-muted/30" />
+                )}
+              </div>
+              {profileUser.status === 'premium' && (
+                <div className="absolute bottom-1 right-1 md:bottom-2 md:right-2 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full p-1.5 md:p-2 border-4 border-background shadow-lg" title="Premium Üye">
+                  <Check size={16} className="text-white" strokeWidth={4} />
+                </div>
               )}
             </div>
             
             {/* Info */}
             <div className="flex-1 text-center md:text-left mb-2 md:mb-4">
-              <Typography variant="h1" className="mb-1">{profileUser.displayName}</Typography>
+              <div className="flex flex-col md:flex-row items-center md:items-center gap-2 md:gap-3 mb-1">
+                <Typography variant="h1">{profileUser.displayName}</Typography>
+                <div className="flex items-center gap-2 mt-1 md:mt-0">
+                  {profileUser.isAdmin && (
+                    <span className="bg-red-500/10 text-red-500 border border-red-500/20 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                      Yönetici
+                    </span>
+                  )}
+                  {profileUser.status === 'premium' && (
+                    <span className="bg-purple-500/10 text-purple-500 border border-purple-500/20 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                      Premium
+                    </span>
+                  )}
+                </div>
+              </div>
               <Typography variant="body" className="text-primary font-medium text-lg">@{profileUser.username}</Typography>
             </div>
 
