@@ -109,7 +109,7 @@ export default function UsernameSetupModal() {
               ) : (
                 <div className="flex flex-col items-center justify-center">
                   <span className="text-3xl font-bold uppercase mb-1">
-                    {firebaseUser?.displayName?.charAt(0) || 'U'}
+                    {(firebaseUser?.displayName || username || firebaseUser?.email || 'U').charAt(0)}
                   </span>
                   <span className="text-[9px] font-medium uppercase opacity-80 flex items-center gap-1">
                     <Upload size={10} /> Değiştir

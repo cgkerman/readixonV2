@@ -616,7 +616,9 @@ export default function ProfilePage() {
                   {avatarPreview ? (
                     <img src={avatarPreview} alt="Preview" className="w-full h-full object-cover" />
                   ) : (
-                    <UserIcon size={40} className="text-muted/50" />
+                    <span className="text-4xl font-bold text-primary uppercase">
+                      {(editForm.displayName || profileUser.displayName || 'U').charAt(0)}
+                    </span>
                   )}
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
                     <label className="cursor-pointer text-white text-xs font-semibold px-2 py-1 bg-primary/80 rounded-full">

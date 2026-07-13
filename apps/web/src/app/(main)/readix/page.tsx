@@ -346,8 +346,8 @@ function ReadixContent() {
               {userProfile?.avatarUrl ? (
                 <img src={userProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-primary">
-                  <UserIcon size={24} />
+                <div className="w-full h-full flex flex-col items-center justify-center text-primary bg-primary/20">
+                  <span className="text-xs font-bold uppercase">{(userProfile?.displayName || 'U').charAt(0)}</span>
                 </div>
               )}
             </div>
