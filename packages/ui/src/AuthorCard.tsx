@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, UserPlus } from 'lucide-react';
+import { User, UserPlus, Check } from 'lucide-react';
 import { Typography } from './Typography';
 
 export interface AuthorCardProps {
@@ -10,6 +10,7 @@ export interface AuthorCardProps {
   isFollowing?: boolean;
   onPress?: () => void;
   onFollowPress?: (e: React.MouseEvent) => void;
+  isPremium?: boolean;
   className?: string;
 }
 
@@ -19,6 +20,7 @@ export const AuthorCard: React.FC<AuthorCardProps> = ({
   avatarUrl,
   followers,
   isFollowing = false,
+  isPremium = false,
   onPress,
   onFollowPress,
   className = '',
@@ -42,10 +44,17 @@ export const AuthorCard: React.FC<AuthorCardProps> = ({
             />
           ) : (
             <div className="w-full h-full bg-primary/20 flex items-center justify-center text-primary">
-              <User size={40} />
+              <span className="text-4xl font-bold uppercase">
+                {name?.charAt(0) || username?.charAt(0) || 'U'}
+              </span>
             </div>
           )}
         </div>
+        {isPremium && (
+          <div className="absolute bottom-0 right-0 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full p-1 border-2 border-card shadow-lg" title="Premium Yazar">
+            <Check size={12} className="text-white" strokeWidth={4} />
+          </div>
+        )}
       </div>
       
       {/* Yazar Bilgileri */}

@@ -373,7 +373,9 @@ export default function ProfilePage() {
                 {profileUser.avatarUrl ? (
                   <img src={profileUser.avatarUrl} alt={profileUser.displayName} className="w-full h-full object-cover" />
                 ) : (
-                  <UserIcon size={64} className="text-muted/30" />
+                  <span className="text-5xl font-bold text-primary uppercase">
+                    {profileUser.displayName?.charAt(0) || profileUser.username?.charAt(0) || 'U'}
+                  </span>
                 )}
               </div>
               {profileUser.status === 'premium' && (

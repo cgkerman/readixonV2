@@ -77,6 +77,7 @@ export default function ExploreAuthorsPage() {
                   avatarUrl={author.avatarUrl}
                   followers={author.stats?.followers || 0}
                   isFollowing={followingIds.includes(author.uid)}
+                  isPremium={author.status === 'premium'}
                   onFollowPress={(e) => handleFollowToggle(e, author.uid)}
                 />
               </div>

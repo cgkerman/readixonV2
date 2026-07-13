@@ -619,6 +619,7 @@ function AuthorCarouselRow({ title, icon, authors, seeAllHref, onAuthorClick, fo
               followers={author.stats?.followers || 0}
               onPress={() => onAuthorClick(author)}
               isFollowing={followingIds.includes(author.uid)}
+              isPremium={author.status === 'premium'}
               onFollowPress={(e) => onFollowToggle(e, author.uid)}
             />
           </div>

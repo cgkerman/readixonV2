@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { BookOpen, Bookmark, Loader2, Compass } from 'lucide-react';
 import { Typography, Button } from '@readixon/ui';
 import { StoryCard } from '@readixon/ui';
-import { useAuthStore, getUserReadingProgress, getSavedStories, getStoriesByIds, generateStorySlug } from '@readixon/core';
+import { useAuthStore, getUserReadingProgress, getSavedStories, getStoriesByIds, generateStorySlug, getUserProfile } from '@readixon/core';
 import type { Story } from '@readixon/core';
 
 export default function LibraryPage() {
@@ -32,6 +32,17 @@ export default function LibraryPage() {
             const storyIds = progresses.map(p => p.storyId);
             const stories = await getStoriesByIds(storyIds);
             
+            // Eksik yazar bilgilerini tamamla
+            for (let story of stories) {
+              if (!story.authorName) {
+                const authorProfile = await getUserProfile(story.authorId);
+                if (authorProfile) {
+                  story.authorName = authorProfile.displayName;
+                  story.authorUsername = authorProfile.username;
+                }
+              }
+            }
+            
             // İlerlemeyi birleştir
             const merged = stories.map(story => {
               const prog = progresses.find(p => p.storyId === story.storyId);
@@ -48,6 +59,18 @@ export default function LibraryPage() {
           const savedIds = await getSavedStories(firebaseUser.uid);
           if (savedIds.length > 0) {
             const stories = await getStoriesByIds(savedIds);
+            
+            // Eksik yazar bilgilerini tamamla
+            for (let story of stories) {
+              if (!story.authorName) {
+                const authorProfile = await getUserProfile(story.authorId);
+                if (authorProfile) {
+                  story.authorName = authorProfile.displayName;
+                  story.authorUsername = authorProfile.username;
+                }
+              }
+            }
+            
             setSavedStories(stories);
           } else {
             setSavedStories([]);

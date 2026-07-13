@@ -154,6 +154,7 @@ function SearchContent() {
                 avatarUrl={author.avatarUrl}
                 followers={author.stats?.followers || 0}
                 isFollowing={followingIds.includes(author.uid)}
+                isPremium={author.status === 'premium'}
                 onPress={() => {
                   if (author.username) {
                     router.push(`/profile/@${author.username}`);
