@@ -389,13 +389,13 @@ export default function ProfilePage() {
                 <Typography variant="h1">{profileUser.displayName}</Typography>
                 <div className="flex items-center gap-2 mt-1 md:mt-0">
                   {profileUser.isAdmin && (
-                    <span className="bg-red-500/10 text-red-500 border border-red-500/20 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                      Yönetici
+                    <span className="bg-red-500/10 text-red-500 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                      yönetici
                     </span>
                   )}
                   {profileUser.status === 'premium' && (
-                    <span className="bg-purple-500/10 text-purple-500 border border-purple-500/20 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                      Premium
+                    <span className="bg-purple-500/10 text-purple-500 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                      premium
                     </span>
                   )}
                 </div>
