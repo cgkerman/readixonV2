@@ -9,8 +9,8 @@ if (!getApps().length) {
       credential: cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        // Replace literal \n with actual newlines if provided in env var
-        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        // Replace literal \n with actual newlines if provided in env var, and remove leading/trailing quotes
+        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n').replace(/^"|"$/g, ''),
       }),
     });
     console.log('Firebase Admin SDK initialized successfully.');

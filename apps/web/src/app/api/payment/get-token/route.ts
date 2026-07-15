@@ -60,8 +60,12 @@ export async function POST(req: Request) {
 
     await db.collection('payment_transactions').doc(merchantOid).set(transactionData);
 
-    // Get user IP
-    const userIp = req.headers.get('x-forwarded-for') || '85.105.1.1'; // Default fallback
+    // Get user IP and ensure it is a single IP address (Vercel uses comma-separated lists)
+    const forwardedFor = req.headers.get('x-forwarded-for');
+    let userIp = '85.105.1.1'; // Default fallback
+    if (forwardedFor) {
+      userIp = forwardedFor.split(',')[0].trim();
+    }
 
     const basket: Array<[string, string, number]> = [
       [packageDetails.name, packageDetails.amount.toString(), 1]
