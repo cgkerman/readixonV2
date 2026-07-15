@@ -19,7 +19,7 @@ import {
 import { db } from '../firebase';
 import { Readix, ReadixComment } from '../types';
 import { createNotification } from './notificationService';
-import { getUserProfile } from './userService';
+import { getUserProfile, getUserByUsername } from './userService';
 
 const READIXES_COLLECTION = 'readixes';
 const USERS_COLLECTION = 'users';
@@ -68,6 +68,27 @@ export async function createReadix(
   });
 
   await batch.commit();
+
+  // Send notifications to mentioned users (after batch commit, in background)
+  if (mentions.length > 0) {
+    const sender = await getUserProfile(authorId);
+    if (sender) {
+      Promise.all(mentions.map(async (username) => {
+        const user = await getUserByUsername(username);
+        if (user && user.uid !== authorId) {
+          await createNotification({
+            userId: user.uid,
+            actorId: authorId,
+            actorName: sender.displayName,
+            type: 'readix_mention',
+            entityId: readixRef.id,
+            actorAvatar: sender.avatarUrl,
+            actorUsername: sender.username
+          });
+        }
+      })).catch(err => console.error("Mention notifications failed:", err));
+    }
+  }
   
   return {
     ...newReadix,
@@ -107,6 +128,45 @@ export async function getReadixById(readixId: string): Promise<Readix | null> {
   } catch (error) {
     console.error("Readix detayı çekilirken hata:", error);
     return null;
+  }
+}
+
+export async function getMentionedReadixes(
+  username: string,
+  limitCount = 20,
+  startAfterDoc?: DocumentSnapshot,
+  blockedUsers?: string[]
+): Promise<{ readixes: Readix[], lastVisible: DocumentSnapshot | null }> {
+  try {
+    let q = query(
+      collection(db, READIXES_COLLECTION),
+      where('mentions', 'array-contains', username),
+      orderBy('createdAt', 'desc'),
+      limit(limitCount)
+    );
+
+    if (startAfterDoc) {
+      q = query(q, startAfter(startAfterDoc));
+    }
+
+    const snap = await getDocs(q);
+    
+    const readixes = snap.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as Readix));
+
+    // Filter blocked users
+    const filteredReadixes = blockedUsers && blockedUsers.length > 0
+      ? readixes.filter(r => !blockedUsers.includes(r.authorId))
+      : readixes;
+
+    const lastVisible = snap.docs.length === limitCount ? snap.docs[snap.docs.length - 1] : null;
+
+    return { readixes: filteredReadixes, lastVisible };
+  } catch (error) {
+    console.error("Bahsedilen readix'ler çekilirken hata:", error);
+    return { readixes: [], lastVisible: null };
   }
 }
 

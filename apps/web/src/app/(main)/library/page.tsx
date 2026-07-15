@@ -2,17 +2,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { BookOpen, Bookmark, Loader2, Compass } from 'lucide-react';
+import { BookOpen, Bookmark, Loader2, Compass, Quote, Trash2 } from 'lucide-react';
 import { Typography, Button } from '@readixon/ui';
 import { StoryCard } from '@readixon/ui';
-import { useAuthStore, getUserReadingProgress, getSavedStories, getStoriesByIds, generateStorySlug, getUserProfile } from '@readixon/core';
-import type { Story } from '@readixon/core';
+import { useAuthStore, getUserReadingProgress, getSavedStories, getStoriesByIds, generateStorySlug, getUserProfile, getUserQuotes, deleteSavedQuote } from '@readixon/core';
+import type { Story, SavedQuote } from '@readixon/core';
+import { toast } from 'sonner';
 
 export default function LibraryPage() {
-  const [activeTab, setActiveTab] = useState<'reading' | 'saved'>('reading');
+  const [activeTab, setActiveTab] = useState<'reading' | 'saved' | 'quotes'>('reading');
   const [loading, setLoading] = useState(true);
   const [readingStories, setReadingStories] = useState<(Story & { progress?: number })[]>([]);
   const [savedStories, setSavedStories] = useState<Story[]>([]);
+  const [savedQuotes, setSavedQuotes] = useState<SavedQuote[]>([]);
   
   const { firebaseUser } = useAuthStore();
   const router = useRouter();
@@ -55,7 +57,7 @@ export default function LibraryPage() {
           } else {
             setReadingStories([]);
           }
-        } else {
+          } else if (activeTab === 'saved') {
           const savedIds = await getSavedStories(firebaseUser.uid);
           if (savedIds.length > 0) {
             const stories = await getStoriesByIds(savedIds);
@@ -75,6 +77,9 @@ export default function LibraryPage() {
           } else {
             setSavedStories([]);
           }
+        } else if (activeTab === 'quotes') {
+          const quotes = await getUserQuotes(firebaseUser.uid);
+          setSavedQuotes(quotes);
         }
       } catch (error) {
         console.error('Kütüphane verileri çekilirken hata:', error);
@@ -112,7 +117,7 @@ export default function LibraryPage() {
       );
     }
 
-    const items = activeTab === 'reading' ? readingStories : savedStories;
+    const items = activeTab === 'reading' ? readingStories : activeTab === 'saved' ? savedStories : savedQuotes;
 
     if (items.length === 0) {
       return (
@@ -120,19 +125,74 @@ export default function LibraryPage() {
           <div className="w-24 h-24 rounded-full bg-muted/5 flex items-center justify-center mb-6">
             {activeTab === 'reading' ? (
               <BookOpen size={40} className="text-muted/40" />
-            ) : (
+            ) : activeTab === 'saved' ? (
               <Bookmark size={40} className="text-muted/40" />
+            ) : (
+              <Quote size={40} className="text-muted/40" />
             )}
           </div>
           <Typography variant="h3" className="mb-3 text-text/90 tracking-tight">Burada Henüz Bir Şey Yok</Typography>
           <Typography variant="body" className="text-muted max-w-sm mx-auto mb-8">
             {activeTab === 'reading' 
               ? 'Henüz okumaya başladığınız bir hikaye bulunmuyor. Yeni dünyalar keşfetmeye hemen başlayın.' 
-              : 'Daha sonra okumak için henüz hiçbir hikayeyi kaydetmemişsiniz.'}
+              : activeTab === 'saved' 
+                ? 'Daha sonra okumak için henüz hiçbir hikayeyi kaydetmemişsiniz.'
+                : 'Okurken altını çizdiğiniz veya kaydettiğiniz hiçbir alıntı bulunmuyor.'}
           </Typography>
           <Button variant="primary" onPress={() => router.push('/feed')} className="rounded-full px-6">
             <Compass size={18} className="mr-2" /> Keşfetmeye Başla
           </Button>
+        </div>
+      );
+    }
+
+    if (activeTab === 'quotes') {
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+          {savedQuotes.map(quote => (
+            <div key={quote.id} className="bg-card border border-border/50 rounded-2xl p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow group relative">
+              <div>
+                <Quote size={24} className="text-primary/40 mb-4" />
+                <Typography variant="body" className="text-text font-serif italic text-lg leading-relaxed mb-6">
+                  "{quote.text}"
+                </Typography>
+              </div>
+              
+              <div className="flex items-center justify-between border-t border-border/30 pt-4 mt-auto">
+                <div 
+                  className="cursor-pointer group/title"
+                  onClick={() => router.push(`/read/${quote.storyId}/${quote.chapterId}`)}
+                >
+                  <Typography variant="h4" className="text-sm font-bold group-hover/title:text-primary transition-colors line-clamp-1">
+                    {quote.storyTitle}
+                  </Typography>
+                  <Typography variant="body" className="text-xs text-muted mt-0.5">
+                    {quote.authorName} {quote.authorUsername && `@${quote.authorUsername}`}
+                  </Typography>
+                </div>
+              </div>
+              
+              <button 
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  if (!firebaseUser) return;
+                  if (confirm('Bu alıntıyı silmek istediğinize emin misiniz?')) {
+                    try {
+                      await deleteSavedQuote(firebaseUser.uid, quote.id);
+                      setSavedQuotes(prev => prev.filter(q => q.id !== quote.id));
+                      toast.success("Alıntı silindi.");
+                    } catch(err) {
+                      toast.error("Alıntı silinemedi.");
+                    }
+                  }
+                }}
+                className="absolute top-4 right-4 p-2 text-muted-foreground hover:text-red-500 bg-background/50 backdrop-blur opacity-0 group-hover:opacity-100 transition-all rounded-full"
+                title="Sil"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ))}
         </div>
       );
     }
@@ -199,6 +259,17 @@ export default function LibraryPage() {
         >
           <Bookmark size={18} />
           Kaydedilenler
+        </button>
+        <button
+          onClick={() => setActiveTab('quotes')}
+          className={`flex items-center gap-2 py-4 border-b-2 transition-all ${
+            activeTab === 'quotes' 
+              ? 'border-primary text-primary font-semibold' 
+              : 'border-transparent text-muted hover:text-text'
+          }`}
+        >
+          <Quote size={18} />
+          Alıntılar
         </button>
       </div>
 

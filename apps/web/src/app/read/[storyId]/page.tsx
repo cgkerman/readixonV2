@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { getStoryById, getPublishedChapters, getReadingProgress, type Story, type Chapter, type ReadingProgress } from '@readixon/core';
 import { useAuthStore } from '@readixon/core/src/store/useAuthStore';
 import { Typography, Button } from '@readixon/ui';
-import { ArrowLeft, BookOpen, Clock, Heart, Eye, CheckCircle, Bookmark } from 'lucide-react';
+import { ArrowLeft, BookOpen, Clock, Heart, Eye, CheckCircle, Bookmark, MessageSquare } from 'lucide-react';
 import { toast } from "sonner";
 
 export default function StoryEntryPage() {
@@ -64,6 +64,10 @@ export default function StoryEntryPage() {
   if (!story) return null;
 
   const firstChapter = chapters.length > 0 ? chapters[0] : null;
+  const totalComments = Math.max(
+    story.stats?.commentCount || 0,
+    chapters.reduce((sum, chap) => sum + (chap.stats?.commentCount || 0), 0)
+  );
 
   return (
     <div className="min-h-screen bg-background text-text pb-24">
@@ -103,6 +107,9 @@ export default function StoryEntryPage() {
                 </div>
                 <div className="flex items-center gap-1 text-muted text-sm">
                   <Heart size={16} /> {story.stats?.likes || 0}
+                </div>
+                <div className="flex items-center gap-1 text-muted text-sm">
+                  <MessageSquare size={16} /> {totalComments}
                 </div>
               </div>
             </div>

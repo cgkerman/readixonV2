@@ -55,8 +55,9 @@ export interface StoryStats {
   views: number;
   likes: number;
   chapterCount: number;
-  rating?: number;       // 10 Ã¼zerinden ortalama puan (Ã–rn: 8.5)
-  reviewCount?: number;  // Toplam inceleme sayÄ±sÄ±
+  rating?: number;       // 10 üzerinden ortalama puan (Örn: 8.5)
+  reviewCount?: number;  // Toplam inceleme sayısı
+  commentCount?: number; // Toplam bölüm ve satır arası yorum sayısı
 }
 
 export interface Contributor {
@@ -213,6 +214,7 @@ export type NotificationType =
   | 'follow' 
   | 'story_like' 
   | 'story_comment' 
+  | 'paragraph_comment'
   | 'readix_like' 
   | 'readix_comment' 
   | 'readix_mention'
@@ -231,7 +233,8 @@ export interface AppNotification {
   actorUsername?: string; 
   type: NotificationType;
   entityId?: string; // e.g. storyId or readixId
-  entityTitle?: string; // optional context, e.g. "YÃ¼zÃ¼klerin Efendisi"
+  entityTitle?: string; // optional context, e.g. "Yüzüklerin Efendisi"
+  subEntityId?: string; // e.g. chapterId
   subEntityTitle?: string; // e.g. chapter title
   message?: string; // System message content
   isRead: boolean;
@@ -476,7 +479,23 @@ export interface CurveballVote {
   createdAt: Timestamp;
 }
 
+// ─────────────────────────────────────────────
+// 3.5. Alıntılar (Quotes)
+// ─────────────────────────────────────────────
 
+export interface SavedQuote {
+  id: string;
+  text: string;
+  storyId: string;
+  chapterId: string;
+  storyTitle: string;
+  authorName: string;
+  authorUsername?: string | null;
+  createdAt: Timestamp;
+}
+
+// ─────────────────────────────────────────────
+// 3.6. Etkileşimler (Beğeni / Dislike vs)r Notebook)
 // ¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦
 // 3.12. Karakter Defteri (Character Notebook)
 // ¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦

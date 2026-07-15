@@ -383,6 +383,70 @@ export async function getUserFollowerIds(userId: string): Promise<string[]> {
 }
 
 /**
+ * Kullanıcının takip ettiği kişilerin profillerini döndürür (limitli).
+ */
+export async function getUserFollowing(userId: string, limitCount = 50): Promise<User[]> {
+  if (!userId) return [];
+  try {
+    const followingSnapshot = await getDocs(
+      query(collection(db, `${USERS_COLLECTION}/${userId}/following`), limit(limitCount))
+    );
+    const ids = followingSnapshot.docs.map(doc => doc.id);
+    const users = await Promise.all(ids.map(id => getUserProfile(id)));
+    
+    // Auto-heal missing users
+    const missingIds = ids.filter((_, index) => users[index] === null);
+    if (missingIds.length > 0) {
+      const batch = writeBatch(db);
+      missingIds.forEach(missingId => {
+        batch.delete(doc(db, `${USERS_COLLECTION}/${userId}/following`, missingId));
+      });
+      batch.update(doc(db, USERS_COLLECTION, userId), {
+        'stats.following': increment(-missingIds.length)
+      });
+      await batch.commit().catch(e => console.error("Auto-heal following error", e));
+    }
+
+    return users.filter(u => u !== null) as User[];
+  } catch (error) {
+    console.error("Takip edilen profilleri çekerken hata:", error);
+    return [];
+  }
+}
+
+/**
+ * Kullanıcının takipçilerinin profillerini döndürür (limitli).
+ */
+export async function getUserFollowers(userId: string, limitCount = 50): Promise<User[]> {
+  if (!userId) return [];
+  try {
+    const followersSnapshot = await getDocs(
+      query(collection(db, `${USERS_COLLECTION}/${userId}/followers`), limit(limitCount))
+    );
+    const ids = followersSnapshot.docs.map(doc => doc.id);
+    const users = await Promise.all(ids.map(id => getUserProfile(id)));
+    
+    // Auto-heal missing users
+    const missingIds = ids.filter((_, index) => users[index] === null);
+    if (missingIds.length > 0) {
+      const batch = writeBatch(db);
+      missingIds.forEach(missingId => {
+        batch.delete(doc(db, `${USERS_COLLECTION}/${userId}/followers`, missingId));
+      });
+      batch.update(doc(db, USERS_COLLECTION, userId), {
+        'stats.followers': increment(-missingIds.length)
+      });
+      await batch.commit().catch(e => console.error("Auto-heal followers error", e));
+    }
+
+    return users.filter(u => u !== null) as User[];
+  } catch (error) {
+    console.error("Takipçi profillerini çekerken hata:", error);
+    return [];
+  }
+}
+
+/**
  * Kullanıcı arama (displayName alanında prefix arama yapar).
  */
 export async function searchUsers(searchTerm: string): Promise<User[]> {

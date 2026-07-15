@@ -71,15 +71,20 @@ export default function NotificationsPage() {
         break;
       case 'story_like':
       case 'story_comment':
+      case 'paragraph_comment':
       case 'new_chapter':
         if (notif.entityTitle && notif.entityId) {
-          router.push(`/story/${generateStorySlug(notif.entityTitle, notif.entityId)}`);
+          if (notif.subEntityId) {
+            router.push(`/read/${notif.entityId}/${notif.subEntityId}`);
+          } else {
+            router.push(`/story/${generateStorySlug(notif.entityTitle, notif.entityId)}`);
+          }
         }
         break;
       case 'readix_like':
       case 'readix_comment':
       case 'readix_mention':
-        router.push('/readix');
+        router.push(notif.entityId ? `/readix?id=${notif.entityId}` : '/readix');
         break;
       case 'duel_challenge':
       case 'duel_rejected':
@@ -117,6 +122,7 @@ export default function NotificationsPage() {
       case 'readix_like':
         return <div className="w-10 h-10 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center shrink-0"><Heart size={20} /></div>;
       case 'story_comment':
+      case 'paragraph_comment':
       case 'readix_comment':
       case 'readix_mention':
         return <div className="w-10 h-10 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center shrink-0"><MessageCircle size={20} /></div>;
@@ -145,12 +151,14 @@ export default function NotificationsPage() {
         return <>{actor}, {entity} hikayeni beğendi.</>;
       case 'story_comment':
         return <>{actor}, {entity} hikayene yorum yaptı.</>;
+      case 'paragraph_comment':
+        return <>{actor}, {entity} kitabının {notif.subEntityTitle ? `"${notif.subEntityTitle}" bölümünde` : 'bir bölümünde'} satır arası yorum yaptı.</>;
       case 'readix_like':
         return <>{actor}, {entity} gönderini beğendi.</>;
       case 'readix_comment':
         return <>{actor}, {entity} gönderine yanıt verdi.</>;
       case 'readix_mention':
-        return <>{actor}, {entity} gönderisinde senden bahsetti.</>;
+        return <>{actor} bir Readix gönderisinde senden bahsetti.</>;
       case 'new_chapter':
         const chapter = notif.subEntityTitle ? <span className="font-medium text-primary">"{notif.subEntityTitle}"</span> : null;
         return <>{actor}, {entity} kitabında yeni bir bölüm yayınladı: {chapter}</>;
@@ -163,6 +171,7 @@ export default function NotificationsPage() {
       case 'system_message':
         return <span>{notif.message || 'Sistemden yeni bir mesajınız var.'}</span>;
       default:
+        console.warn('Bilinmeyen bildirim tipi:', notif.type, notif);
         return <span>Yeni bir bildiriminiz var.</span>;
     }
   };

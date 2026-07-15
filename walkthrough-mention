@@ -1,0 +1,26 @@
+# Readix Etiketleme (Mention) Güncellemeleri - Tamamlandı
+
+Seçtiğin A seçeneği üzerinden ilerleyerek bildirimleri ve profil sayfasındaki Readix geliştirmelerini başarıyla tamamladım. Ayrıca bahsettiğin "Kullanıcı Etiketlerken Arama (Autocomplete)" özelliğini de Readix paylaşım ekranına ekledim!
+
+İşte yapılan tüm yenilikler:
+
+## 1. Etiketleme (Mention) İçin Otomatik Tamamlama
+Readix oluşturma alanında artık aynı hashtag'lerde (`#`) olduğu gibi `@` sembolünü yazdığında sistem arka planda saniyeler içerisinde kullanıcıları arayacak. 
+Ekranda çıkan kullanıcı listesinden istediğin kişiyi (Profil fotoğrafı ve kullanıcı adıyla birlikte göreceksin) seçerek doğrudan metnin içerisine hızlıca etiketleyebilirsin.
+
+## 2. Bildirimlerden Direkt Konuya Yönlendirme
+Biri seni etiketlediğinde, sana gelen bildirime tıkladığında artık sadece Readix akışına gitmeyeceksin. 
+O gönderi arka planda otomatik olarak bulunacak ve **doğrudan Yorumlar modülü (Modal) tam sayfa olarak açılacak**. Böylece bahsedildiğin içeriği, altına gelen yorumları görebilir ve sen de direkt konuya dahil olarak cevap verebilirsin.
+
+## 3. Profil Sayfası Readix'ler Bölümü
+Kendi profiline veya bir başkasının profiline girdiğinde "Readixleri" sekmesi artık iki alt sekmeye ayrılıyor:
+* **Paylaşılanlar:** Kullanıcının (veya senin) yazdığı orijinal Readix'ler.
+* **Bahsedilenler:** Kullanıcının (veya senin) etiketlendiği, başkaları tarafından yazılan tüm Readix'ler.
+
+*Not: "Bahsedilenler" sekmesindeki gönderiler farklı yazarlara ait olsa dahi sistem arka planda o yazarların güncel bilgilerini anında çeker ve kartın üzerinde doğru yazarın adı ile resmi yer alır.*
+
+---
+**Test Edebilirsin:**
+1. Profil sayfana gidip Readixler -> Bahsedilenler sekmesini kontrol et. (Şu an boş olabilir).
+2. "Readix Paylaş" sayfasına gidip `@` işareti koyarak bir kullanıcı aramayı dene. (Ör: kendi ismini veya başka bir hesabı).
+3. Etiketlediğin (veya yan hesaptan etiketlendiğin) hesaba gidip gelen bildirime tıkla, yorum penceresinin nasıl şık bir şekilde açıldığını gör!

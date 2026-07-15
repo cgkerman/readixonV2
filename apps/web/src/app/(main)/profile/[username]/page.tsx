@@ -2,22 +2,27 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Loader2, Users, BookOpen, User as UserIcon, Edit2, Bookmark, BookmarkCheck, Check, X, Hash, MessageCircle, Feather } from 'lucide-react';
+import { Loader2, Users, BookOpen, User as UserIcon, Edit2, Bookmark, BookmarkCheck, Check, X, Hash, MessageCircle, Feather, Eye, Heart, MessageSquare } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 import { Typography, Button, StoryCard, Input, ReadixCard, ReadixCommentModal, ReadixShareModal, ShareReadixData, EditReadixModal, ReportModal, ConfirmationDialog } from '@readixon/ui';
 import { 
   useAuthStore, 
   getUserByUsername, 
+  getUserProfile,
   subscribeToPublishedAuthorStories,
+  getPublishedChapters,
   checkIsFollowing,
   followUser,
   unfollowUser,
+  getUserFollowers,
+  getUserFollowing,
   updateUserProfile,
   getSavedStories,
   uploadFile,
   compressImage,
   getCroppedImg,
   getUserReadixes,
+  getMentionedReadixes,
   toggleReadixLike,
   addReadixComment,
   getReadixComments,
@@ -44,6 +49,9 @@ export default function ProfilePage() {
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [stories, setStories] = useState<Story[]>([]);
   const [readixes, setReadixes] = useState<Readix[]>([]);
+  const [mentionedReadixes, setMentionedReadixes] = useState<Readix[]>([]);
+  const [authors, setAuthors] = useState<Record<string, User>>({});
+  const [activeReadixTab, setActiveReadixTab] = useState<'shared' | 'mentions'>('shared');
   const [savedStories, setSavedStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -153,9 +161,61 @@ export default function ProfilePage() {
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
 
+  // Global Comments
+  const [globalTotalComments, setGlobalTotalComments] = useState(0);
+
+  useEffect(() => {
+    const fetchGlobalComments = async () => {
+      if (profileUser?.isAuthor && stories.length > 0) {
+        let total = 0;
+        await Promise.all(
+          stories.map(async (story) => {
+            try {
+              const chapters = await getPublishedChapters(story.storyId);
+              const chapTotal = chapters.reduce((sum, chap) => sum + (chap.stats?.commentCount || 0), 0);
+              const storyTotal = Math.max(story.stats?.commentCount || 0, chapTotal);
+              total += storyTotal;
+              total += story.stats?.reviewCount || 0;
+            } catch (e) {
+              total += story.stats?.commentCount || 0;
+              total += story.stats?.reviewCount || 0;
+            }
+          })
+        );
+        setGlobalTotalComments(total);
+      }
+    };
+    fetchGlobalComments();
+  }, [profileUser, stories]);
+
   const onCropComplete = useCallback((_croppedArea: any, croppedAreaPixels: any) => {
     setCroppedAreaPixels(croppedAreaPixels);
   }, []);
+
+  // Follow Modal States
+  const [followModalType, setFollowModalType] = useState<'followers' | 'following' | null>(null);
+  const [followModalUsers, setFollowModalUsers] = useState<User[]>([]);
+  const [isFollowModalLoading, setIsFollowModalLoading] = useState(false);
+
+  const openFollowModal = async (type: 'followers' | 'following') => {
+    if (!profileUser?.uid) return;
+    setFollowModalType(type);
+    setIsFollowModalLoading(true);
+    setFollowModalUsers([]);
+    try {
+      if (type === 'followers') {
+        const users = await getUserFollowers(profileUser.uid);
+        setFollowModalUsers(users);
+      } else {
+        const users = await getUserFollowing(profileUser.uid);
+        setFollowModalUsers(users);
+      }
+    } catch (e) {
+      toast.error('Kullanıcı listesi alınamadı.');
+    } finally {
+      setIsFollowModalLoading(false);
+    }
+  };
 
   const handleCropSave = async () => {
     if (cropImageSrc && croppedAreaPixels) {
@@ -202,6 +262,21 @@ export default function ProfilePage() {
         // Fetch user's readixes
         const userReadixes = await getUserReadixes(user.uid, 20);
         setReadixes(userReadixes.readixes);
+        
+        // Fetch mentioned readixes
+        const mentions = await getMentionedReadixes(user.username!, 20);
+        setMentionedReadixes(mentions.readixes);
+
+        // Fetch authors for mentioned readixes
+        const missingAuthorIds = Array.from(new Set(mentions.readixes.map(r => r.authorId))).filter(id => id !== user.uid);
+        if (missingAuthorIds.length > 0) {
+          const newAuthors: Record<string, User> = {};
+          await Promise.all(missingAuthorIds.map(async (id) => {
+            const authorData = await getUserProfile(id);
+            if (authorData) newAuthors[id] = authorData;
+          }));
+          setAuthors(newAuthors);
+        }
         
         // Takip durumunu kontrol et
         if (firebaseUser && firebaseUser.uid !== user.uid) {
@@ -480,21 +555,45 @@ export default function ProfilePage() {
               </div>
 
               <div className="bg-card border border-border/50 rounded-3xl p-6 grid grid-cols-2 gap-4">
-                <div className="text-center">
+                <div 
+                  className="text-center cursor-pointer hover:opacity-80 transition-opacity" 
+                  onClick={() => openFollowModal('followers')}
+                >
                   <Typography variant="h2" className="text-primary mb-1">{profileUser.stats?.followers || 0}</Typography>
                   <Typography variant="caption" className="text-muted font-medium uppercase">Takipçi</Typography>
                 </div>
-                <div className="text-center">
+                <div 
+                  className="text-center cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => openFollowModal('following')}
+                >
                   <Typography variant="h2" className="mb-1">{profileUser.stats?.following || 0}</Typography>
                   <Typography variant="caption" className="text-muted font-medium uppercase">Takip</Typography>
                 </div>
-                <div className="col-span-2 pt-4 border-t border-border/50 text-center mt-2">
-                  <Typography variant="h3" className="text-text mb-1">
-                    {profileUser.isAuthor 
-                      ? stories.reduce((sum, s) => sum + (s.stats?.views || 0), 0) 
-                      : (profileUser.stats?.totalReads || 0)}
-                  </Typography>
-                  <Typography variant="caption" className="text-muted font-medium uppercase">Toplam Okunma</Typography>
+                <div className="col-span-2 pt-4 border-t border-border/50 flex justify-center gap-8 items-center mt-2">
+                  <div className="flex items-center gap-2">
+                    <Eye size={20} className="text-primary" />
+                    <Typography variant="h3" className="text-text">
+                      {profileUser.isAuthor 
+                        ? stories.reduce((sum, s) => sum + (s.stats?.views || 0), 0) 
+                        : (profileUser.stats?.totalReads || 0)}
+                    </Typography>
+                  </div>
+                  {profileUser.isAuthor && (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <Heart size={20} className="text-primary" />
+                        <Typography variant="h3" className="text-text">
+                          {stories.reduce((sum, s) => sum + (s.stats?.likes || 0), 0)}
+                        </Typography>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <MessageSquare size={20} className="text-primary" />
+                        <Typography variant="h3" className="text-text">
+                          {globalTotalComments}
+                        </Typography>
+                      </div>
+                    </>
+                  )}
                 </div>
                 {profileUser.isAuthor && (
                   <div className="col-span-2 pt-4 border-t border-border/50 text-center mt-2 flex items-center justify-center gap-2">
@@ -561,43 +660,101 @@ export default function ProfilePage() {
                   </div>
                 )
               ) : (
-                readixes.length === 0 ? (
-                  <div className="bg-card/30 border border-dashed border-border rounded-3xl p-12 text-center">
-                    <Typography variant="body" className="text-muted">
-                      {isOwnProfile ? "Henüz bir readix paylaşmadınız." : "Bu yazar henüz bir readix paylaşmamış."}
-                    </Typography>
-                    {isOwnProfile && (
-                      <Button variant="outline" onPress={() => router.push('/readix')} className="mt-4 rounded-full">
-                        İlk Readix'ini Paylaş
-                      </Button>
-                    )}
+                <div className="flex flex-col gap-6">
+                  {/* Readix Sub-Tabs */}
+                  <div className="flex gap-4 border-b border-white/5 pb-2">
+                    <button 
+                      onClick={() => setActiveReadixTab('shared')}
+                      className={`text-sm font-semibold transition-colors relative ${activeReadixTab === 'shared' ? 'text-primary' : 'text-muted hover:text-white'}`}
+                    >
+                      Paylaşılanlar
+                      {activeReadixTab === 'shared' && <div className="absolute -bottom-2.5 left-0 right-0 h-0.5 bg-primary rounded-t-full" />}
+                    </button>
+                    <button 
+                      onClick={() => setActiveReadixTab('mentions')}
+                      className={`text-sm font-semibold transition-colors relative ${activeReadixTab === 'mentions' ? 'text-primary' : 'text-muted hover:text-white'}`}
+                    >
+                      Bahsedilenler
+                      {activeReadixTab === 'mentions' && <div className="absolute -bottom-2.5 left-0 right-0 h-0.5 bg-primary rounded-t-full" />}
+                    </button>
                   </div>
-                ) : (
-                  <div className="flex flex-col gap-4">
-                    {readixes.map((readix) => (
-                      <ReadixCard
-                        key={readix.id}
-                        authorName={profileUser.displayName}
-                        authorUsername={profileUser.username}
-                        authorAvatarUrl={profileUser.avatarUrl}
-                        content={readix.content}
-                        mediaUrls={readix.mediaUrls}
-                        createdAtStr={readix.createdAt ? new Date((readix.createdAt as any).seconds ? (readix.createdAt as any).seconds * 1000 : (readix.createdAt as unknown as number)).toLocaleDateString() : 'Şimdi'}
-                        likesCount={readix.stats?.likes || 0}
-                        commentsCount={readix.stats?.comments || 0}
-                        isOwner={firebaseUser?.uid === readix.authorId}
-                        onLikePress={() => handleReadixLike(readix.id, readix.stats?.likes || 0)}
-                        onCommentPress={() => openComments(readix)}
-                        onSharePress={() => openShare(readix, profileUser)}
-                        onPress={() => openComments(readix)}
-                        onEditPress={() => { setActiveReadix(readix); setEditReadixModalOpen(true); }}
-                        onDeletePress={() => { setActiveReadix(readix); setDeleteConfirmOpen(true); }}
-                        onReportPress={() => { setActiveReadix(readix); setReportModalOpen(true); }}
-                        onBlockPress={() => { setActiveReadix(readix); setBlockConfirmOpen(true); }}
-                      />
-                    ))}
-                  </div>
-                )
+
+                  {activeReadixTab === 'shared' ? (
+                    readixes.length === 0 ? (
+                      <div className="bg-card/30 border border-dashed border-border rounded-3xl p-12 text-center mt-4">
+                        <Typography variant="body" className="text-muted">
+                          {isOwnProfile ? "Henüz bir readix paylaşmadınız." : "Bu yazar henüz bir readix paylaşmamış."}
+                        </Typography>
+                        {isOwnProfile && (
+                          <Button variant="outline" onPress={() => router.push('/readix')} className="mt-4 rounded-full">
+                            İlk Readix'ini Paylaş
+                          </Button>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-4">
+                        {readixes.map((readix) => (
+                          <ReadixCard
+                            key={readix.id}
+                            authorName={profileUser.displayName}
+                            authorUsername={profileUser.username}
+                            authorAvatarUrl={profileUser.avatarUrl}
+                            content={readix.content}
+                            mediaUrls={readix.mediaUrls}
+                            createdAtStr={readix.createdAt ? new Date((readix.createdAt as any).seconds ? (readix.createdAt as any).seconds * 1000 : (readix.createdAt as unknown as number)).toLocaleDateString() : 'Şimdi'}
+                            likesCount={readix.stats?.likes || 0}
+                            commentsCount={readix.stats?.comments || 0}
+                            isOwner={firebaseUser?.uid === readix.authorId}
+                            onLikePress={() => handleReadixLike(readix.id, readix.stats?.likes || 0)}
+                            onCommentPress={() => openComments(readix)}
+                            onSharePress={() => openShare(readix, profileUser)}
+                            onPress={() => openComments(readix)}
+                            onEditPress={() => { setActiveReadix(readix); setEditReadixModalOpen(true); }}
+                            onDeletePress={() => { setActiveReadix(readix); setDeleteConfirmOpen(true); }}
+                            onReportPress={() => { setActiveReadix(readix); setReportModalOpen(true); }}
+                            onBlockPress={() => { setActiveReadix(readix); setBlockConfirmOpen(true); }}
+                          />
+                        ))}
+                      </div>
+                    )
+                  ) : (
+                    mentionedReadixes.length === 0 ? (
+                      <div className="bg-card/30 border border-dashed border-border rounded-3xl p-12 text-center mt-4">
+                        <Typography variant="body" className="text-muted">
+                          {isOwnProfile ? "Henüz hiçbir readix'te bahsedilmediniz." : "Bu yazardan henüz bahsedilmemiş."}
+                        </Typography>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-4">
+                        {mentionedReadixes.map((readix) => {
+                          const author = authors[readix.authorId] || profileUser;
+                          return (
+                            <ReadixCard
+                              key={readix.id}
+                              authorName={author.displayName}
+                              authorUsername={author.username}
+                              authorAvatarUrl={author.avatarUrl}
+                              content={readix.content}
+                              mediaUrls={readix.mediaUrls}
+                              createdAtStr={readix.createdAt ? new Date((readix.createdAt as any).seconds ? (readix.createdAt as any).seconds * 1000 : (readix.createdAt as unknown as number)).toLocaleDateString() : 'Şimdi'}
+                              likesCount={readix.stats?.likes || 0}
+                              commentsCount={readix.stats?.comments || 0}
+                              isOwner={firebaseUser?.uid === readix.authorId}
+                              onLikePress={() => handleReadixLike(readix.id, readix.stats?.likes || 0)}
+                              onCommentPress={() => openComments(readix)}
+                              onSharePress={() => openShare(readix, author)}
+                              onPress={() => openComments(readix)}
+                              onEditPress={() => { setActiveReadix(readix); setEditReadixModalOpen(true); }}
+                              onDeletePress={() => { setActiveReadix(readix); setDeleteConfirmOpen(true); }}
+                              onReportPress={() => { setActiveReadix(readix); setReportModalOpen(true); }}
+                              onBlockPress={() => { setActiveReadix(readix); setBlockConfirmOpen(true); }}
+                            />
+                          );
+                        })}
+                      </div>
+                    )
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -737,6 +894,7 @@ export default function ProfilePage() {
         selectedReadix={selectedReadix}
         currentUserId={firebaseUser?.uid || null}
         onCommentAdded={handleCommentAdded}
+        onLikePost={(id, likes) => handleReadixLike(id, likes)}
       />
 
       <ReadixShareModal
@@ -779,6 +937,55 @@ export default function ProfilePage() {
         variant="warning"
         isLoading={isProcessing}
       />
+
+      {/* Follow List Modal */}
+      {followModalType && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setFollowModalType(null)}>
+          <div className="bg-card w-full max-w-md rounded-3xl p-6 border border-border/50 shadow-2xl flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-6">
+              <Typography variant="h3">{followModalType === 'followers' ? 'Takipçiler' : 'Takip Edilenler'}</Typography>
+              <button onClick={() => setFollowModalType(null)} className="p-2 hover:bg-muted/10 rounded-full transition-colors text-muted hover:text-text">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
+              {isFollowModalLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="animate-spin text-primary" size={24} />
+                </div>
+              ) : followModalUsers.length === 0 ? (
+                <div className="text-center py-8 text-muted">
+                  {followModalType === 'followers' ? 'Henüz takipçi yok.' : 'Henüz kimseyi takip etmiyor.'}
+                </div>
+              ) : (
+                followModalUsers.map(u => (
+                  <div 
+                    key={u.uid} 
+                    className="flex items-center gap-3 p-2 hover:bg-muted/5 rounded-xl cursor-pointer transition-colors"
+                    onClick={() => {
+                      setFollowModalType(null);
+                      router.push(`/profile/${u.username}`);
+                    }}
+                  >
+                    {u.avatarUrl ? (
+                      <img src={u.avatarUrl} alt={u.username} className="w-10 h-10 rounded-full object-cover border border-border/30" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                        <UserIcon size={20} className="text-primary" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <Typography variant="body" className="font-semibold truncate">{u.displayName}</Typography>
+                      <Typography variant="caption" className="text-muted truncate">@{u.username}</Typography>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

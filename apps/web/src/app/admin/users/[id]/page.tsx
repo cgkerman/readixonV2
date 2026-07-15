@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { Typography, Button } from '@readixon/ui';
-import { getUserProfile, getAuthorStories, User, Story } from '@readixon/core';
-import { ArrowLeft, User as UserIcon, Calendar, CheckCircle, ShieldAlert, PenTool, Users, Eye, Swords, BookOpen } from 'lucide-react';
+import { getUserProfile, getAuthorStories, User, Story, useAuthStore } from '@readixon/core';
+import { ArrowLeft, User as UserIcon, Calendar, CheckCircle, ShieldAlert, PenTool, Users, Eye, Swords, BookOpen, Mail } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
@@ -11,7 +11,9 @@ export default function AdminUserDetailPage() {
   const { id } = useParams() as { id: string };
   const [user, setUser] = useState<User | null>(null);
   const [authorStories, setAuthorStories] = useState<Story[]>([]);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const { firebaseUser } = useAuthStore();
 
   useEffect(() => {
     const loadData = async () => {
@@ -25,6 +27,21 @@ export default function AdminUserDetailPage() {
             const stories = await getAuthorStories(id);
             setAuthorStories(stories);
           }
+          
+          if (firebaseUser) {
+            try {
+              const token = await firebaseUser.getIdToken();
+              const response = await fetch(`/api/user/${id}/email`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              if (response.ok) {
+                const data = await response.json();
+                setUserEmail(data.email);
+              }
+            } catch (err) {
+              console.error("Mail adresi çekilirken hata:", err);
+            }
+          }
         }
       } catch (error) {
         console.error("Kullanıcı detayı çekilirken hata:", error);
@@ -34,7 +51,7 @@ export default function AdminUserDetailPage() {
     };
     
     loadData();
-  }, [id]);
+  }, [id, firebaseUser]);
 
   if (loading) {
     return (
@@ -109,6 +126,13 @@ export default function AdminUserDetailPage() {
                 </div>
                 <Typography variant="h2" className="font-bold text-3xl">{user.displayName}</Typography>
                 <Typography variant="body" className="text-muted font-medium mt-1">@{user.username || user.uid.substring(0, 8)}</Typography>
+                
+                {userEmail && (
+                  <div className="flex items-center gap-2 mt-2 text-muted bg-muted/5 w-fit px-3 py-1.5 rounded-lg border border-border/50">
+                    <Mail size={16} />
+                    <span className="text-sm font-medium">{userEmail}</span>
+                  </div>
+                )}
               </div>
 
               <div>

@@ -168,7 +168,7 @@ export const ReadixCard: React.FC<ReadixCardProps> = ({
               <a 
                 key={index} 
                 href={`/readix?hashtag=${part.slice(1)}`}
-                className="text-primary hover:underline"
+                className="text-black font-bold hover:underline"
                 onClick={(e) => e.stopPropagation()}
               >
                 {part}
@@ -179,7 +179,7 @@ export const ReadixCard: React.FC<ReadixCardProps> = ({
               <a 
                 key={index} 
                 href={`/profile/${part}`}
-                className="text-blue-400 font-medium hover:underline"
+                className="text-black font-bold hover:underline"
                 onClick={(e) => e.stopPropagation()}
               >
                 {part}

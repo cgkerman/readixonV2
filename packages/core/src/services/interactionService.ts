@@ -157,7 +157,14 @@ export const checkChapterLiked = async (storyId: string, chapterId: string, user
 /**
  * Bölüm sonuna yorum (tartışma) ekler.
  */
-export const addChapterComment = async (storyId: string, chapterId: string, userId: string, text: string): Promise<Comment> => {
+export const addChapterComment = async (
+  storyId: string, 
+  chapterId: string, 
+  userId: string, 
+  text: string,
+  type: 'chapter' | 'paragraph' = 'chapter',
+  paragraphIndex: number = -1
+): Promise<Comment> => {
   try {
     const userProfile = await getUserProfile(userId);
     const commentRef = doc(collection(db, 'stories', storyId, 'chapters', chapterId, 'comments'));
@@ -170,8 +177,8 @@ export const addChapterComment = async (storyId: string, chapterId: string, user
       authorUsername: userProfile?.username,
       authorAvatarUrl: userProfile?.avatarUrl,
       text,
-      type: 'chapter',
-      paragraphIndex: -1,
+      type,
+      paragraphIndex,
       createdAt: serverTimestamp() as any,
     };
     await setDoc(commentRef, newComment);
@@ -182,23 +189,34 @@ export const addChapterComment = async (storyId: string, chapterId: string, user
       'stats.commentCount': increment(1)
     });
 
+    // update story comment count
+    const storyRef = doc(db, 'stories', storyId);
+    await updateDoc(storyRef, {
+      'stats.commentCount': increment(1)
+    });
+
     // Bildirim gönder
     try {
       const storyRef = doc(db, 'stories', storyId);
       const storySnap = await getDoc(storyRef);
+      const chapterSnap = await getDoc(chapterRef); // Fetch chapter to get title
       const userProfile = await getUserProfile(userId);
       
       if (storySnap.exists() && userProfile) {
         const storyData = storySnap.data();
+        const chapterData = chapterSnap.exists() ? chapterSnap.data() : null;
+        
         await createNotification({
           userId: storyData.authorId,
           actorId: userId,
           actorName: userProfile.displayName,
           actorAvatar: userProfile.avatarUrl,
           actorUsername: userProfile.username,
-          type: 'story_comment',
+          type: type === 'paragraph' ? 'paragraph_comment' : 'story_comment',
           entityId: storyId,
-          entityTitle: storyData.title
+          entityTitle: storyData.title,
+          subEntityId: chapterId,
+          subEntityTitle: chapterData?.title || `Bölüm ${chapterData?.order || ''}`.trim()
         });
       }
     } catch (notifError) {
@@ -230,6 +248,27 @@ export const getChapterComments = async (storyId: string, chapterId: string): Pr
     return comments;
   } catch (error) {
     console.error("Yorumları çekerken hata:", error);
+    return [];
+  }
+};
+
+/**
+ * Bölüme ait tüm yorumları (genel ve paragraf) çeker.
+ */
+export const getAllChapterComments = async (storyId: string, chapterId: string): Promise<Comment[]> => {
+  try {
+    const q = query(
+      collection(db, 'stories', storyId, 'chapters', chapterId, 'comments'),
+      orderBy('createdAt', 'desc')
+    );
+    const snap = await getDocs(q);
+    const comments: Comment[] = [];
+    snap.forEach((docSnap) => {
+      comments.push({ ...docSnap.data(), commentId: docSnap.id } as Comment);
+    });
+    return comments;
+  } catch (error) {
+    console.error("Tüm yorumları çekerken hata:", error);
     return [];
   }
 };

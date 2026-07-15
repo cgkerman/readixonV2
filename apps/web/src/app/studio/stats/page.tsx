@@ -3,12 +3,13 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Typography, Card } from '@readixon/ui';
 import { BarChart3, Eye, Heart, MessageSquare, TrendingUp, BookOpen, Star } from 'lucide-react';
-import { subscribeToAuthorStories, useAuthStore, type Story } from '@readixon/core';
+import { subscribeToAuthorStories, getPublishedChapters, useAuthStore, type Story } from '@readixon/core';
 
 export default function StudioStats() {
   const { firebaseUser } = useAuthStore();
   const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
+  const [realCommentCounts, setRealCommentCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (!firebaseUser) return;
@@ -22,6 +23,28 @@ export default function StudioStats() {
 
     return () => unsubscribe();
   }, [firebaseUser]);
+
+  useEffect(() => {
+    const fetchCommentCounts = async () => {
+      const counts: Record<string, number> = {};
+      await Promise.all(
+        stories.map(async (story) => {
+          try {
+            const chapters = await getPublishedChapters(story.storyId);
+            const total = chapters.reduce((sum, chap) => sum + (chap.stats?.commentCount || 0), 0);
+            counts[story.storyId] = Math.max(story.stats?.commentCount || 0, total);
+          } catch (e) {
+            counts[story.storyId] = story.stats?.commentCount || 0;
+          }
+        })
+      );
+      setRealCommentCounts(counts);
+    };
+
+    if (stories.length > 0) {
+      fetchCommentCounts();
+    }
+  }, [stories]);
 
   // Aggregated Stats
   const { totalViews, totalLikes, totalReviews, totalStories, avgRating } = useMemo(() => {
@@ -50,6 +73,14 @@ export default function StudioStats() {
       avgRating: ratedStoriesCount > 0 ? (totalRating / ratedStoriesCount).toFixed(1) : '0.0'
     };
   }, [stories]);
+
+  const globalTotalComments = useMemo(() => {
+    // Toplam yorum sayısını ya realCommentCounts'tan ya da story.stats'tan al
+    return stories.reduce((sum, story) => {
+      const realCount = realCommentCounts[story.storyId];
+      return sum + (realCount !== undefined ? realCount : (story.stats?.commentCount || 0));
+    }, 0);
+  }, [stories, realCommentCounts]);
 
   // Top performing stories (sorted by views)
   const topStories = useMemo(() => {
@@ -97,8 +128,8 @@ export default function StudioStats() {
             />
             <StatCard 
               icon={<MessageSquare size={24} className="text-primary" />} 
-              label="Toplam İnceleme" 
-              value={totalReviews.toLocaleString('tr-TR')} 
+              label="Yorum & İnceleme" 
+              value={(totalReviews + globalTotalComments).toLocaleString('tr-TR')} 
               bgColor="bg-primary/10"
               borderColor="border-primary/20"
             />
@@ -138,8 +169,8 @@ export default function StudioStats() {
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <Typography variant="body" className="font-bold truncate">{story.title}</Typography>
-                          <Typography variant="caption" className="text-muted flex items-center gap-2 mt-1">
+                          <Typography variant="body" className="font-bold truncate mb-1">{story.title}</Typography>
+                          <Typography variant="caption" className="text-muted flex items-center gap-2 mb-2">
                             {story.status === 'ongoing' || story.status === 'completed' ? (
                               <span className="w-2 h-2 rounded-full bg-primary" />
                             ) : (
@@ -147,15 +178,24 @@ export default function StudioStats() {
                             )}
                             {story.status === 'ongoing' || story.status === 'completed' ? 'Yayında' : 'Taslak'}
                           </Typography>
-                        </div>
-                        <div className="flex items-center gap-6 text-sm font-medium pr-2">
-                          <div className="flex items-center gap-1.5 min-w-[4rem]">
-                            <Eye size={16} className="text-primary" />
-                            {story.stats.views || 0}
-                          </div>
-                          <div className="flex items-center gap-1.5 min-w-[4rem]">
-                            <Heart size={16} className="text-primary" />
-                            {story.stats.likes || 0}
+                          
+                          <div className="flex items-center gap-5 text-sm font-medium opacity-80">
+                            <div className="flex items-center gap-1.5 min-w-[3rem]">
+                              <Eye size={16} className="text-primary" />
+                              {story.stats.views || 0}
+                            </div>
+                            <div className="flex items-center gap-1.5 min-w-[3rem]">
+                              <Heart size={16} className="text-primary" />
+                              {story.stats.likes || 0}
+                            </div>
+                            <div className="flex items-center gap-1.5 min-w-[3rem]">
+                              <MessageSquare size={16} className="text-primary" />
+                              {realCommentCounts[story.storyId] !== undefined ? realCommentCounts[story.storyId] : (story.stats.commentCount || 0)}
+                            </div>
+                            <div className="flex items-center gap-1.5 min-w-[3rem]">
+                              <Star size={16} className="text-primary" />
+                              {story.stats.rating ? story.stats.rating.toFixed(1) : '0.0'}
+                            </div>
                           </div>
                         </div>
                       </div>

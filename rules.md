@@ -43,6 +43,10 @@ service cloud.firestore {
       match /savedStories/{savedId} {
         allow read, write: if isOwner(userId);
       }
+      
+      match /saved_quotes/{quoteId} {
+        allow read, write: if isOwner(userId);
+      }
     }
 
 

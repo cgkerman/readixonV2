@@ -13,6 +13,7 @@ export interface ReadixCommentModalProps {
   selectedReadix: Readix | null;
   currentUserId: string | null;
   onCommentAdded: (newComment: any) => void;
+  onLikePost?: (readixId: string, currentLikes: number) => void;
 }
 
 export const ReadixCommentModal: React.FC<ReadixCommentModalProps> = ({
@@ -21,6 +22,7 @@ export const ReadixCommentModal: React.FC<ReadixCommentModalProps> = ({
   selectedReadix,
   currentUserId,
   onCommentAdded,
+  onLikePost,
 }) => {
   const [comments, setComments] = useState<ReadixComment[]>([]);
   const [authors, setAuthors] = useState<Record<string, User>>({});
@@ -169,7 +171,7 @@ export const ReadixCommentModal: React.FC<ReadixCommentModalProps> = ({
                     <a 
                       key={index} 
                       href={`/readix?hashtag=${part.slice(1)}`}
-                      className="text-primary hover:underline"
+                      className="text-black font-bold hover:underline"
                     >
                       {part}
                     </a>
@@ -179,7 +181,7 @@ export const ReadixCommentModal: React.FC<ReadixCommentModalProps> = ({
                     <a 
                       key={index} 
                       href={`/profile/${part}`}
-                      className="text-blue-400 font-medium hover:underline"
+                      className="text-black font-bold hover:underline"
                     >
                       {part}
                     </a>
@@ -198,6 +200,16 @@ export const ReadixCommentModal: React.FC<ReadixCommentModalProps> = ({
                 ))}
               </div>
             )}
+            
+            <div className="flex items-center gap-2 mt-4 text-muted">
+              <button 
+                onClick={() => onLikePost?.(selectedReadix.id, selectedReadix.stats?.likes || 0)}
+                className="flex items-center gap-1.5 hover:text-pink-500 transition-colors bg-muted/10 px-3 py-1.5 rounded-full text-sm font-medium"
+              >
+                <Heart size={16} />
+                <span>{selectedReadix.stats?.likes || 0} Beğeni</span>
+              </button>
+            </div>
           </div>
           
           {loadingComments ? (

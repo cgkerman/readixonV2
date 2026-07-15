@@ -3,12 +3,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { fetchChapter, getPublishedChapters, syncReadingProgress, incrementChapterView, checkChapterLiked, toggleChapterLike, addChapterComment, getChapterComments } from '@readixon/core';
-import type { Chapter, Comment } from '@readixon/core';
+import { fetchChapter, getPublishedChapters, syncReadingProgress, incrementChapterView, checkChapterLiked, toggleChapterLike, addChapterComment, getAllChapterComments, getStoryById, saveQuote, getUserProfile } from '@readixon/core';
+import type { Chapter, Comment, Story, User } from '@readixon/core';
 import { useReaderStore } from '@readixon/core/src/store/useReaderStore';
 import { useAuthStore } from '@readixon/core/src/store/useAuthStore';
 import { ContentRenderer, ReadingSettingsPanel, Button, Typography } from '@readixon/ui';
-import { ArrowLeft, Settings, List, ChevronLeft, ChevronRight, CheckCircle, X, Heart, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Settings, List, ChevronLeft, ChevronRight, CheckCircle, X, Heart, MessageSquare, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ReadPage() {
@@ -20,6 +20,7 @@ export default function ReadPage() {
 
   const { firebaseUser, isInitialized } = useAuthStore();
   const [chapter, setChapter] = useState<Chapter | null>(null);
+  const [story, setStory] = useState<Story | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
@@ -30,26 +31,35 @@ export default function ReadPage() {
   const [isLiked, setIsLiked] = useState(false);
   const [isLikeLoading, setIsLikeLoading] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
+  const [chapterComments, setChapterComments] = useState<Comment[]>([]);
+  const [paragraphComments, setParagraphComments] = useState<Record<number, Comment[]>>({});
+  const [paragraphCommentCounts, setParagraphCommentCounts] = useState<Record<number, number>>({});
+  
   const [commentText, setCommentText] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
+
+  // Satır Arası Yorum (Side Panel) State
+  const [selectedParagraphIndex, setSelectedParagraphIndex] = useState<number | null>(null);
+  const [selectedParagraphText, setSelectedParagraphText] = useState('');
+  const [paragraphCommentText, setParagraphCommentText] = useState('');
+  const [submittingParagraphComment, setSubmittingParagraphComment] = useState(false);
 
   const { theme, fontSize, setTheme, setFontSize } = useReaderStore();
 
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      const [chaps, chap, fetchedComments] = await Promise.all([
+      const [chaps, chap, fetchedComments, storyData] = await Promise.all([
         getPublishedChapters(storyId),
         fetchChapter(storyId, chapterId),
-        getChapterComments(storyId, chapterId)
+        getAllChapterComments(storyId, chapterId),
+        getStoryById(storyId)
       ]);
 
       if (chap && chap.status === 'scheduled' && chap.publishDate) {
         const pubDate = chap.publishDate.toDate ? chap.publishDate.toDate() : new Date(chap.publishDate as any);
         if (pubDate > new Date()) {
           // Check if user is the author
-          const { getStoryById } = await import('@readixon/core');
-          const storyData = await getStoryById(storyId);
           if (!firebaseUser || storyData?.authorId !== firebaseUser.uid) {
             toast.error("Bu bölüm henüz yayınlanmadı.");
             router.push(`/story/${storyId}`);
@@ -68,7 +78,41 @@ export default function ReadPage() {
       
       setChapters(chaps);
       setChapter(chap);
-      setComments(fetchedComments);
+      
+      if (storyData) {
+        if (!storyData.authorName) {
+          try {
+            const author = await getUserProfile(storyData.authorId);
+            if (author) {
+              storyData.authorName = author.displayName;
+              storyData.authorUsername = author.username;
+            }
+          } catch (e) {
+            console.error("Yazar bilgisi alınamadı", e);
+          }
+        }
+        setStory(storyData as Story);
+      }
+      
+      // Yorumları ayır
+      const chapComments = fetchedComments.filter(c => c.type === 'chapter' || !c.type);
+      const parComments = fetchedComments.filter(c => c.type === 'paragraph' && c.paragraphIndex >= 0);
+      
+      setChapterComments(chapComments);
+      setComments(chapComments); // Geriye dönük uyumluluk için, tartışma kısmında chapter comments görünür
+      
+      const counts: Record<number, number> = {};
+      const groupedPar: Record<number, Comment[]> = {};
+      
+      parComments.forEach(c => {
+        counts[c.paragraphIndex] = (counts[c.paragraphIndex] || 0) + 1;
+        if (!groupedPar[c.paragraphIndex]) groupedPar[c.paragraphIndex] = [];
+        groupedPar[c.paragraphIndex].push(c);
+      });
+      
+      setParagraphCommentCounts(counts);
+      setParagraphComments(groupedPar);
+      
       setLoading(false);
     };
     if (storyId && chapterId && isInitialized) {
@@ -141,7 +185,8 @@ export default function ReadPage() {
 
     setSubmittingComment(true);
     try {
-      const newComment = await addChapterComment(storyId, chapterId, firebaseUser.uid, commentText);
+      const newComment = await addChapterComment(storyId, chapterId, firebaseUser.uid, commentText, 'chapter', -1);
+      setChapterComments(prev => [newComment, ...prev]);
       setComments(prev => [newComment, ...prev]);
       setCommentText('');
     } catch (error) {
@@ -149,6 +194,53 @@ export default function ReadPage() {
     } finally {
       setSubmittingComment(false);
     }
+  };
+
+  const handleParagraphCommentSubmit = async () => {
+    if (!firebaseUser) {
+      router.push('/login');
+      return;
+    }
+    if (!paragraphCommentText.trim() || selectedParagraphIndex === null) return;
+
+    setSubmittingParagraphComment(true);
+    try {
+      const newComment = await addChapterComment(
+        storyId, 
+        chapterId, 
+        firebaseUser.uid, 
+        paragraphCommentText, 
+        'paragraph', 
+        selectedParagraphIndex
+      );
+      
+      setParagraphComments(prev => ({
+        ...prev,
+        [selectedParagraphIndex]: [newComment, ...(prev[selectedParagraphIndex] || [])]
+      }));
+      
+      setParagraphCommentCounts(prev => ({
+        ...prev,
+        [selectedParagraphIndex]: (prev[selectedParagraphIndex] || 0) + 1
+      }));
+      
+      setParagraphCommentText('');
+    } catch (error) {
+      console.error("Paragraf yorumu eklenirken hata:", error);
+    } finally {
+      setSubmittingParagraphComment(false);
+    }
+  };
+
+  const openParagraphComments = (index: number, text: string) => {
+    const cleanText = text.replace(/<[^>]+>/g, '').trim();
+    let displayText = cleanText;
+    if (displayText.length > 100) {
+      displayText = '...' + displayText.substring(displayText.length - 100);
+    }
+    
+    setSelectedParagraphIndex(index);
+    setSelectedParagraphText(displayText);
   };
 
   useEffect(() => {
@@ -194,7 +286,7 @@ export default function ReadPage() {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <Typography variant="h3">Bölüm bulunamadı.</Typography>
-        <Button variant="primary" onPress={() => router.back()} className="mt-4">Geri Dön</Button>
+        <Button variant="primary" onPress={() => router.replace(`/read/${storyId}`)} className="mt-4">Geri Dön</Button>
       </div>
     );
   }
@@ -221,7 +313,7 @@ export default function ReadPage() {
       <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b border-border/10 bg-opacity-90 backdrop-blur"
            style={{ backgroundColor: `${currentThemeStyle.bg}E6` }}>
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onPress={() => router.back()} className="rounded-full p-2">
+          <Button variant="ghost" onPress={() => router.replace(`/read/${storyId}`)} className="rounded-full p-2">
             <ArrowLeft size={24} color={currentThemeStyle.text} />
           </Button>
           <Typography variant="h3" style={{ color: currentThemeStyle.text }}>
@@ -252,11 +344,55 @@ export default function ReadPage() {
 
       {/* Main Content */}
       <main className="max-w-2xl mx-auto px-6 py-12">
-        <ContentRenderer blocks={chapter.contentBlocks} fontSize={fontSize} textColor={currentThemeStyle.text} />
+        <ContentRenderer 
+          blocks={chapter.contentBlocks} 
+          fontSize={fontSize} 
+          textColor={currentThemeStyle.text}
+          onParagraphCommentClick={openParagraphComments}
+          paragraphCommentCounts={paragraphCommentCounts}
+          onQuoteShare={(text) => {
+            if (!story) return;
+            const hashtag = story.title.replace(/[^\p{L}\p{N}]/gu, '');
+            const mention = story.authorUsername ? `@${story.authorUsername}` : '';
+            const content = `${text}\n\n#${hashtag} ${mention}`;
+            router.push(`/readix?quote=${encodeURIComponent(content)}`);
+          }}
+          onQuoteSave={async (text) => {
+            if (!firebaseUser || !story || !chapter) {
+              toast.error("Alıntı kaydetmek için giriş yapmalısınız.");
+              return;
+            }
+            try {
+              await saveQuote(
+                firebaseUser.uid,
+                text,
+                storyId,
+                chapterId,
+                story.title,
+                story.authorName || 'Bilinmeyen Yazar',
+                story.authorUsername
+              );
+              toast.success("Alıntı kütüphanenize kaydedildi.");
+            } catch (error) {
+              console.error(error);
+              toast.error("Alıntı kaydedilemedi.");
+            }
+          }}
+        />
         
         {/* Bölüm Beğeni ve Tartışma Alanı */}
         <div className="mt-20 pt-8 border-t border-border/20">
           <div className="flex flex-col items-center justify-center mb-16 space-y-4">
+            <div className="flex items-center gap-6 mb-4 opacity-70" style={{ color: currentThemeStyle.text }}>
+              <div className="flex items-center gap-2" title="Okunma">
+                <Eye size={20} />
+                <span className="font-bold">{chapter.stats?.views || 0}</span>
+              </div>
+              <div className="flex items-center gap-2" title="Yorum">
+                <MessageSquare size={20} />
+                <span className="font-bold">{comments.length + Object.values(paragraphComments).flat().length}</span>
+              </div>
+            </div>
             <Typography variant="h3" style={{ color: currentThemeStyle.text }}>Bu bölümü nasıl buldunuz?</Typography>
             <button 
               onClick={handleToggleLike}
@@ -273,7 +409,7 @@ export default function ReadPage() {
 
           <div className="mb-12">
             <Typography variant="h3" className="mb-6 flex items-center gap-2" style={{ color: currentThemeStyle.text }}>
-              <MessageSquare size={20} /> Tartışma ({comments.length})
+              <MessageSquare size={20} /> Bölüm Yorumları ({comments.length})
             </Typography>
 
             <div className="mb-8">
@@ -399,6 +535,80 @@ export default function ReadPage() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Paragraph Comments Side Panel (Drawer) */}
+      {selectedParagraphIndex !== null && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm" onClick={() => setSelectedParagraphIndex(null)}>
+          <div 
+            className="w-full max-w-md h-full bg-card overflow-y-auto flex flex-col shadow-2xl animate-in slide-in-from-right"
+            onClick={e => e.stopPropagation()}
+            style={{ backgroundColor: currentThemeStyle.bg, color: currentThemeStyle.text }}
+          >
+            <div className="p-6 flex items-center justify-between border-b border-border/10">
+              <Typography variant="h3" style={{ color: currentThemeStyle.text }}>Satır Arası Yorumlar</Typography>
+              <Button variant="ghost" onPress={() => setSelectedParagraphIndex(null)} className="p-2 rounded-full">
+                <X size={24} color={currentThemeStyle.text} />
+              </Button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {(paragraphComments[selectedParagraphIndex] || []).length > 0 ? (
+                (paragraphComments[selectedParagraphIndex] || []).map(comment => (
+                  <div key={comment.commentId} className="flex gap-3">
+                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary flex-shrink-0 overflow-hidden text-sm">
+                      {comment.authorAvatarUrl ? (
+                        <img src={comment.authorAvatarUrl} alt={comment.authorName || 'User'} className="w-full h-full object-cover" />
+                      ) : (
+                        (comment.authorName ? comment.authorName.substring(0,2) : comment.userId.substring(0,2)).toUpperCase()
+                      )}
+                    </div>
+                    <div className="bg-black/5 rounded-2xl rounded-tl-none p-3 flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-sm" style={{ color: currentThemeStyle.text }}>
+                          {comment.authorName || `Kullanıcı ${comment.userId.substring(0,6)}`}
+                        </span>
+                        <span className="text-xs opacity-50" style={{ color: currentThemeStyle.text }}>
+                          {new Date(comment.createdAt?.seconds * 1000 || Date.now()).toLocaleDateString('tr-TR')}
+                        </span>
+                      </div>
+                      <Typography variant="body" className="text-sm whitespace-pre-line" style={{ color: currentThemeStyle.text }}>
+                        {comment.text}
+                      </Typography>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 opacity-50">
+                  <MessageSquare size={32} className="mx-auto mb-2 opacity-50" />
+                  <Typography variant="body" style={{ color: currentThemeStyle.text }}>
+                    Bu satıra henüz yorum yapılmamış. İlk sen yorum yap!
+                  </Typography>
+                </div>
+              )}
+            </div>
+            
+            <div className="p-4 border-t border-border/10 bg-background">
+              <textarea 
+                value={paragraphCommentText}
+                onChange={(e) => setParagraphCommentText(e.target.value)}
+                placeholder="Düşüncelerini paylaş..."
+                className="w-full bg-black/5 border border-border/20 rounded-xl p-3 text-sm focus:outline-none focus:border-primary resize-y min-h-[80px]"
+                style={{ color: currentThemeStyle.text }}
+              />
+              <div className="flex justify-end mt-2">
+                <Button 
+                  variant="primary" 
+                  onPress={handleParagraphCommentSubmit} 
+                  disabled={submittingParagraphComment || !paragraphCommentText.trim()}
+                  className="py-1.5 px-4 text-sm"
+                >
+                  {submittingParagraphComment ? 'Gönderiliyor...' : 'Yorum Yap'}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

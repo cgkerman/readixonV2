@@ -19,6 +19,8 @@ import {
   deleteReadix,
   reportContent,
   blockUser,
+  getReadixById,
+  searchUsers,
   Readix,
   User
 } from '@readixon/core';
@@ -121,8 +123,10 @@ function ReadixContent() {
   };
 
   // Create Readix State
-  const [newContent, setNewContent] = useState('');
+  const quoteParam = searchParams.get('quote');
+  const [newContent, setNewContent] = useState(quoteParam || '');
   const [activeHashtag, setActiveHashtag] = useState<string | null>(null);
+  const [activeMention, setActiveMention] = useState<string | null>(null);
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -133,8 +137,13 @@ function ReadixContent() {
 
     if (lastWord.startsWith('#') && lastWord.length > 0) {
       setActiveHashtag(lastWord.slice(1).toLowerCase());
+      setActiveMention(null);
+    } else if (lastWord.startsWith('@') && lastWord.length > 0) {
+      setActiveMention(lastWord.slice(1).toLowerCase());
+      setActiveHashtag(null);
     } else {
       setActiveHashtag(null);
+      setActiveMention(null);
     }
   };
 
@@ -146,7 +155,16 @@ function ReadixContent() {
     setActiveHashtag(null);
   };
 
+  const handleMentionSelect = (username: string) => {
+    const words = newContent.trimEnd().split(/\s+/);
+    words.pop(); // remove the partial mention
+    const newText = words.length > 0 ? `${words.join(' ')} @${username} ` : `@${username} `;
+    setNewContent(newText);
+    setActiveMention(null);
+  };
+
   const [filteredTags, setFilteredTags] = useState<{id: string, count?: number, label?: string}[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
 
   useEffect(() => {
     if (!activeHashtag) {
@@ -161,6 +179,39 @@ function ReadixContent() {
 
     return () => clearTimeout(timer);
   }, [activeHashtag]);
+
+  useEffect(() => {
+    if (!activeMention) {
+      setFilteredUsers([]);
+      return;
+    }
+    
+    const timer = setTimeout(async () => {
+      const results = await searchUsers(activeMention);
+      setFilteredUsers(results);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [activeMention]);
+
+  // Handle specific readix from URL
+  useEffect(() => {
+    const idParam = searchParams.get('id');
+    if (idParam) {
+      const fetchSpecific = async () => {
+        const readix = await getReadixById(idParam);
+        if (readix) {
+          // fetch author
+          if (!authors[readix.authorId]) {
+            const user = await getUserProfile(readix.authorId);
+            if (user) setAuthors(prev => ({ ...prev, [readix.authorId]: user }));
+          }
+          openComments(readix);
+        }
+      };
+      fetchSpecific();
+    }
+  }, [searchParams.get('id')]);
 
   // Set initial content if hashtag exists and tab is hashtag
   useEffect(() => {
@@ -375,6 +426,25 @@ function ReadixContent() {
                     ))}
                   </div>
                 )}
+                {activeMention !== null && filteredUsers.length > 0 && (
+                  <div className="absolute top-full left-0 mt-1 w-64 bg-card border border-border/50 rounded-xl shadow-xl overflow-hidden z-50">
+                    {filteredUsers.map((user) => (
+                      <button
+                        key={user.uid}
+                        onClick={() => handleMentionSelect(user.username!)}
+                        className="w-full text-left px-4 py-3 hover:bg-primary/10 transition-colors flex items-center gap-3"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden flex-shrink-0">
+                          {user.avatarUrl ? <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" /> : <span className="text-primary font-bold">{user.displayName?.charAt(0) || 'U'}</span>}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-text">{user.displayName}</span>
+                          <span className="text-xs text-muted">@{user.username}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               
               {previewUrl && (
@@ -490,6 +560,7 @@ function ReadixContent() {
         selectedReadix={selectedReadix}
         currentUserId={firebaseUser?.uid || null}
         onCommentAdded={handleCommentAdded}
+        onLikePost={(id, likes) => handleLike(id, likes)}
       />
       <ReadixShareModal
         isOpen={shareModalOpen}

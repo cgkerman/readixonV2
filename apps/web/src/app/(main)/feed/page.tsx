@@ -67,6 +67,20 @@ export default function FeedPage() {
   // Öne Çıkan Slaytlar (Carousel Verisi)
   const slides = useMemo(() => {
     const arr: any[] = [];
+    
+    // Readixon V1 Announcement Slide (Her zaman ilk sırada)
+    arr.push({
+      id: 'slide-readixon-v1',
+      type: 'announcement',
+      badge: 'YENİ NESİL OKUMA DENEYİMİ',
+      badgeIcon: Sparkles,
+      title: 'Readixon V1 Yayında! 🚀',
+      summary: 'Alışılmış platformları unutun. Readix ile yazarlarla etkileşime geçin, hikayenin gidişatını oylayın (Curveball), RPG karakter istatistiklerini keşfedin ve yazar düellolarına (Duels) şahit olun. Okuma deneyimi baştan yazılıyor!',
+      image: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&q=80', // Kozmik/Yıldızlı bir arkaplan
+      primaryLabel: 'Hemen Keşfet',
+      primaryAction: () => router.push('/about'),
+    });
+
     if (topStories.length > 0) {
       arr.push({
         id: `slide-top-${topStories[0].storyId}`,
@@ -247,6 +261,8 @@ export default function FeedPage() {
             className={`flex-shrink-0 shadow-2xl shadow-black/50 border border-white/10 animate-in fade-in slide-in-from-bottom-4 duration-700 ${
               activeSlide?.type === 'author' 
                 ? 'w-40 h-40 md:w-64 md:h-64 rounded-full object-cover' 
+                : activeSlide?.type === 'announcement'
+                ? 'w-40 md:w-72 aspect-square rounded-2xl object-cover'
                 : 'w-40 md:w-72 aspect-[2/3] rounded-xl'
             } overflow-hidden`}
           >
