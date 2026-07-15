@@ -30,7 +30,8 @@ export interface User {
   createdAt: Timestamp;
   isAuthor?: boolean;
   isAdmin?: boolean;
-  status?: 'free' | 'premium'; // Premium status for features like Character Book
+  status?: 'free' | 'premium' | 'pro'; // Premium status for features like Character Book
+  rxPoints?: number; // Virtual currency balance
   termsAcceptedAt?: Timestamp; // Yasal onay timestamp
   privacyAcceptedAt?: Timestamp; // Gizlilik onay timestamp
   aiUsage?: {
@@ -39,6 +40,8 @@ export interface User {
   };
   blockedUsers?: string[];
   readixPoints?: number; // Edebi Arena puanlarÄ±
+  hasUsedFreeWizard?: boolean; // Freemium wizard hakkını kullandı mı?
+  freeCharacterBookStoryId?: string; // Hangi hikaye için karakter defterini ücretsiz açtığı
 }
 
 /** Yeni kullanÄ±cÄ± oluÅŸturulurken kullanÄ±lan kÄ±smi tip */
@@ -250,6 +253,18 @@ export interface ChatParticipant {
   displayName: string;
   username: string;
   avatarUrl: string;
+}
+
+export interface PaymentTransaction {
+  id: string; // Firestore document ID (also used as merchant_oid)
+  userId: string;
+  type: 'rx_points' | 'premium_subscription' | 'pro_subscription';
+  status: 'pending' | 'completed' | 'failed';
+  amount: number; // in TL (e.g., 19.90)
+  rxAmount?: number; // Only for RX Points purchase
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  paytrResponse?: any;
 }
 
 export type ChatStatus = 'pending' | 'accepted';

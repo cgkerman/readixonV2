@@ -36,7 +36,7 @@ export default function CharactersLayout({ children }: { children: React.ReactNo
             <Button variant="outline" onPress={() => router.push('/studio')} className="px-6 rounded-full">
               Stüdyoya Dön
             </Button>
-            <Button variant="primary" className="px-8 rounded-full shadow-lg shadow-primary/20 hover:-translate-y-1 transition-all">
+            <Button variant="primary" onPress={() => router.push('/premium')} className="px-8 rounded-full shadow-lg shadow-primary/20 hover:-translate-y-1 transition-all">
               Premium'a Yükselt
             </Button>
           </div>

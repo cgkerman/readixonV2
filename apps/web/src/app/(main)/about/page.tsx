@@ -1,6 +1,6 @@
 import React from 'react';
 import { Metadata } from 'next';
-import { Sparkles, MessageCircle, Quote, TrendingUp, Users, Swords, Zap, Heart, Shield, BookOpen, LayoutDashboard } from 'lucide-react';
+import { Sparkles, MessageCircle, Quote, TrendingUp, Users, Swords, Zap, Heart, Shield, BookOpen, LayoutDashboard, Wand2 } from 'lucide-react';
 import Link from 'next/link';
 import { Typography, Button } from '@readixon/ui';
 
@@ -142,6 +142,32 @@ export default function AboutPage() {
               title="Yapay Zeka (AI) Desteği"
               desc="Tıkandığınız yerde ilham periniz hazır. Gelişmiş AI asistanımızla karakter betimlemeleri üretebilir, cümlelerinizi zenginleştirebilir ve dilbilgisi hatalarını saniyeler içinde düzeltebilirsiniz (Günlük kota limitiyle)."
             />
+          </div>
+
+          {/* Kurgu Sihirbazı - Geniş Kart */}
+          <div className="mt-6 w-full bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-3xl p-8 md:p-12 flex flex-col md:flex-row items-center gap-8 hover:border-primary/40 transition-colors group">
+            <div className="w-20 h-20 shrink-0 rounded-2xl bg-primary/20 text-primary flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-primary/20">
+              <Wand2 size={40} />
+            </div>
+            <div>
+              <Typography variant="h3" className="text-2xl md:text-3xl font-black text-text mb-3">Kurgu Sihirbazı (Story Wizard)</Typography>
+              <Typography variant="body" className="text-muted text-lg leading-relaxed">
+                İlhamın ne zaman geleceği belli olmaz ama profesyonel yazarlar plan yapar! Hikayenizi yazmaya başlamadan önce <strong className="text-primary font-bold">Kurgu Sihirbazı</strong> ile açılış sahnesini (Kanca), karakter çatışmalarını, ters köşeleri (Plot Twist) ve çarpıcı finali şablonlar üzerinden kurgulayın. Üstelik yazım ekranındaki bölünmüş panel sayesinde (Split Screen) yazdığınız bölüme odaklanırken bir yandan da kurgu notlarınıza anında göz atabilirsiniz.
+              </Typography>
+            </div>
+          </div>
+
+          {/* Yazar Akademisi - Geniş Kart */}
+          <div className="mt-6 w-full bg-gradient-to-br from-secondary/10 via-secondary/5 to-transparent border border-secondary/20 rounded-3xl p-8 md:p-12 flex flex-col md:flex-row items-center gap-8 hover:border-secondary/40 transition-colors group">
+            <div className="w-20 h-20 shrink-0 rounded-2xl bg-secondary/20 text-secondary flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-secondary/20">
+              <BookOpen size={40} />
+            </div>
+            <div>
+              <Typography variant="h3" className="text-2xl md:text-3xl font-black text-text mb-3">Yazar Akademisi (Writer Academy)</Typography>
+              <Typography variant="body" className="text-muted text-lg leading-relaxed">
+                Yazarlarımızın başarısı, bizim başarımızdır. Amacımız sadece bir yayın platformu olmak değil, yazarlarımızın edebi yeteneklerini geliştirmelerine yardımcı olmaktır. Yeni başlayanlar için bölüm kurgulama rehberlerinden, ustalar için tempo ayarlama ve karakter derinliği sağlama tekniklerine kadar özenle hazırlanmış <strong className="text-secondary font-bold">Yazar Akademisi</strong> notlarına stüdyonuzdan anında erişebilirsiniz.
+              </Typography>
+            </div>
           </div>
         </div>
       </section>

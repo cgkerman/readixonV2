@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { BookOpen, Compass, Search, User, LogOut, PenTool, Hash, Settings, Bell, MessageCircle, Menu, X, LifeBuoy, Feather, ShieldAlert } from 'lucide-react';
+import { BookOpen, Compass, Search, User, LogOut, PenTool, Hash, Settings, Bell, MessageCircle, Menu, X, LifeBuoy, Feather, ShieldAlert, Crown } from 'lucide-react';
 import { Typography, Button } from '@readixon/ui';
 import { useAuthStore, signOut, becomeAuthor, sendVerificationEmail, subscribeToChats } from '@readixon/core';
 import { toast } from "sonner";
@@ -252,6 +252,21 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               </div>
             </div>
           </Link>
+          {userProfile?.status !== 'pro' && (
+            <Link href="/premium">
+              <div className="bg-primary/10 border border-primary/20 rounded-xl p-3 text-primary shadow-sm hover:bg-primary/20 transition-all cursor-pointer flex flex-col items-start gap-0.5 mb-3 group">
+                <div className="flex items-center gap-2">
+                  <Crown size={18} className="text-primary group-hover:scale-110 transition-transform" />
+                  <Typography variant="body" className="font-bold text-sm">
+                    {userProfile?.status === 'premium' ? 'Pro\'ya Yükselt' : 'Premium Ol'}
+                  </Typography>
+                </div>
+                <Typography variant="caption" className="text-primary/70 text-xs">
+                  {userProfile?.status === 'premium' ? 'Sınırsız yaratıcılığa adım at' : 'Okuma deneyimini zirveye taşı'}
+                </Typography>
+              </div>
+            </Link>
+          )}
           {userProfile?.isAuthor ? (
             <Link href="/studio">
               <Button variant="outline" className="w-full justify-start mb-2 border-primary/20 text-primary hover:bg-primary/10">
@@ -451,6 +466,21 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
               <div className="mt-8 mb-4 shrink-0">
                 <div className="h-px w-full bg-border/50 mb-4" />
+                {userProfile?.status !== 'pro' && (
+                  <Link href="/premium" onClick={() => setIsMobileMenuOpen(false)}>
+                    <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 text-primary shadow-sm hover:bg-primary/20 transition-all mb-4 group">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Crown size={20} className="text-primary group-hover:scale-110 transition-transform" />
+                        <Typography variant="body" className="font-bold text-base">
+                          {userProfile?.status === 'premium' ? 'Pro\'ya Yükselt' : 'Premium Ol'}
+                        </Typography>
+                      </div>
+                      <Typography variant="caption" className="text-primary/70 text-sm">
+                        {userProfile?.status === 'premium' ? 'Sınırsız yaratıcılığa adım at' : 'Okuma deneyimini zirveye taşı'}
+                      </Typography>
+                    </div>
+                  </Link>
+                )}
                 {userProfile?.isAuthor ? (
                   <Link href="/studio" onClick={() => setIsMobileMenuOpen(false)}>
                     <Button variant="outline" className="w-full justify-start border-primary/20 text-primary hover:bg-primary/10 py-6">

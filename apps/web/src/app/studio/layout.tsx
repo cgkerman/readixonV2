@@ -54,6 +54,13 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
             <Users size={20} />
             <span className="font-medium">Karakter Defteri</span>
           </Link>
+          <Link 
+            href="/studio/academy" 
+            className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${pathname.includes('/academy') ? 'bg-primary/10 text-primary' : 'text-muted hover:text-text hover:bg-muted/10'}`}
+          >
+            <PenTool size={20} />
+            <span className="font-medium">Yazar Akademisi</span>
+          </Link>
         </nav>
         
         <div className="p-4 border-t border-border/10">

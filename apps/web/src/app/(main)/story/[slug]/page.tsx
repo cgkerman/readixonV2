@@ -595,7 +595,7 @@ export default function StoryDetailPage() {
                   <Typography variant="body" className="text-muted max-w-md mx-auto mb-8">
                     Karakter defteri özelliği sadece Premium üyelere ve Adminlere özeldir. Hikayedeki karakterlerin derinliklerini keşfetmek için Premium'a geçin.
                   </Typography>
-                  <Button variant="primary" className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-none px-8 py-3 rounded-full font-bold shadow-lg shadow-yellow-500/20 hover:shadow-yellow-500/40 hover:-translate-y-1 transition-all">
+                  <Button onPress={() => router.push('/premium')} variant="primary" className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-none px-8 py-3 rounded-full font-bold shadow-lg shadow-yellow-500/20 hover:shadow-yellow-500/40 hover:-translate-y-1 transition-all">
                     Premium'a Yükselt
                   </Button>
                 </div>

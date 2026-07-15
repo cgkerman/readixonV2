@@ -2,16 +2,52 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Typography, Button } from '@readixon/ui';
+import { Typography, Button, PaywallModal } from '@readixon/ui';
 import { BookOpen, Image as ImageIcon, ArrowRight, Info, X } from 'lucide-react';
-import { subscribeToAuthorStories, useAuthStore, type Story } from '@readixon/core';
+import { subscribeToAuthorStories, useAuthStore, consumeFreeCharacterBook, type Story } from '@readixon/core';
+import { toast } from 'sonner';
 
 export default function CharacterNotebookSelectStory() {
   const router = useRouter();
-  const { firebaseUser } = useAuthStore();
+  const { firebaseUser, userProfile, setUserProfile } = useAuthStore();
   const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [isPaywallOpen, setIsPaywallOpen] = useState(false);
+
+  const handleOpenCharacterBook = async (storyId: string) => {
+    if (!firebaseUser) return;
+    
+    // Premium veya Pro ise direkt girsin
+    if (userProfile?.status === 'premium' || userProfile?.status === 'pro') {
+      router.push(`/studio/characters/${storyId}`);
+      return;
+    }
+
+    // Eğer daha önce hiç ücretsiz defter kullanmamışsa (null/undefined ise) bu hikaye için hakkını kullansın
+    if (!userProfile?.freeCharacterBookStoryId) {
+      try {
+        await consumeFreeCharacterBook(firebaseUser.uid, storyId);
+        // State'i de güncelleyelim ki hemen aktif olsun
+        setUserProfile({ ...userProfile, freeCharacterBookStoryId: storyId } as any);
+        toast.success("Tebrikler! Bu hikaye için Karakter Defteri'ni ücretsiz açtınız.");
+        router.push(`/studio/characters/${storyId}`);
+      } catch (err) {
+        console.error("Free character book err:", err);
+        toast.error("İşlem sırasında bir hata oluştu.");
+      }
+      return;
+    }
+
+    // Eğer tıklanan hikaye, ücretsiz hakkını kullandığı hikayeyse direkt girsin
+    if (userProfile.freeCharacterBookStoryId === storyId) {
+      router.push(`/studio/characters/${storyId}`);
+      return;
+    }
+
+    // Farklı bir hikayeye girmeye çalışıyorsa Paywall'ı aç
+    setIsPaywallOpen(true);
+  };
 
   useEffect(() => {
     if (!firebaseUser) return;
@@ -102,7 +138,7 @@ export default function CharacterNotebookSelectStory() {
           {stories.map(story => (
             <div 
               key={story.storyId} 
-              onClick={() => router.push(`/studio/characters/${story.storyId}`)}
+              onClick={() => handleOpenCharacterBook(story.storyId)}
               className="bg-card border border-border/40 hover:border-primary/50 rounded-3xl overflow-hidden cursor-pointer transition-all hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/10 group flex flex-col"
             >
               {story.coverImage ? (
@@ -132,6 +168,16 @@ export default function CharacterNotebookSelectStory() {
             </div>
           ))}
         </div>
+      )}
+
+      {isPaywallOpen && (
+        <PaywallModal 
+          onClose={() => setIsPaywallOpen(false)}
+          onUpgrade={() => {
+            setIsPaywallOpen(false);
+            router.push('/premium');
+          }}
+        />
       )}
     </div>
   );

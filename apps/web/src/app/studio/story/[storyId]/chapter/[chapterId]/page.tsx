@@ -3,12 +3,13 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Typography, Button, BlockEditor, Input } from '@readixon/ui';
-import { ArrowLeft, Save, PlusCircle, CheckCircle, FileText, Globe, Calendar, GripVertical, Trash2, Sparkles } from 'lucide-react';
+import { ArrowLeft, Save, PlusCircle, CheckCircle, FileText, Globe, Calendar, GripVertical, Trash2, Sparkles, Wand2 } from 'lucide-react';
 import { fetchChapter, updateChapter, compressImage, fetchChapters, createChapter, deleteChapter, createNotification, getUserFollowerIds, getStoryById, useAuthStore, type Chapter } from '@readixon/core';
 import { ReadixonAIAssistant } from '@/components/ReadixonAIAssistant';
 import { uploadFile } from '@readixon/core/src/services/storageService';
 import { toast } from "sonner";
 import Link from 'next/link';
+import { PlannerSidebar } from './PlannerSidebar';
 
 export default function ChapterEditorPage() {
   const params = useParams();
@@ -23,6 +24,7 @@ export default function ChapterEditorPage() {
   const [saving, setSaving] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
+  const [isPlannerOpen, setIsPlannerOpen] = useState(false);
   
   const isInitialLoad = useRef(true);
   const publishedRef = useRef(false);
@@ -153,7 +155,7 @@ export default function ChapterEditorPage() {
 
     const timer = setTimeout(() => {
       handleSave(false);
-    }, 2000);
+    }, 1500);
 
     return () => clearTimeout(timer);
   }, [chapter, loading]);
@@ -258,19 +260,6 @@ export default function ChapterEditorPage() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
             <div>
               <Typography variant="h2" className="mb-2">Bölüm Düzenle</Typography>
-              <div className="flex items-center gap-4 h-6">
-                {autoSaveStatus === 'saving' && (
-                  <Typography variant="caption" className="text-muted flex items-center gap-1">
-                    <span className="w-3 h-3 border-2 border-muted border-t-primary rounded-full animate-spin" />
-                    Kaydediliyor...
-                  </Typography>
-                )}
-                {autoSaveStatus === 'saved' && (
-                  <Typography variant="caption" className="text-green-500 font-bold flex items-center gap-1 animate-in fade-in zoom-in duration-300">
-                    <CheckCircle size={14} /> Kaydedildi
-                  </Typography>
-                )}
-              </div>
             </div>
 
             <div className="flex items-center gap-3 flex-wrap">
@@ -298,6 +287,15 @@ export default function ChapterEditorPage() {
 
               <Button variant="ghost" onPress={handleDeleteChapter} className="rounded-full p-2 text-red-500 hover:bg-red-500/10 hover:text-red-600 transition-colors">
                 <Trash2 size={20} />
+              </Button>
+
+              <Button 
+                variant="outline" 
+                onPress={() => setIsPlannerOpen(!isPlannerOpen)} 
+                className="rounded-full px-4 border-primary/20 text-primary hover:bg-primary/5 hover:border-primary/40 transition-colors"
+              >
+                <Wand2 size={16} className="mr-2 hidden md:inline-block" /> 
+                Plan Notlarım
               </Button>
 
               <Button 
@@ -356,7 +354,7 @@ export default function ChapterEditorPage() {
             </Typography>
           </div>
 
-          <div className="bg-background rounded-2xl border border-border/30 shadow-inner p-2 md:p-6 min-h-[500px]">
+          <div className="bg-background rounded-2xl border border-border/30 shadow-inner p-2 md:p-6 min-h-[500px] mb-24">
             <BlockEditor 
               initialBlocks={chapter.contentBlocks}
               onChange={(blocks) => setChapter({ ...chapter, contentBlocks: blocks })}
@@ -366,6 +364,37 @@ export default function ChapterEditorPage() {
           
         </div>
       </main>
+
+      {/* ── Sticky Toolbar for AutoSave Indicator ── */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[40] flex items-center bg-background/90 backdrop-blur-md shadow-2xl rounded-full border border-border/20 px-6 py-3 min-w-[200px] justify-center pointer-events-none">
+        {autoSaveStatus === 'saving' && (
+          <div className="flex items-center gap-2 animate-in fade-in zoom-in duration-200">
+            <span className="w-4 h-4 border-2 border-muted border-t-primary rounded-full animate-spin" />
+            <Typography variant="caption" className="text-muted font-bold tracking-wide">Otomatik Kaydediliyor...</Typography>
+          </div>
+        )}
+        {autoSaveStatus === 'saved' && (
+          <div className="flex items-center gap-2 animate-in fade-in zoom-in duration-300">
+            <CheckCircle size={16} className="text-green-500" />
+            <Typography variant="caption" className="text-green-500 font-bold tracking-wide">Buluta Kaydedildi</Typography>
+          </div>
+        )}
+        {autoSaveStatus === 'idle' && (
+          <div className="flex items-center gap-2 opacity-50">
+            <CheckCircle size={16} className="text-muted" />
+            <Typography variant="caption" className="text-muted font-bold tracking-wide">Güncel</Typography>
+          </div>
+        )}
+      </div>
+
+      {/* ── Planner Sidebar (Sağ Sütun) ── */}
+      {isPlannerOpen && (
+        <PlannerSidebar 
+          storyId={storyId} 
+          chapterId={chapterId} 
+          onClose={() => setIsPlannerOpen(false)} 
+        />
+      )}
 
       <ReadixonAIAssistant 
         isOpen={isAIAssistantOpen} 

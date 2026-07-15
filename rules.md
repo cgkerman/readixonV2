@@ -43,10 +43,13 @@ service cloud.firestore {
       match /savedStories/{savedId} {
         allow read, write: if isOwner(userId);
       }
-      
-      match /saved_quotes/{quoteId} {
+
+			match /saved_quotes/{quoteId} {
         allow read, write: if isOwner(userId);
       }
+
+      // Kullanıcı SADECE kendi profilini güncelleyebilir
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
 
@@ -91,12 +94,19 @@ service cloud.firestore {
         allow create, update: if isAuthenticated();
         allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
       }
-      
-      // YENİ EKLENEN: Karakterler alt koleksiyonu için izinler
+
+// YENİ EKLENEN: Karakterler alt koleksiyonu için izinler
       match /characters/{characterId} {
         allow read: if true; 
         allow write: if isAuthenticated() && request.auth.uid == get(/databases/$(database)/documents/stories/$(storyId)).data.authorId; 
       }
+    }
+
+    match /stories/{storyId}/planner/{document=**} {
+      allow read, write: if request.auth != null; 
+    }
+    match /stories/{storyId}/chapters/{chapterId}/planner/{document=**} {
+      allow read, write: if request.auth != null; 
     }
 
 

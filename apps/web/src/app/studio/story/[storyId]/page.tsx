@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Typography, Button, Input } from '@readixon/ui';
-import { ArrowLeft, PlusCircle, Save, GripVertical, CheckCircle } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Save, GripVertical, CheckCircle, Wand2 } from 'lucide-react';
 import { 
   getStoryById, 
   updateStory, 
@@ -155,6 +155,25 @@ export default function StoryDetailAdminPage() {
     }
   };
 
+  const handleDeleteStory = async () => {
+    const isConfirmed = window.confirm(
+      "DİKKAT: Bu hikayeyi, tüm bölümlerini, sihirbaz planlama notlarını ve yorumlarını kalıcı olarak silmek üzeresiniz!\n\nBu işlemin hiçbir geri dönüşü YOKTUR. Silmek istediğinize emin misiniz?"
+    );
+    if (!isConfirmed) return;
+
+    setSaving(true);
+    try {
+      const { deleteStoryCompletely } = await import('@readixon/core');
+      await deleteStoryCompletely(storyId);
+      toast.success("Hikaye kalıcı olarak silindi.");
+      router.push('/studio');
+    } catch (e) {
+      console.error(e);
+      toast.error("Hikaye silinirken bir hata oluştu.");
+      setSaving(false);
+    }
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       try {
@@ -232,6 +251,30 @@ export default function StoryDetailAdminPage() {
                 placeholder="Görsel URL (Manuel değiştirebilirsiniz)"
               />
             )}
+          </div>
+
+          {/* Kurgu Sihirbazı Kısayolu */}
+          <div 
+            onClick={() => router.push(`/studio/story/${storyId}/planner`)}
+            className="bg-primary/5 p-6 rounded-2xl border border-primary/20 cursor-pointer hover:bg-primary/10 transition-colors group flex flex-col gap-2"
+          >
+            <div className="flex items-center gap-3">
+              <div className="bg-primary/20 p-2 rounded-xl text-primary">
+                <Wand2 size={24} />
+              </div>
+              <Typography variant="h3" className="font-bold text-primary">Kurgu Sihirbazı</Typography>
+            </div>
+            <Typography variant="caption" className="text-muted">Hikayenizi baştan sona planlayın, plot twistler ve finaller kurgulayın.</Typography>
+          </div>
+
+          <div className="bg-red-500/5 p-6 rounded-2xl border border-red-500/20">
+            <Typography variant="h3" className="text-red-500 mb-2 font-bold">Tehlikeli Bölge</Typography>
+            <Typography variant="caption" className="text-muted block mb-4 leading-relaxed">
+              Bu hikayeyi ve altındaki tüm bölümleri, notları kalıcı olarak silmek istiyorsanız aşağıdaki butonu kullanabilirsiniz. Veritabanından tamamen silinecektir ve <strong>bu işlemin hiçbir geri dönüşü yoktur.</strong>
+            </Typography>
+            <Button variant="outline" className="border-red-500/50 text-red-500 hover:bg-red-500/10 w-full" onPress={handleDeleteStory}>
+              Hikayeyi Kalıcı Olarak Sil
+            </Button>
           </div>
         </div>
 

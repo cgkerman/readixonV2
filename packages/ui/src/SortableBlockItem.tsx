@@ -3,7 +3,8 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Trash2, Bold, Italic, Type } from 'lucide-react';
+import { GripVertical, Trash2, Bold, Italic, Type, Maximize2, Minimize2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import type { ContentBlock } from '@readixon/core';
 
 export interface SortableBlockItemProps {
@@ -16,12 +17,13 @@ export interface SortableBlockItemProps {
 
 const ParagraphEditor = ({ block, onChange }: { block: ContentBlock, onChange: (b: ContentBlock) => void }) => {
   const ref = React.useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
 
   React.useEffect(() => {
     if (ref.current && ref.current.innerHTML !== (block.text || '')) {
       ref.current.innerHTML = block.text || '';
     }
-  }, [block.text]);
+  }, [block.text, isFullscreen]);
 
   const handleInput = React.useCallback(() => {
     if (ref.current) {
@@ -29,18 +31,83 @@ const ParagraphEditor = ({ block, onChange }: { block: ContentBlock, onChange: (
     }
   }, [block, onChange]);
 
-  return (
-    <div
-      ref={ref}
-      contentEditable
-      suppressContentEditableWarning
-      onInput={handleInput}
-      onBlur={handleInput}
-      className="w-full bg-background border border-border/50 rounded-lg p-3 min-h-[100px] text-text focus:outline-none focus:border-primary transition-all focus:empty:before:hidden empty:before:content-[attr(data-placeholder)] empty:before:text-muted/50"
-      style={{ scrollMarginBottom: '150px', outline: 'none' }}
-      data-placeholder="Metninizi yazın (Kısmı formatlamak için seçip yukarıdaki butonları kullanın)..."
-    />
+  // Handle Escape key to exit fullscreen
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen]);
+
+  const editorNode = (
+    <div className="flex flex-col gap-2 w-full h-full relative">
+      <div className={`flex items-center justify-between bg-muted/10 p-1 rounded-lg border border-border/50 w-full ${isFullscreen ? 'mb-4' : ''}`}>
+        <div className="flex items-center gap-1">
+          <button 
+            onMouseDown={(e) => {
+              e.preventDefault();
+              document.execCommand('bold', false, undefined);
+            }}
+            className="p-1.5 rounded-md hover:bg-muted/20 transition-colors text-muted hover:text-primary"
+            title="Seçili metni kalın yap"
+          >
+            <Bold size={16} />
+          </button>
+          <button 
+            onMouseDown={(e) => {
+              e.preventDefault();
+              document.execCommand('italic', false, undefined);
+            }}
+            className="p-1.5 rounded-md hover:bg-muted/20 transition-colors text-muted hover:text-primary"
+            title="Seçili metni italik yap"
+          >
+            <Italic size={16} />
+          </button>
+        </div>
+        
+        <button 
+          onClick={() => setIsFullscreen(!isFullscreen)}
+          className="p-1.5 rounded-md hover:bg-muted/20 transition-colors text-muted hover:text-primary mr-1"
+          title={isFullscreen ? "Küçült (Esc)" : "Tam Ekran (Odak Modu)"}
+        >
+          {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+        </button>
+      </div>
+
+      <div
+        ref={ref}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={handleInput}
+        onBlur={handleInput}
+        className={`w-full bg-background border border-border/50 rounded-lg p-4 text-text focus:outline-none focus:border-primary transition-all focus:empty:before:hidden empty:before:content-[attr(data-placeholder)] empty:before:text-muted/50 custom-scrollbar ${
+          isFullscreen ? 'flex-1 h-full max-h-[85vh] text-lg leading-relaxed' : 'min-h-[100px] max-h-[400px]'
+        } overflow-y-auto`}
+        style={!isFullscreen ? { scrollMarginBottom: '150px', outline: 'none' } : { outline: 'none' }}
+        data-placeholder="Metninizi yazın (Kısmı formatlamak için seçip yukarıdaki butonları kullanın)..."
+      />
+    </div>
   );
+
+  if (isFullscreen) {
+    if (typeof document === 'undefined') return editorNode;
+    return createPortal(
+      <div className="fixed inset-0 z-[200] bg-background/95 backdrop-blur-md p-4 md:p-12 flex flex-col items-center justify-center animate-in zoom-in-95 duration-200">
+        <div className="w-full max-w-4xl h-[90vh] bg-card border border-border/50 shadow-2xl rounded-2xl p-6 flex flex-col">
+          <div className="text-sm font-bold text-muted uppercase tracking-widest mb-4">
+            Odak Modu
+          </div>
+          {editorNode}
+        </div>
+      </div>,
+      document.body
+    );
+  }
+
+  return editorNode;
 };
 
 export function SortableBlockItem({ id, block, onChange, onDelete, onUploadImage }: SortableBlockItemProps) {
@@ -83,31 +150,7 @@ export function SortableBlockItem({ id, block, onChange, onDelete, onUploadImage
     switch (block.type) {
       case 'paragraph':
         return (
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-1 bg-muted/10 p-1 rounded-lg w-fit border border-border/50">
-              <button 
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  document.execCommand('bold', false, undefined);
-                }}
-                className="p-1.5 rounded-md hover:bg-muted/20 transition-colors text-muted hover:text-primary"
-                title="Seçili metni kalın yap"
-              >
-                <Bold size={16} />
-              </button>
-              <button 
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  document.execCommand('italic', false, undefined);
-                }}
-                className="p-1.5 rounded-md hover:bg-muted/20 transition-colors text-muted hover:text-primary"
-                title="Seçili metni italik yap"
-              >
-                <Italic size={16} />
-              </button>
-            </div>
-            <ParagraphEditor block={block} onChange={onChange} />
-          </div>
+          <ParagraphEditor block={block} onChange={onChange} />
         );
       case 'quote':
         return (

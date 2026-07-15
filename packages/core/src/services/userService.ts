@@ -564,3 +564,13 @@ export async function unblockUser(currentUserId: string, targetUserId: string): 
   const userRef = doc(db, USERS_COLLECTION, currentUserId);
   await updateDoc(userRef, { blockedUsers: arrayRemove(targetUserId) });
 }
+
+export async function consumeFreeWizard(uid: string): Promise<void> {
+  const userRef = doc(db, USERS_COLLECTION, uid);
+  await updateDoc(userRef, { hasUsedFreeWizard: true });
+}
+
+export async function consumeFreeCharacterBook(uid: string, storyId: string): Promise<void> {
+  const userRef = doc(db, USERS_COLLECTION, uid);
+  await updateDoc(userRef, { freeCharacterBookStoryId: storyId });
+}

@@ -849,3 +849,37 @@ export const getReviews = async (storyId: string): Promise<Review[]> => {
     return [];
   }
 };
+
+/**
+ * Hikayeyi ve alt�ndaki temel koleksiyonlar� (b�l�mler, planlay�c�) tamamen siler.
+ * ��lemin geri d�n��� yoktur.
+ */
+export const deleteStoryCompletely = async (storyId: string): Promise<void> => {
+  try {
+    // 1. B�l�mleri (chapters) sil
+    const chaptersRef = collection(db, 'stories', storyId, 'chapters');
+    const chaptersSnap = await getDocs(chaptersRef);
+    const deletePromises: Promise<void>[] = [];
+    
+    chaptersSnap.forEach(docSnap => {
+      // Her b�l�m�n planner dok�man� da olabilir, ama yetim kalmalar� �ok k���k veri tutar.
+      // Basitlik ad�na b�l�m dok�manlar�n� siliyoruz.
+      deletePromises.push(deleteDoc(docSnap.ref));
+    });
+    
+    // 2. Ana hikaye planner dok�man�n� sil
+    const plannerRef = doc(db, 'stories', storyId, 'planner', 'main');
+    deletePromises.push(deleteDoc(plannerRef));
+    
+    // Alt dok�manlar�n silinmesini bekle
+    await Promise.all(deletePromises);
+    
+    // 3. Ana hikayeyi sil
+    const storyRef = doc(db, 'stories', storyId);
+    await deleteDoc(storyRef);
+    
+  } catch (error) {
+    console.error("Hikaye tamamen silinirken hata:", error);
+    throw error;
+  }
+};

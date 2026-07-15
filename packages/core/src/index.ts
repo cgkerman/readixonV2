@@ -95,6 +95,8 @@ export {
   deleteUserAccount,
   blockUser,
   unblockUser,
+  consumeFreeWizard,
+  consumeFreeCharacterBook,
 } from './services/userService';
 
 // Store (Zustand)
@@ -109,11 +111,14 @@ export * from './services/interactionService';
 export * from './services/readixService';
 export * from './services/duelService';
 export * from './services/quoteService';
+export * from './services/paymentService';
 export * from './services/adminService';
 export * from './services/notificationService';
 export * from './services/chatService';
 export * from './services/reportService';
 export * from './services/lobbyService';
+export * from './services/plannerService';
+export * from './types/planner';
 export * from './services/curveballService';
 export * from './services/pointsService';
 export * from './utils/imageUtils';
