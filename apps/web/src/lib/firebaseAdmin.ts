@@ -19,15 +19,5 @@ if (!getApps().length) {
   }
 }
 
-export function getAdminDb() {
-  try {
-    return getFirestore();
-  } catch (error: any) {
-    console.error('getAdminDb failed:', error);
-    throw new Error('Firebase Admin DB başlatılamadı: ' + error.message);
-  }
-}
-
-export function getAdminAuth() {
-  return getAuth();
-}
+export const adminDb = getFirestore();
+export const adminAuth = getAuth();
