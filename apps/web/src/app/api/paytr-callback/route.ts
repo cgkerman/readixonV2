@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { adminDb as db } from '@/lib/firebaseAdmin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { paymentService } from '@readixon/core';
 
 export async function POST(req: Request) {
@@ -17,6 +17,23 @@ export async function POST(req: Request) {
     }
 
     const { merchant_oid, status, total_amount, payment_amount } = postData;
+
+    let db;
+    try {
+      if (!getApps().length) {
+        initializeApp({
+          credential: cert({
+            projectId: process.env.FIREBASE_PROJECT_ID,
+            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+            privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n').replace(/^"|"$/g, ''),
+          }),
+        });
+      }
+      db = getFirestore();
+    } catch (firebaseErr: any) {
+      console.error("Firebase Admin Error in callback: ", firebaseErr);
+      return new NextResponse('FIREBASE INIT ERROR', { status: 500 });
+    }
 
     // Get the transaction
     const transactionRef = db.collection('payment_transactions').doc(merchant_oid as string);

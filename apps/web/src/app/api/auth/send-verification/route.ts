@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
-import { adminAuth } from '@/lib/firebaseAdmin';
+import { getAdminAuth } from '@/lib/firebaseAdmin';
 
 export async function POST(request: Request) {
   try {
@@ -16,6 +16,7 @@ export async function POST(request: Request) {
     // Generate Verification Link using Firebase Admin
     let verificationLink: string;
     try {
+      const adminAuth = getAdminAuth();
       verificationLink = await adminAuth.generateEmailVerificationLink(email);
     } catch (error: any) {
       console.error('Link oluşturma hatası:', error);
