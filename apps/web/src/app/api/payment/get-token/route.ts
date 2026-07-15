@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     }
 
     // Determine price and package details
-    let packageDetails;
+    let packageDetails: any;
     if (type === 'rx_points') {
       packageDetails = PRICING.rx_points[packageId as keyof typeof PRICING.rx_points];
     } else if (type === 'premium_subscription') {
