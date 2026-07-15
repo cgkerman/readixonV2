@@ -26,7 +26,7 @@ import {
 } from '@readixon/core';
 import { Typography, Button, ReadixCard, Input, ReadixCommentModal, ReadixShareModal, ShareReadixData, EditReadixModal, ReportModal, ConfirmationDialog } from '@readixon/ui';
 import { Loader2, Image as ImageIcon, Send, User as UserIcon, Bold, Italic, Smile } from 'lucide-react';
-import EmojiPicker from 'emoji-picker-react';
+import EmojiPicker, { Theme } from 'emoji-picker-react';
 import ContentEditable, { ContentEditableEvent } from 'react-contenteditable';
 import { toast } from "sonner";
 
@@ -545,7 +545,7 @@ function ReadixContent() {
                             onEmojiClick(emoji);
                             setShowEmojiPicker(false);
                           }}
-                          theme="dark"
+                          theme={Theme.DARK}
                           searchDisabled={true}
                           skinTonesDisabled={true}
                           height={350}
