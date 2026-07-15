@@ -160,9 +160,8 @@ export const ReadixCard: React.FC<ReadixCardProps> = ({
         </div>
       </div>
 
-      {/* Metin İçeriği */}
       <div className="mb-4 text-text/80 whitespace-pre-wrap text-[15px] leading-relaxed">
-        {content.split(/(#[\p{L}\d_]+|@[\p{L}\d_]+)/gu).map((part, index) => {
+        {content.split(/(#[\p{L}\d_]+|@[\p{L}\d_]+|\*\*.*?\*\*|\*.*?\*)/gu).map((part, index) => {
           if (part.startsWith('#')) {
             return (
               <a 
@@ -185,6 +184,10 @@ export const ReadixCard: React.FC<ReadixCardProps> = ({
                 {part}
               </a>
             );
+          } else if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
+            return <strong key={index} className="font-bold text-black">{part.slice(2, -2)}</strong>;
+          } else if (part.startsWith('*') && part.endsWith('*') && part.length >= 2) {
+            return <em key={index} className="italic">{part.slice(1, -1)}</em>;
           }
           return part;
         })}

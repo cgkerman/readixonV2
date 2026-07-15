@@ -25,7 +25,8 @@ import {
   User
 } from '@readixon/core';
 import { Typography, Button, ReadixCard, Input, ReadixCommentModal, ReadixShareModal, ShareReadixData, EditReadixModal, ReportModal, ConfirmationDialog } from '@readixon/ui';
-import { Loader2, Image as ImageIcon, Send, User as UserIcon } from 'lucide-react';
+import { Loader2, Image as ImageIcon, Send, User as UserIcon, Bold, Italic, Smile } from 'lucide-react';
+import EmojiPicker from 'emoji-picker-react';
 import { toast } from "sonner";
 
 function ReadixContent() {
@@ -127,6 +128,46 @@ function ReadixContent() {
   const [newContent, setNewContent] = useState(quoteParam || '');
   const [activeHashtag, setActiveHashtag] = useState<string | null>(null);
   const [activeMention, setActiveMention] = useState<string | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  const insertFormat = (prefix: string, suffix: string) => {
+    if (!textareaRef.current) return;
+    const textarea = textareaRef.current;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const before = text.substring(0, start);
+    const selected = text.substring(start, end);
+    const after = text.substring(end, text.length);
+
+    const newText = before + prefix + (selected || 'metin') + suffix + after;
+    setNewContent(newText);
+    
+    // Focus back and select the text
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + prefix.length, start + prefix.length + (selected || 'metin').length);
+    }, 0);
+  };
+
+  const onEmojiClick = (emojiData: any) => {
+    if (!textareaRef.current) {
+      setNewContent(prev => prev + emojiData.emoji);
+      return;
+    }
+    const textarea = textareaRef.current;
+    const start = textarea.selectionStart;
+    const text = textarea.value;
+    const before = text.substring(0, start);
+    const after = text.substring(start, text.length);
+
+    setNewContent(before + emojiData.emoji + after);
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + emojiData.emoji.length, start + emojiData.emoji.length);
+    }, 0);
+  };
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -405,6 +446,7 @@ function ReadixContent() {
             <div className="flex-1 flex flex-col">
               <div className="relative">
                 <textarea
+                  ref={textareaRef}
                   value={newContent}
                   onChange={handleContentChange}
                   placeholder="Hangi kitaptan bahsediyoruz?"
@@ -459,8 +501,8 @@ function ReadixContent() {
                 </div>
               )}
 
-              <div className="flex items-center justify-between border-t border-white/5 pt-3">
-                <div>
+              <div className="flex items-center justify-between border-t border-white/5 pt-3 relative">
+                <div className="flex items-center gap-1">
                   <input
                     type="file"
                     accept="image/*"
@@ -476,6 +518,46 @@ function ReadixContent() {
                   <label htmlFor="readix-image" className="cursor-pointer text-primary hover:bg-primary/10 p-2 rounded-full inline-flex transition-colors">
                     <ImageIcon size={20} />
                   </label>
+                  
+                  <button 
+                    onClick={() => insertFormat('**', '**')}
+                    className="text-muted hover:text-primary hover:bg-primary/10 p-2 rounded-full inline-flex transition-colors"
+                    title="Kalın"
+                  >
+                    <Bold size={20} />
+                  </button>
+                  <button 
+                    onClick={() => insertFormat('*', '*')}
+                    className="text-muted hover:text-primary hover:bg-primary/10 p-2 rounded-full inline-flex transition-colors"
+                    title="İtalik"
+                  >
+                    <Italic size={20} />
+                  </button>
+                  
+                  <div className="relative">
+                    <button 
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className={`hover:bg-primary/10 p-2 rounded-full inline-flex transition-colors ${showEmojiPicker ? 'text-primary bg-primary/10' : 'text-muted hover:text-primary'}`}
+                      title="Emoji Ekle"
+                    >
+                      <Smile size={20} />
+                    </button>
+                    {showEmojiPicker && (
+                      <div className="absolute top-full left-0 mt-2 z-50 shadow-2xl rounded-2xl overflow-hidden border border-border">
+                        <EmojiPicker 
+                          onEmojiClick={(emoji) => {
+                            onEmojiClick(emoji);
+                            setShowEmojiPicker(false);
+                          }}
+                          theme="dark"
+                          searchDisabled={true}
+                          skinTonesDisabled={true}
+                          height={350}
+                          width={300}
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
                 
                 <Button 

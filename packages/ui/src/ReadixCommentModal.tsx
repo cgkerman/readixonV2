@@ -165,7 +165,7 @@ export const ReadixCommentModal: React.FC<ReadixCommentModalProps> = ({
           {/* Orijinal Gönderi Özeti */}
           <div className="pb-4 border-b border-border mb-2">
             <div className="text-text/80 whitespace-pre-wrap text-[15px] leading-relaxed mb-3">
-              {selectedReadix.content.split(/(#[\p{L}\d_]+|@[\p{L}\d_]+)/gu).map((part, index) => {
+              {selectedReadix.content.split(/(#[\p{L}\d_]+|@[\p{L}\d_]+|\*\*.*?\*\*|\*.*?\*)/gu).map((part, index) => {
                 if (part.startsWith('#')) {
                   return (
                     <a 
@@ -186,6 +186,10 @@ export const ReadixCommentModal: React.FC<ReadixCommentModalProps> = ({
                       {part}
                     </a>
                   );
+                } else if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
+                  return <strong key={index} className="font-bold text-black">{part.slice(2, -2)}</strong>;
+                } else if (part.startsWith('*') && part.endsWith('*') && part.length >= 2) {
+                  return <em key={index} className="italic">{part.slice(1, -1)}</em>;
                 }
                 return part;
               })}
