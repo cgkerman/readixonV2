@@ -23,7 +23,7 @@ export async function DELETE(request: Request) {
 
     // 3. Kullanıcının Readix'lerini bul ve sil
     const readixesQuery = await adminDb.collection('readixes').where('authorId', '==', uid).get();
-    readixesQuery.docs.forEach(doc => {
+    readixesQuery.docs.forEach((doc: any) => {
       batch.delete(doc.ref);
     });
 
@@ -34,7 +34,7 @@ export async function DELETE(request: Request) {
       
       // Hikayenin bölümlerini de sil
       const chaptersQuery = await adminDb.collection('stories').doc(storyDoc.id).collection('chapters').get();
-      chaptersQuery.docs.forEach(chapterDoc => {
+      chaptersQuery.docs.forEach((chapterDoc: any) => {
         batch.delete(chapterDoc.ref);
       });
     }

@@ -70,9 +70,9 @@ export async function GET(request: Request) {
 
       // Takipçileri bulup bildirimlerini hazırla
       const followersQuery = await adminDb.collection('users').doc(storyData.authorId).collection('followers').get();
-      const followerIds = followersQuery.docs.map(doc => doc.id);
+      const followerIds = followersQuery.docs.map((doc: any) => doc.id);
 
-      followerIds.forEach(followerId => {
+      followerIds.forEach((followerId: string) => {
         const notificationRef = adminDb.collection('users').doc(followerId).collection('notifications').doc();
         notificationsToCreate.push({
           ref: notificationRef,
@@ -123,7 +123,7 @@ export async function GET(request: Request) {
     const chunkSize = 100;
     for (let i = 0; i < allOperations.length; i += chunkSize) {
       const chunk = allOperations.slice(i, i + chunkSize);
-      await Promise.all(chunk.map(op => op()));
+      await Promise.all(chunk.map((op: any) => op()));
     }
 
     return NextResponse.json({ 
