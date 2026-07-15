@@ -7,6 +7,17 @@ import { Typography, Button } from '@readixon/ui';
 export const metadata: Metadata = {
   title: 'Hakkımızda - Readixon V1',
   description: 'Readixon: Okuma deneyimini yeniden tanımlayan, yazarlarla etkileşime geçebileceğiniz, hikayelere yön verebileceğiniz yeni nesil hikaye platformu.',
+  keywords: ['readixon nedir', 'yeni nesil hikaye platformu', 'rpg kitap okuma', 'canlı okuma', 'yazar etkileşimi', 'edebi arena'],
+  openGraph: {
+    title: 'Hakkımızda - Readixon V1 Devrimi',
+    description: 'Klasik wattpad alternatiflerini unutun. Readix, Arena ve RPG karakter sistemiyle okuma deneyimini oyunlaştıran yeni nesil edebiyat ekosistemi.',
+    url: 'https://readixon.com/about',
+  },
+  twitter: {
+    title: 'Readixon V1 - Okuma Deneyimi Yeniden Tanımlanıyor',
+    description: 'Yazarlarla etkileşime geç, hikayeye yön ver, karakterlerin istatistiklerini takip et.',
+    card: 'summary_large_image',
+  }
 };
 
 export default function AboutPage() {

@@ -7,6 +7,17 @@ import { Map, BookOpen, MessageCircle, Swords, Users, Sparkles, LayoutDashboard 
 export const metadata: Metadata = {
   title: 'Site Haritası | Readixon',
   description: 'Readixon platformundaki tüm sayfalara ve özelliklere bu harita üzerinden hızlıca erişin.',
+  keywords: ['readixon site haritası', 'platform rehberi', 'tüm sayfalar', 'sitemap'],
+  openGraph: {
+    title: 'Site Haritası | Readixon Platform Rehberi',
+    description: 'Readixon evrenindeki tüm mekaniklere, keşif sayfalarına ve araçlara tek bir ekrandan ulaşın.',
+    url: 'https://readixon.com/sitemap',
+  },
+  twitter: {
+    title: 'Site Haritası | Readixon',
+    description: 'Platformdaki tüm özellikler ve sayfalara hızlı erişim.',
+    card: 'summary_large_image',
+  }
 };
 
 export default function SitemapPage() {
