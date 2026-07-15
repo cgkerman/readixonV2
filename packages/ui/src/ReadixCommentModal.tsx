@@ -194,8 +194,8 @@ export const ReadixCommentModal: React.FC<ReadixCommentModalProps> = ({
             {selectedReadix.mediaUrls && selectedReadix.mediaUrls.length > 0 && (
               <div className={`grid gap-2 ${selectedReadix.mediaUrls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
                 {selectedReadix.mediaUrls.map((url, index) => (
-                  <div key={index} className="rounded-2xl overflow-hidden border border-border bg-background/50 aspect-[4/3] max-h-64">
-                    <img src={url} alt="Readix Media" className="w-full h-full object-contain" />
+                  <div key={index} className="rounded-2xl overflow-hidden border border-border bg-background/50 aspect-[4/3]">
+                    <img src={url} alt="Readix Media" className="w-full h-full object-cover" />
                   </div>
                 ))}
               </div>
