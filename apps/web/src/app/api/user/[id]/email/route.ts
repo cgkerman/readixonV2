@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { adminDb, adminAuth } from '@/lib/firebaseAdmin';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const authHeader = request.headers.get('Authorization');
@@ -17,7 +19,15 @@ export async function GET(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: 'Sadece adminler bu veriyi görebilir.' }, { status: 403 });
     }
 
-    const userRecord = await adminAuth.getUser(params.id);
+    let userRecord;
+    try {
+      userRecord = await adminAuth.getUser(params.id);
+    } catch (e: any) {
+      if (e.code === 'auth/user-not-found') {
+        return NextResponse.json({ email: null });
+      }
+      throw e;
+    }
     
     return NextResponse.json({ email: userRecord.email || null });
   } catch (error: any) {
