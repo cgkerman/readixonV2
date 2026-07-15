@@ -27,6 +27,7 @@ import {
 import { Typography, Button, ReadixCard, Input, ReadixCommentModal, ReadixShareModal, ShareReadixData, EditReadixModal, ReportModal, ConfirmationDialog } from '@readixon/ui';
 import { Loader2, Image as ImageIcon, Send, User as UserIcon, Bold, Italic, Smile } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
+import ContentEditable, { ContentEditableEvent } from 'react-contenteditable';
 import { toast } from "sonner";
 
 function ReadixContent() {
@@ -125,55 +126,49 @@ function ReadixContent() {
 
   // Create Readix State
   const quoteParam = searchParams.get('quote');
-  const [newContent, setNewContent] = useState(quoteParam || '');
+  const contentEditableRef = React.useRef<HTMLElement>(null);
+  const [newContent, setNewContent] = useState(quoteParam || ''); // this stores HTML
   const [activeHashtag, setActiveHashtag] = useState<string | null>(null);
   const [activeMention, setActiveMention] = useState<string | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
-  const insertFormat = (prefix: string, suffix: string) => {
-    if (!textareaRef.current) return;
-    const textarea = textareaRef.current;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = textarea.value;
-    const before = text.substring(0, start);
-    const selected = text.substring(start, end);
-    const after = text.substring(end, text.length);
+  const htmlToMarkdown = (html: string) => {
+    let markdown = html;
+    // Replace divs/brs with newlines
+    markdown = markdown.replace(/<div>/gi, '\n').replace(/<\/div>/gi, '');
+    markdown = markdown.replace(/<br\s*[\/]?>/gi, '\n');
+    // Replace bold
+    markdown = markdown.replace(/<(b|strong)[^>]*>(.*?)<\/\1>/gi, '**$2**');
+    // Replace italic
+    markdown = markdown.replace(/<(i|em)[^>]*>(.*?)<\/\1>/gi, '*$2*');
+    // Strip all other tags
+    markdown = markdown.replace(/<[^>]+>/g, '');
+    // Decode html entities
+    markdown = markdown.replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+    return markdown;
+  };
 
-    const newText = before + prefix + (selected || 'metin') + suffix + after;
-    setNewContent(newText);
-    
-    // Focus back and select the text
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + prefix.length, start + prefix.length + (selected || 'metin').length);
-    }, 0);
+  const insertFormat = (command: string) => {
+    document.execCommand(command, false);
+    if (contentEditableRef.current) {
+      setNewContent(contentEditableRef.current.innerHTML);
+    }
   };
 
   const onEmojiClick = (emojiData: any) => {
-    if (!textareaRef.current) {
-      setNewContent(prev => prev + emojiData.emoji);
-      return;
+    document.execCommand('insertText', false, emojiData.emoji);
+    if (contentEditableRef.current) {
+      setNewContent(contentEditableRef.current.innerHTML);
     }
-    const textarea = textareaRef.current;
-    const start = textarea.selectionStart;
-    const text = textarea.value;
-    const before = text.substring(0, start);
-    const after = text.substring(start, text.length);
-
-    setNewContent(before + emojiData.emoji + after);
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + emojiData.emoji.length, start + emojiData.emoji.length);
-    }, 0);
   };
 
-  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleContentChange = (e: ContentEditableEvent) => {
     const value = e.target.value;
     setNewContent(value);
     
-    const words = value.split(/\s+/);
+    // Fallback simple parsing for hashtag/mention detection (stripping tags)
+    const plainText = value.replace(/<[^>]+>/g, '');
+    const words = plainText.split(/\s+/);
     const lastWord = words[words.length - 1];
 
     if (lastWord.startsWith('#') && lastWord.length > 0) {
@@ -320,9 +315,10 @@ function ReadixContent() {
         mediaUrls.push(url);
       }
 
+      const finalMarkdownContent = htmlToMarkdown(newContent);
       const newReadix = await createReadix(
         firebaseUser.uid,
-        newContent.trim(),
+        finalMarkdownContent.trim(),
         mediaUrls
       );
 
@@ -445,12 +441,12 @@ function ReadixContent() {
             </div>
             <div className="flex-1 flex flex-col">
               <div className="relative">
-                <textarea
-                  ref={textareaRef}
-                  value={newContent}
+                <ContentEditable
+                  innerRef={contentEditableRef}
+                  html={newContent}
                   onChange={handleContentChange}
-                  placeholder="Hangi kitaptan bahsediyoruz?"
-                  className="bg-transparent border-none focus:outline-none text-text resize-none text-lg min-h-[80px] w-full"
+                  tagName="div"
+                  className="bg-transparent border-none focus:outline-none text-text resize-none text-[15px] leading-relaxed min-h-[80px] w-full break-words outline-none empty:before:content-['Hangi_kitaptan_bahsediyoruz?'] empty:before:text-muted/50 empty:before:pointer-events-none"
                 />
                 {activeHashtag !== null && filteredTags.length > 0 && (
                   <div className="absolute top-full left-0 mt-1 w-64 bg-card border border-border/50 rounded-xl shadow-xl overflow-hidden z-50">
@@ -520,14 +516,14 @@ function ReadixContent() {
                   </label>
                   
                   <button 
-                    onClick={() => insertFormat('**', '**')}
+                    onClick={() => insertFormat('bold')}
                     className="text-muted hover:text-primary hover:bg-primary/10 p-2 rounded-full inline-flex transition-colors"
                     title="Kalın"
                   >
                     <Bold size={20} />
                   </button>
                   <button 
-                    onClick={() => insertFormat('*', '*')}
+                    onClick={() => insertFormat('italic')}
                     className="text-muted hover:text-primary hover:bg-primary/10 p-2 rounded-full inline-flex transition-colors"
                     title="İtalik"
                   >
