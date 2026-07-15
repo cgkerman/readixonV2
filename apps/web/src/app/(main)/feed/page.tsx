@@ -15,8 +15,8 @@ export default function FeedPage() {
   const { firebaseUser, userProfile, followingIds, toggleFollowingId } = useAuthStore();
 
   // Veri çekimi - Infinite Query ile
-  const { 
-    data: recentData, 
+  const {
+    data: recentData,
     isLoading: recentLoading,
     fetchNextPage: fetchNextRecent,
     hasNextPage: hasNextRecent
@@ -27,8 +27,8 @@ export default function FeedPage() {
     initialPageParam: null as any
   });
 
-  const { 
-    data: topData, 
+  const {
+    data: topData,
     isLoading: topLoading,
     fetchNextPage: fetchNextTop,
     hasNextPage: hasNextTop
@@ -67,15 +67,15 @@ export default function FeedPage() {
   // Öne Çıkan Slaytlar (Carousel Verisi)
   const slides = useMemo(() => {
     const arr: any[] = [];
-    
+
     // Readixon V1 Announcement Slide (Her zaman ilk sırada)
     arr.push({
       id: 'slide-readixon-v1',
       type: 'announcement',
       badge: 'YENİ NESİL OKUMA DENEYİMİ',
       badgeIcon: Sparkles,
-      title: 'Readixon V1 Yayında! 🚀',
-      summary: 'Alışılmış platformları unutun. Readix ile yazarlarla etkileşime geçin, hikayenin gidişatını oylayın (Curveball), RPG karakter istatistiklerini keşfedin ve yazar düellolarına (Duels) şahit olun. Okuma deneyimi baştan yazılıyor!',
+      title: 'Readixon V1 Yayında!',
+      summary: 'Alışılmış platformları unutun. Readix ile yazarlarla etkileşime geçin, hikayenin gidişatını oylayın, RPG karakter istatistiklerini keşfedin ve yazar düellolarına şahit olun. Okuma deneyimi baştan yazılıyor!',
       image: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&q=80', // Kozmik/Yıldızlı bir arkaplan
       primaryLabel: 'Hemen Keşfet',
       primaryAction: () => router.push('/about'),
@@ -164,7 +164,7 @@ export default function FeedPage() {
     try {
       const nowLiked = await toggleStoryLike(storyId, firebaseUser.uid);
       const likeDelta = nowLiked ? 1 : -1;
-      
+
       // Update cache optimistically for infinite query structure
       queryClient.setQueryData(['stories', 'recent'], (oldData: any) => {
         if (!oldData || !oldData.pages) return oldData;
@@ -214,7 +214,7 @@ export default function FeedPage() {
       return;
     }
     const isCurrentlyFollowing = followingIds.includes(targetUserId);
-    
+
     // Optimistic update
     toggleFollowingId(targetUserId);
 
@@ -233,17 +233,17 @@ export default function FeedPage() {
 
   return (
     <div className="flex flex-col w-full pb-24 md:pb-10 bg-background overflow-x-hidden">
-      
+
       {/* ── 1. Hero Banner (Carousel) ── */}
       <div className="relative w-full min-h-[65vh] md:min-h-[70vh] flex flex-col justify-center mb-16 overflow-hidden">
         {/* Bulanık Arka Plan Görseli */}
         {activeSlide?.image ? (
           <div className="absolute inset-0 z-0 overflow-hidden">
-            <img 
+            <img
               key={`bg-${activeSlide.id}`}
-              src={activeSlide.image} 
-              alt="Background" 
-              className="w-full h-full object-cover opacity-20 blur-3xl scale-125 animate-in fade-in duration-1000" 
+              src={activeSlide.image}
+              alt="Background"
+              className="w-full h-full object-cover opacity-20 blur-3xl scale-125 animate-in fade-in duration-1000"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
             <div className="absolute inset-0 bg-gradient-to-r from-background via-background/60 to-transparent" />
@@ -254,17 +254,16 @@ export default function FeedPage() {
 
         {/* Hero İçerik (Kapak Resmi + Metinler) */}
         <div className="relative z-10 w-full max-w-7xl mx-auto px-6 md:px-16 pt-16 pb-24 md:py-24 flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16">
-          
+
           {/* Sol/Üst Kısım: Net Kapak Resmi */}
-          <div 
+          <div
             key={`img-${activeSlide?.id}`}
-            className={`flex-shrink-0 shadow-2xl shadow-black/50 border border-white/10 animate-in fade-in slide-in-from-bottom-4 duration-700 ${
-              activeSlide?.type === 'author' 
-                ? 'w-40 h-40 md:w-64 md:h-64 rounded-full object-cover' 
-                : activeSlide?.type === 'announcement'
+            className={`flex-shrink-0 shadow-2xl shadow-black/50 border border-white/10 animate-in fade-in slide-in-from-bottom-4 duration-700 ${activeSlide?.type === 'author'
+              ? 'w-40 h-40 md:w-64 md:h-64 rounded-full object-cover'
+              : activeSlide?.type === 'announcement'
                 ? 'w-40 md:w-72 aspect-square rounded-2xl object-cover'
                 : 'w-40 md:w-72 aspect-[2/3] rounded-xl'
-            } overflow-hidden`}
+              } overflow-hidden`}
           >
             {activeSlide?.image ? (
               <img src={activeSlide.image} alt={activeSlide.title} className="w-full h-full object-cover" />
@@ -285,19 +284,19 @@ export default function FeedPage() {
                 </span>
               )}
             </div>
-            
+
             <Typography variant="h1" className="text-3xl md:text-5xl lg:text-6xl font-black text-text mb-4 leading-tight drop-shadow-2xl">
               {activeSlide?.title || "Okunmaya Değer Başyapıtlar"}
             </Typography>
-            
+
             <Typography variant="body" className="text-sm md:text-lg lg:text-xl text-text/80 mb-8 line-clamp-4 drop-shadow-md max-w-2xl">
               {activeSlide?.summary || "Farklı dünyalara yelken açmak ve yeni serüvenlere atılmak için binlerce hikaye arasından sizin için seçtiklerimizi keşfedin."}
             </Typography>
 
             <div className="flex flex-row flex-wrap justify-center md:justify-start gap-3 md:gap-4 w-full">
               {activeSlide?.primaryLabel && (
-                <Button 
-                  variant="primary" 
+                <Button
+                  variant="primary"
                   className="rounded-full flex-1 md:flex-none min-w-[140px] px-6 py-3.5 md:py-6 text-sm md:text-lg shadow-primary/30 shadow-lg font-bold flex items-center justify-center gap-2"
                   onPress={activeSlide.primaryAction}
                 >
@@ -306,8 +305,8 @@ export default function FeedPage() {
                 </Button>
               )}
               {activeSlide?.secondaryLabel && (
-                <Button 
-                  variant="secondary" 
+                <Button
+                  variant="secondary"
                   className="rounded-full flex-1 md:flex-none min-w-[140px] px-6 py-3.5 md:py-6 text-sm md:text-lg font-semibold bg-text/5 hover:bg-text/10 text-text border border-text/20 backdrop-blur-md transition-colors"
                   onPress={activeSlide.secondaryAction}
                 >
@@ -317,17 +316,16 @@ export default function FeedPage() {
             </div>
           </div>
         </div>
-        
+
         {/* Carousel Indicators (Dots) */}
         {slides.length > 1 && (
           <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2 z-20">
             {slides.map((_, idx) => (
-              <button 
+              <button
                 key={idx}
                 onClick={() => setCurrentSlideIndex(idx)}
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  currentSlideIndex === idx ? 'w-8 bg-primary' : 'w-2 bg-white/30 hover:bg-white/50'
-                }`}
+                className={`h-2 rounded-full transition-all duration-300 ${currentSlideIndex === idx ? 'w-8 bg-primary' : 'w-2 bg-white/30 hover:bg-white/50'
+                  }`}
                 aria-label={`Slayt ${idx + 1}`}
               />
             ))}
@@ -364,11 +362,11 @@ export default function FeedPage() {
       {/* ── 3. Yatay Kaydırmalı Listeler (Carousels) ── */}
       {!isLoading && (
         <div className="flex flex-col gap-12 px-6 md:px-16">
-          
+
           {/* Öne Çıkan Yazarlar */}
           {featuredAuthors.length > 0 && (
-            <AuthorCarouselRow 
-              title="Öne Çıkan Yazarlar" 
+            <AuthorCarouselRow
+              title="Öne Çıkan Yazarlar"
               icon={<Users className="text-primary" size={24} />}
               authors={featuredAuthors}
               seeAllHref="/explore/authors"
@@ -386,8 +384,8 @@ export default function FeedPage() {
 
           {/* Sana Özel / Günün Trendleri */}
           {recommendedStories.length > 0 && (
-            <CarouselRow 
-              title={firebaseUser && userProfile?.preferredGenres?.length ? "Sana Özel" : "Günün Trendleri"} 
+            <CarouselRow
+              title={firebaseUser && userProfile?.preferredGenres?.length ? "Sana Özel" : "Günün Trendleri"}
               icon={<Sparkles className="text-primary" size={24} />}
               stories={recommendedStories}
               seeAllHref="/explore/recommended"
@@ -398,8 +396,8 @@ export default function FeedPage() {
 
           {/* En Çok Beğenilenler */}
           {mostLikedStories.length > 0 && (
-            <CarouselRow 
-              title="Kalplerin Efendileri" 
+            <CarouselRow
+              title="Kalplerin Efendileri"
               icon={<Heart className="text-primary" size={24} />}
               stories={mostLikedStories}
               seeAllHref="/explore/most-liked"
@@ -410,8 +408,8 @@ export default function FeedPage() {
 
           {/* En Çok Okunanlar */}
           {topStories.length > 0 && (
-            <CarouselRow 
-              title="Haftanın En Çok Okunanları" 
+            <CarouselRow
+              title="Haftanın En Çok Okunanları"
               icon={<TrendingUp className="text-primary" size={24} />}
               stories={topStories}
               seeAllHref="/explore/top"
@@ -425,8 +423,8 @@ export default function FeedPage() {
 
           {/* Yeni Çıkanlar */}
           {recentStories.length > 0 && (
-            <CarouselRow 
-              title="Yeni Çıkanlar" 
+            <CarouselRow
+              title="Yeni Çıkanlar"
               icon={<Clock className="text-primary" size={24} />}
               stories={recentStories}
               seeAllHref="/explore/recent"
@@ -440,8 +438,8 @@ export default function FeedPage() {
 
           {/* Kısa & Öz (Tamamlanmış) */}
           {completedStories.length > 0 && (
-            <CarouselRow 
-              title="Kısa ve Öz (Tamamlanmış)" 
+            <CarouselRow
+              title="Kısa ve Öz (Tamamlanmış)"
               icon={<CheckCircle className="text-emerald-500" size={24} />}
               stories={completedStories}
               seeAllHref="/explore/completed"
@@ -488,7 +486,7 @@ function CarouselRow({ title, icon, stories, seeAllHref, onStoryClick, onLikePre
     const target = e.currentTarget;
     setShowLeftArrow(target.scrollLeft > 0);
     setShowRightArrow(target.scrollLeft < target.scrollWidth - target.clientWidth - 10);
-    
+
     // Sonsuz kaydırma tetikleyici (sondan 100px önce)
     if (onEndReached && target.scrollLeft > target.scrollWidth - target.clientWidth - 100) {
       onEndReached();
@@ -511,7 +509,7 @@ function CarouselRow({ title, icon, stories, seeAllHref, onStoryClick, onLikePre
 
       {/* Sol-Sağ Oklar (Sadece Desktop) */}
       {showLeftArrow && (
-        <button 
+        <button
           onClick={() => scroll('left')}
           className="hidden md:flex absolute left-[-24px] top-[55%] -translate-y-1/2 z-20 w-12 h-12 bg-card/90 backdrop-blur-md border border-border/50 rounded-full items-center justify-center text-primary shadow-xl hover:bg-primary/10 hover:scale-110 transition-all"
         >
@@ -520,7 +518,7 @@ function CarouselRow({ title, icon, stories, seeAllHref, onStoryClick, onLikePre
       )}
 
       {showRightArrow && (
-        <button 
+        <button
           onClick={() => scroll('right')}
           className="hidden md:flex absolute right-[-24px] top-[55%] -translate-y-1/2 z-20 w-12 h-12 bg-card/90 backdrop-blur-md border border-border/50 rounded-full items-center justify-center text-primary shadow-xl hover:bg-primary/10 hover:scale-110 transition-all"
         >
@@ -528,7 +526,7 @@ function CarouselRow({ title, icon, stories, seeAllHref, onStoryClick, onLikePre
         </button>
       )}
 
-      <div 
+      <div
         ref={scrollRef}
         onScroll={handleScroll}
         className="flex gap-6 overflow-x-auto pb-8 pt-2 scrollbar-hide snap-x"
@@ -539,7 +537,7 @@ function CarouselRow({ title, icon, stories, seeAllHref, onStoryClick, onLikePre
             <StoryCard
               title={story.title}
               authorName={story.authorName || 'Bilinmiyor'}
-              authorUsername={story.authorUsername} 
+              authorUsername={story.authorUsername}
               coverImage={story.coverImage}
               views={story.stats?.views || 0}
               likes={story.stats?.likes || 0}
@@ -603,7 +601,7 @@ function AuthorCarouselRow({ title, icon, authors, seeAllHref, onAuthorClick, fo
       </div>
 
       {showLeftArrow && (
-        <button 
+        <button
           onClick={() => scroll('left')}
           className="hidden md:flex absolute left-[-24px] top-[55%] -translate-y-1/2 z-20 w-12 h-12 bg-card/90 backdrop-blur-md border border-border/50 rounded-full items-center justify-center text-primary shadow-xl hover:bg-primary/10 hover:scale-110 transition-all"
         >
@@ -612,7 +610,7 @@ function AuthorCarouselRow({ title, icon, authors, seeAllHref, onAuthorClick, fo
       )}
 
       {showRightArrow && (
-        <button 
+        <button
           onClick={() => scroll('right')}
           className="hidden md:flex absolute right-[-24px] top-[55%] -translate-y-1/2 z-20 w-12 h-12 bg-card/90 backdrop-blur-md border border-border/50 rounded-full items-center justify-center text-primary shadow-xl hover:bg-primary/10 hover:scale-110 transition-all"
         >
@@ -620,7 +618,7 @@ function AuthorCarouselRow({ title, icon, authors, seeAllHref, onAuthorClick, fo
         </button>
       )}
 
-      <div 
+      <div
         ref={scrollRef}
         onScroll={handleScroll}
         className="flex gap-6 overflow-x-auto pb-8 pt-2 scrollbar-hide snap-x"
