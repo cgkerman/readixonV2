@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     }
 
     // 3. Tarihi gelmiş olanları bellekte filtrele (Composite Index hatasını önlemek için)
-    const readyToPublishDocs = chaptersSnapshot.docs.filter(doc => {
+    const readyToPublishDocs = chaptersSnapshot.docs.filter((doc: any) => {
       const data = doc.data();
       if (!data.publishDate) return false;
       
