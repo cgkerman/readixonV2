@@ -87,6 +87,7 @@ export async function createUserProfile(input: CreateUserInput): Promise<void> {
     },
     createdAt: serverTimestamp(),
     isAuthor: false,
+    rxPoints: 50, // Yeni kayıtlara 50 RX hediye
     ...(input.termsAcceptedAt ? { termsAcceptedAt: input.termsAcceptedAt } : {}),
     ...(input.privacyAcceptedAt ? { privacyAcceptedAt: input.privacyAcceptedAt } : {}),
   };
