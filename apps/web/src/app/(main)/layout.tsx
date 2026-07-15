@@ -247,7 +247,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               <div className="flex items-center gap-1 mt-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                 <Typography variant="caption" className="text-amber-500 font-bold text-[10px]">
-                  {userProfile?.readixPoints || 0} RX
+                  {userProfile?.rxPoints || 0} RX
                 </Typography>
               </div>
             </div>
@@ -444,7 +444,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   <div className="flex items-center gap-1 mt-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                     <Typography variant="caption" className="text-amber-500 font-bold text-[11px]">
-                      {userProfile?.readixPoints || 0} RX
+                      {userProfile?.rxPoints || 0} RX
                     </Typography>
                   </div>
                 </div>
