@@ -37,6 +37,9 @@ export default function AdminUserDetailPage() {
               if (response.ok) {
                 const data = await response.json();
                 setUserEmail(data.email);
+              } else {
+                const errData = await response.json();
+                console.error("Mail API Hatası (500):", errData);
               }
             } catch (err) {
               console.error("Mail adresi çekilirken hata:", err);
