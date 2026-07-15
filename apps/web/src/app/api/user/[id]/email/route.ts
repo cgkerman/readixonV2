@@ -32,6 +32,17 @@ export async function GET(request: Request, { params }: { params: { id: string }
     return NextResponse.json({ email: userRecord.email || null });
   } catch (error: any) {
     console.error('Error fetching user email:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    
+    // Add detailed diagnostics to the error response
+    const diagnostics = {
+      errorMessage: error.message,
+      errorCode: error.code,
+      hasProjectId: !!process.env.FIREBASE_PROJECT_ID,
+      hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
+      hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
+      privateKeyLength: process.env.FIREBASE_PRIVATE_KEY ? process.env.FIREBASE_PRIVATE_KEY.length : 0,
+    };
+    
+    return NextResponse.json({ error: error.message, diagnostics }, { status: 500 });
   }
 }
