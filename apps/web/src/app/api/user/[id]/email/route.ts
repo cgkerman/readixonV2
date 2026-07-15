@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { adminDb, adminAuth } from '@/lib/firebaseAdmin';
+import { getAdminDb, getAdminAuth } from '@/lib/firebaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +10,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: 'Yetkisiz erişim. Token bulunamadı.' }, { status: 401 });
     }
 
+    const adminAuth = getAdminAuth();
+    const adminDb = getAdminDb();
+    
     const idToken = authHeader.split('Bearer ')[1];
     const decodedToken = await adminAuth.verifyIdToken(idToken);
     

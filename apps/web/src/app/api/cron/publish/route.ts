@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminDb } from '@/lib/firebaseAdmin';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 
 export const runtime = 'nodejs';
@@ -14,6 +14,8 @@ export async function GET(request: Request) {
 
   try {
     const now = Timestamp.now();
+    
+    const adminDb = getAdminDb();
     
     // 2. Collection Group ile durumu 'scheduled' olan tüm chapter'ları bul
     const scheduledChaptersQuery = adminDb.collectionGroup('chapters')

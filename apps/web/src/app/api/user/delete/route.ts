@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
-import { adminDb, adminAuth } from '@/lib/firebaseAdmin';
+import { getAdminDb, getAdminAuth } from '@/lib/firebaseAdmin';
 
 export async function DELETE(request: Request) {
   try {
+    const adminAuth = getAdminAuth();
+    const adminDb = getAdminDb();
+    
     // 1. Yetkilendirme kontrolü
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
