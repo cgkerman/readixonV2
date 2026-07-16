@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const MAX_DAILY_REQUESTS = 10; // Günlük ücretsiz kullanım limiti
-
 export async function POST(request: Request) {
   try {
     // 1. Yetki Kontrolü
@@ -42,6 +40,13 @@ export async function POST(request: Request) {
     const userData = userDoc.data();
     const today = new Date().toISOString().split('T')[0]; // Örn: 2026-07-09
     
+    let maxDailyRequests = 5; // Default for free users
+    if (userData?.isAdmin || userData?.status === 'pro') {
+      maxDailyRequests = Infinity;
+    } else if (userData?.status === 'premium') {
+      maxDailyRequests = 10;
+    }
+    
     let aiUsage = userData?.aiUsage || { date: today, requestCount: 0 };
     
     if (aiUsage.date !== today) {
@@ -49,9 +54,9 @@ export async function POST(request: Request) {
       aiUsage = { date: today, requestCount: 0 };
     }
     
-    if (aiUsage.requestCount >= MAX_DAILY_REQUESTS) {
+    if (aiUsage.requestCount >= maxDailyRequests) {
       return NextResponse.json({ 
-        error: `Günlük kullanım sınırınıza (${MAX_DAILY_REQUESTS}) ulaştınız. Lütfen yarın tekrar deneyin.` 
+        error: `Günlük kullanım sınırınıza (${maxDailyRequests}) ulaştınız. Lütfen daha fazla kullanım için Premium veya Pro plana geçiş yapın.` 
       }, { status: 429 });
     }
     
@@ -92,11 +97,20 @@ ${prompt}
     return NextResponse.json({ 
       response: text, 
       requestCount: aiUsage.requestCount + 1, 
-      maxRequests: MAX_DAILY_REQUESTS 
+      maxRequests: maxDailyRequests === Infinity ? -1 : maxDailyRequests 
     }, { status: 200 });
     
   } catch (error: any) {
     console.error("AI Error:", error);
-    return NextResponse.json({ error: `Hata: ${error.message || 'Bilinmeyen'}` }, { status: 500 });
+    const errorMessage = error.message || '';
+    
+    // Google AI 503 (High Demand) hatası kontrolü
+    if (errorMessage.includes('503') || errorMessage.includes('high demand') || errorMessage.includes('Service Unavailable')) {
+      return NextResponse.json({ 
+        error: 'Şu an yapay zeka sunucularımızda kısa süreli bir yoğunluk yaşanıyor. Lütfen birkaç dakika sonra tekrar deneyin.' 
+      }, { status: 503 });
+    }
+    
+    return NextResponse.json({ error: `Hata: ${errorMessage || 'Bilinmeyen'}` }, { status: 500 });
   }
 }

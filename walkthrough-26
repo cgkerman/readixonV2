@@ -1,0 +1,24 @@
+# Akıllı İçerik Aktarımı - Geliştirme Özeti
+
+Yazarların içerik üretirken diğer platformlardan kolayca metin aktarabilmesi için **Akıllı Kopyala-Yapıştır** ve **Word (.docx) Yükleme** özelliklerini başarıyla entegre ettik.
+
+## Neler Yapıldı?
+
+### 1. Akıllı Kopyala-Yapıştır Entegrasyonu
+- `SortableBlockItem` içerisindeki editöre özel bir `onPaste` yakalayıcı eklendi.
+- Yazar dışarıdan (Google Docs vb.) bir metin kopyalayıp yapıştırdığında, metnin içindeki paragraflar veya `html` etiketleri (`<p>`, `<h1>`, vb.) tespit ediliyor.
+- Eğer birden fazla paragraf kopyalanmışsa, bu paragraflar tek bir bloğa yığılmak yerine otomatik olarak bölünerek alt alta yeni bloklar (`ContentBlock`) olarak diziye ekleniyor.
+- Tüm kalınlık (bold) ve liste (ul/ol) formatları korunarak düzgünce ayrıştırılıyor.
+
+### 2. .docx (Word Dosyası) Yükleme Özelliği
+- Tarayıcı tarafında Word dosyalarını başarıyla okuyup HTML'e dönüştürebilmek için `mammoth` kütüphanesi projenin arayüz (`ui`) paketine eklendi.
+- Editörün altındaki araç çubuğuna (Toolbar) göze çarpan bir **Word Yükle** butonu yerleştirildi.
+- Yazar bir `.docx` dosyası seçtiğinde, dosya saniyeler içinde çözümleniyor ve içindeki metinler otomatik olarak paragraflara bölünüp editöre ekleniyor.
+
+## Nasıl Test Edebilirsiniz?
+1. Uygulamanızda herhangi bir hikayenin **Bölüm Düzenle** (Chapter Editor) sayfasına gidin.
+2. İnternetten veya Google Docs'tan uzun bir metin kopyalayıp boş bir bloğun içine yapıştırın. (Paragrafların ayrı bloklar olarak eklendiğini göreceksiniz.)
+3. Sayfanın en altındaki "Word Yükle" butonuna basarak bilgisayarınızdan herhangi bir Word (`.docx`) belgesini seçin ve yazıların anında aktarıldığını deneyimleyin.
+
+> [!TIP]
+> Word dosyasındaki resimler karmaşıklık yaratmaması adına şimdilik içeri aktarılmaz, sadece metin aktarımı yapılır. Yazar resimleri her zamanki gibi 'Görsel' bloğu ekleyerek manuel olarak yerleştirebilir.

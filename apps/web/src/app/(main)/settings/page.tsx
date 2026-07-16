@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Typography, Button } from '@readixon/ui';
 import { useThemeStore, Theme, useAuthStore, deleteUserAccount } from '@readixon/core';
-import { Settings, LogOut, AlertTriangle, Monitor, UserX, CheckCircle2 } from 'lucide-react';
+import { Settings, LogOut, AlertTriangle, Monitor, UserX, CheckCircle2, Lock } from 'lucide-react';
 import { toast } from "sonner";
 
 const themes: { id: Theme; name: string; colors: string[] }[] = [
@@ -21,6 +21,8 @@ export default function SettingsPage() {
   const router = useRouter();
   const { theme, setTheme } = useThemeStore();
   const { userProfile, firebaseUser } = useAuthStore();
+  
+  const hasThemeAccess = userProfile?.isAdmin || userProfile?.status === 'premium' || userProfile?.status === 'pro';
   
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
@@ -89,8 +91,9 @@ export default function SettingsPage() {
             <Typography variant="h3" className="font-bold">Görünüm ve Tema</Typography>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {themes.map((t) => (
+          <div className="relative">
+            <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 transition-all duration-300 ${!hasThemeAccess ? 'opacity-30 pointer-events-none blur-[3px]' : ''}`}>
+              {themes.map((t) => (
               <div 
                 key={t.id} 
                 onClick={() => setTheme(t.id)}
@@ -133,6 +136,28 @@ export default function SettingsPage() {
               </div>
               <Typography variant="body" className="font-semibold">Kendi Temanı Yarat</Typography>
             </div>
+            </div>
+
+            {!hasThemeAccess && (
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center p-6 text-center">
+                <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-4 shadow-lg shadow-primary/10 border border-primary/20">
+                  <Lock className="text-primary" size={32} />
+                </div>
+                <Typography variant="h3" className="font-bold mb-2 text-text">
+                  Premium Özellik
+                </Typography>
+                <Typography variant="body" className="text-text/70 mb-6 max-w-sm">
+                  Farklı temalar seçmek ve platformu dilediğiniz renklerde özelleştirmek için Premium'a geçin.
+                </Typography>
+                <Button 
+                  variant="primary" 
+                  onPress={() => router.push('/premium')}
+                  className="shadow-primary/20 shadow-lg px-8 font-bold"
+                >
+                  Premium'a Geç
+                </Button>
+              </div>
+            )}
           </div>
         </section>
 
