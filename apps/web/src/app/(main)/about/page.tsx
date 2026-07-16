@@ -125,8 +125,8 @@ export default function AboutPage() {
             {/* Blok Tabanlı Editör */}
             <FeatureCard 
               icon={<LayoutDashboard size={28} />}
-              title="Blok Tabanlı Yazım"
-              desc="Hikayenizi tekdüze bir metin olarak değil; paragraflar, alıntı blokları, görseller ve ayraçlar (divider) gibi dinamik 'bloklar' halinde inşa edin. Bölüm sonlarına etkileşimli bloklar ekleyerek okurları yönlendirin."
+              title="Blok Tabanlı Akıllı Editör"
+              desc="Hikayenizi dinamik bloklar halinde inşa edin. Word (.docx) veya Google Docs üzerinden yapacağınız kopyala-yapıştır aktarımları saniyeler içinde otomatik olarak bloklara dönüştürülür. İşiniz bittiğinde bölümünüzü anında ön izleyin."
             />
 
             {/* Karakter İstatistikleri (RPG) */}
