@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Typography, Button, BlockEditor, Input } from '@readixon/ui';
-import { ArrowLeft, Save, PlusCircle, CheckCircle, FileText, Globe, Calendar, GripVertical, Trash2, Sparkles, Wand2 } from 'lucide-react';
+import { Typography, Button, BlockEditor, Input, ContentRenderer } from '@readixon/ui';
+import { ArrowLeft, Save, PlusCircle, CheckCircle, FileText, Globe, Calendar, GripVertical, Trash2, Sparkles, Wand2, Eye, EyeOff, Info, X } from 'lucide-react';
 import { fetchChapter, updateChapter, compressImage, fetchChapters, createChapter, deleteChapter, createNotification, getUserFollowerIds, getStoryById, useAuthStore, type Chapter } from '@readixon/core';
 import { ReadixonAIAssistant } from '@/components/ReadixonAIAssistant';
 import { uploadFile } from '@readixon/core/src/services/storageService';
@@ -25,6 +25,8 @@ export default function ChapterEditorPage() {
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
   const [isPlannerOpen, setIsPlannerOpen] = useState(false);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   
   const isInitialLoad = useRef(true);
   const publishedRef = useRef(false);
@@ -196,6 +198,17 @@ export default function ChapterEditorPage() {
     return await uploadFile(compressedFile, `stories/${storyId}/${chapterId}-${Date.now()}`);
   };
 
+  const getWordCount = () => {
+    if (!chapter?.contentBlocks) return 0;
+    return chapter.contentBlocks.reduce((acc, block) => {
+      if (!block.text) return acc;
+      // Strip HTML tags for accurate word count
+      const plainText = block.text.replace(/<[^>]*>?/gm, '');
+      const words = plainText.trim().split(/\s+/).filter(w => w.length > 0);
+      return acc + words.length;
+    }, 0);
+  };
+
   if (loading || !chapter) {
     return <div className="p-8 text-center"><Typography variant="body">Yükleniyor...</Typography></div>;
   }
@@ -306,6 +319,15 @@ export default function ChapterEditorPage() {
                 <Sparkles size={16} className="mr-2" /> AI Asistan
               </Button>
 
+              <Button 
+                variant="outline" 
+                onPress={() => setIsPreviewMode(!isPreviewMode)} 
+                className={`rounded-full px-4 transition-colors ${isPreviewMode ? 'bg-primary/10 border-primary text-primary' : 'border-primary/20 text-primary hover:bg-primary/5 hover:border-primary/40'}`}
+              >
+                {isPreviewMode ? <EyeOff size={16} className="mr-2" /> : <Eye size={16} className="mr-2" />}
+                {isPreviewMode ? 'Düzenle' : 'Ön İzleme'}
+              </Button>
+
               <Button variant="primary" onPress={() => handleSave(true)} disabled={saving || autoSaveStatus === 'saving'} className="rounded-full px-6">
                 <Save size={16} className="mr-2 hidden md:inline-block" /> Kaydet
               </Button>
@@ -346,20 +368,38 @@ export default function ChapterEditorPage() {
             <div>
               <Typography variant="h3" className="mb-1 flex items-center gap-2">
                 <FileText className="text-primary" /> İçerik Editörü
+                <button 
+                  onClick={() => setIsInfoModalOpen(true)} 
+                  className="text-muted/60 hover:text-primary hover:bg-primary/10 p-1 rounded-full transition-all"
+                  title="Editör Özelliklerini Görüntüle"
+                >
+                  <Info size={18} />
+                </button>
               </Typography>
               <Typography variant="caption" className="text-muted">Blokları ekleyip sürükleyerek sıralarını değiştirebilirsiniz.</Typography>
             </div>
-            <Typography variant="caption" className="text-primary bg-primary/10 px-3 py-1 rounded-full font-bold">
-              {chapter.contentBlocks.length} Blok
-            </Typography>
+            <div className="flex items-center gap-2">
+              <Typography variant="caption" className="text-primary bg-primary/10 px-3 py-1 rounded-full font-bold">
+                {getWordCount()} Kelime
+              </Typography>
+              <Typography variant="caption" className="text-primary bg-primary/10 px-3 py-1 rounded-full font-bold">
+                {chapter.contentBlocks.length} Blok
+              </Typography>
+            </div>
           </div>
 
           <div className="bg-background rounded-2xl border border-border/30 shadow-inner p-2 md:p-6 min-h-[500px] mb-24">
-            <BlockEditor 
-              initialBlocks={chapter.contentBlocks}
-              onChange={(blocks) => setChapter({ ...chapter, contentBlocks: blocks })}
-              onUploadImage={handleUploadImage}
-            />
+            {isPreviewMode ? (
+              <div className="max-w-3xl mx-auto py-8">
+                <ContentRenderer blocks={chapter.contentBlocks} />
+              </div>
+            ) : (
+              <BlockEditor 
+                initialBlocks={chapter.contentBlocks}
+                onChange={(blocks) => setChapter({ ...chapter, contentBlocks: blocks })}
+                onUploadImage={handleUploadImage}
+              />
+            )}
           </div>
           
         </div>
@@ -394,6 +434,66 @@ export default function ChapterEditorPage() {
           chapterId={chapterId} 
           onClose={() => setIsPlannerOpen(false)} 
         />
+      )}
+
+      {/* ── Info Modal (Editör Rehberi) ── */}
+      {isInfoModalOpen && (
+        <div className="fixed inset-0 z-[200] bg-background/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-card border border-border/50 shadow-2xl rounded-2xl p-6 md:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto relative animate-in zoom-in-95 duration-200 custom-scrollbar">
+            <button 
+              onClick={() => setIsInfoModalOpen(false)} 
+              className="absolute top-4 right-4 p-2 text-muted hover:text-foreground hover:bg-muted/10 rounded-full transition-colors"
+            >
+              <X size={20} />
+            </button>
+            <Typography variant="h2" className="mb-6 flex items-center gap-2">
+              <Info className="text-primary" /> Editör Rehberi
+            </Typography>
+            
+            <div className="space-y-6">
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
+                <Typography variant="h4" className="text-primary mb-2 flex items-center gap-2">1. Akıllı Kopyala & Yapıştır (Tavsiye Edilen)</Typography>
+                <Typography variant="body" className="text-muted text-sm leading-relaxed">
+                  Google Docs, Word veya internet üzerindeki uzun metinlerinizi kopyalayıp editöre doğrudan <b>(Ctrl+V)</b> yapıştırabilirsiniz. Metinlerinizdeki paragraflar ve listeler otomatik olarak algılanıp ayrı bloklara bölünür. Her blokla tek tek uğraşmanıza gerek kalmaz.
+                </Typography>
+              </div>
+              <div className="bg-card border border-border/50 rounded-xl p-4">
+                <Typography variant="h4" className="text-foreground mb-2">2. Word (.docx) Dosyası Yükleme</Typography>
+                <Typography variant="body" className="text-muted text-sm leading-relaxed">
+                  Ekranın altındaki <b>Word Yükle</b> butonunu kullanarak bilgisayarınızdaki .docx uzantılı belgeleri sisteme aktarabilirsiniz. Belge içindeki yazılar saniyeler içinde bloklara dönüşerek editöre eklenir.
+                </Typography>
+              </div>
+              <div className="bg-card border border-border/50 rounded-xl p-4">
+                <Typography variant="h4" className="text-foreground mb-2">3. Anında Ön İzleme</Typography>
+                <Typography variant="body" className="text-muted text-sm leading-relaxed">
+                  Sağ üstteki <b>Ön İzleme</b> butonuna basarak, yazdığınız bölümün okuyucularınıza uygulamanın içinde tam olarak nasıl görüneceğini test edebilirsiniz. İşiniz bitince tekrar <b>Düzenle</b> moduna dönebilirsiniz.
+                </Typography>
+              </div>
+              <div className="bg-card border border-border/50 rounded-xl p-4">
+                <Typography variant="h4" className="text-foreground mb-2">4. Odak Modu (Tam Ekran)</Typography>
+                <Typography variant="body" className="text-muted text-sm leading-relaxed">
+                  Herhangi bir paragraf bloğunun sağ üst köşesindeki <b>Genişlet</b> ikonuna tıkladığınızda, o blok tüm ekranı kaplar. Bu sayede dikkatiniz dağılmadan içeriğinize odaklanabilirsiniz (Çıkmak için ESC).
+                </Typography>
+              </div>
+              <div className="bg-card border border-border/50 rounded-xl p-4">
+                <Typography variant="h4" className="text-foreground mb-2">5. AI Asistan Desteği</Typography>
+                <Typography variant="body" className="text-muted text-sm leading-relaxed">
+                  Yazarken tıkandığınızda sağ üstteki <b>AI Asistan</b> butonuna tıklayarak yapay zekadan fikir alabilir, bölümü devam ettirmesini veya metninizi düzenlemesini isteyebilirsiniz.
+                </Typography>
+              </div>
+              <div className="bg-card border border-border/50 rounded-xl p-4">
+                <Typography variant="h4" className="text-foreground mb-2">6. Plan Notlarım</Typography>
+                <Typography variant="body" className="text-muted text-sm leading-relaxed">
+                  Bölümünüzün kurgusu, karakterler veya olay örgüsüyle ilgili aldığınız notlara hızlıca göz atmak isterseniz sağ üstteki <b>Plan Notlarım</b> butonuna tıklayarak sağ tarafta açılan defterinizi kullanabilirsiniz.
+                </Typography>
+              </div>
+            </div>
+            
+            <div className="mt-8 flex justify-end">
+              <Button variant="primary" onPress={() => setIsInfoModalOpen(false)} className="px-6 rounded-full">Anladım</Button>
+            </div>
+          </div>
+        </div>
       )}
 
       <ReadixonAIAssistant 

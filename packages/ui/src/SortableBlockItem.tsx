@@ -13,9 +13,10 @@ export interface SortableBlockItemProps {
   onChange: (updatedBlock: ContentBlock) => void;
   onDelete: () => void;
   onUploadImage?: (file: File) => Promise<string>;
+  onPasteMultiple?: (html: string, text: string) => void;
 }
 
-const ParagraphEditor = ({ block, onChange }: { block: ContentBlock, onChange: (b: ContentBlock) => void }) => {
+const ParagraphEditor = ({ block, onChange, onPasteMultiple }: { block: ContentBlock, onChange: (b: ContentBlock) => void, onPasteMultiple?: (h: string, t: string) => void }) => {
   const ref = React.useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = React.useState(false);
 
@@ -41,6 +42,25 @@ const ParagraphEditor = ({ block, onChange }: { block: ContentBlock, onChange: (
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isFullscreen]);
+
+  const handlePaste = React.useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
+    const html = e.clipboardData.getData('text/html');
+    const text = e.clipboardData.getData('text/plain');
+    
+    // Check if html has multiple block elements like <p>, <h1>, <div>
+    // Or if text has multiple line breaks
+    if (html && (html.match(/<(p|div|h[1-6]|ul|ol|li|blockquote)[^>]*>/gi)?.length || 0) > 1) {
+      e.preventDefault();
+      if (onPasteMultiple) {
+        onPasteMultiple(html, text);
+      }
+    } else if (text && text.trim().split(/\r?\n/).length > 1) {
+      e.preventDefault();
+      if (onPasteMultiple) {
+        onPasteMultiple(html, text);
+      }
+    }
+  }, [block, onChange, onPasteMultiple]);
 
   const editorNode = (
     <div className="flex flex-col gap-2 w-full h-full relative">
@@ -83,11 +103,12 @@ const ParagraphEditor = ({ block, onChange }: { block: ContentBlock, onChange: (
         suppressContentEditableWarning
         onInput={handleInput}
         onBlur={handleInput}
+        onPaste={handlePaste}
         className={`w-full bg-background border border-border/50 rounded-lg p-4 text-text focus:outline-none focus:border-primary transition-all focus:empty:before:hidden empty:before:content-[attr(data-placeholder)] empty:before:text-muted/50 custom-scrollbar ${
           isFullscreen ? 'flex-1 h-full max-h-[85vh] text-lg leading-relaxed' : 'min-h-[100px] max-h-[400px]'
         } overflow-y-auto`}
         style={!isFullscreen ? { scrollMarginBottom: '150px', outline: 'none' } : { outline: 'none' }}
-        data-placeholder="Metninizi yazın (Kısmı formatlamak için seçip yukarıdaki butonları kullanın)..."
+        data-placeholder="Yazmaya başlayın veya uzun bir metin yapıştırın (Otomatik olarak bloklara ayrılacaktır)..."
       />
     </div>
   );
@@ -110,7 +131,7 @@ const ParagraphEditor = ({ block, onChange }: { block: ContentBlock, onChange: (
   return editorNode;
 };
 
-export function SortableBlockItem({ id, block, onChange, onDelete, onUploadImage }: SortableBlockItemProps) {
+export function SortableBlockItem({ id, block, onChange, onDelete, onUploadImage, onPasteMultiple }: SortableBlockItemProps) {
   const {
     attributes,
     listeners,
@@ -150,7 +171,7 @@ export function SortableBlockItem({ id, block, onChange, onDelete, onUploadImage
     switch (block.type) {
       case 'paragraph':
         return (
-          <ParagraphEditor block={block} onChange={onChange} />
+          <ParagraphEditor block={block} onChange={onChange} onPasteMultiple={onPasteMultiple} />
         );
       case 'quote':
         return (
