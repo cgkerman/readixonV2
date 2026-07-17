@@ -57,8 +57,21 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       });
       
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Doğrulama maili gönderilemedi.');
+        let errorMsg = 'Doğrulama maili gönderilemedi.';
+        try {
+          const contentType = res.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await res.json();
+            errorMsg = errorData.error || errorMsg;
+          } else {
+            const textData = await res.text();
+            console.error('Sunucu HTML/Metin döndürdü:', textData.substring(0, 200));
+            errorMsg = 'Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin.';
+          }
+        } catch (e) {
+          console.error('Hata yanıtı okunamadı:', e);
+        }
+        throw new Error(errorMsg);
       }
 
       toast('Doğrulama e-postası gönderildi. Lütfen gelen kutunuzu (ve gereksiz kutusunu) kontrol edin.');
