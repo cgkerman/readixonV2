@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-    serverComponentsExternalPackages: ['firebase-admin', 'jwks-rsa', 'jose', 'nodemailer']
+    serverComponentsExternalPackages: ['firebase-admin', 'nodemailer']
   },
   async redirects() {
     return [
