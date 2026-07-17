@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { fetchChapter, getPublishedChapters, syncReadingProgress, incrementChapterView, checkChapterLiked, toggleChapterLike, addChapterComment, getAllChapterComments, getStoryById, saveQuote, getUserProfile } from '@readixon/core';
+import { fetchChapter, getPublishedChapters, syncReadingProgress, incrementChapterView, checkChapterLiked, toggleChapterLike, addChapterComment, getAllChapterComments, getStoryById, saveQuote, getUserProfile, trackInteraction } from '@readixon/core';
 import type { Chapter, Comment, Story, User } from '@readixon/core';
 import { useReaderStore } from '@readixon/core/src/store/useReaderStore';
 import { useAuthStore } from '@readixon/core/src/store/useAuthStore';
@@ -144,6 +144,10 @@ export default function ReadPage() {
         }
       });
       
+      if (nowLiked) {
+        trackInteraction(firebaseUser.uid, 'like_given').catch(console.error);
+      }
+      
       // Update story lists cache so feed/explore pages reflect total story likes
       const updateStoryLikes = (oldData: any) => {
         if (!oldData) return oldData;
@@ -189,6 +193,7 @@ export default function ReadPage() {
       setChapterComments(prev => [newComment, ...prev]);
       setComments(prev => [newComment, ...prev]);
       setCommentText('');
+      trackInteraction(firebaseUser.uid, 'comment_given').catch(console.error);
     } catch (error) {
       console.error("Yorum eklenirken hata:", error);
     } finally {
@@ -225,6 +230,7 @@ export default function ReadPage() {
       }));
       
       setParagraphCommentText('');
+      trackInteraction(firebaseUser.uid, 'comment_given').catch(console.error);
     } catch (error) {
       console.error("Paragraf yorumu eklenirken hata:", error);
     } finally {

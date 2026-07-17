@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from "sonner";
 import { useRouter } from 'next/navigation';
-import { Bell, Heart, MessageCircle, UserPlus, CheckCircle2, Circle, Loader2, BookOpen, Feather, XCircle } from 'lucide-react';
+import { Bell, Heart, MessageCircle, UserPlus, CheckCircle2, Circle, Loader2, BookOpen, Feather, XCircle, Award } from 'lucide-react';
 import { Typography, Button } from '@readixon/ui';
 import { 
   useAuthStore, 
@@ -135,6 +135,8 @@ export default function NotificationsPage() {
         return <div className="w-10 h-10 rounded-full bg-red-950/20 text-red-700 flex items-center justify-center shrink-0"><XCircle size={20} /></div>;
       case 'system_message':
         return <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center shrink-0"><Bell size={20} /></div>;
+      case 'badge_earned':
+        return <div className="w-10 h-10 rounded-full bg-yellow-500/20 text-yellow-500 flex items-center justify-center shrink-0"><Award size={20} /></div>;
       default:
         return <div className="w-10 h-10 rounded-full bg-muted/20 text-muted flex items-center justify-center shrink-0"><Bell size={20} /></div>;
     }
@@ -170,6 +172,8 @@ export default function NotificationsPage() {
         return <>{actor} meydan okumanı reddetti.</>;
       case 'system_message':
         return <span>{notif.message || 'Sistemden yeni bir mesajınız var.'}</span>;
+      case 'badge_earned':
+        return <span>Tebrikler! <span className="font-semibold text-yellow-500">"{notif.entityTitle}"</span> rozetini kazandın.</span>;
       default:
         console.warn('Bilinmeyen bildirim tipi:', notif.type, notif);
         return <span>Yeni bir bildiriminiz var.</span>;

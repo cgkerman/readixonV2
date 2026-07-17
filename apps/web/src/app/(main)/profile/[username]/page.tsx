@@ -2,9 +2,9 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Loader2, Users, BookOpen, User as UserIcon, Edit2, Bookmark, BookmarkCheck, Check, X, Hash, MessageCircle, Feather, Eye, Heart, MessageSquare } from 'lucide-react';
+import { Loader2, Users, BookOpen, User as UserIcon, Edit2, Bookmark, BookmarkCheck, Check, X, Hash, MessageCircle, Feather, Eye, Heart, MessageSquare, Award, Lock } from 'lucide-react';
 import Cropper from 'react-easy-crop';
-import { Typography, Button, StoryCard, Input, ReadixCard, ReadixCommentModal, ReadixShareModal, ShareReadixData, EditReadixModal, ReportModal, ConfirmationDialog } from '@readixon/ui';
+import { Typography, Button, StoryCard, Input, ReadixCard, ReadixCommentModal, ReadixShareModal, ShareReadixData, EditReadixModal, ReportModal, ConfirmationDialog, BadgeCard } from '@readixon/ui';
 import { 
   useAuthStore, 
   getUserByUsername, 
@@ -30,7 +30,8 @@ import {
   updateReadix,
   deleteReadix,
   reportContent,
-  blockUser
+  blockUser,
+  BADGES
 } from '@readixon/core';
 import type { User, Story, Readix } from '@readixon/core';
 import { toast } from "sonner";
@@ -55,7 +56,7 @@ export default function ProfilePage() {
   const [savedStories, setSavedStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [activeProfileTab, setActiveProfileTab] = useState<'stories' | 'readixes'>('stories');
+  const [activeProfileTab, setActiveProfileTab] = useState<'stories' | 'readixes' | 'badges'>('stories');
   
   // Share Modal State
   const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -628,6 +629,14 @@ export default function ProfilePage() {
                   Readixleri
                   {activeProfileTab === 'readixes' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-t-full" />}
                 </button>
+                <button 
+                  onClick={() => setActiveProfileTab('badges')}
+                  className={`flex-1 pb-3 text-center font-semibold transition-colors relative flex items-center justify-center gap-2 ${activeProfileTab === 'badges' ? 'text-primary' : 'text-muted hover:text-white'}`}
+                >
+                  <Award size={20} />
+                  Başarımlar
+                  {activeProfileTab === 'badges' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-t-full" />}
+                </button>
               </div>
 
               {activeProfileTab === 'stories' ? (
@@ -659,7 +668,7 @@ export default function ProfilePage() {
                     ))}
                   </div>
                 )
-              ) : (
+              ) : activeProfileTab === 'readixes' ? (
                 <div className="flex flex-col gap-6">
                   {/* Readix Sub-Tabs */}
                   <div className="flex gap-4 border-b border-white/5 pb-2">
@@ -754,6 +763,20 @@ export default function ProfilePage() {
                       </div>
                     )
                   )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {Object.values(BADGES).map(badge => (
+                    <BadgeCard
+                      key={badge.id}
+                      title={badge.title}
+                      description={badge.description}
+                      icon={badge.icon}
+                      tier={badge.tier}
+                      isUnlocked={profileUser.achievements?.earnedBadges?.includes(badge.id) || false}
+                      conditionDescription={isOwnProfile ? badge.conditionDescription : undefined}
+                    />
+                  ))}
                 </div>
               )}
             </div>

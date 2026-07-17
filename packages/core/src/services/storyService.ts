@@ -364,6 +364,9 @@ export const syncReadingProgress = async (
     
     if (isChapterCompleted && !completedChapters.includes(currentChapterId)) {
       completedChapters.push(currentChapterId);
+      import('./achievementService').then(module => {
+        module.trackRead(userId).catch(err => console.error("trackRead error:", err));
+      });
     }
     
     const progressData: ReadingProgress = {

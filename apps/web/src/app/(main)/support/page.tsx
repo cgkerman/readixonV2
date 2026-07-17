@@ -73,12 +73,7 @@ export default function SupportPage() {
     }
   };
 
-  const footerLinks = [
-    { title: 'Kullanım Koşulları', href: '/terms', icon: FileText },
-    { title: 'Gizlilik Politikası', href: '/privacy', icon: Shield },
-    { title: 'Topluluk Kuralları', href: '/guidelines', icon: Book },
-    { title: 'Telif Hakkı', href: '/copyright', icon: AlertCircle },
-  ];
+
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-y-auto">
@@ -153,19 +148,7 @@ export default function SupportPage() {
           )}
         </div>
 
-        {/* Policies / Links Footer */}
-        <div className="mt-auto pt-16 pb-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            {footerLinks.map((link) => (
-              <Link key={link.href} href={link.href} className="group flex flex-col items-center justify-center gap-3 p-6 rounded-3xl bg-card/50 hover:bg-card border border-transparent hover:border-border/50 transition-all text-center">
-                <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <link.icon size={24} />
-                </div>
-                <Typography variant="body" className="font-medium group-hover:text-primary transition-colors">{link.title}</Typography>
-              </Link>
-            ))}
-          </div>
-        </div>
+
       </div>
     </div>
   );

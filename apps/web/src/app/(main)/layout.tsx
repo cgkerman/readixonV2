@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { BookOpen, Compass, Search, User, LogOut, PenTool, Hash, Settings, Bell, MessageCircle, Menu, X, LifeBuoy, Feather, ShieldAlert, Crown } from 'lucide-react';
+import { BookOpen, Compass, Search, User, LogOut, PenTool, Hash, Settings, Bell, MessageCircle, Menu, X, LifeBuoy, Feather, ShieldAlert, Crown, Info } from 'lucide-react';
 import { Typography, Button } from '@readixon/ui';
 import { useAuthStore, signOut, becomeAuthor, sendVerificationEmail, subscribeToChats } from '@readixon/core';
 import { toast } from "sonner";
@@ -177,7 +177,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     { name: 'Kütüphane', href: '/library', icon: BookOpen },
     { name: 'Mesajlar', href: '/messages', icon: MessageCircle, badge: unreadMessageCount },
     { name: 'Bildirimler', href: '/notifications', icon: Bell, badge: unreadNotificationCount },
-    { name: 'Destek', href: '/support', icon: LifeBuoy },
+    { name: 'Hakkımızda', href: '/about', icon: Info },
     { name: 'Ayarlar', href: '/settings', icon: Settings },
   ];
 
@@ -450,7 +450,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 </div>
               </Link>
               
-              {bottomNavItems.filter(item => ['/library', '/support', '/settings'].includes(item.href)).map((item) => (
+              {bottomNavItems.filter(item => ['/library', '/about', '/settings'].includes(item.href)).map((item) => (
                 <Link 
                   key={item.href} 
                   href={item.href}

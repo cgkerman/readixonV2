@@ -17,7 +17,8 @@ import {
   toggleStoryLike,
   incrementStoryView,
   useAuthStore,
-  getCharacters
+  getCharacters,
+  trackInteraction
 } from '@readixon/core';
 import type { Story, User, Chapter, Review, Character } from '@readixon/core';
 import { 
@@ -150,6 +151,9 @@ export default function StoryDetailPage() {
     try {
       const nowSaved = await toggleSaveStory(firebaseUser.uid, storyId);
       setIsSaved(nowSaved);
+      if (nowSaved) {
+        trackInteraction(firebaseUser.uid, 'story_library_added').catch(console.error);
+      }
     } catch (err) {
       console.error("Kaydetme işlemi başarısız:", err);
     } finally {
@@ -178,6 +182,7 @@ export default function StoryDetailPage() {
       }, ...prev]);
       setReviewText('');
       setReviewRating(10);
+      trackInteraction(firebaseUser.uid, 'comment_given').catch(console.error);
       
       // Hikaye puanını geçici olarak güncelle
       if (story) {

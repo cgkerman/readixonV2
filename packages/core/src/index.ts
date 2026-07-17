@@ -59,6 +59,7 @@ export type {
   CharacterRole,
   CharacterRPGStats,
   SavedQuote,
+  UserAchievements,
 } from './types';
 
 // Auth servisi
@@ -137,3 +138,5 @@ export { useUserProfile } from './hooks/useUserProfile';
 // export * from './store/storyStore';       // Zustand story cache
 // export * from './services/commentService'; // Yorum servisi
 export * from './services/characterService';
+export * from './constants/badges';
+export * from './services/achievementService';

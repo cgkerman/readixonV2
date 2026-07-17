@@ -50,3 +50,4 @@ export type { ReadingSettingsPanelProps, ThemeType } from './ReadingSettingsPane
 export { BlockEditor } from './BlockEditor';
 export type { BlockEditorProps } from './BlockEditor';
 export * from './PaywallModal';
+export * from './BadgeCard';

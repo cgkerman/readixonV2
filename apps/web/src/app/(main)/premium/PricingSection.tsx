@@ -146,6 +146,7 @@ export default function PricingSection() {
 
           <ul className="space-y-4 mb-8 flex-1">
             <PricingFeature text="Tüm Premium özellikler" />
+            <PricingFeature text="Aylık 500 RX Puanı hediyesi" highlightBlue />
             <PricingFeature text="Sınırsız hikaye paylaşımı" highlightBlue />
             <PricingFeature text="Okuma kulüpleri oluşturma" highlightBlue />
             <PricingFeature text="Ücretli hikaye oluşturma" highlightBlue />

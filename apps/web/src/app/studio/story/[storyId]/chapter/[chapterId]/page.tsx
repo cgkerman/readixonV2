@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Typography, Button, BlockEditor, Input, ContentRenderer } from '@readixon/ui';
 import { ArrowLeft, Save, PlusCircle, CheckCircle, FileText, Globe, Calendar, GripVertical, Trash2, Sparkles, Wand2, Eye, EyeOff, Info, X } from 'lucide-react';
-import { fetchChapter, updateChapter, compressImage, fetchChapters, createChapter, deleteChapter, createNotification, getUserFollowerIds, getStoryById, useAuthStore, type Chapter } from '@readixon/core';
+import { fetchChapter, updateChapter, compressImage, fetchChapters, createChapter, deleteChapter, createNotification, getUserFollowerIds, getStoryById, useAuthStore, trackWordCount, trackInteraction, type Chapter } from '@readixon/core';
 import { ReadixonAIAssistant } from '@/components/ReadixonAIAssistant';
 import { uploadFile } from '@readixon/core/src/services/storageService';
 import { toast } from "sonner";
@@ -30,6 +30,7 @@ export default function ChapterEditorPage() {
   
   const isInitialLoad = useRef(true);
   const publishedRef = useRef(false);
+  const initialWordCountRef = useRef<number | null>(null);
 
   useEffect(() => {
     loadData();
@@ -138,6 +139,21 @@ export default function ChapterEditorPage() {
       
       // Update local chapters list to reflect title changes instantly
       setAllChapters(prev => prev.map(c => c.chapterId === chapterId ? { ...c, title: chapter.title, status: chapter.status } : c));
+
+      if (userProfile) {
+        if (shouldNotify) {
+          trackInteraction(userProfile.uid, 'chapter_published').catch(e => console.error("Badge error:", e));
+        }
+        
+        if (manual) {
+          const currentWords = getWordCount();
+          if (initialWordCountRef.current !== null && currentWords > initialWordCountRef.current) {
+            const addedWords = currentWords - initialWordCountRef.current;
+            trackWordCount(userProfile.uid, addedWords).catch(e => console.error("Word tracking error:", e));
+            initialWordCountRef.current = currentWords; // Reset to new baseline
+          }
+        }
+      }
     } catch (error) {
       if (manual) toast.error('Kaydetme başarısız oldu.');
       else setAutoSaveStatus('idle');
@@ -151,6 +167,9 @@ export default function ChapterEditorPage() {
     if (isInitialLoad.current) {
       if (!loading && chapter) {
         isInitialLoad.current = false;
+        if (initialWordCountRef.current === null) {
+          initialWordCountRef.current = getWordCount();
+        }
       }
       return;
     }

@@ -19,6 +19,29 @@ export interface UserStats {
   arenaScore?: number;
 }
 
+export interface UserAchievements {
+  // --- Yazar İstatistikleri ---
+  totalWordsWritten: number; // Editörde yazılan toplam kelime
+  consecutiveWriteDays: number; // Peş peşe yazılan gün sayısı
+  lastWriteDate?: string; // Son yazılan tarih (YYYY-MM-DD)
+  
+  wordImports: number; // Dışarıdan dosya (docx/txt vs.) aktarma sayısı
+  publishedChapters: number; // Yayına alınan bölüm sayısı
+  completedStories: number; // Tamamlandı işaretlenen hikaye sayısı
+  commentsReplied: number; // Okuyucu yorumlarına verilen cevap sayısı
+
+  // --- Okur İstatistikleri ---
+  chaptersRead: number; // Okunan toplam bölüm sayısı
+  consecutiveReadDays: number; // Peş peşe okunan gün sayısı
+  lastReadDate?: string; // Son okunan tarih (YYYY-MM-DD)
+  
+  storiesInLibrary: number; // Kütüphaneye eklenen hikaye sayısı
+  commentsGiven: number; // Yapılan toplam yorum sayısı
+  likesGiven: number; // Verilen toplam beğeni/oy sayısı
+  
+  earnedBadges: string[]; // Kazanılan rozetlerin ID'leri
+}
+
 export interface User {
   uid: string;
   username: string;
@@ -39,9 +62,10 @@ export interface User {
     requestCount: number;
   };
   blockedUsers?: string[];
-  readixPoints?: number; // Edebi Arena puanlarÄ±
+  readixPoints?: number; // Edebi Arena puanları
   hasUsedFreeWizard?: boolean; // Freemium wizard hakkını kullandı mı?
   freeCharacterBookStoryId?: string; // Hangi hikaye için karakter defterini ücretsiz açtığı
+  achievements?: UserAchievements; // Kullanıcı başarımları ve rozetleri
 }
 
 /** Yeni kullanÄ±cÄ± oluÅŸturulurken kullanÄ±lan kÄ±smi tip */
@@ -225,7 +249,8 @@ export type NotificationType =
   | 'duel_challenge'
   | 'duel_accepted'
   | 'duel_rejected'
-  | 'system_message';
+  | 'system_message'
+  | 'badge_earned';
 
 export interface AppNotification {
   id: string;

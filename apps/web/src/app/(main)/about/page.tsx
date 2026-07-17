@@ -1,6 +1,6 @@
 import React from 'react';
 import { Metadata } from 'next';
-import { Sparkles, MessageCircle, Quote, TrendingUp, Users, Swords, Zap, Heart, Shield, BookOpen, LayoutDashboard, Wand2 } from 'lucide-react';
+import { Sparkles, MessageCircle, Quote, TrendingUp, Users, Swords, Zap, Heart, Shield, BookOpen, LayoutDashboard, Wand2, Award, FileText, AlertCircle, Book, LifeBuoy } from 'lucide-react';
 import Link from 'next/link';
 import { Typography, Button } from '@readixon/ui';
 
@@ -21,6 +21,13 @@ export const metadata: Metadata = {
 };
 
 export default function AboutPage() {
+  const footerLinks = [
+    { title: 'Kullanım Koşulları', href: '/terms', icon: FileText },
+    { title: 'Gizlilik Politikası', href: '/privacy', icon: Shield },
+    { title: 'Topluluk Kuralları', href: '/guidelines', icon: Book },
+    { title: 'Telif Hakkı', href: '/copyright', icon: AlertCircle },
+  ];
+
   return (
     <div className="flex flex-col w-full min-h-screen bg-background overflow-x-hidden pb-20">
       
@@ -169,6 +176,18 @@ export default function AboutPage() {
               </Typography>
             </div>
           </div>
+          {/* Başarımlar ve Rozetler - Geniş Kart */}
+          <div className="mt-6 w-full bg-gradient-to-br from-yellow-500/10 via-yellow-500/5 to-transparent border border-yellow-500/20 rounded-3xl p-8 md:p-12 flex flex-col md:flex-row items-center gap-8 hover:border-yellow-500/40 transition-colors group">
+            <div className="w-20 h-20 shrink-0 rounded-2xl bg-yellow-500/20 text-yellow-500 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-yellow-500/20">
+              <Award size={40} />
+            </div>
+            <div>
+              <Typography variant="h3" className="text-2xl md:text-3xl font-black text-text mb-3">Başarımlar ve Rozetler</Typography>
+              <Typography variant="body" className="text-muted text-lg leading-relaxed">
+                Okudukça ve yazdıkça gelişmeye hazır mısın? Readixon'daki her etkileşimin bir değeri var! Binlerce kelime yazarak <strong className="text-yellow-500 font-bold">Klavye Aşındıran</strong> rozetini kapabilir veya her gün okuyarak sadık bir okur olduğunu kanıtlayabilirsin. Kazandığın yeni rozetler, özel animasyonlarıyla anında bildirim olarak gelir ve profilindeki rozet koleksiyonunda sergilenir. Edebi yolculuğunu eğlenceli bir oyuna dönüştür!
+              </Typography>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -185,6 +204,34 @@ export default function AboutPage() {
           <Link href="/readix" className="px-8 py-4 bg-card border border-border text-text font-bold rounded-full transition-colors hover:bg-muted">
             Readix Akışına Git
           </Link>
+        </div>
+      </section>
+
+      {/* 5.5. SUPPORT BLOCK */}
+      <section className="relative w-full py-16 px-6 flex flex-col items-center justify-center z-10 text-center border-t border-border/50 bg-blue-500/5">
+        <div className="w-16 h-16 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center mb-6">
+          <LifeBuoy size={32} />
+        </div>
+        <Typography variant="h3" className="text-2xl md:text-3xl font-black text-text mb-4">Yardıma mı İhtiyacın Var?</Typography>
+        <Typography variant="body" className="text-muted text-lg max-w-xl mb-8">
+          Aklına takılan bir soru mu var veya bir sorunla mı karşılaştın? Readixon destek ekibi her zaman yanında.
+        </Typography>
+        <Link href="/support" className="px-6 py-3 bg-blue-500/10 text-blue-500 font-bold rounded-full transition-colors hover:bg-blue-500/20 flex items-center gap-2">
+          Destek Sayfasına Git
+        </Link>
+      </section>
+
+      {/* 6. POLICIES & LINKS */}
+      <section className="relative w-full py-16 px-6 max-w-5xl mx-auto z-10 border-t border-border/50">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          {footerLinks.map((link) => (
+            <Link key={link.href} href={link.href} className="group flex flex-col items-center justify-center gap-3 p-6 rounded-3xl bg-card/50 hover:bg-card border border-transparent hover:border-border/50 transition-all text-center">
+              <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
+                <link.icon size={24} />
+              </div>
+              <Typography variant="body" className="font-medium group-hover:text-primary transition-colors">{link.title}</Typography>
+            </Link>
+          ))}
         </div>
       </section>
       
