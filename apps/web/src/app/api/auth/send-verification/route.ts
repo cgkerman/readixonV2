@@ -168,7 +168,14 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Doğrulama e-postası gönderme hatası:', error);
     return NextResponse.json(
-      { error: 'E-posta gönderilirken bir hata oluştu.' },
+      { 
+        error: 'E-posta gönderilirken bir hata oluştu.',
+        details: error instanceof Error ? error.message : String(error),
+        debug: {
+          hasEmail: !!process.env.SMTP_EMAIL,
+          hasPassword: !!process.env.SMTP_PASSWORD
+        }
+      },
       { status: 500 }
     );
   }

@@ -63,6 +63,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           if (contentType && contentType.includes('application/json')) {
             const errorData = await res.json();
             errorMsg = errorData.error || errorMsg;
+            if (errorData.details) {
+              console.error('Sunucu Detaylı Hatası:', errorData.details, 'Debug:', errorData.debug);
+              errorMsg += ' (Detaylar konsolda)';
+            }
           } else {
             const textData = await res.text();
             console.error('Sunucu HTML/Metin döndürdü:', textData.substring(0, 200));
