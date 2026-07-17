@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import nodemailer from 'nodemailer';
 
 export async function POST(request: Request) {
   try {
@@ -12,6 +11,9 @@ export async function POST(request: Request) {
       );
     }
 
+    // Dynamically import to prevent top-level Next.js/Vercel crashes
+    const nodemailer = (await import('nodemailer')).default;
+
     // Nodemailer SMTP taşıyıcısını oluştur
     const transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
@@ -23,7 +25,10 @@ export async function POST(request: Request) {
       },
       tls: {
         rejectUnauthorized: false
-      }
+      },
+      connectionTimeout: 5000,
+      greetingTimeout: 5000,
+      socketTimeout: 5000,
     });
 
     // E-postayı gönder

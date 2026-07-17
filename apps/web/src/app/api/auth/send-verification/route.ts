@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server';
-import nodemailer from 'nodemailer';
-import { adminAuth } from '@/lib/firebaseAdmin';
 
 export async function POST(request: Request) {
   try {
@@ -12,6 +10,10 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    // Dynamically import to prevent top-level Next.js/Vercel crashes
+    const { adminAuth } = await import('@/lib/firebaseAdmin');
+    const nodemailer = (await import('nodemailer')).default;
 
     // Generate Verification Link using Firebase Admin
     let verificationLink: string;
@@ -41,7 +43,7 @@ export async function POST(request: Request) {
     // Create the custom verification link
     const customLink = `${appUrl}/verify-email?oobCode=${oobCode}`;
 
-    // Setup Nodemailer Transporter
+    // Setup Nodemailer Transporter with explicit timeouts to prevent Vercel 10s limit crash
     const transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
       port: 465, // SSL
@@ -52,7 +54,10 @@ export async function POST(request: Request) {
       },
       tls: {
         rejectUnauthorized: false
-      }
+      },
+      connectionTimeout: 5000,
+      greetingTimeout: 5000,
+      socketTimeout: 5000,
     });
 
     // Email Template
