@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Typography, Button, Input, PaywallModal } from '@readixon/ui';
-import { PlusCircle, FileText, Image as ImageIcon, X, BookOpen, Sparkles, Wand2, Users, Compass, ChevronRight } from 'lucide-react';
+import { PlusCircle, FileText, Image as ImageIcon, X, BookOpen, Sparkles, Wand2, Users, Compass, ChevronRight, Info } from 'lucide-react';
 import { subscribeToAuthorStories, createStory, useAuthStore, POPULAR_TAGS, type Story } from '@readixon/core';
 import { toast } from "sonner";
 
@@ -169,6 +169,17 @@ export default function StudioDashboard() {
             </div>
             
             <div className="p-6 overflow-y-auto">
+              {/* Bilgilendirme Alanı */}
+              <div className="mb-6 p-4 rounded-xl bg-primary/10 border border-primary/20 flex gap-3 text-primary">
+                <Info size={24} className="shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <strong className="block mb-1 text-base">Hangi seçeneği seçmeliyim?</strong>
+                  <ul className="list-disc ml-4 space-y-2 opacity-90 mt-2">
+                    <li><strong className="font-semibold">Düz Metin İle Başla:</strong> Klasik yöntem. Karakterlerinizi ve evreninizi sıfırdan, kendi hayal gücünüzle özgürce yazarak inşa edersiniz.</li>
+                    <li><strong className="font-semibold">Sihirbazla Başla:</strong> Yapay zeka asistanı size yönlendirici sorular sorar. RPG yeteneklerini ve kurguyu dakikalar içinde birlikte tasarlarsınız. (Önerilen)</li>
+                  </ul>
+                </div>
+              </div>
               <Input
                 label="Hikaye Adı"
                 placeholder="Örn: Yüzüklerin Efendisi"
