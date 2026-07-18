@@ -444,12 +444,12 @@ export default function StoryDetailPage() {
       </div>
 
       {/* ── Sekme (Tab) Menüsü ── */}
-      <div className="max-w-6xl mx-auto w-full px-6 mt-8 mb-8">
+      <div className="relative z-20 max-w-6xl mx-auto w-full px-6 mt-8 mb-8">
         <div className="flex items-center gap-8 border-b border-text/10 overflow-x-auto custom-scrollbar pb-px">
           <button
             onClick={() => setActiveTab('about')}
             className={`flex items-center gap-2 py-4 text-lg font-medium border-b-2 transition-all whitespace-nowrap ${
-              activeTab === 'about' ? 'border-primary text-primary' : 'border-transparent text-black hover:text-primary'
+              activeTab === 'about' ? 'border-primary text-primary' : 'border-transparent text-text/70 hover:text-primary'
             }`}
           >
             <BookOpen size={20} /> Hakkında
@@ -457,7 +457,7 @@ export default function StoryDetailPage() {
           <button
             onClick={() => setActiveTab('chapters')}
             className={`flex items-center gap-2 py-4 text-lg font-medium border-b-2 transition-all whitespace-nowrap ${
-              activeTab === 'chapters' ? 'border-primary text-primary' : 'border-transparent text-black hover:text-primary'
+              activeTab === 'chapters' ? 'border-primary text-primary' : 'border-transparent text-text/70 hover:text-primary'
             }`}
           >
             <List size={20} /> Bölümler <span className="bg-black/10 text-xs px-2 py-0.5 rounded-full">{chapters.length}</span>
@@ -465,7 +465,7 @@ export default function StoryDetailPage() {
           <button
             onClick={() => setActiveTab('reviews')}
             className={`flex items-center gap-2 py-4 text-lg font-medium border-b-2 transition-all whitespace-nowrap ${
-              activeTab === 'reviews' ? 'border-primary text-primary' : 'border-transparent text-black hover:text-primary'
+              activeTab === 'reviews' ? 'border-primary text-primary' : 'border-transparent text-text/70 hover:text-primary'
             }`}
           >
             <MessageSquare size={20} /> İncelemeler <span className="bg-black/10 text-xs px-2 py-0.5 rounded-full">{reviews.length}</span>
@@ -473,7 +473,7 @@ export default function StoryDetailPage() {
           <button
             onClick={() => setActiveTab('characters')}
             className={`flex items-center gap-2 py-4 text-lg font-medium border-b-2 transition-all whitespace-nowrap ${
-              activeTab === 'characters' ? 'border-primary text-primary' : 'border-transparent text-black hover:text-primary'
+              activeTab === 'characters' ? 'border-primary text-primary' : 'border-transparent text-text/70 hover:text-primary'
             }`}
           >
             <Users size={20} /> Karakterler <span className="bg-black/10 text-xs px-2 py-0.5 rounded-full">{characters.length}</span>
