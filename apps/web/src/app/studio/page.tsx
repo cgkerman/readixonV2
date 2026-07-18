@@ -176,7 +176,7 @@ export default function StudioDashboard() {
                   <strong className="block mb-1 text-base">Hangi seçeneği seçmeliyim?</strong>
                   <ul className="list-disc ml-4 space-y-2 opacity-90 mt-2">
                     <li><strong className="font-semibold">Düz Metin İle Başla:</strong> Klasik yöntem. Karakterlerinizi ve evreninizi sıfırdan, kendi hayal gücünüzle özgürce yazarak inşa edersiniz.</li>
-                    <li><strong className="font-semibold">Sihirbazla Başla:</strong> Yapay zeka asistanı size yönlendirici sorular sorar. RPG yeteneklerini ve kurguyu dakikalar içinde birlikte tasarlarsınız. (Önerilen)</li>
+                    <li><strong className="font-semibold">Sihirbazla Başla:</strong> Yapay zeka asistanı size yönlendirici sorular sorar. RPG yeteneklerini ve kurguyu dakikalar içinde birlikte tasarlarsınız. <span className="font-medium text-orange-500">(Premium - Önerilen)</span></li>
                   </ul>
                 </div>
               </div>
