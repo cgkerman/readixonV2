@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Typography, Button, BlockEditor, Input, ContentRenderer } from '@readixon/ui';
 import { ArrowLeft, Save, PlusCircle, CheckCircle, FileText, Globe, Calendar, GripVertical, Trash2, Sparkles, Wand2, Eye, EyeOff, Info, X } from 'lucide-react';
-import { fetchChapter, updateChapter, compressImage, fetchChapters, createChapter, deleteChapter, createNotification, getUserFollowerIds, getStoryById, useAuthStore, trackWordCount, trackInteraction, type Chapter } from '@readixon/core';
+import { fetchChapter, updateChapter, compressImage, fetchChapters, createChapter, deleteChapter, createNotification, getUserFollowerIds, getStoryById, updateStory, useAuthStore, trackWordCount, trackInteraction, type Chapter } from '@readixon/core';
 import { ReadixonAIAssistant } from '@/components/ReadixonAIAssistant';
 import { uploadFile } from '@readixon/core/src/services/storageService';
 import { toast } from "sonner";
@@ -110,6 +110,10 @@ export default function ChapterEditorPage() {
       if (shouldNotify && userProfile) {
         const storyData = await getStoryById(storyId);
         if (storyData) {
+          if (storyData.status === 'draft') {
+            await updateStory(storyId, { status: 'ongoing' });
+            toast.success("Hikaye taslaktan çıkartılıp 'Devam Ediyor' olarak işaretlendi.");
+          }
           const followerIds = await getUserFollowerIds(userProfile.uid);
           const notificationsPromises = followerIds.map(fId => 
             createNotification({
