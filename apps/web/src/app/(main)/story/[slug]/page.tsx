@@ -176,9 +176,12 @@ export default function StoryDetailPage() {
         reviewId: Date.now().toString(),
         storyId,
         userId: firebaseUser.uid,
+        authorName: userProfile?.displayName,
+        authorUsername: userProfile?.username,
+        authorAvatarUrl: userProfile?.avatarUrl,
         rating: reviewRating,
         text: reviewText,
-        createdAt: new Date() as any,
+        createdAt: new Date().toISOString() as any
       }, ...prev]);
       setReviewText('');
       setReviewRating(10);
