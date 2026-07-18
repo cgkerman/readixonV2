@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Typography, Button, Input } from '@readixon/ui';
-import { ArrowLeft, PlusCircle, Save, GripVertical, CheckCircle, Wand2 } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Save, GripVertical, CheckCircle, Wand2, Info } from 'lucide-react';
 import { 
   getStoryById, 
   updateStory, 
@@ -222,6 +222,22 @@ export default function StoryDetailAdminPage() {
           <Button variant="primary" onPress={handleSave} disabled={saving || autoSaveStatus === 'saving'}>
             <Save size={18} className="mr-2" /> Kaydet
           </Button>
+        </div>
+      </div>
+
+      {/* Bilgilendirme Alanı */}
+      <div className="mb-8 p-4 md:p-5 rounded-2xl bg-primary/10 border border-primary/20 flex flex-col md:flex-row gap-4 text-primary">
+        <div className="shrink-0 pt-1">
+          <Info size={28} />
+        </div>
+        <div className="text-sm">
+          <strong className="block mb-2 text-base font-bold">Stüdyo Yönetim Paneline Hoş Geldiniz!</strong>
+          <p className="mb-2 opacity-90">Bu sayfa hikayenizin kalbidir. Peki burada neler yapabilirsiniz?</p>
+          <ul className="list-disc ml-4 space-y-2 opacity-90">
+            <li><strong className="font-semibold">Sol Kolon (Kapak ve Detaylar):</strong> Hikayenizin vitrinidir. Okurların göreceği kapak görselini, özeti ve hikayenin durumunu buradan ayarlarsınız. Yaptığınız değişiklikleri sağ üstteki "Kaydet" butonu ile kaydetmeyi unutmayın.</li>
+            <li><strong className="font-semibold">Sağ Kolon (Bölümler ve Planlama):</strong> Hikayenizin gidişatını buradan yönetirsiniz. "Yeni Bölüm Ekle" diyerek hemen yazmaya başlayabilir veya "Sihirbaz Planlamasına Git" butonuna tıklayarak (yapay zeka kullandıysanız) hikaye şemanızı, karakterlerinizi ve kurgunuzu detaylandırabilirsiniz.</li>
+            <li><strong className="font-semibold">Tehlikeli Bölge:</strong> Sayfanın en altındaki alandan hikayenizi tamamen silebilirsiniz. Ancak dikkatli olun, bu işlemin geri dönüşü yoktur!</li>
+          </ul>
         </div>
       </div>
 
