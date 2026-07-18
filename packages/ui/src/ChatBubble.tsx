@@ -18,7 +18,7 @@ export function ChatBubble({ text, isOwnMessage, timeText }: ChatBubbleProps) {
             : 'bg-card border border-border text-text rounded-tl-sm'
         }`}
       >
-        <Typography variant="body" className="text-sm break-words whitespace-pre-wrap">
+        <Typography variant="body" className={`text-sm break-words whitespace-pre-wrap ${isOwnMessage ? 'text-white' : 'text-text'}`}>
           {text}
         </Typography>
         <div 
