@@ -4,20 +4,20 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Typography, Button, Input } from '@readixon/ui';
 import { ArrowLeft, PlusCircle, Save, GripVertical, CheckCircle, Wand2, Info } from 'lucide-react';
-import { 
-  getStoryById, 
-  updateStory, 
-  createChapter, 
+import {
+  getStoryById,
+  updateStory,
+  createChapter,
   fetchChapters,
   updateChapter,
   createNotification,
   getUserFollowerIds,
   useAuthStore,
   compressImage,
-  type Story, 
-  type Chapter, 
-  type StoryStatus, 
-  type Contributor 
+  type Story,
+  type Chapter,
+  type StoryStatus,
+  type Contributor
 } from '@readixon/core';
 import { uploadFile } from '@readixon/core/src/services/storageService';
 import { toast } from "sonner";
@@ -54,9 +54,9 @@ export default function StoryDetailAdminPage() {
     try {
       const realStory = await getStoryById(storyId);
       let chaps = await fetchChapters(storyId);
-      
+
       setChapters(chaps);
-      
+
       if (realStory) {
         setStory(realStory);
         setTitle(realStory.title || '');
@@ -65,7 +65,7 @@ export default function StoryDetailAdminPage() {
         setStatus(realStory.status || 'draft');
         setForeword(realStory.foreword || '');
         setBackCover(realStory.backCover || '');
-        
+
         // Geriye dönük uyumluluk: eski string dizisi (veya string) ise nesneye çevir
         const rawContributors = realStory.contributors || [];
         if (rawContributors.length > 0 && typeof rawContributors[0] === 'string') {
@@ -89,10 +89,10 @@ export default function StoryDetailAdminPage() {
     try {
       // Boş isimli katkıda bulunanları filtrele
       const validContributors = contributors.filter(c => c.name.trim().length > 0);
-      await updateStory(storyId, { 
-        title, 
-        summary, 
-        coverImage, 
+      await updateStory(storyId, {
+        title,
+        summary,
+        coverImage,
         status,
         foreword,
         backCover,
@@ -110,10 +110,10 @@ export default function StoryDetailAdminPage() {
     setAutoSaveStatus('saving');
     try {
       const validContributors = contributors.filter(c => c.name.trim().length > 0);
-      await updateStory(storyId, { 
-        title, 
-        summary, 
-        coverImage, 
+      await updateStory(storyId, {
+        title,
+        summary,
+        coverImage,
         status,
         foreword,
         backCover,
@@ -181,7 +181,7 @@ export default function StoryDetailAdminPage() {
         const originalFile = e.target.files[0];
         // Sıkıştırma: Max 800x1200, %80 kalite
         const compressedFile = await compressImage(originalFile);
-        
+
         const url = await uploadFile(compressedFile, `covers/${storyId}-${Date.now()}`);
         setCoverImage(url);
       } catch (err) {
@@ -234,9 +234,9 @@ export default function StoryDetailAdminPage() {
           <strong className="block mb-2 text-base font-bold">Stüdyo Yönetim Paneline Hoş Geldiniz!</strong>
           <p className="mb-2 opacity-90">Bu sayfa hikayenizin kalbidir. Peki burada neler yapabilirsiniz?</p>
           <ul className="list-disc ml-4 space-y-2 opacity-90">
-            <li><strong className="font-semibold">Sol Kolon (Kapak ve Detaylar):</strong> Hikayenizin vitrinidir. Okurların göreceği kapak görselini, özeti ve hikayenin durumunu buradan ayarlarsınız. Yaptığınız değişiklikleri sağ üstteki "Kaydet" butonu ile kaydetmeyi unutmayın.</li>
-            <li><strong className="font-semibold">Sağ Kolon (Bölümler ve Planlama):</strong> Hikayenizin gidişatını buradan yönetirsiniz. "Yeni Bölüm Ekle" diyerek hemen yazmaya başlayabilir veya "Sihirbaz Planlamasına Git" butonuna tıklayarak (yapay zeka kullandıysanız) hikaye şemanızı, karakterlerinizi ve kurgunuzu detaylandırabilirsiniz.</li>
-            <li><strong className="font-semibold">Tehlikeli Bölge:</strong> Sayfanın en altındaki alandan hikayenizi tamamen silebilirsiniz. Ancak dikkatli olun, bu işlemin geri dönüşü yoktur!</li>
+            <li><strong className="font-semibold">Kapak ve Detaylar:</strong> Hikayenizin vitrinidir. Okurların göreceği kapak görselini, özeti, önsözü, arka kapak sözünü, varsa ekibinizi ve hikayenin durumunu buradan ayarlarsınız. Yaptığınız değişiklikleri sağ üstteki "Kaydet" butonu ile kaydetmeyi unutmayın. (Otomatik kaydetme özelliği aktif.)</li>
+            <li><strong className="font-semibold">Bölümler ve Planlama:</strong> Hikayenizin gidişatını buradan yönetirsiniz. "Yeni Bölüm Ekle" veya eklediğiniz bölümün üzerine tıklayarak gelişmiş içerik editörüne geçebilir ve hemen yazmaya başlayabilirsiniz. Ayrıca "Sihirbaz Planlamasına Git" butonuna tıklayarak (yapay zeka kullandıysanız) hikaye şemanızı, karakterlerinizi ve kurgunuzu detaylandırabilirsiniz.</li>
+            <li><strong className="font-semibold">Tehlikeli Bölge:</strong> Sayfanın sol kolonunda, en altında hikayenizi tamamen silebilirsiniz. Ancak dikkatli olun, bu işlemin geri dönüşü yoktur!</li>
           </ul>
         </div>
       </div>
@@ -252,16 +252,16 @@ export default function StoryDetailAdminPage() {
               ) : (
                 <Typography variant="caption" className="text-muted">Görsel Seç</Typography>
               )}
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={handleImageUpload} 
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
                 className="absolute inset-0 opacity-0 cursor-pointer"
                 title="Görsel Yükle"
               />
             </div>
             {coverImage && (
-              <Input 
+              <Input
                 value={coverImage}
                 onChangeText={setCoverImage}
                 placeholder="Görsel URL (Manuel değiştirebilirsiniz)"
@@ -270,7 +270,7 @@ export default function StoryDetailAdminPage() {
           </div>
 
           {/* Kurgu Sihirbazı Kısayolu */}
-          <div 
+          <div
             onClick={() => router.push(`/studio/story/${storyId}/planner`)}
             className="bg-primary/5 p-6 rounded-2xl border border-primary/20 cursor-pointer hover:bg-primary/10 transition-colors group flex flex-col gap-2"
           >
@@ -298,26 +298,26 @@ export default function StoryDetailAdminPage() {
         <div className="md:col-span-2 flex flex-col gap-8">
           <div className="bg-card p-6 rounded-2xl border border-border/20 flex flex-col gap-4">
             <Typography variant="h3" className="mb-2">Hikaye Bilgileri</Typography>
-            <Input 
-              value={title} 
-              onChangeText={setTitle} 
-              placeholder="Hikaye Başlığı" 
+            <Input
+              value={title}
+              onChangeText={setTitle}
+              placeholder="Hikaye Başlığı"
             />
-            <textarea 
+            <textarea
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
               placeholder="Hikaye Özeti (Kitabın genel tanıtımı)"
               className="w-full bg-background border border-border/50 rounded-xl p-4 text-text focus:outline-none focus:border-primary resize-y min-h-[120px]"
             />
-            
+
             <Typography variant="h3" className="mt-4 mb-2 text-lg">Yayın & Kitap Detayları</Typography>
-            <textarea 
+            <textarea
               value={foreword}
               onChange={(e) => setForeword(e.target.value)}
               placeholder="Önsöz (İsteğe bağlı)"
               className="w-full bg-background border border-border/50 rounded-xl p-4 text-text focus:outline-none focus:border-primary resize-y min-h-[80px]"
             />
-            <textarea 
+            <textarea
               value={backCover}
               onChange={(e) => setBackCover(e.target.value)}
               placeholder="Arka Kapak Yazısı (İsteğe bağlı)"
@@ -326,21 +326,21 @@ export default function StoryDetailAdminPage() {
             <div className="flex flex-col gap-3 mt-2">
               <div className="flex items-center justify-between">
                 <Typography variant="caption" className="font-bold text-muted uppercase">Ekip & Katkıda Bulunanlar</Typography>
-                <button 
+                <button
                   onClick={() => setContributors([...contributors, { role: 'Editör', name: '' }])}
                   className="text-primary text-sm flex items-center gap-1 hover:underline"
                 >
                   <PlusCircle size={14} /> Kişi Ekle
                 </button>
               </div>
-              
+
               {contributors.length === 0 ? (
                 <Typography variant="body" className="text-muted/50 text-sm italic">Henüz kimse eklenmedi.</Typography>
               ) : (
                 <div className="space-y-3">
                   {contributors.map((contributor, idx) => (
                     <div key={idx} className="flex gap-3">
-                      <select 
+                      <select
                         value={contributor.role}
                         onChange={(e) => {
                           const newC = [...contributors];
@@ -356,7 +356,7 @@ export default function StoryDetailAdminPage() {
                         <option value="Son Okuma">Son Okuma</option>
                         <option value="Katkıda Bulunan">Diğer</option>
                       </select>
-                      <input 
+                      <input
                         type="text"
                         value={contributor.name}
                         onChange={(e) => {
@@ -367,7 +367,7 @@ export default function StoryDetailAdminPage() {
                         placeholder="İsim Soyisim"
                         className="flex-1 bg-background border border-border/50 rounded-lg px-3 py-2 text-text focus:outline-none focus:border-primary"
                       />
-                      <button 
+                      <button
                         onClick={() => {
                           setContributors(contributors.filter((_, i) => i !== idx));
                         }}
@@ -380,10 +380,10 @@ export default function StoryDetailAdminPage() {
                 </div>
               )}
             </div>
-            
+
             <div className="flex flex-col gap-2 mt-2">
               <Typography variant="caption" className="font-bold text-muted uppercase">Yayın Durumu</Typography>
-              <select 
+              <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as any)}
                 className="w-full bg-background border border-border/50 rounded-xl p-4 text-text focus:outline-none focus:border-primary appearance-none"
@@ -402,7 +402,7 @@ export default function StoryDetailAdminPage() {
                 <PlusCircle size={16} className="mr-2" /> Yeni Ekle
               </Button>
             </div>
-            
+
             <div className="flex flex-col gap-3">
               {chapters.length === 0 ? (
                 <div className="text-center py-8 text-muted border-2 border-dashed border-border/20 rounded-xl">
