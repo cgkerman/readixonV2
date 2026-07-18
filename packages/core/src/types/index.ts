@@ -66,6 +66,7 @@ export interface User {
   hasUsedFreeWizard?: boolean; // Freemium wizard hakkını kullandı mı?
   freeCharacterBookStoryId?: string; // Hangi hikaye için karakter defterini ücretsiz açtığı
   achievements?: UserAchievements; // Kullanıcı başarımları ve rozetleri
+  likedStoryIds?: string[]; // Kullanıcının beğendiği hikaye ID'leri
 }
 
 /** Yeni kullanÄ±cÄ± oluÅŸturulurken kullanÄ±lan kÄ±smi tip */
