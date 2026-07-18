@@ -119,6 +119,7 @@ export default function NotificationsPage() {
       case 'follow':
         return <div className="w-10 h-10 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center shrink-0"><UserPlus size={20} /></div>;
       case 'story_like':
+      case 'chapter_like':
       case 'readix_like':
         return <div className="w-10 h-10 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center shrink-0"><Heart size={20} /></div>;
       case 'story_comment':
@@ -151,6 +152,8 @@ export default function NotificationsPage() {
         return <>{actor} seni takip etmeye başladı.</>;
       case 'story_like':
         return <>{actor}, {entity} hikayeni beğendi.</>;
+      case 'chapter_like':
+        return <>{actor}, {entity} hikayenin {notif.subEntityTitle ? `"${notif.subEntityTitle}" bölümünü` : 'bir bölümünü'} beğendi.</>;
       case 'story_comment':
         return <>{actor}, {entity} hikayene yorum yaptı.</>;
       case 'paragraph_comment':

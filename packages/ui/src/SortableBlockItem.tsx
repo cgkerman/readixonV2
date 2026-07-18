@@ -234,6 +234,14 @@ export function SortableBlockItem({ id, block, onChange, onDelete, onUploadImage
             </div>
           </div>
         );
+      case 'end_of_story':
+        return (
+          <div className="flex justify-center py-6 w-full">
+            <div className="text-center font-bold text-primary uppercase tracking-widest text-sm">
+              • • • HİKAYE SONU • • •
+            </div>
+          </div>
+        );
       default:
         return null;
     }

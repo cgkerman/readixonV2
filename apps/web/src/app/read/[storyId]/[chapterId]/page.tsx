@@ -3,12 +3,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { fetchChapter, getPublishedChapters, syncReadingProgress, incrementChapterView, checkChapterLiked, toggleChapterLike, addChapterComment, getAllChapterComments, getStoryById, saveQuote, getUserProfile, trackInteraction } from '@readixon/core';
+import { fetchChapter, getPublishedChapters, syncReadingProgress, incrementChapterView, checkChapterLiked, toggleChapterLike, addChapterComment, getAllChapterComments, getStoryById, saveQuote, getUserProfile, trackInteraction, toggleChapterCommentLike } from '@readixon/core';
 import type { Chapter, Comment, Story, User } from '@readixon/core';
 import { useReaderStore } from '@readixon/core/src/store/useReaderStore';
 import { useAuthStore } from '@readixon/core/src/store/useAuthStore';
 import { ContentRenderer, ReadingSettingsPanel, Button, Typography } from '@readixon/ui';
-import { ArrowLeft, Settings, List, ChevronLeft, ChevronRight, CheckCircle, X, Heart, MessageSquare, Eye } from 'lucide-react';
+import { ArrowLeft, Settings, List, ChevronLeft, ChevronRight, CheckCircle, X, Heart, MessageSquare, Eye, Reply } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ReadPage() {
@@ -43,6 +43,10 @@ export default function ReadPage() {
   const [selectedParagraphText, setSelectedParagraphText] = useState('');
   const [paragraphCommentText, setParagraphCommentText] = useState('');
   const [submittingParagraphComment, setSubmittingParagraphComment] = useState(false);
+
+  // Yanıt (Reply) State'leri
+  const [replyingToComment, setReplyingToComment] = useState<Comment | null>(null);
+  const [replyingToParagraphComment, setReplyingToParagraphComment] = useState<Comment | null>(null);
 
   const { theme, fontSize, setTheme, setFontSize } = useReaderStore();
 
@@ -189,10 +193,11 @@ export default function ReadPage() {
 
     setSubmittingComment(true);
     try {
-      const newComment = await addChapterComment(storyId, chapterId, firebaseUser.uid, commentText, 'chapter', -1);
+      const newComment = await addChapterComment(storyId, chapterId, firebaseUser.uid, commentText, 'chapter', -1, replyingToComment?.commentId);
       setChapterComments(prev => [newComment, ...prev]);
       setComments(prev => [newComment, ...prev]);
       setCommentText('');
+      setReplyingToComment(null);
       trackInteraction(firebaseUser.uid, 'comment_given').catch(console.error);
     } catch (error) {
       console.error("Yorum eklenirken hata:", error);
@@ -216,7 +221,8 @@ export default function ReadPage() {
         firebaseUser.uid, 
         paragraphCommentText, 
         'paragraph', 
-        selectedParagraphIndex
+        selectedParagraphIndex,
+        replyingToParagraphComment?.commentId
       );
       
       setParagraphComments(prev => ({
@@ -230,11 +236,67 @@ export default function ReadPage() {
       }));
       
       setParagraphCommentText('');
+      setReplyingToParagraphComment(null);
       trackInteraction(firebaseUser.uid, 'comment_given').catch(console.error);
     } catch (error) {
       console.error("Paragraf yorumu eklenirken hata:", error);
     } finally {
       setSubmittingParagraphComment(false);
+    }
+  };
+
+  const handleCommentLike = async (commentId: string, currentLikes: number, isParagraph = false) => {
+    if (!firebaseUser) {
+      router.push('/login');
+      return;
+    }
+    
+    // Optimistic Update
+    if (isParagraph) {
+      setParagraphComments(prev => {
+        const newGroup = { ...prev };
+        for (const index in newGroup) {
+          newGroup[index] = newGroup[index].map(c => c.commentId === commentId ? { ...c, likes: (c.likes || 0) + 1 } : c);
+        }
+        return newGroup;
+      });
+    } else {
+      setComments(prev => prev.map(c => c.commentId === commentId ? { ...c, likes: (c.likes || 0) + 1 } : c));
+      setChapterComments(prev => prev.map(c => c.commentId === commentId ? { ...c, likes: (c.likes || 0) + 1 } : c));
+    }
+
+    try {
+      const liked = await toggleChapterCommentLike(firebaseUser.uid, storyId, chapterId, commentId);
+      if (!liked) {
+        // Geri al
+        if (isParagraph) {
+          setParagraphComments(prev => {
+            const newGroup = { ...prev };
+            for (const index in newGroup) {
+              newGroup[index] = newGroup[index].map(c => c.commentId === commentId ? { ...c, likes: Math.max(0, currentLikes - 1) } : c);
+            }
+            return newGroup;
+          });
+        } else {
+          setComments(prev => prev.map(c => c.commentId === commentId ? { ...c, likes: Math.max(0, currentLikes - 1) } : c));
+          setChapterComments(prev => prev.map(c => c.commentId === commentId ? { ...c, likes: Math.max(0, currentLikes - 1) } : c));
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      // Hata durumunda da geri al
+      if (isParagraph) {
+        setParagraphComments(prev => {
+          const newGroup = { ...prev };
+          for (const index in newGroup) {
+            newGroup[index] = newGroup[index].map(c => c.commentId === commentId ? { ...c, likes: currentLikes } : c);
+          }
+          return newGroup;
+        });
+      } else {
+        setComments(prev => prev.map(c => c.commentId === commentId ? { ...c, likes: currentLikes } : c));
+        setChapterComments(prev => prev.map(c => c.commentId === commentId ? { ...c, likes: currentLikes } : c));
+      }
     }
   };
 
@@ -309,6 +371,47 @@ export default function ReadPage() {
     sepia: { bg: '#f4ecd8', text: '#5b4636' }
   };
   const currentThemeStyle = themeStyles[theme];
+
+  // Yorumları Gruplama
+  const rootComments = comments.filter(c => !c.replyToId);
+  const repliesMap = comments.filter(c => c.replyToId).reduce((acc, reply) => {
+    if (!acc[reply.replyToId!]) acc[reply.replyToId!] = [];
+    acc[reply.replyToId!].push(reply);
+    return acc;
+  }, {} as Record<string, Comment[]>);
+
+  const renderComment = (comment: Comment, isReply = false, isParagraph = false) => (
+    <div key={comment.commentId} className={`bg-black/5 border border-border/10 p-5 rounded-2xl flex gap-4 ${isReply ? 'ml-12 mt-4' : ''}`}>
+      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary flex-shrink-0 overflow-hidden">
+        {comment.authorAvatarUrl ? (
+          <img src={comment.authorAvatarUrl} alt={comment.authorName || 'User'} className="w-full h-full object-cover" />
+        ) : (
+          (comment.authorName ? comment.authorName.substring(0,2) : comment.userId.substring(0,2)).toUpperCase()
+        )}
+      </div>
+      <div className="flex-1">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="font-bold" style={{ color: currentThemeStyle.text }}>{comment.authorName || `Kullanıcı ${comment.userId.substring(0,6)}`}</span>
+          <span className="text-sm opacity-50" style={{ color: currentThemeStyle.text }}>
+            {new Date(comment.createdAt?.seconds * 1000 || Date.now()).toLocaleDateString('tr-TR')}
+          </span>
+        </div>
+        <Typography variant="body" style={{ color: currentThemeStyle.text }} className="whitespace-pre-line leading-relaxed mb-3">
+          {comment.text}
+        </Typography>
+        <div className="flex items-center gap-4 text-xs font-medium">
+          <button onClick={() => handleCommentLike(comment.commentId, comment.likes || 0, isParagraph)} className="flex items-center gap-1.5 opacity-70 hover:opacity-100 hover:text-red-500 transition-colors" style={{ color: currentThemeStyle.text }}>
+            <Heart size={16} />
+            <span>{comment.likes || 0}</span>
+          </button>
+          <button onClick={() => isParagraph ? setReplyingToParagraphComment(comment) : setReplyingToComment(comment)} className="flex items-center gap-1.5 opacity-70 hover:opacity-100 hover:text-blue-500 transition-colors" style={{ color: currentThemeStyle.text }}>
+            <Reply size={16} />
+            <span>Yanıtla</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div 
@@ -419,42 +522,32 @@ export default function ReadPage() {
             </Typography>
 
             <div className="mb-8">
+              {replyingToComment && (
+                <div className="flex items-center justify-between text-xs opacity-70 px-2 mb-2" style={{ color: currentThemeStyle.text }}>
+                  <span><strong>{replyingToComment.authorName || 'Kullanıcı'}</strong>'na yanıt veriliyor...</span>
+                  <button onClick={() => setReplyingToComment(null)} className="hover:underline">İptal</button>
+                </div>
+              )}
               <textarea 
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
-                placeholder="Bölüm hakkındaki düşüncelerini paylaş..."
+                placeholder={replyingToComment ? "Yanıtınızı yazın..." : "Bölüm hakkındaki düşüncelerini paylaş..."}
                 className="w-full bg-black/5 border border-border/20 rounded-xl p-4 focus:outline-none focus:border-primary resize-y min-h-[100px]"
                 style={{ color: currentThemeStyle.text }}
               />
               <div className="flex justify-end mt-3">
                 <Button variant="primary" onPress={handleSubmitComment} disabled={submittingComment || !commentText.trim()}>
-                  {submittingComment ? 'Gönderiliyor...' : 'Yorum Yap'}
+                  {submittingComment ? 'Gönderiliyor...' : (replyingToComment ? 'Yanıtla' : 'Yorum Yap')}
                 </Button>
               </div>
             </div>
 
             <div className="space-y-6">
               {comments.length > 0 ? (
-                comments.map(comment => (
-                  <div key={comment.commentId} className="bg-black/5 border border-border/10 p-5 rounded-2xl flex gap-4">
-                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary flex-shrink-0 overflow-hidden">
-                      {comment.authorAvatarUrl ? (
-                        <img src={comment.authorAvatarUrl} alt={comment.authorName || 'User'} className="w-full h-full object-cover" />
-                      ) : (
-                        (comment.authorName ? comment.authorName.substring(0,2) : comment.userId.substring(0,2)).toUpperCase()
-                      )}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-bold" style={{ color: currentThemeStyle.text }}>{comment.authorName || `Kullanıcı ${comment.userId.substring(0,6)}`}</span>
-                        <span className="text-sm opacity-50" style={{ color: currentThemeStyle.text }}>
-                          {new Date(comment.createdAt?.seconds * 1000 || Date.now()).toLocaleDateString('tr-TR')}
-                        </span>
-                      </div>
-                      <Typography variant="body" style={{ color: currentThemeStyle.text }} className="whitespace-pre-line leading-relaxed">
-                        {comment.text}
-                      </Typography>
-                    </div>
+                rootComments.map(c => (
+                  <div key={c.commentId}>
+                    {renderComment(c, false, false)}
+                    {repliesMap[c.commentId] && repliesMap[c.commentId].map(reply => renderComment(reply, true, false))}
                   </div>
                 ))
               ) : (
@@ -562,46 +655,45 @@ export default function ReadPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {(paragraphComments[selectedParagraphIndex] || []).length > 0 ? (
-                (paragraphComments[selectedParagraphIndex] || []).map(comment => (
-                  <div key={comment.commentId} className="flex gap-3">
-                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary flex-shrink-0 overflow-hidden text-sm">
-                      {comment.authorAvatarUrl ? (
-                        <img src={comment.authorAvatarUrl} alt={comment.authorName || 'User'} className="w-full h-full object-cover" />
-                      ) : (
-                        (comment.authorName ? comment.authorName.substring(0,2) : comment.userId.substring(0,2)).toUpperCase()
-                      )}
-                    </div>
-                    <div className="bg-black/5 rounded-2xl rounded-tl-none p-3 flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-sm" style={{ color: currentThemeStyle.text }}>
-                          {comment.authorName || `Kullanıcı ${comment.userId.substring(0,6)}`}
-                        </span>
-                        <span className="text-xs opacity-50" style={{ color: currentThemeStyle.text }}>
-                          {new Date(comment.createdAt?.seconds * 1000 || Date.now()).toLocaleDateString('tr-TR')}
-                        </span>
-                      </div>
-                      <Typography variant="body" className="text-sm whitespace-pre-line" style={{ color: currentThemeStyle.text }}>
-                        {comment.text}
+              {(() => {
+                const parComments = paragraphComments[selectedParagraphIndex] || [];
+                if (parComments.length === 0) {
+                  return (
+                    <div className="text-center py-8 opacity-50">
+                      <MessageSquare size={32} className="mx-auto mb-2 opacity-50" />
+                      <Typography variant="body" style={{ color: currentThemeStyle.text }}>
+                        Bu satıra henüz yorum yapılmamış. İlk sen yorum yap!
                       </Typography>
                     </div>
+                  );
+                }
+                const parRootComments = parComments.filter(c => !c.replyToId);
+                const parRepliesMap = parComments.filter(c => c.replyToId).reduce((acc, reply) => {
+                  if (!acc[reply.replyToId!]) acc[reply.replyToId!] = [];
+                  acc[reply.replyToId!].push(reply);
+                  return acc;
+                }, {} as Record<string, Comment[]>);
+
+                return parRootComments.map(c => (
+                  <div key={c.commentId}>
+                    {renderComment(c, false, true)}
+                    {parRepliesMap[c.commentId] && parRepliesMap[c.commentId].map(reply => renderComment(reply, true, true))}
                   </div>
-                ))
-              ) : (
-                <div className="text-center py-8 opacity-50">
-                  <MessageSquare size={32} className="mx-auto mb-2 opacity-50" />
-                  <Typography variant="body" style={{ color: currentThemeStyle.text }}>
-                    Bu satıra henüz yorum yapılmamış. İlk sen yorum yap!
-                  </Typography>
-                </div>
-              )}
+                ));
+              })()}
             </div>
             
             <div className="p-4 border-t border-border/10 bg-background">
+              {replyingToParagraphComment && (
+                <div className="flex items-center justify-between text-xs opacity-70 px-2 mb-2" style={{ color: currentThemeStyle.text }}>
+                  <span><strong>{replyingToParagraphComment.authorName || 'Kullanıcı'}</strong>'na yanıt veriliyor...</span>
+                  <button onClick={() => setReplyingToParagraphComment(null)} className="hover:underline">İptal</button>
+                </div>
+              )}
               <textarea 
                 value={paragraphCommentText}
                 onChange={(e) => setParagraphCommentText(e.target.value)}
-                placeholder="Düşüncelerini paylaş..."
+                placeholder={replyingToParagraphComment ? "Yanıtınızı yazın..." : "Düşüncelerini paylaş..."}
                 className="w-full bg-black/5 border border-border/20 rounded-xl p-3 text-sm focus:outline-none focus:border-primary resize-y min-h-[80px]"
                 style={{ color: currentThemeStyle.text }}
               />
@@ -612,7 +704,7 @@ export default function ReadPage() {
                   disabled={submittingParagraphComment || !paragraphCommentText.trim()}
                   className="py-1.5 px-4 text-sm"
                 >
-                  {submittingParagraphComment ? 'Gönderiliyor...' : 'Yorum Yap'}
+                  {submittingParagraphComment ? 'Gönderiliyor...' : (replyingToParagraphComment ? 'Yanıtla' : 'Yorum Yap')}
                 </Button>
               </div>
             </div>

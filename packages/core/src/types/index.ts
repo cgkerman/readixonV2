@@ -120,7 +120,7 @@ export interface Story {
 // 3.3. BÃ¶lÃ¼mler (/stories/{storyId}/chapters/{chapterId})
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-export type ContentBlockType = 'paragraph' | 'quote' | 'image' | 'divider' | 'end_of_chapter';
+export type ContentBlockType = 'paragraph' | 'quote' | 'image' | 'divider' | 'end_of_chapter' | 'end_of_story';
 
 /**
  * BÃ¶lÃ¼m iÃ§eriÄŸi JSON blok formatÄ±nda tutulur.
@@ -166,6 +166,8 @@ export interface Comment {
   authorUsername?: string;
   authorAvatarUrl?: string;
   text: string;
+  likes?: number;
+  replyToId?: string;
   createdAt: Timestamp;
 }
 
@@ -240,6 +242,7 @@ export interface ReadixComment {
 export type NotificationType = 
   | 'follow' 
   | 'story_like' 
+  | 'chapter_like'
   | 'story_comment' 
   | 'paragraph_comment'
   | 'readix_like' 

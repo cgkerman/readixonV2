@@ -48,9 +48,11 @@ service cloud.firestore {
         allow read, write: if isOwner(userId);
       }
 
+ 
       // Kullanıcı SADECE kendi profilini güncelleyebilir
       allow write: if request.auth != null && request.auth.uid == userId;
     }
+
 
 
     // ==========================================
@@ -86,6 +88,11 @@ service cloud.firestore {
           allow read: if true;
           allow create, update: if isAuthenticated();
           allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+
+          match /likes/{likeUserId} {
+            allow read: if true;
+            allow write: if isAuthenticated() && request.auth.uid == likeUserId;
+          }
         }
       }
       

@@ -262,6 +262,9 @@ export function BlockEditor({ initialBlocks = [], onChange, onUploadImage }: Blo
         <Button variant="outline" onPress={() => addBlock('end_of_chapter')} className="flex flex-row items-center gap-2">
           <Flag size={16} /> Bölüm Sonu
         </Button>
+        <Button variant="outline" onPress={() => addBlock('end_of_story')} className="flex flex-row items-center gap-2">
+          <Flag size={16} className="text-primary" /> Hikaye Sonu
+        </Button>
       </div>
     </div>
   );

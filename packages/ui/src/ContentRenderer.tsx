@@ -251,6 +251,27 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                 </Typography>
               </div>
             );
+          case 'end_of_story':
+            return (
+              <div key={blockIndex} className="flex justify-center my-16 w-full">
+                <div className="flex flex-col items-center justify-center gap-4 p-8 rounded-2xl border-2 border-primary/20 bg-primary/5">
+                  <Typography 
+                    variant="h3" 
+                    style={{ color: textColor, fontWeight: 'bold' }}
+                    className="text-center text-primary uppercase tracking-widest"
+                  >
+                    • • • Hikaye Sonu • • •
+                  </Typography>
+                  <Typography 
+                    variant="body" 
+                    style={{ fontSize: `${fontSize * 0.9}px`, color: textColor }}
+                    className="text-center opacity-80 max-w-md italic"
+                  >
+                    Yazar bu hikayeyi tamamladı. Okuduğunuz için teşekkürler!
+                  </Typography>
+                </div>
+              </div>
+            );
           default:
             return null;
         }

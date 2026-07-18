@@ -133,6 +133,34 @@ export const toggleChapterLike = async (storyId: string, chapterId: string, user
       await updateDoc(storyRef, {
         'stats.likes': increment(1)
       });
+
+      // Bildirim gönder
+      try {
+        const storySnap = await getDoc(storyRef);
+        const chapterSnap = await getDoc(chapterRef);
+        const userProfile = await getUserProfile(userId);
+        
+        if (storySnap.exists() && userProfile) {
+          const storyData = storySnap.data();
+          const chapterData = chapterSnap.exists() ? chapterSnap.data() : null;
+          
+          await createNotification({
+            userId: storyData.authorId,
+            actorId: userId,
+            actorName: userProfile.displayName,
+            actorAvatar: userProfile.avatarUrl,
+            actorUsername: userProfile.username,
+            type: 'chapter_like',
+            entityId: storyId,
+            entityTitle: storyData.title,
+            subEntityId: chapterId,
+            subEntityTitle: chapterData?.title || `Bölüm ${chapterData?.order || ''}`.trim()
+          });
+        }
+      } catch (notifError) {
+        console.error("Bölüm beğeni bildirimi gönderilirken hata:", notifError);
+      }
+
       return true;
     }
   } catch (error) {
@@ -163,7 +191,8 @@ export const addChapterComment = async (
   userId: string, 
   text: string,
   type: 'chapter' | 'paragraph' = 'chapter',
-  paragraphIndex: number = -1
+  paragraphIndex: number = -1,
+  replyToId?: string
 ): Promise<Comment> => {
   try {
     const userProfile = await getUserProfile(userId);
@@ -179,8 +208,14 @@ export const addChapterComment = async (
       text,
       type,
       paragraphIndex,
+      likes: 0,
       createdAt: serverTimestamp() as any,
     };
+    
+    if (replyToId) {
+      newComment.replyToId = replyToId;
+    }
+
     await setDoc(commentRef, newComment);
     
     // update chapter comment count
@@ -205,19 +240,45 @@ export const addChapterComment = async (
       if (storySnap.exists() && userProfile) {
         const storyData = storySnap.data();
         const chapterData = chapterSnap.exists() ? chapterSnap.data() : null;
+        // Yazar'a bildirim gönder (kendisi yorum yapmadıysa)
+        if (storyData.authorId !== userId) {
+          await createNotification({
+            userId: storyData.authorId,
+            actorId: userId,
+            actorName: userProfile.displayName,
+            actorAvatar: userProfile.avatarUrl,
+            actorUsername: userProfile.username,
+            type: type === 'paragraph' ? 'paragraph_comment' : 'story_comment',
+            entityId: storyId,
+            entityTitle: storyData.title,
+            subEntityId: chapterId,
+            subEntityTitle: chapterData?.title || `Bölüm ${chapterData?.order || ''}`.trim()
+          });
+        }
         
-        await createNotification({
-          userId: storyData.authorId,
-          actorId: userId,
-          actorName: userProfile.displayName,
-          actorAvatar: userProfile.avatarUrl,
-          actorUsername: userProfile.username,
-          type: type === 'paragraph' ? 'paragraph_comment' : 'story_comment',
-          entityId: storyId,
-          entityTitle: storyData.title,
-          subEntityId: chapterId,
-          subEntityTitle: chapterData?.title || `Bölüm ${chapterData?.order || ''}`.trim()
-        });
+        // Eğer bir yoruma yanıt verildiyse, o yorumun sahibine bildirim gönder
+        if (replyToId) {
+          const parentCommentRef = doc(db, 'stories', storyId, 'chapters', chapterId, 'comments', replyToId);
+          const parentCommentSnap = await getDoc(parentCommentRef);
+          
+          if (parentCommentSnap.exists()) {
+            const parentCommentData = parentCommentSnap.data();
+            // Kendine yanıt vermediyse ve yazar değilse (yazara zaten gitti)
+            if (parentCommentData.userId !== userId && parentCommentData.userId !== storyData.authorId) {
+              await createNotification({
+                userId: parentCommentData.userId,
+                actorId: userId,
+                actorName: userProfile.displayName,
+                actorAvatar: userProfile.avatarUrl,
+                actorUsername: userProfile.username,
+                type: type === 'paragraph' ? 'paragraph_comment' : 'story_comment',
+                entityId: storyId,
+                entityTitle: parentCommentData.text.substring(0, 30) + (parentCommentData.text.length > 30 ? '...' : ''),
+                subEntityId: chapterId,
+              });
+            }
+          }
+        }
       }
     } catch (notifError) {
       console.error("Yorum bildirimi gönderilirken hata:", notifError);
@@ -270,5 +331,65 @@ export const getAllChapterComments = async (storyId: string, chapterId: string):
   } catch (error) {
     console.error("Tüm yorumları çekerken hata:", error);
     return [];
+  }
+};
+
+/**
+ * Bölüm yorumunu (veya paragraf yorumunu) beğenip/beğenmekten vazgeçme (Toggle).
+ */
+export const toggleChapterCommentLike = async (userId: string, storyId: string, chapterId: string, commentId: string): Promise<boolean> => {
+  try {
+    const likeRef = doc(db, 'stories', storyId, 'chapters', chapterId, 'comments', commentId, 'likes', userId);
+    const commentRef = doc(db, 'stories', storyId, 'chapters', chapterId, 'comments', commentId);
+    
+    const likeSnap = await getDoc(likeRef);
+    
+    if (likeSnap.exists()) {
+      // Unlike
+      await deleteDoc(likeRef);
+      await updateDoc(commentRef, {
+        likes: increment(-1)
+      });
+      return false; // Artık beğenmiyor
+    } else {
+      // Like
+      await setDoc(likeRef, {
+        userId,
+        createdAt: serverTimestamp()
+      });
+      await updateDoc(commentRef, {
+        likes: increment(1)
+      });
+
+      // Bildirim gönder
+      try {
+        const commentSnap = await getDoc(commentRef);
+        const userProfile = await getUserProfile(userId);
+        
+        if (commentSnap.exists() && userProfile) {
+          const commentData = commentSnap.data();
+          const isParagraph = commentData.type === 'paragraph';
+          
+          await createNotification({
+            userId: commentData.userId,
+            actorId: userId,
+            actorName: userProfile.displayName,
+            actorAvatar: userProfile.avatarUrl,
+            actorUsername: userProfile.username,
+            type: isParagraph ? 'paragraph_comment' : 'story_comment',
+            entityId: storyId,
+            entityTitle: commentData.text.substring(0, 30) + (commentData.text.length > 30 ? '...' : ''),
+            subEntityId: chapterId
+          });
+        }
+      } catch (notifError) {
+        console.error("Yorum beğeni bildirimi gönderilirken hata:", notifError);
+      }
+
+      return true; // Beğenildi
+    }
+  } catch (error) {
+    console.error("Yorum beğeni işlemi başarısız:", error);
+    throw error;
   }
 };

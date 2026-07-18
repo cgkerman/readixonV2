@@ -81,6 +81,19 @@ export default function FeedPage() {
       primaryAction: () => router.push('/about'),
     });
 
+    // Beta Uyarı & Destek Slide
+    arr.push({
+      id: 'slide-beta-announcement',
+      type: 'announcement',
+      badge: 'BETA SÜRÜMÜNDEYİZ 🚀',
+      badgeIcon: CheckCircle, // veya uygun bir ikon
+      title: 'Dürüst Olalım: Hatalar Çıkabilir',
+      summary: 'Platformumuz henüz çok yeni ve taze! Geliştirme sürecimizde karşınıza ufak tefek hatalar veya pürüzler çıkabilir. Karşılaştığınız sorunları çözebilmemiz ve deneyimi iyileştirmemiz için bize doğrudan yazın.',
+      image: 'https://images.unsplash.com/photo-1457369804613-52c61a468e7d?auto=format&fit=crop&q=80', // Cozy reading/writing theme
+      primaryLabel: 'Hata Bildir / Destek',
+      primaryAction: () => router.push('/support'),
+    });
+
     if (topStories.length > 0) {
       arr.push({
         id: `slide-top-${topStories[0].storyId}`,
