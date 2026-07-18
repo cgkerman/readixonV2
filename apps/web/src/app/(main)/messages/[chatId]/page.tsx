@@ -161,33 +161,59 @@ export default function ActiveChatPage() {
       <div className="flex-1 overflow-y-auto p-4 flex flex-col min-h-0">
         {messages.map((msg, index) => {
           let timeText = '';
+          let showDateDivider = false;
+          let dividerText = '';
+
           if (msg.createdAt) {
             const date = msg.createdAt.toDate();
-            const now = new Date();
-            const isToday = date.getDate() === now.getDate() && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-            
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            const isYesterday = date.getDate() === yesterday.getDate() && date.getMonth() === yesterday.getMonth() && date.getFullYear() === yesterday.getFullYear();
+            timeText = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-            const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            // Önceki mesajla tarih karşılaştırması
+            let prevDate: Date | null = null;
+            if (index > 0 && messages[index - 1].createdAt) {
+              prevDate = messages[index - 1].createdAt.toDate();
+            }
 
-            if (isToday) {
-              timeText = `Bugün ${timeStr}`;
-            } else if (isYesterday) {
-              timeText = `Dün ${timeStr}`;
-            } else {
-              timeText = `${date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })} ${timeStr}`;
+            if (!prevDate || 
+                date.getDate() !== prevDate.getDate() || 
+                date.getMonth() !== prevDate.getMonth() || 
+                date.getFullYear() !== prevDate.getFullYear()) {
+              
+              showDateDivider = true;
+              
+              const now = new Date();
+              const isToday = date.getDate() === now.getDate() && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+              
+              const yesterday = new Date();
+              yesterday.setDate(yesterday.getDate() - 1);
+              const isYesterday = date.getDate() === yesterday.getDate() && date.getMonth() === yesterday.getMonth() && date.getFullYear() === yesterday.getFullYear();
+
+              if (isToday) {
+                dividerText = 'Bugün';
+              } else if (isYesterday) {
+                dividerText = 'Dün';
+              } else {
+                dividerText = date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+              }
             }
           }
+
           return (
-            <ChatBubble
-              key={msg.id}
-              id={msg.id}
-              text={msg.text}
-              isOwnMessage={msg.senderId === firebaseUser.uid}
-              timeText={timeText}
-            />
+            <React.Fragment key={msg.id}>
+              {showDateDivider && (
+                <div className="flex justify-center my-4">
+                  <div className="bg-text/5 border border-border/40 text-text/60 text-xs px-3 py-1 rounded-full font-medium">
+                    {dividerText}
+                  </div>
+                </div>
+              )}
+              <ChatBubble
+                id={msg.id}
+                text={msg.text}
+                isOwnMessage={msg.senderId === firebaseUser.uid}
+                timeText={timeText}
+              />
+            </React.Fragment>
           );
         })}
         <div ref={messagesEndRef} />
