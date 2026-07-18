@@ -230,14 +230,32 @@ export interface ReadixComment {
   readixId: string;
   authorId: string;
   content: string;
-  likes?: number; // Yorum beÄŸeni sayÄ±sÄ±
-  replyToId?: string; // Hangi yoruma yanÄ±t verildiÄŸi (null ise ana yorum)
+  likes?: number; // Yorum beğeni sayısı
+  replyToId?: string; // Hangi yoruma yanıt verildiği (null ise ana yorum)
   createdAt: Timestamp;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// 3.7. Bildirimler (/users/{userId}/notifications/{notificationId})
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
+// 3.7. Duyurular (Announcements) (/announcements/{id})
+// Sistem yöneticileri tarafından yayınlanan platform haberleri
+// ─────────────────────────────────────────────
+
+export interface Announcement {
+  id: string;
+  title: string;
+  content: string; // Kısa açıklama veya içerik
+  link?: string; // Duyuru detayına veya harici linke yönlendirme
+  imageUrl?: string; // İsteğe bağlı görsel
+  isActive: boolean; // Yayında olup olmadığı
+  publishAt?: Timestamp; // Otomatik yayınlama zamanı (opsiyonel)
+  expireAt?: Timestamp; // Otomatik yayından kalkma zamanı (opsiyonel)
+  createdAt: Timestamp;
+  updatedAt?: Timestamp;
+}
+
+// ─────────────────────────────────────────────
+// 3.8. Bildirimler (/users/{userId}/notifications/{notificationId})
+// ─────────────────────────────────────────────
 
 export type NotificationType = 
   | 'follow' 

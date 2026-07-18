@@ -213,5 +213,13 @@ service cloud.firestore {
         allow delete: if false;
       }
     }
+
+    // ==========================================
+    // 6. DUYURULAR (ANNOUNCEMENTS)
+    // ==========================================
+    match /announcements/{announcementId} {
+      allow read: if true;
+      allow write: if isAuthenticated(); // İdealde admin rolü kontrol edilmeli
+    }
   }
 }

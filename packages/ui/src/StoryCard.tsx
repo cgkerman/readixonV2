@@ -13,6 +13,7 @@ export interface StoryCardProps {
   views: number;
   likes: number;
   tags: string[];
+  progress?: number;
   onPress?: () => void;
   onLikePress?: (e: React.MouseEvent) => void;
   isLiked?: boolean;
@@ -27,6 +28,7 @@ export const StoryCard: React.FC<StoryCardProps> = ({
   views,
   likes,
   tags,
+  progress,
   onPress,
   onLikePress,
   isLiked = false,
@@ -78,6 +80,16 @@ export const StoryCard: React.FC<StoryCardProps> = ({
             </Typography>
           </button>
         </div>
+
+        {/* Progress Bar */}
+        {progress !== undefined && (
+          <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-black/40">
+            <div 
+              className="h-full bg-primary transition-all duration-500 ease-out"
+              style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}
+            />
+          </div>
+        )}
       </div>
 
       {/* İçerik Alanı */}

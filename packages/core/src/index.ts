@@ -58,6 +58,10 @@ export type {
   Character,
   CharacterRole,
   CharacterRPGStats,
+  Badge,
+  UserBadge,
+  AchievementInfo,
+  Announcement,
   SavedQuote,
   UserAchievements,
 } from './types';
@@ -140,3 +144,5 @@ export { useUserProfile } from './hooks/useUserProfile';
 export * from './services/characterService';
 export * from './constants/badges';
 export * from './services/achievementService';
+export * from './services/systemService';
+

@@ -458,9 +458,8 @@ export const getStoriesByIds = async (storyIds: string[]): Promise<Story[]> => {
     for (const batch of batches) {
       const q = query(collection(db, 'stories'), where(documentId(), 'in', batch));
       const querySnapshot = await getDocs(q);
-      querySnapshot.forEach((docSnap) => {
-        stories.push({ storyId: docSnap.id, ...docSnap.data() } as Story);
-      });
+      const enrichedBatch = await enrichStories(querySnapshot.docs);
+      stories.push(...enrichedBatch);
     }
 
     return stories;
@@ -703,6 +702,26 @@ export const getTopStoriesPaginated = async (limitCount: number = 10, lastDoc?: 
 // ─────────────────────────────────────────────
 // YENİ KEŞFET ALGORİTMALARI
 // ─────────────────────────────────────────────
+
+/**
+ * En çok yorum alan/tartışılan hikayeleri getirir.
+ */
+export const getTrendingDiscussions = async (limitCount: number = 10): Promise<Story[]> => {
+  try {
+    const q = query(
+      collection(db, 'stories'),
+      where('status', 'in', ['ongoing', 'completed']),
+      orderBy('stats.commentCount', 'desc'),
+      limit(limitCount)
+    );
+    const snap = await getDocs(q);
+    return await enrichStories(snap.docs);
+  } catch (error) {
+    console.error("Tartışılan hikayeler çekilirken hata:", error);
+    // Eğer index eksikse fallback olarak popüler hikayeleri döndür
+    return getTopStories(limitCount);
+  }
+};
 
 /**
  * Kullanıcının favori türlerine (preferredGenres) göre hikayeler önerir.

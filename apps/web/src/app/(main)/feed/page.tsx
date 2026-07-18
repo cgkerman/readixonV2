@@ -3,9 +3,9 @@
 import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Typography, StoryCard, Button } from '@readixon/ui';
-import { getRecentStoriesPaginated, getTopStoriesPaginated, getFeaturedAuthors, getRecommendedStories, getCompletedStories, getMostLikedStories, POPULAR_TAGS, generateStorySlug, toggleStoryLike, followUser, unfollowUser, useAuthStore, type Story, type User } from '@readixon/core';
+import { getRecentStoriesPaginated, getTopStoriesPaginated, getFeaturedAuthors, getRecommendedStories, getCompletedStories, getMostLikedStories, getActiveAnnouncements, getUserReadingProgress, getStoriesByIds, getTrendingDiscussions, POPULAR_TAGS, generateStorySlug, toggleStoryLike, followUser, unfollowUser, useAuthStore, type Story, type User, type Announcement } from '@readixon/core';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Flame, Sparkles, TrendingUp, Clock, ChevronRight, ChevronLeft, Play, Users, Heart, CheckCircle } from 'lucide-react';
+import { Flame, Sparkles, TrendingUp, Clock, ChevronRight, ChevronLeft, Play, Users, Heart, CheckCircle, BellRing, BookOpen, MessageCircle } from 'lucide-react';
 import { AuthorCard } from '@readixon/ui';
 import { toast } from "sonner";
 
@@ -59,10 +59,39 @@ export default function FeedPage() {
     queryFn: () => getMostLikedStories(10),
   });
 
+  const { data: announcements = [], isLoading: announcementsLoading } = useQuery({
+    queryKey: ['announcements', 'active'],
+    queryFn: () => getActiveAnnouncements(3),
+  });
+
+  const { data: readingHistory = [], isLoading: historyLoading } = useQuery({
+    queryKey: ['stories', 'readingProgress', firebaseUser?.uid],
+    queryFn: async () => {
+      if (!firebaseUser?.uid) return [];
+      const history = await getUserReadingProgress(firebaseUser.uid);
+      if (!history || history.length === 0) return [];
+
+      const storyIds = history.map(h => h.storyId);
+      const stories = await getStoriesByIds(storyIds);
+
+      // Hikayeleri bul ve ilerlemeyi eşleştir
+      return history.map(h => {
+        const story = stories.find(s => s.storyId === h.storyId);
+        return story ? { story, progress: h.scrollPercentage || 0, chapterId: h.currentChapterId } : null;
+      }).filter(Boolean) as { story: Story; progress: number; chapterId: string }[];
+    },
+    enabled: !!firebaseUser?.uid
+  });
+
+  const { data: trendingDiscussions = [], isLoading: discussionsLoading } = useQuery({
+    queryKey: ['stories', 'trendingDiscussions'],
+    queryFn: () => getTrendingDiscussions(10),
+  });
+
   const recentStories = recentData?.pages.flatMap((p: any) => p.stories) || [];
   const topStories = topData?.pages.flatMap((p: any) => p.stories) || [];
 
-  const isLoading = recentLoading || topLoading || authorsLoading || recLoading || compLoading || likedLoading;
+  const isLoading = recentLoading || topLoading || authorsLoading || recLoading || compLoading || likedLoading || historyLoading || discussionsLoading;
 
   // Öne Çıkan Slaytlar (Carousel Verisi)
   const slides = useMemo(() => {
@@ -85,7 +114,7 @@ export default function FeedPage() {
     arr.push({
       id: 'slide-beta-announcement',
       type: 'announcement',
-      badge: 'BETA SÜRÜMÜNDEYİZ 🚀',
+      badge: 'BETA SÜRÜMÜNDEYİZ',
       badgeIcon: CheckCircle, // veya uygun bir ikon
       title: 'Dürüst Olalım: Hatalar Çıkabilir',
       summary: 'Platformumuz henüz çok yeni ve taze! Geliştirme sürecimizde karşınıza ufak tefek hatalar veya pürüzler çıkabilir. Karşılaştığınız sorunları çözebilmemiz ve deneyimi iyileştirmemiz için bize doğrudan yazın.',
@@ -372,11 +401,135 @@ export default function FeedPage() {
         </div>
       )}
 
-      {/* ── 3. Yatay Kaydırmalı Listeler (Carousels) ── */}
+      {/* ── 3. Yatay Kaydırmalı Listeler (Carousels) & Duyurular ── */}
       {!isLoading && (
         <div className="flex flex-col gap-12 px-6 md:px-16">
 
-          {/* Öne Çıkan Yazarlar */}
+          {/* Duyurular Bloğu */}
+          {announcements.length > 0 && (
+            <div className="w-full">
+              <div className="flex items-center gap-3 mb-6">
+                <BellRing className="text-primary" size={24} />
+                <Typography variant="h2" className="text-2xl font-bold">Platform Duyuruları</Typography>
+              </div>
+              <div className="flex flex-col gap-6 items-center w-full">
+                {announcements.map(announcement => {
+                  const hasImage = !!announcement.imageUrl;
+                  return (
+                    <div
+                      key={announcement.id}
+                      className="relative w-full flex flex-col md:flex-row p-6 md:p-8 rounded-3xl bg-card border border-border/50 shadow-sm hover:shadow-md transition-all gap-8 md:gap-12 items-center"
+                    >
+                      {/* Sol Taraf: Görsel veya İkon */}
+                      <div className="w-full md:w-64 lg:w-72 shrink-0 flex items-center justify-center">
+                        {hasImage ? (
+                          <div className="w-full aspect-[4/5] rounded-2xl overflow-hidden bg-muted/20 shadow-md">
+                            <img src={announcement.imageUrl} alt={announcement.title} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                          </div>
+                        ) : (
+                          <div className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+                            <BellRing size={56} className="opacity-80" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Sağ Taraf: Metinler */}
+                      <div className="flex-1 flex flex-col text-center md:text-left h-full justify-center">
+                        <Typography variant="h3" className="font-black text-xl md:text-2xl mb-3">{announcement.title}</Typography>
+                        <Typography variant="body" className="text-muted text-sm md:text-base mb-6 leading-relaxed whitespace-pre-wrap">
+                          {announcement.content}
+                        </Typography>
+                        {announcement.link && (
+                          <Button
+                            variant="primary"
+                            className="w-full sm:w-auto self-center md:self-start mt-auto shadow-lg shadow-primary/20"
+                            onPress={() => window.open(announcement.link, '_blank')}
+                          >
+                            Daha Fazla Bilgi
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Okumaya Devam Et Bloğu */}
+          {readingHistory.length > 0 && (
+            <CarouselRow
+              title="Okumaya Devam Et"
+              icon={<BookOpen className="text-primary" size={24} />}
+              stories={readingHistory.map(h => h.story)}
+              progresses={readingHistory.reduce((acc, h) => ({ ...acc, [h.story.storyId]: h.progress }), {})}
+              onStoryClick={(story) => {
+                const historyItem = readingHistory.find(h => h.story.storyId === story.storyId);
+                if (historyItem?.chapterId) {
+                  router.push(`/read/${story.storyId}/${historyItem.chapterId}`);
+                } else {
+                  router.push(`/story/${generateStorySlug(story.title, story.storyId)}`);
+                }
+              }}
+              onLikePress={handleLikePress}
+            />
+          )}
+
+          {/* 1. Sana Özel / Günün Trendleri */}
+          {recommendedStories.length > 0 && (
+            <CarouselRow
+              title={firebaseUser && userProfile?.preferredGenres?.length ? "Sana Özel" : "Günün Trendleri"}
+              icon={<Sparkles className="text-primary" size={24} />}
+              stories={recommendedStories}
+              seeAllHref="/explore/recommended"
+              onStoryClick={(story) => router.push(`/story/${generateStorySlug(story.title, story.storyId)}`)}
+              onLikePress={handleLikePress}
+            />
+          )}
+
+          {/* 1.5 Son Tartışılanlar */}
+          {trendingDiscussions.length > 0 && (
+            <CarouselRow
+              title="Son Tartışılanlar"
+              icon={<MessageCircle className="text-primary" size={24} />}
+              stories={trendingDiscussions}
+              seeAllHref="/explore/discussions"
+              onStoryClick={(story) => router.push(`/story/${generateStorySlug(story.title, story.storyId)}`)}
+              onLikePress={handleLikePress}
+            />
+          )}
+
+          {/* 2. En Çok Okunanlar */}
+          {topStories.length > 0 && (
+            <CarouselRow
+              title="Haftanın En Çok Okunanları"
+              icon={<TrendingUp className="text-primary" size={24} />}
+              stories={topStories}
+              seeAllHref="/explore/top"
+              onStoryClick={(story) => router.push(`/story/${generateStorySlug(story.title, story.storyId)}`)}
+              onLikePress={handleLikePress}
+              onEndReached={() => {
+                if (hasNextTop) fetchNextTop();
+              }}
+            />
+          )}
+
+          {/* 3. Yeni Çıkanlar */}
+          {recentStories.length > 0 && (
+            <CarouselRow
+              title="Yeni Çıkanlar"
+              icon={<Clock className="text-primary" size={24} />}
+              stories={recentStories}
+              seeAllHref="/explore/recent"
+              onStoryClick={(story) => router.push(`/story/${generateStorySlug(story.title, story.storyId)}`)}
+              onLikePress={handleLikePress}
+              onEndReached={() => {
+                if (hasNextRecent) fetchNextRecent();
+              }}
+            />
+          )}
+
+          {/* 4. Öne Çıkan Yazarlar */}
           {featuredAuthors.length > 0 && (
             <AuthorCarouselRow
               title="Öne Çıkan Yazarlar"
@@ -395,19 +548,7 @@ export default function FeedPage() {
             />
           )}
 
-          {/* Sana Özel / Günün Trendleri */}
-          {recommendedStories.length > 0 && (
-            <CarouselRow
-              title={firebaseUser && userProfile?.preferredGenres?.length ? "Sana Özel" : "Günün Trendleri"}
-              icon={<Sparkles className="text-primary" size={24} />}
-              stories={recommendedStories}
-              seeAllHref="/explore/recommended"
-              onStoryClick={(story) => router.push(`/story/${generateStorySlug(story.title, story.storyId)}`)}
-              onLikePress={handleLikePress}
-            />
-          )}
-
-          {/* En Çok Beğenilenler */}
+          {/* 5. En Çok Beğenilenler */}
           {mostLikedStories.length > 0 && (
             <CarouselRow
               title="Kalplerin Efendileri"
@@ -419,37 +560,7 @@ export default function FeedPage() {
             />
           )}
 
-          {/* En Çok Okunanlar */}
-          {topStories.length > 0 && (
-            <CarouselRow
-              title="Haftanın En Çok Okunanları"
-              icon={<TrendingUp className="text-primary" size={24} />}
-              stories={topStories}
-              seeAllHref="/explore/top"
-              onStoryClick={(story) => router.push(`/story/${generateStorySlug(story.title, story.storyId)}`)}
-              onLikePress={handleLikePress}
-              onEndReached={() => {
-                if (hasNextTop) fetchNextTop();
-              }}
-            />
-          )}
-
-          {/* Yeni Çıkanlar */}
-          {recentStories.length > 0 && (
-            <CarouselRow
-              title="Yeni Çıkanlar"
-              icon={<Clock className="text-primary" size={24} />}
-              stories={recentStories}
-              seeAllHref="/explore/recent"
-              onStoryClick={(story) => router.push(`/story/${generateStorySlug(story.title, story.storyId)}`)}
-              onLikePress={handleLikePress}
-              onEndReached={() => {
-                if (hasNextRecent) fetchNextRecent();
-              }}
-            />
-          )}
-
-          {/* Kısa & Öz (Tamamlanmış) */}
+          {/* 6. Kısa & Öz (Tamamlanmış) */}
           {completedStories.length > 0 && (
             <CarouselRow
               title="Kısa ve Öz (Tamamlanmış)"
@@ -475,14 +586,16 @@ interface CarouselRowProps {
   title: string;
   icon: React.ReactNode;
   stories: Story[];
+  progresses?: Record<string, number>;
   seeAllHref?: string;
   onStoryClick: (story: Story) => void;
   onLikePress: (e: React.MouseEvent, storyId: string) => void;
   onEndReached?: () => void;
 }
 
-function CarouselRow({ title, icon, stories, seeAllHref, onStoryClick, onLikePress, onEndReached }: CarouselRowProps) {
+function CarouselRow({ title, icon, stories, progresses, seeAllHref, onStoryClick, onLikePress, onEndReached }: CarouselRowProps) {
   const router = useRouter();
+  const { userProfile } = useAuthStore();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(true);
@@ -552,9 +665,11 @@ function CarouselRow({ title, icon, stories, seeAllHref, onStoryClick, onLikePre
               authorName={story.authorName || 'Bilinmiyor'}
               authorUsername={story.authorUsername}
               coverImage={story.coverImage}
-              views={story.stats?.views || 0}
-              likes={story.stats?.likes || 0}
+              views={story.stats?.views || story.stats?.viewCount || 0}
+              likes={story.stats?.likes || story.stats?.likeCount || 0}
               tags={story.tags || []}
+              isLiked={userProfile?.likedStoryIds?.includes(story.storyId)}
+              progress={progresses?.[story.storyId]}
               onPress={() => onStoryClick(story)}
               onLikePress={(e) => onLikePress(e, story.storyId)}
             />
