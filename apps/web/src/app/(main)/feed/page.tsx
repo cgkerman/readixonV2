@@ -665,8 +665,8 @@ function CarouselRow({ title, icon, stories, progresses, seeAllHref, onStoryClic
               authorName={story.authorName || 'Bilinmiyor'}
               authorUsername={story.authorUsername}
               coverImage={story.coverImage}
-              views={story.stats?.views || story.stats?.viewCount || 0}
-              likes={story.stats?.likes || story.stats?.likeCount || 0}
+              views={story.stats?.views || 0}
+              likes={story.stats?.likes || 0}
               tags={story.tags || []}
               isLiked={userProfile?.likedStoryIds?.includes(story.storyId)}
               progress={progresses?.[story.storyId]}
