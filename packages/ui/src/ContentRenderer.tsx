@@ -96,7 +96,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-6 relative" ref={containerRef}>
+    <div className="readixon-content flex flex-col gap-6 relative" ref={containerRef}>
       
       {selection && (onQuoteSave || onQuoteShare) && (
         <div 
