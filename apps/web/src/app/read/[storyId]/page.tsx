@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getStoryById, getPublishedChapters, getReadingProgress, type Story, type Chapter, type ReadingProgress } from '@readixon/core';
+import { getStoryById, getPublishedChapters, getReadingProgress, generateStorySlug, type Story, type Chapter, type ReadingProgress } from '@readixon/core';
 import { useAuthStore } from '@readixon/core/src/store/useAuthStore';
 import { Typography, Button } from '@readixon/ui';
 import { ArrowLeft, BookOpen, Clock, Heart, Eye, CheckCircle, Bookmark, MessageSquare } from 'lucide-react';
@@ -73,7 +73,7 @@ export default function StoryEntryPage() {
     <div className="min-h-screen bg-background text-text pb-24">
       {/* Top Navbar */}
       <div className="sticky top-0 z-10 flex items-center p-4 bg-background/80 backdrop-blur-md border-b border-border/10">
-        <Button variant="ghost" onPress={() => router.back()} className="rounded-full p-2 mr-4">
+        <Button variant="ghost" onPress={() => router.push(`/story/${generateStorySlug(story.title, story.storyId)}`)} className="rounded-full p-2 mr-4">
           <ArrowLeft size={24} />
         </Button>
         <Typography variant="h3">Hikaye Detayı</Typography>
