@@ -469,7 +469,7 @@ export default function FeedPage() {
                   return (
                     <div
                       key={announcement.id}
-                      className="relative w-[90%] md:w-[75%] lg:w-[60%] shrink-0 snap-center flex flex-col md:flex-row p-6 md:p-8 rounded-3xl bg-card border border-border/50 shadow-sm hover:shadow-md transition-all gap-8 md:gap-12 items-center"
+                      className="relative w-full shrink-0 snap-center flex flex-col md:flex-row p-6 md:p-8 rounded-3xl bg-card border border-border/50 shadow-sm hover:shadow-md transition-all gap-8 md:gap-12 items-center"
                     >
                       {/* Sol Taraf: Görsel veya İkon */}
                       <div className="w-full md:w-64 lg:w-72 shrink-0 flex items-center justify-center">
