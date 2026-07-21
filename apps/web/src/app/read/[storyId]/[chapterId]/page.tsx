@@ -10,6 +10,7 @@ import { useAuthStore } from '@readixon/core/src/store/useAuthStore';
 import { ContentRenderer, ReadingSettingsPanel, Button, Typography } from '@readixon/ui';
 import { ArrowLeft, Settings, List, ChevronLeft, ChevronRight, CheckCircle, X, Heart, MessageSquare, Eye, Reply } from 'lucide-react';
 import { toast } from 'sonner';
+import { ChapterEndActivity } from '@/components/ChapterEndActivity';
 
 export default function ReadPage() {
   const params = useParams();
@@ -492,6 +493,18 @@ export default function ReadPage() {
             }
           }}
         />
+
+        {/* Bölüm Sonu Aktivitesi */}
+        {chapter.endActivity && (
+          <ChapterEndActivity 
+            activity={chapter.endActivity} 
+            storyId={storyId} 
+            chapterId={chapterId} 
+            authorId={story?.authorId || ''} 
+            userId={firebaseUser?.uid} 
+            textColor={currentThemeStyle.text}
+          />
+        )}
         
         {/* Bölüm Beğeni ve Tartışma Alanı */}
         <div className="mt-20 pt-8 border-t border-border/20">
@@ -518,6 +531,31 @@ export default function ReadPage() {
               <Heart size={24} className={`transition-colors ${isLiked ? 'fill-current' : ''}`} /> 
               <span className="font-bold">{chapter.stats?.likes || 0} Beğeni</span>
             </button>
+          </div>
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between items-center my-12 pt-8 border-t border-border/20">
+            {prevChapter ? (
+              <Button 
+                variant="outline" 
+                onPress={() => router.push(`/read/${storyId}/${prevChapter.chapterId}`)}
+                className="flex-1 mr-2 flex flex-row justify-center items-center gap-2"
+              >
+                <ChevronLeft size={20} />
+                Önceki Bölüm
+              </Button>
+            ) : <div className="flex-1 mr-2" />}
+            
+            {nextChapter ? (
+              <Button 
+                variant="primary" 
+                onPress={() => router.push(`/read/${storyId}/${nextChapter.chapterId}`)}
+                className="flex-1 ml-2 flex flex-row justify-center items-center gap-2"
+              >
+                Sonraki Bölüm
+                <ChevronRight size={20} />
+              </Button>
+            ) : <div className="flex-1 ml-2" />}
           </div>
 
           <div className="mb-12">
@@ -561,31 +599,6 @@ export default function ReadPage() {
               )}
             </div>
           </div>
-        </div>
-        
-        {/* Navigation Buttons */}
-        <div className="flex justify-between items-center mt-16 pt-8 border-t border-border/20">
-          {prevChapter ? (
-            <Button 
-              variant="outline" 
-              onPress={() => router.push(`/read/${storyId}/${prevChapter.chapterId}`)}
-              className="flex-1 mr-2 flex flex-row justify-center items-center gap-2"
-            >
-              <ChevronLeft size={20} />
-              Önceki Bölüm
-            </Button>
-          ) : <div className="flex-1 mr-2" />}
-          
-          {nextChapter ? (
-            <Button 
-              variant="primary" 
-              onPress={() => router.push(`/read/${storyId}/${nextChapter.chapterId}`)}
-              className="flex-1 ml-2 flex flex-row justify-center items-center gap-2"
-            >
-              Sonraki Bölüm
-              <ChevronRight size={20} />
-            </Button>
-          ) : <div className="flex-1 ml-2" />}
         </div>
       </main>
 

@@ -134,6 +134,27 @@ export interface ContentBlock {
   textStyle?: 'normal' | 'bold' | 'italic';
 }
 
+export type ChapterActivityType = 'question' | 'poll';
+
+export interface ChapterActivity {
+  type: ChapterActivityType;
+  question: string;
+  options?: string[]; // Sadece poll (anket) için geçerli
+}
+
+export interface ActivityAnswer {
+  id?: string;
+  userId: string;
+  type: ChapterActivityType;
+  answer?: string; // Soru için
+  selectedOptionIndex?: number; // Anket için
+  createdAt: Timestamp;
+  // Denormalized user fields for easier UI rendering without extra queries
+  userDisplayName?: string;
+  userUsername?: string;
+  userAvatarUrl?: string;
+}
+
 export interface ChapterStats {
   views: number;
   likes: number;
@@ -148,6 +169,7 @@ export interface Chapter {
   publishDate: Timestamp;
   status?: 'draft' | 'published' | 'scheduled';
   stats?: ChapterStats;
+  endActivity?: ChapterActivity;
 }
 
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -263,6 +285,7 @@ export type NotificationType =
   | 'story_like' 
   | 'chapter_like'
   | 'story_comment' 
+  | 'chapter_activity'
   | 'paragraph_comment'
   | 'readix_like' 
   | 'readix_comment' 

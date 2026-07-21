@@ -74,9 +74,9 @@ export default function FeedPage() {
       const storyIds = history.map(h => h.storyId);
       const stories = await getStoriesByIds(storyIds);
 
-      // Hikayeleri bul ve ilerlemeyi eşleştir
+      // Hikayeleri bul ve ilerlemeyi eşleştir (Sadece yayınlanmış olanları göster)
       return history.map(h => {
-        const story = stories.find(s => s.storyId === h.storyId);
+        const story = stories.find(s => s.storyId === h.storyId && s.status !== 'draft');
         return story ? { story, progress: h.scrollPercentage || 0, chapterId: h.currentChapterId } : null;
       }).filter(Boolean) as { story: Story; progress: number; chapterId: string }[];
     },

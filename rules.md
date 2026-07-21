@@ -83,6 +83,12 @@ service cloud.firestore {
           allow read: if true;
           allow write: if isAuthenticated() && request.auth.uid == likeUserId;
         }
+
+        // YENİ EKLENEN: Bölüm Sonu Aktiviteleri (Cevaplar/Anketler) için İzin
+        match /activity_answers/{userId} {
+          allow read: if true;
+          allow write: if isAuthenticated() && request.auth.uid == userId;
+        }
         
         match /comments/{commentId} {
           allow read: if true;

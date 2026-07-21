@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Typography, Button, Input } from '@readixon/ui';
-import { ArrowLeft, PlusCircle, Save, GripVertical, CheckCircle, Wand2, Info } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Save, GripVertical, CheckCircle, Wand2, Info, MessageSquare } from 'lucide-react';
 import {
   getStoryById,
   updateStory,
@@ -236,6 +236,7 @@ export default function StoryDetailAdminPage() {
           <ul className="list-disc ml-4 space-y-2 opacity-90">
             <li><strong className="font-semibold">Kapak ve Detaylar:</strong> Hikayenizin vitrinidir. Okurların göreceği kapak görselini, özeti, önsözü, arka kapak sözünü, varsa ekibinizi ve hikayenin durumunu buradan ayarlarsınız. Yaptığınız değişiklikleri sağ üstteki "Kaydet" butonu ile kaydetmeyi unutmayın. (Otomatik kaydetme özelliği aktif.)</li>
             <li><strong className="font-semibold">Bölümler ve Planlama:</strong> Hikayenizin gidişatını buradan yönetirsiniz. "Yeni Bölüm Ekle" veya eklediğiniz bölümün üzerine tıklayarak gelişmiş içerik editörüne geçebilir ve hemen yazmaya başlayabilirsiniz. Ayrıca "Sihirbaz Planlamasına Git" butonuna tıklayarak (yapay zeka kullandıysanız) hikaye şemanızı, karakterlerinizi ve kurgunuzu detaylandırabilirsiniz.</li>
+            <li><strong className="font-semibold">Bölüm Aktiviteleri:</strong> Okuyucularınızla etkileşimi artırmak için bölüm sonlarına eklediğiniz anketlerin ve açık uçlu soruların yanıtlarını buradan (Bölüm Aktiviteleri kısayolundan) takip edebilirsiniz.</li>
             <li><strong className="font-semibold">Tehlikeli Bölge:</strong> Sayfanın sol kolonunda, en altında hikayenizi tamamen silebilirsiniz. Ancak dikkatli olun, bu işlemin geri dönüşü yoktur!</li>
           </ul>
         </div>
@@ -281,6 +282,20 @@ export default function StoryDetailAdminPage() {
               <Typography variant="h3" className="font-bold text-primary">Kurgu Sihirbazı</Typography>
             </div>
             <Typography variant="caption" className="text-muted">Hikayenizi baştan sona planlayın, plot twistler ve finaller kurgulayın.</Typography>
+          </div>
+
+          {/* Etkileşimler Kısayolu */}
+          <div
+            onClick={() => router.push(`/studio/story/${storyId}/activities`)}
+            className="bg-amber-500/5 p-6 rounded-2xl border border-amber-500/20 cursor-pointer hover:bg-amber-500/10 transition-colors group flex flex-col gap-2"
+          >
+            <div className="flex items-center gap-3">
+              <div className="bg-amber-500/20 p-2 rounded-xl text-amber-500">
+                <MessageSquare size={24} />
+              </div>
+              <Typography variant="h3" className="font-bold text-amber-500">Bölüm Aktiviteleri</Typography>
+            </div>
+            <Typography variant="caption" className="text-muted">Bölüm sonlarına eklediğiniz anketlerin ve soruların cevaplarını görün.</Typography>
           </div>
 
           <div className="bg-red-500/5 p-6 rounded-2xl border border-red-500/20">

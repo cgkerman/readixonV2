@@ -13,7 +13,7 @@ export default function Home() {
 
   const handleMouseMove = (e: React.MouseEvent) => {
     // Sadece desktop/tablet'te mouse hareketi olduğu için içerde hesaplama yapalım
-    if (window.innerWidth < 768) return; 
+    if (window.innerWidth < 768) return;
     const x = (e.clientX / window.innerWidth - 0.5) * 2;
     const y = (e.clientY / window.innerHeight - 0.5) * 2;
     setMousePos({ x, y });
@@ -28,7 +28,7 @@ export default function Home() {
   }
 
   return (
-    <div 
+    <div
       className="flex min-h-screen w-full bg-background flex-col md:flex-row overflow-hidden"
       onMouseMove={handleMouseMove}
     >
@@ -156,25 +156,25 @@ export default function Home() {
         {/* Alt Kısım */}
         <div className="text-center md:text-left mt-8">
           <Typography variant="caption" className="text-muted/60 text-sm">
-            © {new Date().getFullYear()} readixon. Tüm hakları saklıdır.
+            © {new Date().getFullYear()} readixon. Tüm hakları saklıdır. Platform özellikleri ve özgün içerikleri izinsiz kopyalanamaz; haksız rekabet ve fikri mülkiyet ihlallerine karşı tüm yasal haklarımız saklıdır.
           </Typography>
         </div>
       </div>
 
       {/* Sağ Taraf - Görsel Alan */}
       <div className="hidden md:flex w-full md:w-1/2 shrink-0 relative items-center justify-center bg-gradient-to-br from-purple-50/50 to-indigo-50/50 dark:from-purple-950/20 dark:to-indigo-950/20 overflow-hidden">
-        
+
         {/* Orta Kısım Geçiş Efekti (Keskinliği Yumuşatmak İçin) */}
         <div className="absolute inset-y-0 left-0 w-24 md:w-32 lg:w-48 bg-gradient-to-r from-background via-background/80 to-transparent z-30 pointer-events-none" />
 
         {/* Zarif Degrade Işıklar */}
         <div className="absolute top-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-primary/10 blur-[120px] rounded-full pointer-events-none" />
         <div className="absolute bottom-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-purple-500/10 blur-[120px] rounded-full pointer-events-none" />
-        
+
         {/* Platformu Yansıtan Süslemeler - Parallax Etkili */}
-        
+
         {/* Yorum / Etkileşim İkonu */}
-        <div 
+        <div
           className="absolute top-[20%] left-[20%] text-primary/20 dark:text-primary/30 transition-transform duration-75 pointer-events-none"
           style={{ transform: `translate(${mousePos.x * 20}px, ${mousePos.y * 20}px) rotate(-12deg)` }}
         >
@@ -182,7 +182,7 @@ export default function Home() {
         </div>
 
         {/* Yazarlık İkonu */}
-        <div 
+        <div
           className="absolute bottom-[25%] right-[15%] text-purple-500/20 dark:text-purple-500/30 transition-transform duration-75 pointer-events-none"
           style={{ transform: `translate(${mousePos.x * -15}px, ${mousePos.y * -15}px) rotate(15deg)` }}
         >
@@ -190,7 +190,7 @@ export default function Home() {
         </div>
 
         {/* Minik Readix (Mikro Blog) Kartı Temsili */}
-        <div 
+        <div
           className="absolute top-[45%] left-[10%] w-48 p-4 rounded-2xl bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 backdrop-blur-md shadow-xl transition-transform duration-75 pointer-events-none"
           style={{ transform: `translate(${mousePos.x * 15}px, ${mousePos.y * -25}px) rotate(-5deg)` }}
         >
@@ -209,7 +209,7 @@ export default function Home() {
         </div>
 
         {/* Başka Bir Ufak Kart */}
-        <div 
+        <div
           className="absolute top-[15%] right-[25%] w-32 p-3 rounded-2xl bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 backdrop-blur-md shadow-lg transition-transform duration-75 pointer-events-none"
           style={{ transform: `translate(${mousePos.x * -10}px, ${mousePos.y * 15}px) rotate(8deg)` }}
         >
@@ -219,22 +219,22 @@ export default function Home() {
             <div className="h-1.5 w-2/3 bg-purple-400/30 rounded-full" />
           </div>
         </div>
-        
+
         {/* Maskot Zemin Gölgesi (Derinlik algısı için) */}
-        <div 
+        <div
           className="absolute top-[65%] left-1/2 w-64 h-12 bg-black/5 dark:bg-black/30 blur-2xl rounded-[100%] pointer-events-none transition-transform duration-75"
           style={{ transform: `translateX(calc(-50% + ${mousePos.x * -8}px))` }}
         />
 
         {/* Maskot - Parallax Etkili */}
-        <div 
+        <div
           className="relative z-10 w-4/5 max-w-[500px] aspect-square drop-shadow-[0_20px_40px_rgba(0,0,0,0.1)] transition-transform duration-75"
           style={{ transform: `translate(${mousePos.x * -25}px, ${mousePos.y * -25}px)` }}
         >
           <div className="relative w-full h-full transition-transform duration-700 hover:scale-105">
-            <Image 
-              src="/panda-mascot.png" 
-              alt="Readixon Panda Mascot" 
+            <Image
+              src="/panda-mascot.png"
+              alt="Readixon Panda Mascot"
               fill
               sizes="(max-width: 768px) 100vw, 500px"
               className="object-contain"
@@ -242,7 +242,7 @@ export default function Home() {
             />
           </div>
         </div>
-        
+
       </div>
     </div>
   );

@@ -61,6 +61,9 @@ export type {
   Announcement,
   SavedQuote,
   UserAchievements,
+  ChapterActivity,
+  ChapterActivityType,
+  ActivityAnswer
 } from './types';
 
 // Auth servisi
@@ -142,4 +145,4 @@ export * from './services/characterService';
 export * from './constants/badges';
 export * from './services/achievementService';
 export * from './services/systemService';
-
+export * from './services/activityService';

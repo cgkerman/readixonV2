@@ -33,9 +33,11 @@ export default function LibraryPage() {
           if (progresses.length > 0) {
             const storyIds = progresses.map(p => p.storyId);
             const stories = await getStoriesByIds(storyIds);
+            // Sadece yayınlanmış hikayeleri filtrele
+            const publishedStories = stories.filter(s => s.status !== 'draft');
             
             // Eksik yazar bilgilerini tamamla
-            for (let story of stories) {
+            for (let story of publishedStories) {
               if (!story.authorName) {
                 const authorProfile = await getUserProfile(story.authorId);
                 if (authorProfile) {
@@ -46,7 +48,7 @@ export default function LibraryPage() {
             }
             
             // İlerlemeyi birleştir
-            const merged = stories.map(story => {
+            const merged = publishedStories.map(story => {
               const prog = progresses.find(p => p.storyId === story.storyId);
               return {
                 ...story,
@@ -62,8 +64,11 @@ export default function LibraryPage() {
           if (savedIds.length > 0) {
             const stories = await getStoriesByIds(savedIds);
             
+            // Sadece yayınlanmış hikayeleri filtrele
+            const publishedSavedStories = stories.filter(s => s.status !== 'draft');
+            
             // Eksik yazar bilgilerini tamamla
-            for (let story of stories) {
+            for (let story of publishedSavedStories) {
               if (!story.authorName) {
                 const authorProfile = await getUserProfile(story.authorId);
                 if (authorProfile) {
@@ -73,7 +78,7 @@ export default function LibraryPage() {
               }
             }
             
-            setSavedStories(stories);
+            setSavedStories(publishedSavedStories);
           } else {
             setSavedStories([]);
           }

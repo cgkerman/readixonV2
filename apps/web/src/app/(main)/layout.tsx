@@ -21,9 +21,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       let count = 0;
       chats.forEach(chat => {
         if (chat.status === 'accepted') {
-           count += (chat.unreadCounts[firebaseUser.uid] || 0);
+          count += (chat.unreadCounts[firebaseUser.uid] || 0);
         } else if (chat.status === 'pending' && chat.requestedBy !== firebaseUser.uid) {
-           count += 1;
+          count += 1;
         }
       });
       setUnreadMessageCount(count);
@@ -36,7 +36,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   const handleBecomeAuthor = async () => {
     if (!firebaseUser || !userProfile) return;
-    
+
     if (!firebaseUser.emailVerified) {
       setIsVerifyModalOpen(true);
       return;
@@ -48,14 +48,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const sendEmailAndStartPolling = async () => {
     if (!firebaseUser) return;
     setIsVerifying(true);
-    
+
     try {
       const res = await fetch('/api/auth/send-verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: firebaseUser.email }),
       });
-      
+
       if (!res.ok) {
         let errorMsg = 'Doğrulama maili gönderilemedi.';
         try {
@@ -79,22 +79,22 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       }
 
       toast('Doğrulama e-postası gönderildi. Lütfen gelen kutunuzu (ve gereksiz kutusunu) kontrol edin.');
-      
+
       const pollInterval = setInterval(async () => {
         await firebaseUser.reload();
         if (firebaseUser.emailVerified) {
           clearInterval(pollInterval);
           setVerifySuccess(true);
-          
+
           setTimeout(async () => {
-             await upgradeToAuthor();
-             setIsVerifyModalOpen(false);
-             setVerifySuccess(false);
-             setIsVerifying(false);
+            await upgradeToAuthor();
+            setIsVerifyModalOpen(false);
+            setVerifySuccess(false);
+            setIsVerifying(false);
           }, 3000); // Başarı mesajını 3 saniye göster
         }
       }, 3000);
-      
+
     } catch (error) {
       console.error('Doğrulama e-postası gönderme hatası:', error);
       toast.error('E-posta gönderilirken bir hata oluştu. Daha sonra tekrar deneyin.');
@@ -107,7 +107,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     try {
       await becomeAuthor(firebaseUser.uid);
       setUserProfile({ ...userProfile, isAuthor: true });
-      
+
       // Tebrik e-postası gönder
       try {
         await fetch('/api/send-email', {
@@ -153,7 +153,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   <div class="footer">
                     <p>Bu e-posta sistem tarafından otomatik olarak gönderilmiştir. Lütfen bu mesaja yanıt vermeyin.</p>
                     <p>Herhangi bir sorunuz veya desteğe ihtiyacınız olursa bize her zaman <a href="mailto:support@readixon.com">support@readixon.com</a> adresinden ulaşabilirsiniz.</p>
-                    <p>&copy; ${new Date().getFullYear()} Readixon. Tüm hakları saklıdır.</p>
+                    <p>&copy; ${new Date().getFullYear()} Readixon. Tüm hakları saklıdır.Platform özellikleri ve özgün içerikleri izinsiz kopyalanamaz; haksız rekabet ve fikri mülkiyet ihlallerine karşı tüm yasal haklarımız saklıdır.</p>
                   </div>
                 </div>
               </body>
@@ -203,17 +203,16 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       {/* ── Sidebar (Desktop) ── */}
       <aside className="hidden md:flex w-64 flex-col border-r border-border/50 bg-card/20 p-6">
         <Typography variant="h2" className="font-bold text-primary tracking-tighter mb-10">readixon</Typography>
-        
+
         <nav className="flex-1 flex flex-col gap-2">
           {topNavItems.map((item) => {
             const isActive = pathname === item.href;
             return (
-              <Link 
-                key={item.href} 
+              <Link
+                key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors relative ${
-                  isActive ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-card hover:text-text'
-                }`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors relative ${isActive ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-card hover:text-text'
+                  }`}
               >
                 <item.icon size={20} />
                 <Typography variant="body" className="font-medium flex-1">{item.name}</Typography>
@@ -224,12 +223,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           {bottomNavItems.map((item) => {
             const isActive = pathname === item.href || (item.href === '/messages' && pathname.startsWith('/messages'));
             return (
-              <Link 
-                key={item.href} 
+              <Link
+                key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors relative ${
-                  isActive ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-card hover:text-text'
-                }`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors relative ${isActive ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-card hover:text-text'
+                  }`}
               >
                 <item.icon size={20} />
                 <Typography variant="body" className="font-medium flex-1">{item.name}</Typography>
@@ -261,7 +259,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                     {userProfile?.displayName || 'Yükleniyor...'}
                   </Typography>
                   <Typography variant="caption" className="text-muted truncate block">
-                    {userProfile?.username ? `@${userProfile.username}` : `@${userProfile?.uid?.substring(0,6)}`}
+                    {userProfile?.username ? `@${userProfile.username}` : `@${userProfile?.uid?.substring(0, 6)}`}
                   </Typography>
                   <div className="flex items-center gap-1 mt-0.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
@@ -328,7 +326,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       {/* ── Main Content ── */}
       <main className="flex-1 flex flex-col overflow-y-auto relative">
         <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none -z-10" />
-        
+
         {/* ── Mobile Top Header ── */}
         <div className="md:hidden sticky top-0 z-40 flex items-center justify-between p-4 bg-background/80 backdrop-blur-md border-b border-border/50 shrink-0">
           <Typography variant="h3" className="font-bold text-primary tracking-tighter">readixon</Typography>
@@ -362,32 +360,32 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       {!(pathname.startsWith('/messages/') && pathname.split('/').length > 2) && (
         <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-card/90 backdrop-blur-xl border-t border-border/50 flex items-center justify-around px-2 z-50 pb-safe">
           {topNavItems.map((item) => {
-          const isActive = pathname === item.href;
-          return (
-            <Link key={item.href} href={item.href} className="flex flex-col items-center justify-center w-16 h-full relative">
-              <item.icon size={24} className={isActive ? 'text-primary' : 'text-muted'} />
-              {item.badge ? (
-                <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full absolute top-2 right-2 border-2 border-background translate-x-1 -translate-y-1">
-                  {item.badge > 99 ? '99+' : item.badge}
+            const isActive = pathname === item.href;
+            return (
+              <Link key={item.href} href={item.href} className="flex flex-col items-center justify-center w-16 h-full relative">
+                <item.icon size={24} className={isActive ? 'text-primary' : 'text-muted'} />
+                {item.badge ? (
+                  <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full absolute top-2 right-2 border-2 border-background translate-x-1 -translate-y-1">
+                    {item.badge > 99 ? '99+' : item.badge}
+                  </span>
+                ) : null}
+                {isActive && <div className="w-1 h-1 rounded-full bg-primary mt-1 absolute bottom-1" />}
+              </Link>
+            );
+          })}
+          {/* Profil Linki (En sağda) */}
+          <Link href="/profile" className="flex flex-col items-center justify-center w-14 h-full">
+            <div className="w-6 h-6 rounded-full bg-primary/20 border border-primary/50 flex items-center justify-center overflow-hidden">
+              {userProfile?.avatarUrl ? (
+                <img src={userProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-[10px] font-bold text-primary uppercase">
+                  {userProfile?.displayName?.charAt(0) || 'U'}
                 </span>
-              ) : null}
-              {isActive && <div className="w-1 h-1 rounded-full bg-primary mt-1 absolute bottom-1" />}
-            </Link>
-          );
-        })}
-        {/* Profil Linki (En sağda) */}
-        <Link href="/profile" className="flex flex-col items-center justify-center w-14 h-full">
-          <div className="w-6 h-6 rounded-full bg-primary/20 border border-primary/50 flex items-center justify-center overflow-hidden">
-            {userProfile?.avatarUrl ? (
-              <img src={userProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-[10px] font-bold text-primary uppercase">
-                {userProfile?.displayName?.charAt(0) || 'U'}
-              </span>
-            )}
-          </div>
-          {pathname === '/profile' && <div className="w-1 h-1 rounded-full bg-primary mt-1" />}
-        </Link>
+              )}
+            </div>
+            {pathname === '/profile' && <div className="w-1 h-1 rounded-full bg-primary mt-1" />}
+          </Link>
         </div>
       )}
 
@@ -405,7 +403,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 <Typography variant="body" className="text-muted mb-8">
                   Yazar olabilmek için e-posta adresinizi doğrulamanız gerekmektedir. E-mail doğrulama işleminizden sonra yazar olabilirsiniz.
                 </Typography>
-                
+
                 <div className="flex flex-col w-full gap-3">
                   <Button variant="primary" onPress={sendEmailAndStartPolling} className="w-full">
                     Doğrulama E-postası Gönder
@@ -474,7 +472,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                       {userProfile?.displayName || 'Yükleniyor...'}
                     </Typography>
                     <Typography variant="caption" className="text-muted truncate block mt-0.5">
-                      {userProfile?.username ? `@${userProfile.username}` : `@${userProfile?.uid?.substring(0,6)}`}
+                      {userProfile?.username ? `@${userProfile.username}` : `@${userProfile?.uid?.substring(0, 6)}`}
                     </Typography>
                     <div className="flex items-center gap-1 mt-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
@@ -498,15 +496,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   </Link>
                 </div>
               )}
-              
+
               {bottomNavItems.filter(item => ['/library', '/about', '/settings'].includes(item.href)).map((item) => (
-                <Link 
-                  key={item.href} 
+                <Link
+                  key={item.href}
                   href={item.href}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`flex items-center gap-4 px-4 py-4 rounded-xl transition-colors shrink-0 ${
-                    pathname === item.href ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-muted/10 hover:text-text'
-                  }`}
+                  className={`flex items-center gap-4 px-4 py-4 rounded-xl transition-colors shrink-0 ${pathname === item.href ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-muted/10 hover:text-text'
+                    }`}
                 >
                   <item.icon size={22} />
                   <Typography variant="body" className="font-medium text-lg flex-1">{item.name}</Typography>

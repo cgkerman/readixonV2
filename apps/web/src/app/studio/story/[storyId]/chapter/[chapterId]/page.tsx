@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Typography, Button, BlockEditor, Input, ContentRenderer } from '@readixon/ui';
-import { ArrowLeft, Save, PlusCircle, CheckCircle, FileText, Globe, Calendar, GripVertical, Trash2, Sparkles, Wand2, Eye, EyeOff, Info, X } from 'lucide-react';
+import { ArrowLeft, Save, PlusCircle, CheckCircle, FileText, Globe, Calendar, GripVertical, Trash2, Sparkles, Wand2, Eye, EyeOff, Info, X, HelpCircle, BarChart2, Plus } from 'lucide-react';
 import { fetchChapter, updateChapter, compressImage, fetchChapters, createChapter, deleteChapter, createNotification, getUserFollowerIds, getStoryById, updateStory, useAuthStore, trackWordCount, trackInteraction, type Chapter } from '@readixon/core';
 import { ReadixonAIAssistant } from '@/components/ReadixonAIAssistant';
 import { uploadFile } from '@readixon/core/src/services/storageService';
@@ -425,6 +425,111 @@ export default function ChapterEditorPage() {
             )}
           </div>
           
+          {/* Bölüm Sonu Aktivitesi */}
+          <div className="bg-card p-4 md:p-8 rounded-2xl border border-border/20 shadow-sm mb-24">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <Typography variant="h3" className="mb-1 flex items-center gap-2">
+                  <Sparkles className="text-primary" /> Bölüm Sonu Aktivitesi
+                </Typography>
+                <Typography variant="caption" className="text-muted">Okuyucularla etkileşimi artırmak için bölüm sonuna bir soru veya anket ekleyin.</Typography>
+              </div>
+              {chapter.endActivity && (
+                <Button 
+                  variant="ghost" 
+                  className="text-destructive hover:bg-destructive/10"
+                  onPress={() => setChapter({ ...chapter, endActivity: undefined })}
+                >
+                  <Trash2 size={16} className="mr-2" /> Kaldır
+                </Button>
+              )}
+            </div>
+
+            {!chapter.endActivity ? (
+              <div className="flex flex-col sm:flex-row gap-4 mt-6">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 py-8 flex flex-col gap-2 hover:border-primary/50 hover:bg-primary/5"
+                  onPress={() => setChapter({ ...chapter, endActivity: { type: 'question', question: '' } })}
+                >
+                  <HelpCircle size={28} className="text-primary" />
+                  <Typography variant="body" className="font-bold">Açık Uçlu Soru Ekle</Typography>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="flex-1 py-8 flex flex-col gap-2 hover:border-primary/50 hover:bg-primary/5"
+                  onPress={() => setChapter({ ...chapter, endActivity: { type: 'poll', question: '', options: ['', ''] } })}
+                >
+                  <BarChart2 size={28} className="text-primary" />
+                  <Typography variant="body" className="font-bold">Anket Ekle</Typography>
+                </Button>
+              </div>
+            ) : (
+              <div className="mt-6 p-6 rounded-xl bg-background border border-border/50">
+                <div className="mb-4">
+                  <Typography variant="caption" className="font-bold text-muted mb-2 block">
+                    {chapter.endActivity.type === 'question' ? 'Sorunuz' : 'Anket Sorusu'}
+                  </Typography>
+                  <Input 
+                    value={chapter.endActivity.question}
+                    onChangeText={(val) => setChapter({ ...chapter, endActivity: { ...chapter.endActivity!, question: val } })}
+                    placeholder={chapter.endActivity.type === 'question' ? 'Okuyucularınıza ne sormak istersiniz?' : 'Anket sorusunu buraya yazın...'}
+                    className="bg-card border-border/50"
+                  />
+                </div>
+
+                {chapter.endActivity.type === 'poll' && chapter.endActivity.options && (
+                  <div className="mt-6">
+                    <Typography variant="caption" className="font-bold text-muted mb-3 block">Anket Şıkları</Typography>
+                    <div className="flex flex-col gap-3">
+                      {chapter.endActivity.options.map((opt, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                            {String.fromCharCode(65 + idx)}
+                          </div>
+                          <Input 
+                            value={opt}
+                            onChangeText={(val) => {
+                              const newOptions = [...chapter.endActivity!.options!];
+                              newOptions[idx] = val;
+                              setChapter({ ...chapter, endActivity: { ...chapter.endActivity!, options: newOptions } });
+                            }}
+                            placeholder={`${idx + 1}. Şık`}
+                            className="bg-card border-border/50 flex-1"
+                          />
+                          {chapter.endActivity!.options!.length > 2 && (
+                            <Button 
+                              variant="ghost" 
+                              className="text-muted hover:text-destructive hover:bg-destructive/10 p-2 shrink-0"
+                              onPress={() => {
+                                const newOptions = chapter.endActivity!.options!.filter((_, i) => i !== idx);
+                                setChapter({ ...chapter, endActivity: { ...chapter.endActivity!, options: newOptions } });
+                              }}
+                            >
+                              <X size={16} />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {chapter.endActivity.options.length < 5 && (
+                      <Button 
+                        variant="ghost" 
+                        className="mt-4 text-primary hover:bg-primary/10 w-full"
+                        onPress={() => {
+                          const newOptions = [...chapter.endActivity!.options!, ''];
+                          setChapter({ ...chapter, endActivity: { ...chapter.endActivity!, options: newOptions } });
+                        }}
+                      >
+                        <Plus size={16} className="mr-2" /> Şık Ekle
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          
         </div>
       </main>
 
@@ -508,6 +613,12 @@ export default function ChapterEditorPage() {
                 <Typography variant="h4" className="text-foreground mb-2">6. Plan Notlarım</Typography>
                 <Typography variant="body" className="text-muted text-sm leading-relaxed">
                   Bölümünüzün kurgusu, karakterler veya olay örgüsüyle ilgili aldığınız notlara hızlıca göz atmak isterseniz sağ üstteki <b>Plan Notlarım</b> butonuna tıklayarak sağ tarafta açılan defterinizi kullanabilirsiniz.
+                </Typography>
+              </div>
+              <div className="bg-card border border-border/50 rounded-xl p-4">
+                <Typography variant="h4" className="text-foreground mb-2">7. Bölüm Sonu Aktiviteleri</Typography>
+                <Typography variant="body" className="text-muted text-sm leading-relaxed">
+                  Sayfanın en altındaki alandan bölümünüze anket veya açık uçlu soru ekleyebilirsiniz. Okuyucuların verdiği yanıtları hikaye panelindeki <b>Bölüm Aktiviteleri</b> sekmesinden takip edebilirsiniz.
                 </Typography>
               </div>
             </div>
