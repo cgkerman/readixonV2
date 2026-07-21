@@ -412,13 +412,13 @@ export default function FeedPage() {
                 <BellRing className="text-primary" size={24} />
                 <Typography variant="h2" className="text-2xl font-bold">Platform Duyuruları</Typography>
               </div>
-              <div className="flex flex-col gap-6 items-center w-full">
+              <div className="flex overflow-x-auto gap-6 pb-6 scrollbar-hide snap-x w-full snap-mandatory">
                 {announcements.map(announcement => {
                   const hasImage = !!announcement.imageUrl;
                   return (
                     <div
                       key={announcement.id}
-                      className="relative w-full flex flex-col md:flex-row p-6 md:p-8 rounded-3xl bg-card border border-border/50 shadow-sm hover:shadow-md transition-all gap-8 md:gap-12 items-center"
+                      className="relative w-[90%] md:w-[75%] lg:w-[60%] shrink-0 snap-center flex flex-col md:flex-row p-6 md:p-8 rounded-3xl bg-card border border-border/50 shadow-sm hover:shadow-md transition-all gap-8 md:gap-12 items-center"
                     >
                       {/* Sol Taraf: Görsel veya İkon */}
                       <div className="w-full md:w-64 lg:w-72 shrink-0 flex items-center justify-center">
