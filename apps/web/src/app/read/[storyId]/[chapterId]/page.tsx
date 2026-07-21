@@ -120,9 +120,13 @@ export default function ReadPage() {
       setLoading(false);
     };
     if (storyId && chapterId && isInitialized) {
+      if (!firebaseUser) {
+        router.replace('/login');
+        return;
+      }
       loadData();
     }
-  }, [storyId, chapterId, firebaseUser, isInitialized]);
+  }, [storyId, chapterId, firebaseUser, isInitialized, router]);
 
   const handleToggleLike = async () => {
     if (!firebaseUser) {

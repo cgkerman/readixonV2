@@ -309,6 +309,23 @@ export default function ArenaPage() {
     </div>
   );
 
+  if (!firebaseUser) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center h-full">
+        <div className="w-24 h-24 rounded-full bg-muted/10 flex items-center justify-center mb-6">
+          <Feather size={48} className="text-muted/50" />
+        </div>
+        <Typography variant="h2" className="mb-2">Edebi Arena'ya Katılın</Typography>
+        <Typography variant="body" className="text-muted max-w-md mx-auto mb-8">
+          Diğer yazarlarla düello yapmak, aktif kapışmaları oylamak ve sürpriz odalara katılmak için giriş yapmalısınız.
+        </Typography>
+        <Button variant="primary" onPress={() => router.push('/login')} className="px-8 rounded-full h-12 text-lg font-semibold">
+          Giriş Yap
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 flex flex-col h-full bg-background overflow-hidden relative">
       <div className="absolute top-0 right-0 left-0 h-96 bg-primary/5 -z-10 blur-3xl pointer-events-none" />

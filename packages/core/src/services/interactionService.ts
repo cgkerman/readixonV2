@@ -13,8 +13,10 @@ export const incrementStoryView = async (storyId: string) => {
     await updateDoc(storyRef, {
       'stats.views': increment(1)
     });
-  } catch (error) {
-    console.error("Hikaye görüntülenme sayısı artırılamadı:", error);
+  } catch (error: any) {
+    if (error?.code !== 'permission-denied') {
+      console.error("Hikaye görüntülenme sayısı artırılamadı:", error);
+    }
   }
 };
 
@@ -29,8 +31,10 @@ export const incrementChapterView = async (storyId: string, chapterId: string) =
     });
     // Hikaye view sayısını da artıralım
     await incrementStoryView(storyId);
-  } catch (error) {
-    console.error("Bölüm görüntülenme sayısı artırılamadı:", error);
+  } catch (error: any) {
+    if (error?.code !== 'permission-denied') {
+      console.error("Bölüm görüntülenme sayısı artırılamadı:", error);
+    }
   }
 };
 

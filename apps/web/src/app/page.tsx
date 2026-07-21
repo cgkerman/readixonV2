@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Typography, Button } from "@readixon/ui";
 import { useAuthStore } from "@readixon/core";
-import { Sparkles, Users, BookOpen, TrendingUp, MessageCircle, Feather } from "lucide-react";
+import { Sparkles, Users, BookOpen, TrendingUp, MessageCircle, Feather, Compass } from "lucide-react";
 
 export default function Home() {
   const { firebaseUser, isInitialized, userProfile } = useAuthStore();
@@ -138,6 +138,13 @@ export default function Home() {
                   <Link href="/login">
                     <Typography variant="caption" className="text-primary font-semibold text-base hover:underline">
                       Giriş Yap
+                    </Typography>
+                  </Link>
+                </div>
+                <div className="flex items-center justify-center mt-2">
+                  <Link href="/feed">
+                    <Typography variant="caption" className="text-muted font-medium hover:text-primary transition-colors text-base hover:underline flex items-center gap-2">
+                      <Compass size={16} /> Misafir Olarak Göz At
                     </Typography>
                   </Link>
                 </div>

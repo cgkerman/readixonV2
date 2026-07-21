@@ -244,67 +244,84 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         </nav>
 
         <div className="pt-6 border-t border-border/50 flex flex-col gap-3">
-          <Link href="/profile" className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-card/50 transition-colors group cursor-pointer">
-            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden border border-transparent group-hover:border-primary/30 transition-colors">
-              {userProfile?.avatarUrl ? (
-                <img src={userProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-xl font-bold text-primary uppercase">
-                  {userProfile?.displayName?.charAt(0) || 'U'}
-                </span>
-              )}
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <Typography variant="body" className="font-semibold truncate group-hover:text-primary transition-colors">
-                {userProfile?.displayName || 'Yükleniyor...'}
-              </Typography>
-              <Typography variant="caption" className="text-muted truncate block">
-                {userProfile?.username ? `@${userProfile.username}` : `@${userProfile?.uid?.substring(0,6)}`}
-              </Typography>
-              <div className="flex items-center gap-1 mt-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                <Typography variant="caption" className="text-amber-500 font-bold text-[10px]">
-                  {userProfile?.rxPoints || 0} RX
-                </Typography>
-              </div>
-            </div>
-          </Link>
-          {userProfile?.status !== 'pro' && (
-            <Link href="/premium">
-              <div className="bg-primary/10 border border-primary/20 rounded-xl p-3 text-primary shadow-sm hover:bg-primary/20 transition-all cursor-pointer flex flex-col items-start gap-0.5 mb-3 group">
-                <div className="flex items-center gap-2">
-                  <Crown size={18} className="text-primary group-hover:scale-110 transition-transform" />
-                  <Typography variant="body" className="font-bold text-sm">
-                    {userProfile?.status === 'premium' ? 'Pro\'ya Yükselt' : 'Premium Ol'}
-                  </Typography>
+          {firebaseUser ? (
+            <>
+              <Link href="/profile" className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-card/50 transition-colors group cursor-pointer">
+                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden border border-transparent group-hover:border-primary/30 transition-colors">
+                  {userProfile?.avatarUrl ? (
+                    <img src={userProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-xl font-bold text-primary uppercase">
+                      {userProfile?.displayName?.charAt(0) || 'U'}
+                    </span>
+                  )}
                 </div>
-                <Typography variant="caption" className="text-primary/70 text-xs">
-                  {userProfile?.status === 'premium' ? 'Sınırsız yaratıcılığa adım at' : 'Okuma deneyimini zirveye taşı'}
-                </Typography>
-              </div>
-            </Link>
-          )}
-          {userProfile?.isAuthor ? (
-            <Link href="/studio">
-              <Button variant="outline" className="w-full justify-start mb-2 border-primary/20 text-primary hover:bg-primary/10">
-                <PenTool size={18} className="mr-2" /> Studio'ya Git
+                <div className="flex-1 overflow-hidden">
+                  <Typography variant="body" className="font-semibold truncate group-hover:text-primary transition-colors">
+                    {userProfile?.displayName || 'Yükleniyor...'}
+                  </Typography>
+                  <Typography variant="caption" className="text-muted truncate block">
+                    {userProfile?.username ? `@${userProfile.username}` : `@${userProfile?.uid?.substring(0,6)}`}
+                  </Typography>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                    <Typography variant="caption" className="text-amber-500 font-bold text-[10px]">
+                      {userProfile?.rxPoints || 0} RX
+                    </Typography>
+                  </div>
+                </div>
+              </Link>
+              {userProfile?.status !== 'pro' && (
+                <Link href="/premium">
+                  <div className="bg-primary/10 border border-primary/20 rounded-xl p-3 text-primary shadow-sm hover:bg-primary/20 transition-all cursor-pointer flex flex-col items-start gap-0.5 mb-3 group">
+                    <div className="flex items-center gap-2">
+                      <Crown size={18} className="text-primary group-hover:scale-110 transition-transform" />
+                      <Typography variant="body" className="font-bold text-sm">
+                        {userProfile?.status === 'premium' ? 'Pro\'ya Yükselt' : 'Premium Ol'}
+                      </Typography>
+                    </div>
+                    <Typography variant="caption" className="text-primary/70 text-xs">
+                      {userProfile?.status === 'premium' ? 'Sınırsız yaratıcılığa adım at' : 'Okuma deneyimini zirveye taşı'}
+                    </Typography>
+                  </div>
+                </Link>
+              )}
+              {userProfile?.isAuthor ? (
+                <Link href="/studio">
+                  <Button variant="outline" className="w-full justify-start mb-2 border-primary/20 text-primary hover:bg-primary/10">
+                    <PenTool size={18} className="mr-2" /> Studio'ya Git
+                  </Button>
+                </Link>
+              ) : (
+                <Button variant="outline" className="w-full justify-start mb-2 border-primary/20 text-primary hover:bg-primary/10" onPress={handleBecomeAuthor}>
+                  <PenTool size={18} className="mr-2" /> Yazar Ol
+                </Button>
+              )}
+              {userProfile?.isAdmin && (
+                <Link href="/admin">
+                  <Button variant="outline" className="w-full justify-start mb-2 border-primary/20 text-primary hover:bg-primary/10">
+                    <ShieldAlert size={18} className="mr-2" /> Admin Paneli
+                  </Button>
+                </Link>
+              )}
+              <Button variant="ghost" className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-950/30" onPress={handleSignOut}>
+                <LogOut size={18} className="mr-2" /> Çıkış Yap
               </Button>
-            </Link>
+            </>
           ) : (
-            <Button variant="outline" className="w-full justify-start mb-2 border-primary/20 text-primary hover:bg-primary/10" onPress={handleBecomeAuthor}>
-              <PenTool size={18} className="mr-2" /> Yazar Ol
-            </Button>
+            <div className="flex flex-col items-center gap-3 p-4 rounded-xl bg-card border border-border/50">
+              <div className="w-12 h-12 rounded-full bg-muted/10 flex items-center justify-center overflow-hidden border border-border/50">
+                <User size={24} className="text-muted" />
+              </div>
+              <div className="text-center mb-1">
+                <Typography variant="body" className="font-semibold text-text">Misafir Kullanıcı</Typography>
+                <Typography variant="caption" className="text-muted block mt-1 text-xs">Platformun tüm özelliklerini kullanmak için giriş yapın.</Typography>
+              </div>
+              <Link href="/login" className="w-full block">
+                <Button variant="primary" className="w-full h-10">Giriş Yap</Button>
+              </Link>
+            </div>
           )}
-          {userProfile?.isAdmin && (
-            <Link href="/admin">
-              <Button variant="outline" className="w-full justify-start mb-2 border-primary/20 text-primary hover:bg-primary/10">
-                <ShieldAlert size={18} className="mr-2" /> Yönetim Paneli
-              </Button>
-            </Link>
-          )}
-          <Button variant="ghost" className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-950/30" onPress={handleSignOut}>
-            <LogOut size={18} className="mr-2" /> Çıkış Yap
-          </Button>
         </div>
       </aside>
 
@@ -441,31 +458,46 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2 pb-safe">
-              <Link href="/profile" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20 mb-4 shrink-0">
-                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden border border-transparent">
-                  {userProfile?.avatarUrl ? (
-                    <img src={userProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-xl font-bold text-primary uppercase">
-                      {userProfile?.displayName?.charAt(0) || 'U'}
-                    </span>
-                  )}
-                </div>
-                <div className="flex-1 overflow-hidden">
-                  <Typography variant="body" className="font-bold truncate text-text">
-                    {userProfile?.displayName || 'Yükleniyor...'}
-                  </Typography>
-                  <Typography variant="caption" className="text-muted truncate block mt-0.5">
-                    {userProfile?.username ? `@${userProfile.username}` : `@${userProfile?.uid?.substring(0,6)}`}
-                  </Typography>
-                  <div className="flex items-center gap-1 mt-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                    <Typography variant="caption" className="text-amber-500 font-bold text-[11px]">
-                      {userProfile?.rxPoints || 0} RX
-                    </Typography>
+              {firebaseUser ? (
+                <Link href="/profile" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20 mb-4 shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden border border-transparent">
+                    {userProfile?.avatarUrl ? (
+                      <img src={userProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-xl font-bold text-primary uppercase">
+                        {userProfile?.displayName?.charAt(0) || 'U'}
+                      </span>
+                    )}
                   </div>
+                  <div className="flex-1 overflow-hidden">
+                    <Typography variant="body" className="font-bold truncate text-text">
+                      {userProfile?.displayName || 'Yükleniyor...'}
+                    </Typography>
+                    <Typography variant="caption" className="text-muted truncate block mt-0.5">
+                      {userProfile?.username ? `@${userProfile.username}` : `@${userProfile?.uid?.substring(0,6)}`}
+                    </Typography>
+                    <div className="flex items-center gap-1 mt-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                      <Typography variant="caption" className="text-amber-500 font-bold text-[11px]">
+                        {userProfile?.rxPoints || 0} RX
+                      </Typography>
+                    </div>
+                  </div>
+                </Link>
+              ) : (
+                <div className="flex flex-col items-center gap-3 p-4 rounded-xl bg-card border border-border/50 mb-4 shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-muted/10 flex items-center justify-center overflow-hidden border border-border/50">
+                    <User size={24} className="text-muted" />
+                  </div>
+                  <div className="text-center mb-1">
+                    <Typography variant="body" className="font-bold text-text">Misafir Kullanıcı</Typography>
+                    <Typography variant="caption" className="text-muted block mt-0.5 text-xs">Platformun tüm özelliklerini kullanmak için giriş yapın.</Typography>
+                  </div>
+                  <Link href="/login" onClick={() => setIsMobileMenuOpen(false)} className="w-full block">
+                    <Button variant="primary" className="w-full h-10">Giriş Yap</Button>
+                  </Link>
                 </div>
-              </Link>
+              )}
               
               {bottomNavItems.filter(item => ['/library', '/about', '/settings'].includes(item.href)).map((item) => (
                 <Link 

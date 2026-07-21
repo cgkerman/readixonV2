@@ -20,8 +20,14 @@ const themes: { id: Theme; name: string; colors: string[] }[] = [
 export default function SettingsPage() {
   const router = useRouter();
   const { theme, setTheme } = useThemeStore();
-  const { userProfile, firebaseUser } = useAuthStore();
+  const { userProfile, firebaseUser, isInitialized } = useAuthStore();
   
+  React.useEffect(() => {
+    if (isInitialized && !firebaseUser) {
+      router.replace('/login');
+    }
+  }, [firebaseUser, isInitialized, router]);
+
   const hasThemeAccess = userProfile?.isAdmin || userProfile?.status === 'premium' || userProfile?.status === 'pro';
   
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
