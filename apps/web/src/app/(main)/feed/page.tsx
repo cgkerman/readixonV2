@@ -186,6 +186,9 @@ export default function FeedPage() {
   }, [topStories, mostLikedStories, featuredAuthors, router]);
 
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  
+  const [currentAnnouncementIndex, setCurrentAnnouncementIndex] = useState(0);
+  const announcementsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (slides.length <= 1) return;
@@ -194,6 +197,24 @@ export default function FeedPage() {
     }, 5000); // 5 saniyede bir dön
     return () => clearInterval(interval);
   }, [slides.length]);
+
+  useEffect(() => {
+    if (announcements.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentAnnouncementIndex((prev) => {
+        const next = (prev + 1) % announcements.length;
+        if (announcementsRef.current) {
+          const el = announcementsRef.current;
+          el.scrollTo({
+            left: next * (el.scrollWidth / announcements.length),
+            behavior: 'smooth'
+          });
+        }
+        return next;
+      });
+    }, 10000); // 10 saniyede bir dön
+    return () => clearInterval(interval);
+  }, [announcements.length]);
 
   const activeSlide = slides[currentSlideIndex] || null;
 
@@ -411,8 +432,38 @@ export default function FeedPage() {
               <div className="flex items-center gap-3 mb-6">
                 <BellRing className="text-primary" size={24} />
                 <Typography variant="h2" className="text-2xl font-bold">Platform Duyuruları</Typography>
+                {announcements.length > 1 && (
+                  <div className="ml-auto flex gap-2">
+                    <button 
+                      onClick={() => {
+                        const next = currentAnnouncementIndex === 0 ? announcements.length - 1 : currentAnnouncementIndex - 1;
+                        setCurrentAnnouncementIndex(next);
+                        if (announcementsRef.current) {
+                          const el = announcementsRef.current;
+                          el.scrollTo({ left: next * (el.scrollWidth / announcements.length), behavior: 'smooth' });
+                        }
+                      }}
+                      className="w-10 h-10 flex items-center justify-center rounded-full bg-card border border-border/50 hover:bg-primary/10 text-muted transition-colors"
+                    >
+                      <ChevronLeft size={20} />
+                    </button>
+                    <button 
+                      onClick={() => {
+                        const next = (currentAnnouncementIndex + 1) % announcements.length;
+                        setCurrentAnnouncementIndex(next);
+                        if (announcementsRef.current) {
+                          const el = announcementsRef.current;
+                          el.scrollTo({ left: next * (el.scrollWidth / announcements.length), behavior: 'smooth' });
+                        }
+                      }}
+                      className="w-10 h-10 flex items-center justify-center rounded-full bg-card border border-border/50 hover:bg-primary/10 text-muted transition-colors"
+                    >
+                      <ChevronRight size={20} />
+                    </button>
+                  </div>
+                )}
               </div>
-              <div className="flex overflow-x-auto gap-6 pb-6 scrollbar-hide snap-x w-full snap-mandatory">
+              <div ref={announcementsRef} className="flex overflow-x-auto gap-6 pb-6 scrollbar-hide snap-x w-full snap-mandatory">
                 {announcements.map(announcement => {
                   const hasImage = !!announcement.imageUrl;
                   return (

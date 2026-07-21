@@ -6,7 +6,7 @@ export const Footer = () => {
   return (
     <footer className="w-full border-t border-border/40 bg-background/50 backdrop-blur-md py-12 mt-auto z-10 relative">
       <div className="max-w-7xl mx-auto px-6 md:px-10 flex flex-col md:flex-row justify-between gap-10">
-        
+
         {/* Brand Area */}
         <div className="flex flex-col gap-4 max-w-sm">
           <Typography variant="h2" className="font-bold text-primary tracking-tighter">readixon</Typography>
@@ -50,16 +50,16 @@ export const Footer = () => {
             <a href="#" className="text-sm text-muted hover:text-primary transition-colors">Kullanım Koşulları</a>
           </div>
         </div>
-        
+
       </div>
-      
+
       {/* Copyright */}
       <div className="max-w-7xl mx-auto px-6 md:px-10 mt-12 pt-6 border-t border-border/30 flex flex-col md:flex-row justify-between items-center gap-4">
         <Typography variant="caption" className="text-muted/60">
-          © {new Date().getFullYear()} Readixon. Tüm Hakları Saklıdır.
+          © {new Date().getFullYear()} Readixon. Tüm Hakları Saklıdır. Platform özellikleri ve özgün içerikleri izinsiz kopyalanamaz; haksız rekabet ve fikri mülkiyet ihlallerine karşı tüm yasal haklarımız saklıdır.
         </Typography>
         <Typography variant="caption" className="text-muted/40">
-          Designed with ❤️ for readers.
+          Designed with 💜 for readers.
         </Typography>
       </div>
     </footer>
