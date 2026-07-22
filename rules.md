@@ -227,5 +227,13 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAuthenticated(); // İdealde admin rolü kontrol edilmeli
     }
+
+    // ==========================================
+    // 7. GÜNÜN OKUR ANKETİ (ADMIN POLLS)
+    // ==========================================
+    match /admin_polls/{pollId} {
+      allow read: if true;
+      allow write: if isAuthenticated(); // Yalnızca giriş yapanlar oy verebilir/anket oluşturabilir
+    }
   }
 }

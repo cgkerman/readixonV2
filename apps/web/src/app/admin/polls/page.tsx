@@ -149,7 +149,7 @@ export default function AdminPollsPage() {
                       placeholder={`Seçenek ${idx + 1}`}
                       value={opt}
                       onChangeText={(val) => handleOptionChange(idx, val)}
-                      containerClassName="flex-1"
+                      className="flex-1"
                     />
                     <button 
                       type="button" 
