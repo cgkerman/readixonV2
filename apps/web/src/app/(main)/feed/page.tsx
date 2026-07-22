@@ -487,9 +487,10 @@ export default function FeedPage() {
                       {/* Sağ Taraf: Metinler */}
                       <div className="flex-1 flex flex-col text-center md:text-left h-full justify-center">
                         <Typography variant="h3" className="font-black text-xl md:text-2xl mb-3">{announcement.title}</Typography>
-                        <Typography variant="body" className="text-muted text-sm md:text-base mb-6 leading-relaxed whitespace-pre-wrap">
-                          {announcement.content}
-                        </Typography>
+                        <div 
+                          className="text-muted text-sm md:text-base mb-6 leading-relaxed whitespace-pre-wrap [&>p]:mb-2 [&>ul]:list-disc [&>ul]:ml-5 [&>ul]:mb-2 [&>ol]:list-decimal [&>ol]:ml-5 [&>ol]:mb-2 [&>strong]:font-bold [&>em]:italic"
+                          dangerouslySetInnerHTML={{ __html: announcement.content }} 
+                        />
                         {announcement.link && (
                           <Button
                             variant="primary"
