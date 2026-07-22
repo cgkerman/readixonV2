@@ -652,3 +652,21 @@ export interface Character {
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
+
+// ─────────────────────────────────────────────────────────────────
+// Admin Polls
+// ─────────────────────────────────────────────────────────────────
+
+export interface AdminPollOption {
+  text: string;
+  votes: number;
+}
+
+export interface AdminPoll {
+  id: string;
+  question: string;
+  options: AdminPollOption[];
+  votedUsers: string[]; // UIDs of users who voted
+  isActive: boolean;
+  createdAt: Timestamp;
+}

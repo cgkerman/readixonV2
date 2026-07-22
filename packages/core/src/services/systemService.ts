@@ -1,6 +1,6 @@
-import { collection, query, where, orderBy, getDocs, limit, doc, setDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, limit, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { db } from '../firebase';
-import type { Announcement } from '../types';
+import type { Announcement, AdminPoll } from '../types';
 
 /**
  * Yayında olan duyuruları getirir.
@@ -122,6 +122,149 @@ export const deleteAnnouncement = async (id: string): Promise<void> => {
     await deleteDoc(ref);
   } catch (error) {
     console.error("Duyuru silinirken hata:", error);
+    throw error;
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────
+// ADMIN POLLS (Günün Okur Anketi)
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Tüm anketleri getirir (Admin panelinde listelemek için).
+ */
+export const getAllAdminPolls = async (): Promise<AdminPoll[]> => {
+  try {
+    const q = query(collection(db, 'admin_polls'), orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AdminPoll));
+  } catch (error) {
+    console.error("Admin anketleri çekilirken hata:", error);
+    return [];
+  }
+};
+
+/**
+ * Aktif anketi getirir (Sağ panelde göstermek için).
+ */
+export const getActiveAdminPoll = async (): Promise<AdminPoll | null> => {
+  try {
+    const q = query(
+      collection(db, 'admin_polls'),
+      where('isActive', '==', true),
+      orderBy('createdAt', 'desc'),
+      limit(1)
+    );
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return null;
+    return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as AdminPoll;
+  } catch (error) {
+    console.error("Aktif anket çekilirken hata:", error);
+    return null;
+  }
+};
+
+/**
+ * Yeni anket oluşturur. (İsteğe bağlı olarak mevcut aktif anketleri pasife çekebiliriz)
+ */
+export const createAdminPoll = async (
+  question: string,
+  optionsText: string[],
+  deactivateOthers: boolean = true
+): Promise<void> => {
+  try {
+    if (deactivateOthers) {
+      // Aktif olanları bul ve pasif yap
+      const activePollsQ = query(collection(db, 'admin_polls'), where('isActive', '==', true));
+      const activeSnaps = await getDocs(activePollsQ);
+      const updatePromises = activeSnaps.docs.map(d => updateDoc(doc(db, 'admin_polls', d.id), { isActive: false }));
+      await Promise.all(updatePromises);
+    }
+
+    const newRef = doc(collection(db, 'admin_polls'));
+    const options = optionsText.map(t => ({ text: t, votes: 0 }));
+    await setDoc(newRef, {
+      question,
+      options,
+      votedUsers: [],
+      isActive: true,
+      createdAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error("Anket oluşturulurken hata:", error);
+    throw error;
+  }
+};
+
+/**
+ * Mevcut anketin aktif/pasif durumunu günceller.
+ */
+export const toggleAdminPollStatus = async (pollId: string, isActive: boolean): Promise<void> => {
+  try {
+    // Eğer aktif ediliyorsa diğerlerini kapatmak iyi olabilir, ama şimdilik sadece kendi statüsünü güncelleyelim
+    if (isActive) {
+      const activePollsQ = query(collection(db, 'admin_polls'), where('isActive', '==', true));
+      const activeSnaps = await getDocs(activePollsQ);
+      const updatePromises = activeSnaps.docs.map(d => updateDoc(doc(db, 'admin_polls', d.id), { isActive: false }));
+      await Promise.all(updatePromises);
+    }
+    await updateDoc(doc(db, 'admin_polls', pollId), { isActive });
+  } catch (error) {
+    console.error("Anket statüsü güncellenirken hata:", error);
+    throw error;
+  }
+};
+
+/**
+ * Anketi siler.
+ */
+export const deleteAdminPoll = async (pollId: string): Promise<void> => {
+  try {
+    await deleteDoc(doc(db, 'admin_polls', pollId));
+  } catch (error) {
+    console.error("Anket silinirken hata:", error);
+    throw error;
+  }
+};
+
+/**
+ * Ankete oy verir (Transaction ile güvenlik ve çakışma önleme).
+ */
+export const voteAdminPoll = async (pollId: string, optionIndex: number, userId: string): Promise<void> => {
+  if (!userId) throw new Error("Oy vermek için giriş yapmalısınız.");
+  
+  const pollRef = doc(db, 'admin_polls', pollId);
+  
+  try {
+    await runTransaction(db, async (transaction) => {
+      const pollDoc = await transaction.get(pollRef);
+      if (!pollDoc.exists()) {
+        throw new Error("Anket bulunamadı.");
+      }
+      
+      const data = pollDoc.data() as Omit<AdminPoll, 'id'>;
+      
+      if (data.votedUsers && data.votedUsers.includes(userId)) {
+        throw new Error("Bu ankete zaten oy verdiniz.");
+      }
+      
+      if (optionIndex < 0 || optionIndex >= data.options.length) {
+        throw new Error("Geçersiz seçenek.");
+      }
+      
+      // Oy ekle
+      const newOptions = [...data.options];
+      newOptions[optionIndex].votes += 1;
+      
+      const newVotedUsers = data.votedUsers ? [...data.votedUsers, userId] : [userId];
+      
+      transaction.update(pollRef, {
+        options: newOptions,
+        votedUsers: newVotedUsers
+      });
+    });
+  } catch (error) {
+    console.error("Oy verme işlemi başarsız:", error);
     throw error;
   }
 };

@@ -5,13 +5,19 @@ import { createPortal } from 'react-dom';
 import { Typography, Button } from '@readixon/ui';
 import { X } from 'lucide-react';
 import { collection, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
-import { db, getTopStories } from '@readixon/core';
+import { db, getTopStories, getActiveAdminPoll, voteAdminPoll, AdminPoll, useAuthStore } from '@readixon/core';
+import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
 
 export function ReadixSidebar() {
   const [trendingTags, setTrendingTags] = useState<{id: string, count: number}[]>([]);
   const [cultureNews, setCultureNews] = useState<any[]>([]);
   const [popularBooks, setPopularBooks] = useState<any[]>([]);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<any | null>(null);
+  const [adminPoll, setAdminPoll] = useState<AdminPoll | null>(null);
+  const [votingOptionIndex, setVotingOptionIndex] = useState<number | null>(null);
+  
+  const { userProfile } = useAuthStore();
 
   useEffect(() => {
     const fetchSidebarData = async () => {
@@ -55,12 +61,41 @@ export function ReadixSidebar() {
           setPopularBooks(topStories);
         }
 
+        // Fetch Admin Poll
+        const poll = await getActiveAdminPoll();
+        setAdminPoll(poll);
+
       } catch (err) {
         console.error("Sidebar data fetch error", err);
       }
     };
     fetchSidebarData();
   }, []);
+
+  const handleVote = async (optionIndex: number) => {
+    if (!userProfile?.uid) {
+      toast.error('Oy vermek için giriş yapmalısınız!');
+      return;
+    }
+    if (!adminPoll) return;
+
+    setVotingOptionIndex(optionIndex);
+    try {
+      await voteAdminPoll(adminPoll.id, optionIndex, userProfile.uid);
+      
+      // Update local state to reflect the vote
+      const newPoll = { ...adminPoll };
+      newPoll.options[optionIndex].votes += 1;
+      newPoll.votedUsers = [...(newPoll.votedUsers || []), userProfile.uid];
+      setAdminPoll(newPoll);
+      
+      toast.success('Oyunuz kaydedildi!');
+    } catch (err: any) {
+      toast.error(err.message || 'Oy verirken bir hata oluştu');
+    } finally {
+      setVotingOptionIndex(null);
+    }
+  };
 
   return (
     <aside className="hidden lg:block w-80 pl-10 py-6 sticky top-0 h-screen overflow-y-auto scrollbar-hide pb-20">
@@ -123,12 +158,49 @@ export function ReadixSidebar() {
         </div>
 
         {/* Admin Poll Widget */}
-        <div className="bg-card/40 rounded-3xl p-6 border border-border flex flex-col gap-3 shadow-sm backdrop-blur-sm">
-          <Typography variant="body" className="font-bold text-text border-b border-border pb-2">Günün Okur Anketi</Typography>
-          <Typography variant="body" className="font-semibold text-sm mb-2">Kitap okurken müzik dinler misiniz?</Typography>
-          <button className="w-full text-left p-2 rounded-xl border border-border text-sm hover:bg-primary/10 transition-colors">🎵 Evet, hafif bir fon müziği</button>
-          <button className="w-full text-left p-2 rounded-xl border border-border text-sm hover:bg-primary/10 transition-colors">🤫 Hayır, mutlak sessizlik isterim</button>
-        </div>
+        {adminPoll && (
+          <div className="bg-card/40 rounded-3xl p-6 border border-border flex flex-col gap-3 shadow-sm backdrop-blur-sm">
+            <Typography variant="body" className="font-bold text-text border-b border-border pb-2">Günün Okur Anketi</Typography>
+            <Typography variant="body" className="font-semibold text-sm mb-2 leading-tight">{adminPoll.question}</Typography>
+            
+            <div className="flex flex-col gap-2">
+              {(() => {
+                const hasVoted = userProfile?.uid && adminPoll.votedUsers?.includes(userProfile.uid);
+                const totalVotes = adminPoll.options.reduce((sum, opt) => sum + opt.votes, 0);
+
+                return adminPoll.options.map((opt, idx) => {
+                  if (hasVoted) {
+                    const percent = totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0;
+                    return (
+                      <div key={idx} className="relative overflow-hidden rounded-xl border border-border bg-black/10 p-3 text-sm">
+                        <div 
+                          className="absolute left-0 top-0 bottom-0 bg-primary/20 transition-all duration-1000" 
+                          style={{ width: `${percent}%` }}
+                        />
+                        <div className="relative z-10 flex justify-between items-center gap-2">
+                          <span className="font-medium text-text line-clamp-2 pr-2">{opt.text}</span>
+                          <span className="font-bold shrink-0">%{percent}</span>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <button 
+                      key={idx}
+                      onClick={() => handleVote(idx)}
+                      disabled={votingOptionIndex !== null}
+                      className="w-full text-left p-3 rounded-xl border border-border text-sm hover:bg-primary/10 transition-colors flex items-center justify-between group"
+                    >
+                      <span className="group-hover:text-primary transition-colors line-clamp-2 pr-2">{opt.text}</span>
+                      {votingOptionIndex === idx && <Loader2 size={14} className="animate-spin text-primary shrink-0" />}
+                    </button>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+        )}
 
         {/* Footer Links */}
         <div className="flex flex-wrap gap-x-4 gap-y-2 px-2 pb-8">
