@@ -11,8 +11,6 @@ import {
 } from '@readixon/core';
 import { Loader2, Plus, Trash2, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
-import { tr } from 'date-fns/locale';
 
 export default function AdminPollsPage() {
   const [polls, setPolls] = useState<AdminPoll[]>([]);
@@ -211,7 +209,12 @@ export default function AdminPollsPage() {
                       <Typography variant="body" className="font-bold text-lg text-text leading-tight">{poll.question}</Typography>
                     </div>
                     <Typography variant="caption" className="text-muted">
-                      {poll.createdAt?.toDate ? format(poll.createdAt.toDate(), "d MMMM yyyy HH:mm", { locale: tr }) : 'Tarih Yok'} • Toplam {totalVotes} oy
+                      {poll.createdAt?.toDate 
+                        ? new Intl.DateTimeFormat('tr-TR', { 
+                            day: 'numeric', month: 'long', year: 'numeric', 
+                            hour: '2-digit', minute: '2-digit' 
+                          }).format(poll.createdAt.toDate())
+                        : 'Tarih Yok'} • Toplam {totalVotes} oy
                     </Typography>
                   </div>
 
