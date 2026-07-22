@@ -15,6 +15,7 @@ export interface ButtonProps {
   type?: 'button' | 'submit' | 'reset';
   className?: string;
   testID?: string;
+  title?: string;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -27,6 +28,7 @@ export const Button: React.FC<ButtonProps> = ({
   type = 'button',
   className = '',
   testID,
+  title,
 }) => {
   const baseClasses = 'flex items-center justify-center rounded-2xl font-semibold transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:active:scale-100';
   
@@ -50,6 +52,7 @@ export const Button: React.FC<ButtonProps> = ({
       disabled={disabled || loading}
       onClick={onPress}
       data-testid={testID}
+      title={title}
       className={`${baseClasses} ${sizeClasses[size]} ${variantClasses[variant]} ${className}`}
       aria-busy={loading}
     >
