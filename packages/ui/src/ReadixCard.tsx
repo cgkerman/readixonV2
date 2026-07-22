@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Heart, MessageCircle, Share2, MoreHorizontal, Edit, Trash2, Flag, ShieldBan } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MoreHorizontal, Edit, Trash2, Flag, ShieldBan, Repeat } from 'lucide-react';
 import { Typography } from './Typography';
 import { Button } from './Button';
 
@@ -14,17 +14,32 @@ export interface ReadixCardProps {
   createdAtStr: string;
   likesCount: number;
   commentsCount: number;
+  repostsCount?: number;
   isLiked?: boolean;
   isOwner?: boolean;
+  isPinned?: boolean;
+  repostOfAuthorName?: string;
+  poll?: {
+    question: string;
+    options: { id: string; text: string; votes: number }[];
+    expiresAt: any;
+    voterIds: string[];
+  };
+  hasVotedInPoll?: boolean;
+  hasReposted?: boolean;
+  currentUserId?: string;
   onLikePress?: () => void;
   onCommentPress?: () => void;
   onSharePress?: () => void;
+  onRepostPress?: () => void;
+  onPinPress?: () => void;
   onAuthorPress?: () => void;
   onPress?: () => void;
   onEditPress?: () => void;
   onDeletePress?: () => void;
   onReportPress?: () => void;
   onBlockPress?: () => void;
+  onPollVote?: (optionId: string) => void;
   className?: string;
 }
 
@@ -37,17 +52,27 @@ export const ReadixCard: React.FC<ReadixCardProps> = ({
   createdAtStr,
   likesCount,
   commentsCount,
+  repostsCount = 0,
   isLiked = false,
   isOwner = false,
+  isPinned = false,
+  repostOfAuthorName,
+  poll,
+  hasVotedInPoll = false,
+  hasReposted = false,
+  currentUserId,
   onLikePress,
   onCommentPress,
   onSharePress,
+  onRepostPress,
+  onPinPress,
   onAuthorPress,
   onPress,
   onEditPress,
   onDeletePress,
   onReportPress,
   onBlockPress,
+  onPollVote,
   className = '',
 }) => {
   const [showMenu, setShowMenu] = useState(false);
@@ -72,6 +97,16 @@ export const ReadixCard: React.FC<ReadixCardProps> = ({
       className={`p-5 bg-card border border-border rounded-3xl hover:bg-text/5 transition-all duration-300 ${onPress ? 'cursor-pointer' : ''} ${className}`}
       onClick={onPress}
     >
+      {isPinned && (
+        <div className="flex items-center gap-2 text-primary font-bold text-xs mb-3 ml-2">
+          <span className="text-sm">📌</span> Sabitlenmiş Gönderi
+        </div>
+      )}
+      {repostOfAuthorName && (
+        <div className="flex items-center gap-2 text-muted font-bold text-xs mb-3 ml-2">
+          <Repeat size={14} /> {repostOfAuthorName} alıntıladı
+        </div>
+      )}
       {/* Üst Kısım: Yazar Bilgisi */}
       <div className="flex items-center justify-between mb-4">
         <div 
@@ -122,6 +157,13 @@ export const ReadixCard: React.FC<ReadixCardProps> = ({
             <div className="absolute right-0 mt-2 w-48 bg-card border border-border shadow-xl rounded-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
               {isOwner ? (
                 <>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setShowMenu(false); onPinPress?.(); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-text/90 hover:bg-muted/10 transition-colors"
+                  >
+                    <span className="text-base leading-none">📌</span>
+                    <span>{isPinned ? 'Sabitlemeyi Kaldır' : 'Profile Sabitle'}</span>
+                  </button>
                   <button 
                     onClick={(e) => { e.stopPropagation(); setShowMenu(false); onEditPress?.(); }}
                     className="w-full flex items-center gap-3 px-4 py-3 text-sm text-text/90 hover:bg-muted/10 transition-colors"
@@ -193,14 +235,56 @@ export const ReadixCard: React.FC<ReadixCardProps> = ({
         })}
       </div>
 
-      {/* Medya (Varsa) */}
+      {/* Medya (Varsa) - Carousel */}
       {mediaUrls.length > 0 && (
-        <div className={`mb-4 grid gap-2 ${mediaUrls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+        <div className="mb-4 flex overflow-x-auto gap-2 snap-x pb-2 scrollbar-thin scrollbar-thumb-white/10">
           {mediaUrls.map((url, index) => (
-            <div key={index} className="rounded-2xl overflow-hidden border border-border bg-background/50 aspect-[4/3]">
+            <div key={index} className={`flex-shrink-0 ${mediaUrls.length === 1 ? 'w-full' : 'w-[85%]'} rounded-2xl overflow-hidden border border-border bg-background/50 snap-center aspect-square sm:aspect-[4/3] relative`}>
               <img src={url} alt="Readix Media" className="w-full h-full object-cover" />
+              {mediaUrls.length > 1 && (
+                <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+                  {index + 1} / {mediaUrls.length}
+                </div>
+              )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Anket (Varsa) */}
+      {poll && (
+        <div className="mb-4 border border-border rounded-xl p-4 bg-background/30">
+          <Typography variant="body" className="font-bold mb-3">{poll.question}</Typography>
+          <div className="flex flex-col gap-2">
+            {poll.options.map((opt) => {
+              const totalVotes = poll.options.reduce((sum, o) => sum + o.votes, 0);
+              const percentage = totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0;
+              const isExpired = new Date(poll.expiresAt?.seconds ? poll.expiresAt.seconds * 1000 : poll.expiresAt) < new Date();
+              const hasVoted = hasVotedInPoll || poll.voterIds?.includes(currentUserId || '');
+              return (
+                <button 
+                  key={opt.id}
+                  disabled={hasVoted || isExpired}
+                  onClick={(e) => { e.stopPropagation(); onPollVote?.(opt.id); }}
+                  className={`relative overflow-hidden border rounded-lg p-3 text-left transition-all ${
+                    hasVoted || isExpired ? 'border-border/50 cursor-default' : 'border-border hover:border-primary/50 hover:bg-primary/5'
+                  }`}
+                >
+                  {(hasVoted || isExpired) && (
+                    <div className="absolute top-0 left-0 bottom-0 bg-primary/20 transition-all" style={{ width: `${percentage}%` }} />
+                  )}
+                  <div className="relative flex justify-between items-center z-10">
+                    <span className="font-medium text-text">{opt.text}</span>
+                    {(hasVoted || isExpired) && <span className="text-xs text-muted">{percentage}%</span>}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-3 text-xs text-muted flex justify-between">
+            <span>{poll.options.reduce((sum, o) => sum + o.votes, 0)} oy</span>
+            <span>{new Date(poll.expiresAt?.seconds ? poll.expiresAt.seconds * 1000 : poll.expiresAt) < new Date() ? 'Sona erdi' : 'Devam ediyor'}</span>
+          </div>
         </div>
       )}
 
@@ -233,9 +317,22 @@ export const ReadixCard: React.FC<ReadixCardProps> = ({
         <button 
           onClick={(e) => {
             e.stopPropagation();
+            onRepostPress?.();
+          }}
+          className={`flex items-center gap-2 text-sm font-medium transition-colors ${
+            hasReposted ? 'text-green-500' : 'text-muted hover:text-green-500'
+          }`}
+        >
+          <Repeat size={20} className={hasReposted ? 'fill-current' : ''} />
+          <span>{repostsCount > 0 ? repostsCount : 'Alıntıla'}</span>
+        </button>
+
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
             onSharePress?.();
           }}
-          className="flex items-center gap-2 text-sm font-medium text-muted hover:text-green-400 transition-colors ml-auto"
+          className="flex items-center gap-2 text-sm font-medium text-muted hover:text-blue-400 transition-colors ml-auto"
         >
           <Share2 size={20} />
         </button>

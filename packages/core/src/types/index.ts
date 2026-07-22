@@ -234,6 +234,20 @@ export interface ReadixStats {
   likes: number;
   comments: number;
   shares: number;
+  reposts?: number; // Repost/Retweet sayisi
+}
+
+export interface ReadixPollOption {
+  id: string;
+  text: string;
+  votes: number;
+}
+
+export interface ReadixPoll {
+  question: string;
+  options: ReadixPollOption[];
+  expiresAt: Timestamp;
+  voterIds: string[]; // Oy verenlerin ID'leri
 }
 
 export interface Readix {
@@ -244,6 +258,10 @@ export interface Readix {
   linkedStoryId?: string; // GÃ¶nderiye konu olan kitap/hikaye
   tags?: string[]; // Metinden Ã§Ä±karÄ±lan hashtagler
   mentions?: string[]; // Bahsedilen kullanÄ±cÄ±lar (@kullaniciadi)
+  poll?: ReadixPoll; // Eger anket varsa
+  repostOfId?: string; // Eger bir gönderinin repost'u ise (Retweet)
+  originalReadix?: Readix; // Repost edilen orijinal gonderinin verisi (client tarafinda doldurulur)
+  isPinned?: boolean; // Profilde sabitlenmis mi
   stats: ReadixStats;
   createdAt: Timestamp;
 }
@@ -269,6 +287,7 @@ export interface Announcement {
   content: string; // Kısa açıklama veya içerik
   link?: string; // Duyuru detayına veya harici linke yönlendirme
   imageUrl?: string; // İsteğe bağlı görsel
+  category?: 'system' | 'culture' | 'event'; // Haber/Duyuru kategorisi
   isActive: boolean; // Yayında olup olmadığı
   publishAt?: Timestamp; // Otomatik yayınlama zamanı (opsiyonel)
   expireAt?: Timestamp; // Otomatik yayından kalkma zamanı (opsiyonel)

@@ -27,10 +27,12 @@ import {
   addReadixComment,
   getReadixComments,
   createOrGetChat,
+  createReadix,
   updateReadix,
   deleteReadix,
   reportContent,
   blockUser,
+  toggleReadixPin,
   BADGES
 } from '@readixon/core';
 import type { User, Story, Readix } from '@readixon/core';
@@ -262,14 +264,25 @@ export default function ProfilePage() {
 
         // Fetch user's readixes
         const userReadixes = await getUserReadixes(user.uid, 20);
-        setReadixes(userReadixes.readixes);
+        const sortedReadixes = [...userReadixes.readixes].sort((a, b) => {
+          if (a.isPinned && !b.isPinned) return -1;
+          if (!a.isPinned && b.isPinned) return 1;
+          return 0;
+        });
+        setReadixes(sortedReadixes);
         
         // Fetch mentioned readixes
         const mentions = await getMentionedReadixes(user.username!, 20);
         setMentionedReadixes(mentions.readixes);
 
         // Fetch authors for mentioned readixes
-        const missingAuthorIds = Array.from(new Set(mentions.readixes.map(r => r.authorId))).filter(id => id !== user.uid);
+        // Fetch authors for mentioned readixes and reposts in user's readixes
+        const missingAuthorIds = Array.from(new Set([
+          ...mentions.readixes.map(r => r.authorId),
+          ...mentions.readixes.map(r => r.originalReadix?.authorId),
+          ...userReadixes.readixes.map(r => r.originalReadix?.authorId)
+        ])).filter(id => id && id !== user.uid) as string[];
+
         if (missingAuthorIds.length > 0) {
           const newAuthors: Record<string, User> = {};
           await Promise.all(missingAuthorIds.map(async (id) => {
@@ -381,6 +394,25 @@ export default function ProfilePage() {
     }
   };
 
+  const handleReadixPin = async (readixId: string, currentStatus: boolean) => {
+    try {
+      const newStatus = await toggleReadixPin(readixId, currentStatus);
+      // update local state
+      setReadixes(prev => {
+        const updated = prev.map(r => r.id === readixId ? { ...r, isPinned: newStatus } : r);
+        return updated.sort((a, b) => {
+          if (a.isPinned && !b.isPinned) return -1;
+          if (!a.isPinned && b.isPinned) return 1;
+          return 0;
+        });
+      });
+      setMentionedReadixes(prev => prev.map(r => r.id === readixId ? { ...r, isPinned: newStatus } : r));
+      toast.success(newStatus ? 'Gönderi profile sabitlendi' : 'Sabitleme kaldırıldı');
+    } catch (error) {
+      toast.error('İşlem başarısız');
+    }
+  };
+
   const handleReadixLike = async (readixId: string, currentLikes: number) => {
     if (!firebaseUser) return router.push('/login');
     
@@ -408,6 +440,34 @@ export default function ProfilePage() {
   const handleCommentAdded = () => {
     if (!selectedReadix) return;
     setReadixes(prev => prev.map(r => r.id === selectedReadix.id ? { ...r, stats: { ...r.stats, comments: (r.stats?.comments || 0) + 1 } } : r));
+  };
+
+  const handleRepost = async (readixId: string) => {
+    if (!firebaseUser) return router.push('/login');
+    try {
+      const newReadix = await createReadix(
+        firebaseUser.uid,
+        '',
+        [],
+        undefined,
+        null,
+        readixId
+      );
+      toast.success("Gönderi başarıyla alıntılandı!");
+      
+      const original = readixes.find(r => r.id === readixId) || mentionedReadixes.find(r => r.id === readixId);
+      if (original) {
+        newReadix.originalReadix = original.originalReadix || original;
+      }
+      
+      // Kendi profilindeyken anında listeye ekle
+      if (isOwnProfile && activeReadixTab === 'shared') {
+        setReadixes(prev => [newReadix, ...prev]);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Alıntılanamadı");
+    }
   };
 
   if (loading) {
@@ -702,28 +762,41 @@ export default function ProfilePage() {
                       </div>
                     ) : (
                       <div className="flex flex-col gap-4">
-                        {readixes.map((readix) => (
-                          <ReadixCard
-                            key={readix.id}
-                            authorName={profileUser.displayName}
-                            authorUsername={profileUser.username}
-                            authorAvatarUrl={profileUser.avatarUrl}
-                            content={readix.content}
-                            mediaUrls={readix.mediaUrls}
-                            createdAtStr={readix.createdAt ? new Date((readix.createdAt as any).seconds ? (readix.createdAt as any).seconds * 1000 : (readix.createdAt as unknown as number)).toLocaleDateString() : 'Şimdi'}
-                            likesCount={readix.stats?.likes || 0}
-                            commentsCount={readix.stats?.comments || 0}
-                            isOwner={firebaseUser?.uid === readix.authorId}
-                            onLikePress={() => handleReadixLike(readix.id, readix.stats?.likes || 0)}
-                            onCommentPress={() => openComments(readix)}
-                            onSharePress={() => openShare(readix, profileUser)}
-                            onPress={() => openComments(readix)}
-                            onEditPress={() => { setActiveReadix(readix); setEditReadixModalOpen(true); }}
-                            onDeletePress={() => { setActiveReadix(readix); setDeleteConfirmOpen(true); }}
-                            onReportPress={() => { setActiveReadix(readix); setReportModalOpen(true); }}
-                            onBlockPress={() => { setActiveReadix(readix); setBlockConfirmOpen(true); }}
-                          />
-                        ))}
+                        {readixes.map((readix) => {
+                          const isRepost = !!readix.originalReadix;
+                          const targetReadix = isRepost ? readix.originalReadix! : readix;
+                          const reposter = isRepost ? profileUser : null;
+                          const author = isRepost ? (authors[targetReadix.authorId] || profileUser) : profileUser;
+                          
+                          return (
+                            <ReadixCard
+                              key={readix.id}
+                              authorName={author.displayName}
+                              authorUsername={author.username}
+                              authorAvatarUrl={author.avatarUrl}
+                              repostOfAuthorName={reposter?.displayName}
+                              content={targetReadix.content}
+                              mediaUrls={targetReadix.mediaUrls}
+                              createdAtStr={targetReadix.createdAt ? new Date((targetReadix.createdAt as any).seconds ? (targetReadix.createdAt as any).seconds * 1000 : (targetReadix.createdAt as unknown as number)).toLocaleDateString() : 'Şimdi'}
+                              likesCount={targetReadix.stats?.likes || 0}
+                              commentsCount={targetReadix.stats?.comments || 0}
+                              repostsCount={targetReadix.stats?.reposts || 0}
+                              poll={targetReadix.poll as any}
+                              isOwner={firebaseUser?.uid === readix.authorId}
+                              isPinned={readix.isPinned}
+                              onPinPress={() => handleReadixPin(readix.id, !!readix.isPinned)}
+                              onLikePress={() => handleReadixLike(targetReadix.id, targetReadix.stats?.likes || 0)}
+                              onCommentPress={() => openComments(targetReadix)}
+                              onSharePress={() => openShare(targetReadix, author)}
+                              onRepostPress={() => handleRepost(targetReadix.id)}
+                              onPress={() => openComments(targetReadix)}
+                              onEditPress={() => { setActiveReadix(readix); setEditReadixModalOpen(true); }}
+                              onDeletePress={() => { setActiveReadix(readix); setDeleteConfirmOpen(true); }}
+                              onReportPress={() => { setActiveReadix(targetReadix); setReportModalOpen(true); }}
+                              onBlockPress={() => { setActiveReadix(targetReadix); setBlockConfirmOpen(true); }}
+                            />
+                          );
+                        })}
                       </div>
                     )
                   ) : (
@@ -736,27 +809,36 @@ export default function ProfilePage() {
                     ) : (
                       <div className="flex flex-col gap-4">
                         {mentionedReadixes.map((readix) => {
-                          const author = authors[readix.authorId] || profileUser;
+                          const isRepost = !!readix.originalReadix;
+                          const targetReadix = isRepost ? readix.originalReadix! : readix;
+                          const reposter = isRepost ? (authors[readix.authorId] || profileUser) : null;
+                          const author = authors[targetReadix.authorId] || profileUser;
                           return (
                             <ReadixCard
                               key={readix.id}
                               authorName={author.displayName}
                               authorUsername={author.username}
                               authorAvatarUrl={author.avatarUrl}
-                              content={readix.content}
-                              mediaUrls={readix.mediaUrls}
-                              createdAtStr={readix.createdAt ? new Date((readix.createdAt as any).seconds ? (readix.createdAt as any).seconds * 1000 : (readix.createdAt as unknown as number)).toLocaleDateString() : 'Şimdi'}
-                              likesCount={readix.stats?.likes || 0}
-                              commentsCount={readix.stats?.comments || 0}
+                              repostOfAuthorName={reposter?.displayName}
+                              content={targetReadix.content}
+                              mediaUrls={targetReadix.mediaUrls}
+                              createdAtStr={targetReadix.createdAt ? new Date((targetReadix.createdAt as any).seconds ? (targetReadix.createdAt as any).seconds * 1000 : (targetReadix.createdAt as unknown as number)).toLocaleDateString() : 'Şimdi'}
+                              likesCount={targetReadix.stats?.likes || 0}
+                              commentsCount={targetReadix.stats?.comments || 0}
+                              repostsCount={targetReadix.stats?.reposts || 0}
+                              poll={targetReadix.poll as any}
                               isOwner={firebaseUser?.uid === readix.authorId}
-                              onLikePress={() => handleReadixLike(readix.id, readix.stats?.likes || 0)}
-                              onCommentPress={() => openComments(readix)}
-                              onSharePress={() => openShare(readix, author)}
-                              onPress={() => openComments(readix)}
+                              isPinned={readix.isPinned}
+                              onPinPress={() => handleReadixPin(readix.id, !!readix.isPinned)}
+                              onLikePress={() => handleReadixLike(targetReadix.id, targetReadix.stats?.likes || 0)}
+                              onCommentPress={() => openComments(targetReadix)}
+                              onSharePress={() => openShare(targetReadix, author)}
+                              onRepostPress={() => handleRepost(targetReadix.id)}
+                              onPress={() => openComments(targetReadix)}
                               onEditPress={() => { setActiveReadix(readix); setEditReadixModalOpen(true); }}
                               onDeletePress={() => { setActiveReadix(readix); setDeleteConfirmOpen(true); }}
-                              onReportPress={() => { setActiveReadix(readix); setReportModalOpen(true); }}
-                              onBlockPress={() => { setActiveReadix(readix); setBlockConfirmOpen(true); }}
+                              onReportPress={() => { setActiveReadix(targetReadix); setReportModalOpen(true); }}
+                              onBlockPress={() => { setActiveReadix(targetReadix); setBlockConfirmOpen(true); }}
                             />
                           );
                         })}

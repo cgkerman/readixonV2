@@ -32,6 +32,11 @@ export const getActiveAnnouncements = async (limitCount: number = 5): Promise<An
       }
 
       if (isValid) {
+        // Kültür duyurularını ana akışta (general) gösterme
+        if (data.category === 'culture') {
+          return;
+        }
+        
         announcements.push({
           id: doc.id,
           ...data

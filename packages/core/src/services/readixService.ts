@@ -28,7 +28,9 @@ export async function createReadix(
   authorId: string,
   content: string,
   mediaUrls?: string[],
-  linkedStoryId?: string
+  linkedStoryId?: string,
+  poll?: any,
+  repostOfId?: string
 ): Promise<Readix> {
   const readixRef = doc(collection(db, READIXES_COLLECTION));
   
@@ -44,12 +46,16 @@ export async function createReadix(
     content,
     mediaUrls: mediaUrls || [],
     linkedStoryId: linkedStoryId || null,
+    poll: poll || null,
+    repostOfId: repostOfId || null,
+    isPinned: false,
     tags,
     mentions,
     stats: {
       likes: 0,
       comments: 0,
       shares: 0,
+      reposts: 0
     },
     createdAt: serverTimestamp()
   };
@@ -131,6 +137,24 @@ export async function getReadixById(readixId: string): Promise<Readix | null> {
   }
 }
 
+export async function populateReposts(readixes: Readix[]): Promise<Readix[]> {
+  const repostIds = [...new Set(readixes.filter(r => r.repostOfId).map(r => r.repostOfId!))];
+  if (repostIds.length === 0) return readixes;
+
+  const originalMap: Record<string, Readix> = {};
+  await Promise.all(repostIds.map(async (id) => {
+    const original = await getReadixById(id);
+    if (original) originalMap[id] = original;
+  }));
+
+  return readixes.map(r => {
+    if (r.repostOfId && originalMap[r.repostOfId]) {
+      return { ...r, originalReadix: originalMap[r.repostOfId] };
+    }
+    return r;
+  });
+}
+
 export async function getMentionedReadixes(
   username: string,
   limitCount = 20,
@@ -151,10 +175,12 @@ export async function getMentionedReadixes(
 
     const snap = await getDocs(q);
     
-    const readixes = snap.docs.map(doc => ({
+    let readixes = snap.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     } as Readix));
+
+    readixes = await populateReposts(readixes);
 
     // Filter blocked users
     const filteredReadixes = blockedUsers && blockedUsers.length > 0
@@ -169,6 +195,7 @@ export async function getMentionedReadixes(
     return { readixes: [], lastVisible: null };
   }
 }
+
 
 export async function getForYouReadixes(
   pageSize = 10,
@@ -187,6 +214,8 @@ export async function getForYouReadixes(
 
   const snapshot = await getDocs(q);
   let readixes = snapshot.docs.map(doc => doc.data() as Readix);
+  
+  readixes = await populateReposts(readixes);
   
   if (blockedUsers && blockedUsers.length > 0) {
     readixes = readixes.filter(r => !blockedUsers.includes(r.authorId));
@@ -232,6 +261,8 @@ export async function getFollowingReadixes(
 
   const snapshot = await getDocs(q);
   let readixes = snapshot.docs.map(doc => doc.data() as Readix);
+
+  readixes = await populateReposts(readixes);
 
   if (blockedUsers && blockedUsers.length > 0) {
     readixes = readixes.filter(r => !blockedUsers.includes(r.authorId));
@@ -320,6 +351,8 @@ export async function getReadixesByTag(
   const snapshot = await getDocs(q);
   let readixes = snapshot.docs.map(doc => doc.data() as Readix);
 
+  readixes = await populateReposts(readixes);
+
   if (blockedUsers && blockedUsers.length > 0) {
     readixes = readixes.filter(r => !blockedUsers.includes(r.authorId));
   }
@@ -348,7 +381,9 @@ export async function getUserReadixes(
   }
 
   const snapshot = await getDocs(q);
-  const readixes = snapshot.docs.map(doc => doc.data() as Readix);
+  let readixes = snapshot.docs.map(doc => doc.data() as Readix);
+
+  readixes = await populateReposts(readixes);
 
   return {
     readixes,
@@ -496,4 +531,12 @@ export async function updateReadix(readixId: string, newContent: string, newMedi
 export async function deleteReadix(readixId: string): Promise<void> {
   const readixRef = doc(db, READIXES_COLLECTION, readixId);
   await deleteDoc(readixRef);
+}
+
+export async function toggleReadixPin(readixId: string, currentPinStatus: boolean): Promise<boolean> {
+  const readixRef = doc(db, READIXES_COLLECTION, readixId);
+  await updateDoc(readixRef, {
+    isPinned: !currentPinStatus
+  });
+  return !currentPinStatus;
 }

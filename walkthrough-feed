@@ -1,0 +1,40 @@
+# Feed Sayfası Geliştirmeleri Tamamlandı 🚀
+
+Daha önceden planladığımız tüm özellik ve blok geliştirmelerini sisteme entegre ettik. Artık ana sayfa (Keşfet) eskisine göre çok daha dinamik, akıllı ve etkileşimli!
+
+## 📌 Neler Yaptık?
+
+### 1. Platform Duyuruları Bloğu (Tamamlandı ✅)
+Admin panelinden eklenen duyuruların listelendiği, zaman ayarlarına (`publishAt` ve `expireAt`) duyarlı ve görselli bildirim sistemi kuruldu.
+- **Tasarım:** Duyuruların görsellerle yatay veya zilsiz tek sütun formatta çıkması ayarlandı.
+- **Admin Kontrolü:** Kırpma aracı, tarih ayarı ve URL link entegrasyonları ile duyurular dinamik hale geldi.
+
+### 2. Okumaya Devam Et Bloğu (Tamamlandı ✅)
+Kullanıcının daha önceden okumaya başladığı ve yarım bıraktığı hikayelerin takibi sağlandı.
+- **İlerleme Çubuğu (Progress Bar):** İlgili kitapların alt kısmında ana rengimizde dolan ince bir okuma yüzdesi çubuğu eklendi.
+- **Kaldığın Yerden Devam:** Kullanıcı bloğa tıkladığında hikayenin başlangıcına değil, doğrudan son kaldığı okuma sayfasının içine aktarılıyor.
+
+### 3. Son Tartışılanlar Bloğu (Tamamlandı ✅)
+`getTrendingDiscussions` algoritması ile platformda yorum ve etkileşimin dorukta olduğu içerikler çekilerek "Sana Özel" blokunun hemen altına yerleştirildi.
+- **Amaç:** Topluluk hissiyatını güçlendirmek ve hararetli kitap tartışmalarına diğer kullanıcıların da katılmasını sağlamak.
+
+### 4. Yeni Sayfa Akışı ve Hiyerarşisi
+Feed sayfasının aşağıya doğru kaydırma mantığı yeniden tasarlandı ve bloklar hiyerarşik önem sırasına göre şöyle dizildi:
+
+1. **Öne Çıkan Slaytlar (Hero Carousel)**
+2. **Platform Duyuruları** (Varsa)
+3. **Okumaya Devam Et** (Kullanıcı giriş yapmış ve bir şeyler okumuşsa)
+4. **Sana Özel / Günün Trendleri**
+5. **Son Tartışılanlar** *(Yeni eklendi)*
+6. **Haftanın En Çok Okunanları**
+7. **Yeni Çıkanlar**
+8. **Öne Çıkan Yazarlar**
+9. **Kalplerin Efendileri**
+10. **Kısa ve Öz (Tamamlanmış)**
+
+---
+
+> [!TIP]
+> Artık kullanıcılar platforma ilk girdiklerinde doğrudan kendilerini ilgilendiren aksiyonları (`Duyurular` ve `Okumaya Devam Et`) görüp ardından platformun geneli hakkındaki içeriklere (Trending, Tartışılanlar vb.) geçiş yapıyorlar.
+
+Planımızdaki tüm Keşfet adımlarını kusursuz şekilde bitirdik! Bir sonraki ana hedefimiz ne olsun? İstediğin an yeni bir özellikle veya düzeltmeyle yola devam edebiliriz.

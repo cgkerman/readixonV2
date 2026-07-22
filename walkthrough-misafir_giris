@@ -1,0 +1,29 @@
+# Misafir Erişimi (Guest Access) Tamamlandı 🚀
+
+Taleplerin ve plana verdiğin onay doğrultusunda **"Platforma Misafir Girişi"** özelliğini başarıyla sisteme entegre ettim. Artık platform kayıtlı olmayan kullanıcılara tamamen kapanmak yerine, onları içeri çekecek ve merak uyandıracak şekilde tasarlandı.
+
+## Neler Yaptık?
+
+### 1. Karşılama Ekranı (Landing Page)
+- Kullanıcıların siteye girdiklerinde kayıt olmadan da akışa (feed) ulaşabilmeleri için `apps/web/src/app/page.tsx` içerisine şık bir **"Misafir Olarak Göz At"** butonu eklendi.
+
+### 2. Misafir Arayüzü (Sidebar)
+- `apps/web/src/app/(main)/layout.tsx` dosyası güncellenerek hem masaüstü hem de mobil yan menülerde (sidebar) dinamik bir yapı kuruldu.
+- Giriş yapmamış kullanıcılar (Misafirler) artık kırık veya "Yükleniyor..." yazan bir profil ekranı değil;
+  > [!TIP]
+  > Şık tasarımlı bir **"Misafir Kullanıcı"** kartı ve hemen altında onları kayıt olmaya/giriş yapmaya teşvik eden bir **"Giriş Yap"** butonu görüyor.
+- Yazar olma, Premium olma ve çıkış yapma gibi sadece kayıtlı kullanıcılara özel butonlar misafirlerden tamamen gizlendi.
+
+### 3. Sınırların Belirlenmesi (Protected Routes)
+Talebinde yer alan "Kitapların detay sayfasına girebilecek ancak bölüm okumaya giremez" kuralı sıkı bir şekilde uygulandı:
+- **Hikaye Detay (`story/[slug]/page.tsx`)**: Misafirler, hikayelerin kapaklarını, özetlerini, etiketlerini ve bölümlerini liste halinde görebiliyorlar.
+- **Bölüm Okuma (`read/[storyId]/[chapterId]/page.tsx`)**: Misafir bir kullanıcı bölümü okumaya çalışırsa (listede bölüme tıklarsa veya doğrudan linkle gelirse) anında `login` sayfasına yönlendiriliyor.
+- **Diğer Sayfalar**:
+  - `settings/page.tsx` (Ayarlar) sayfasına misafir kısıtlaması eklendi.
+  - `library/page.tsx` ve `notifications/page.tsx` sayfalarında hâlihazırda bulunan "Lütfen giriş yapın" şeklindeki şık uyarı ekranları korunarak platform bütünlüğü sağlandı.
+
+## Nasıl Test Edebilirsin?
+1. Tarayıcından yeni bir "Gizli Sekme (Incognito)" aç ve `http://localhost:3000` adresine git.
+2. Ana sayfada "Misafir Olarak Göz At" butonuna tıkla.
+3. Akışta dolaş, bir hikayenin detay sayfasına gir.
+4. "Okumaya Başla" butonuna tıkla ve anında Login ekranına atıldığını gör! 🎉

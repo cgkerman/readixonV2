@@ -29,6 +29,7 @@ import { Loader2, Image as ImageIcon, Send, User as UserIcon, Bold, Italic, Smil
 import EmojiPicker, { Theme } from 'emoji-picker-react';
 import ContentEditable, { ContentEditableEvent } from 'react-contenteditable';
 import { toast } from "sonner";
+import { ReadixSidebar } from './ReadixSidebar';
 
 function ReadixContent() {
   const router = useRouter();
@@ -257,9 +258,20 @@ function ReadixContent() {
     }
   }, [hashtag]);
 
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [isPosting, setIsPosting] = useState(false);
+  
+  // Poll State
+  const [pollActive, setPollActive] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
+  const [pollDuration, setPollDuration] = useState(1); // days
+
+  // Feed State
+  const [lastDoc, setLastDoc] = useState<any>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     fetchFeed();
@@ -278,9 +290,11 @@ function ReadixContent() {
       }
       
       setReadixes(response.readixes);
+      setLastDoc(response.lastDoc);
+      setHasMore(response.hasMore);
       
       // Fetch missing authors
-      const missingAuthorIds = Array.from(new Set(response.readixes.map(r => r.authorId))).filter(id => !authors[id]);
+      const missingAuthorIds = Array.from(new Set(response.readixes.flatMap(r => [r.authorId, r.originalReadix?.authorId]))).filter(id => id && !authors[id]) as string[];
       if (missingAuthorIds.length > 0) {
         const newAuthors = { ...authors };
         await Promise.all(missingAuthorIds.map(async (id) => {
@@ -296,30 +310,85 @@ function ReadixContent() {
     }
   };
 
+  const loadMore = async () => {
+    if (loadingMore || !hasMore || !lastDoc) return;
+    setLoadingMore(true);
+    try {
+      let response;
+      if (activeTab === 'hashtag' && hashtag) {
+        response = await getReadixesByTag(hashtag, 20, lastDoc, userProfile?.blockedUsers);
+      } else if (activeTab === 'following' && firebaseUser) {
+        response = await getFollowingReadixes(firebaseUser.uid, 20, lastDoc, userProfile?.blockedUsers);
+      } else {
+        response = await getForYouReadixes(20, lastDoc, userProfile?.blockedUsers);
+      }
+      
+      setReadixes(prev => [...prev, ...response.readixes]);
+      setLastDoc(response.lastDoc);
+      setHasMore(response.hasMore);
+      
+      const missingAuthorIds = Array.from(new Set(response.readixes.flatMap(r => [r.authorId, r.originalReadix?.authorId]))).filter(id => id && !authors[id]) as string[];
+      if (missingAuthorIds.length > 0) {
+        const newAuthors = { ...authors };
+        await Promise.all(missingAuthorIds.map(async (id) => {
+          const user = await getUserProfile(id);
+          if (user) newAuthors[id] = user;
+        }));
+        setAuthors(newAuthors);
+      }
+    } catch (error) {
+      console.error("Daha fazla yüklenemedi", error);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   const handlePost = async () => {
     if (!firebaseUser) {
       router.push('/login');
       return;
     }
-    if (!newContent.trim() && !selectedFile) return;
+    if (!newContent.trim() && selectedFiles.length === 0 && !pollActive) return;
 
     setIsPosting(true);
     try {
       let mediaUrls: string[] = [];
       
-      if (selectedFile) {
-        // Optimize and upload image
-        const compressed = await compressImage(selectedFile, 1200, 1200, 0.85);
-        const path = `readixes/${firebaseUser.uid}/${Date.now()}`;
-        const url = await uploadFile(compressed, path);
-        mediaUrls.push(url);
+      if (selectedFiles.length > 0) {
+        for (const file of selectedFiles) {
+          const compressed = await compressImage(file, 1200, 1200, 0.85);
+          const path = `readixes/${firebaseUser.uid}/${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+          const url = await uploadFile(compressed, path);
+          mediaUrls.push(url);
+        }
+      }
+
+      let pollData = null;
+      if (pollActive && pollQuestion.trim() && pollOptions[0].trim() && pollOptions[1].trim()) {
+        const validOptions = pollOptions.filter(o => o.trim() !== '');
+        if (validOptions.length >= 2) {
+          const expiresAtDate = new Date();
+          expiresAtDate.setDate(expiresAtDate.getDate() + pollDuration);
+          pollData = {
+            question: pollQuestion.trim(),
+            options: validOptions.map(o => ({ id: Math.random().toString(36).substr(2, 9), text: o, votes: 0 })),
+            expiresAt: expiresAtDate,
+            voterIds: []
+          };
+        }
       }
 
       const finalMarkdownContent = htmlToMarkdown(newContent);
+      
+      // Look for storyId in URL
+      const linkedStoryId = searchParams.get('storyId') || undefined;
+
       const newReadix = await createReadix(
         firebaseUser.uid,
         finalMarkdownContent.trim(),
-        mediaUrls
+        mediaUrls,
+        linkedStoryId,
+        pollData
       );
 
       // Add to feed immediately
@@ -330,8 +399,12 @@ function ReadixContent() {
       
       // Reset form
       setNewContent('');
-      setSelectedFile(null);
-      setPreviewUrl(null);
+      setSelectedFiles([]);
+      setPreviewUrls([]);
+      setPollActive(false);
+      setPollQuestion('');
+      setPollOptions(['', '']);
+      setPollDuration(1);
     } catch (e) {
       console.error("Paylaşım yapılamadı", e);
       toast.error("Bir hata oluştu.");
@@ -371,6 +444,34 @@ function ReadixContent() {
         }
         return r;
       }));
+    }
+  };
+
+  const handleRepost = async (readixId: string) => {
+    if (!firebaseUser) return router.push('/login');
+    try {
+      const newReadix = await createReadix(
+        firebaseUser.uid,
+        '',
+        [],
+        undefined,
+        null,
+        readixId
+      );
+      toast.success("Gönderi başarıyla alıntılandı!");
+      
+      const original = readixes.find(r => r.id === readixId);
+      if (original) {
+        newReadix.originalReadix = original.originalReadix || original;
+      }
+      
+      // If we are on 'foryou' or 'following', we might want to push it to top
+      if (activeTab !== 'hashtag') {
+        setReadixes(prev => [newReadix, ...prev]);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Alıntılanamadı");
     }
   };
 
@@ -485,35 +586,111 @@ function ReadixContent() {
                 )}
               </div>
               
-              {previewUrl && (
-                <div className="relative mb-4 rounded-xl overflow-hidden border border-white/10">
-                  <img src={previewUrl} alt="Preview" className="w-full object-contain max-h-64 bg-black/50" />
-                  <button 
-                    onClick={() => { setSelectedFile(null); setPreviewUrl(null); }}
-                    className="absolute top-2 right-2 w-8 h-8 bg-black/70 text-text rounded-full flex items-center justify-center"
-                  >
-                    ✕
-                  </button>
+              {previewUrls.length > 0 && (
+                <div className="relative mb-4 rounded-xl overflow-x-auto flex gap-2 pb-2 snap-x">
+                  {previewUrls.map((url, idx) => (
+                    <div key={idx} className="relative flex-shrink-0 w-48 h-48 rounded-xl overflow-hidden border border-white/10 snap-center">
+                      <img src={url} alt={`Preview ${idx}`} className="w-full h-full object-cover bg-black/50" />
+                      <button 
+                        onClick={() => {
+                          const newFiles = [...selectedFiles];
+                          newFiles.splice(idx, 1);
+                          setSelectedFiles(newFiles);
+                          
+                          const newUrls = [...previewUrls];
+                          URL.revokeObjectURL(newUrls[idx]);
+                          newUrls.splice(idx, 1);
+                          setPreviewUrls(newUrls);
+                        }}
+                        className="absolute top-2 right-2 w-6 h-6 bg-black/70 text-text rounded-full flex items-center justify-center text-xs"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
 
-              <div className="flex items-center justify-between border-t border-white/5 pt-3 relative">
-                <div className="flex items-center gap-1">
+              {pollActive && (
+                <div className="mb-4 bg-background/50 border border-border rounded-xl p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <Typography variant="body" className="font-bold text-primary">Anket Oluştur</Typography>
+                    <button onClick={() => setPollActive(false)} className="text-muted hover:text-text">✕</button>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Soru sor..."
+                    value={pollQuestion}
+                    onChange={(e) => setPollQuestion(e.target.value)}
+                    className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary mb-3 text-text"
+                  />
+                  {pollOptions.map((opt, idx) => (
+                    <input
+                      key={idx}
+                      type="text"
+                      placeholder={`Seçenek ${idx + 1}`}
+                      value={opt}
+                      onChange={(e) => {
+                        const newOpts = [...pollOptions];
+                        newOpts[idx] = e.target.value;
+                        setPollOptions(newOpts);
+                      }}
+                      className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary mb-2 text-text"
+                    />
+                  ))}
+                  {pollOptions.length < 4 && (
+                    <button 
+                      onClick={() => setPollOptions([...pollOptions, ''])}
+                      className="text-xs text-primary hover:underline mb-3"
+                    >
+                      + Seçenek Ekle
+                    </button>
+                  )}
+                  <div className="flex items-center gap-2 mt-2">
+                    <Typography variant="caption" className="text-muted">Süre:</Typography>
+                    <select
+                      value={pollDuration}
+                      onChange={(e) => setPollDuration(Number(e.target.value))}
+                      className="bg-card border border-border rounded text-xs px-2 py-1 text-text focus:outline-none"
+                    >
+                      <option value={1}>1 Gün</option>
+                      <option value={3}>3 Gün</option>
+                      <option value={7}>7 Gün</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center justify-between border-t border-white/5 pt-3 relative gap-y-3">
+                <div className="flex items-center gap-0.5 sm:gap-1">
                   <input
                     type="file"
                     accept="image/*"
+                    multiple
                     id="readix-image"
                     className="hidden"
                     onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        setSelectedFile(e.target.files[0]);
-                        setPreviewUrl(URL.createObjectURL(e.target.files[0]));
+                      if (e.target.files) {
+                        const files = Array.from(e.target.files).slice(0, 4 - selectedFiles.length);
+                        if (files.length > 0) {
+                          setSelectedFiles([...selectedFiles, ...files]);
+                          const urls = files.map(f => URL.createObjectURL(f));
+                          setPreviewUrls([...previewUrls, ...urls]);
+                        }
                       }
                     }}
                   />
-                  <label htmlFor="readix-image" className="cursor-pointer text-primary hover:bg-primary/10 p-2 rounded-full inline-flex transition-colors">
+                  <label htmlFor="readix-image" className={`cursor-pointer hover:bg-primary/10 p-2 rounded-full inline-flex transition-colors ${selectedFiles.length >= 4 ? 'opacity-50 cursor-not-allowed text-muted' : 'text-primary'}`}>
                     <ImageIcon size={20} />
                   </label>
+                  
+                  <button 
+                    onClick={() => setPollActive(!pollActive)}
+                    className={`hover:bg-primary/10 p-2 rounded-full inline-flex transition-colors ${pollActive ? 'text-primary bg-primary/10' : 'text-muted hover:text-primary'}`}
+                    title="Anket Ekle"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
+                  </button>
                   
                   <button 
                     onClick={() => insertFormat('bold')}
@@ -558,12 +735,16 @@ function ReadixContent() {
                 
                 <Button 
                   variant="primary" 
-                  className="rounded-full px-6"
-                  disabled={isPosting || (!newContent.trim() && !selectedFile)}
+                  className="!p-0 aspect-square w-11 h-11 rounded-full shrink-0 ml-auto flex items-center justify-center"
+                  disabled={isPosting || (!newContent.trim() && selectedFiles.length === 0 && !pollActive)}
                   onPress={handlePost}
+                  title="Paylaş"
                 >
-                  {isPosting ? 'Paylaşılıyor...' : 'Paylaş'}
-                  {!isPosting && <Send size={16} className="ml-2" />}
+                  {isPosting ? (
+                    <Loader2 size={20} className="animate-spin" />
+                  ) : (
+                    <Send size={20} className="ml-[-2px]" />
+                  )}
                 </Button>
               </div>
             </div>
@@ -579,58 +760,62 @@ function ReadixContent() {
               Henüz bir paylaşım yok. İlk paylaşan sen ol!
             </div>
           ) : (
-            readixes.map((readix) => {
-              const author = authors[readix.authorId];
-              return (
-                <ReadixCard
-                  key={readix.id}
-                  authorName={author?.displayName || 'Bilinmeyen Kullanıcı'}
-                  authorUsername={author?.username || 'user'}
-                  authorAvatarUrl={author?.avatarUrl}
-                  content={readix.content}
-                  mediaUrls={readix.mediaUrls}
-                  createdAtStr={readix.createdAt ? new Date((readix.createdAt as any).seconds ? (readix.createdAt as any).seconds * 1000 : (readix.createdAt as unknown as number)).toLocaleDateString() : 'Şimdi'}
-                  likesCount={readix.stats?.likes || 0}
-                  commentsCount={readix.stats?.comments || 0}
-                  isOwner={firebaseUser?.uid === readix.authorId}
-                  onAuthorPress={() => author?.username && router.push(`/profile/@${author.username}`)}
-                  onLikePress={() => handleLike(readix.id, readix.stats?.likes || 0)}
-                  onCommentPress={() => openComments(readix)}
-                  onSharePress={() => openShare(readix, author)}
-                  onPress={() => openComments(readix)}
-                  onEditPress={() => { setActiveReadix(readix); setEditModalOpen(true); }}
-                  onDeletePress={() => { setActiveReadix(readix); setDeleteConfirmOpen(true); }}
-                  onReportPress={() => { setActiveReadix(readix); setReportModalOpen(true); }}
-                  onBlockPress={() => { setActiveReadix(readix); setBlockConfirmOpen(true); }}
-                />
-              );
-            })
+            <>
+              {readixes.map((readix) => {
+                const isRepost = !!readix.originalReadix;
+                const targetReadix = isRepost ? readix.originalReadix! : readix;
+                const reposter = isRepost ? authors[readix.authorId] : null;
+                const author = authors[targetReadix.authorId];
+                
+                return (
+                  <ReadixCard
+                    key={readix.id}
+                    authorName={author?.displayName || 'Bilinmeyen Kullanıcı'}
+                    authorUsername={author?.username || 'user'}
+                    authorAvatarUrl={author?.avatarUrl}
+                    repostOfAuthorName={reposter?.displayName}
+                    content={targetReadix.content}
+                    mediaUrls={targetReadix.mediaUrls}
+                    createdAtStr={targetReadix.createdAt ? new Date((targetReadix.createdAt as any).seconds ? (targetReadix.createdAt as any).seconds * 1000 : (targetReadix.createdAt as unknown as number)).toLocaleDateString() : 'Şimdi'}
+                    likesCount={targetReadix.stats?.likes || 0}
+                    commentsCount={targetReadix.stats?.comments || 0}
+                    repostsCount={targetReadix.stats?.reposts || 0}
+                    poll={targetReadix.poll as any}
+                    isOwner={firebaseUser?.uid === readix.authorId}
+                    currentUserId={firebaseUser?.uid}
+                    onAuthorPress={() => author?.username && router.push(`/profile/@${author.username}`)}
+                    onLikePress={() => handleLike(targetReadix.id, targetReadix.stats?.likes || 0)}
+                    onCommentPress={() => openComments(targetReadix)}
+                    onSharePress={() => openShare(targetReadix, author)}
+                    onRepostPress={() => handleRepost(targetReadix.id)}
+                    onPress={() => openComments(targetReadix)}
+                    onEditPress={() => { setActiveReadix(readix); setEditModalOpen(true); }}
+                    onDeletePress={() => { setActiveReadix(readix); setDeleteConfirmOpen(true); }}
+                    onReportPress={() => { setActiveReadix(targetReadix); setReportModalOpen(true); }}
+                    onBlockPress={() => { setActiveReadix(targetReadix); setBlockConfirmOpen(true); }}
+                  />
+                );
+              })}
+              {hasMore && (
+                <div className="py-8 flex justify-center">
+                  <Button 
+                    variant="outline" 
+                    onPress={loadMore} 
+                    disabled={loadingMore}
+                    className="rounded-full"
+                  >
+                    {loadingMore ? 'Yükleniyor...' : 'Daha Fazla Yükle'}
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </div>
 
       </div>
 
       {/* Right Sidebar (Trending/Suggestions) */}
-      <div className="hidden lg:block w-80 pl-10 py-6">
-        <Typography variant="h3" className="mb-6 text-text">Gündem</Typography>
-        <div className="bg-card/40 rounded-3xl p-6 border border-white/5 flex flex-col gap-6">
-          <div>
-            <Typography variant="caption" className="text-muted mb-1 block">Türkiye'de Trend</Typography>
-            <Typography variant="body" className="font-bold text-text hover:text-primary cursor-pointer transition-colors">#YüzüklerinEfendisi</Typography>
-            <Typography variant="caption" className="text-muted mt-1 block">12.4K Gönderi</Typography>
-          </div>
-          <div>
-            <Typography variant="caption" className="text-muted mb-1 block">Popüler Kitap</Typography>
-            <Typography variant="body" className="font-bold text-text hover:text-primary cursor-pointer transition-colors">Dune - Frank Herbert</Typography>
-            <Typography variant="caption" className="text-muted mt-1 block">8.2K Gönderi</Typography>
-          </div>
-          <div>
-            <Typography variant="caption" className="text-muted mb-1 block">Yeni Çıkanlar</Typography>
-            <Typography variant="body" className="font-bold text-text hover:text-primary cursor-pointer transition-colors">Karanlık Zihinler Geri Döndü</Typography>
-            <Typography variant="caption" className="text-muted mt-1 block">5K Gönderi</Typography>
-          </div>
-        </div>
-      </div>
+      <ReadixSidebar />
       
       <ReadixCommentModal 
         isOpen={commentModalOpen}

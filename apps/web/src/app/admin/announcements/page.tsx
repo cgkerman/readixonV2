@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Typography, Button, Input } from '@readixon/ui';
 import { getAllAnnouncementsAdmin, createAnnouncement, updateAnnouncement, deleteAnnouncement, type Announcement, uploadFile, getCroppedImg } from '@readixon/core';
 import { Timestamp } from 'firebase/firestore';
@@ -22,8 +22,19 @@ export default function AdminAnnouncementsPage() {
     imageUrl: '',
     isActive: true,
     publishAt: '',
-    expireAt: ''
+    expireAt: '',
+    category: 'general'
   });
+
+  const editorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isModalOpen && editorRef.current) {
+      if (editorRef.current.innerHTML !== formData.content) {
+        editorRef.current.innerHTML = formData.content;
+      }
+    }
+  }, [isModalOpen, editingId, formData.content]);
 
   // Image Crop & Upload States
   const [isUploading, setIsUploading] = useState(false);
@@ -67,7 +78,8 @@ export default function AdminAnnouncementsPage() {
         imageUrl: announcement.imageUrl || '',
         isActive: announcement.isActive,
         publishAt: formatDate(announcement.publishAt),
-        expireAt: formatDate(announcement.expireAt)
+        expireAt: formatDate(announcement.expireAt),
+        category: announcement.category || 'general'
       });
     } else {
       setEditingId(null);
@@ -78,7 +90,8 @@ export default function AdminAnnouncementsPage() {
         imageUrl: '',
         isActive: true,
         publishAt: '',
-        expireAt: ''
+        expireAt: '',
+        category: 'general'
       });
     }
     setImageFile(null);
@@ -151,6 +164,7 @@ export default function AdminAnnouncementsPage() {
         link: processedLink,
         publishAt: formData.publishAt ? Timestamp.fromDate(new Date(formData.publishAt)) : null,
         expireAt: formData.expireAt ? Timestamp.fromDate(new Date(formData.expireAt)) : null,
+        category: formData.category
       };
       
       if (finalImageUrl && finalImageUrl.startsWith('http')) {
@@ -242,7 +256,7 @@ export default function AdminAnnouncementsPage() {
                       )}
                       <div>
                         <Typography variant="h4" className="font-semibold text-sm line-clamp-1">{item.title}</Typography>
-                        <Typography variant="body" className="text-xs text-muted line-clamp-1">{item.content}</Typography>
+                        <div className="text-xs text-muted line-clamp-1 [&>p]:inline [&>div]:inline [&>h1]:inline [&>h2]:inline [&>h3]:inline" dangerouslySetInnerHTML={{ __html: item.content }} />
                       </div>
                     </td>
                     <td className="py-4 text-sm text-muted">
@@ -306,15 +320,15 @@ export default function AdminAnnouncementsPage() {
       {/* ── Duyuru Ekleme / Düzenleme Modalı ── */}
       {isModalOpen && !cropImageSrc && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-card w-full max-w-lg rounded-2xl border border-border/50 shadow-2xl flex flex-col max-h-[90vh]">
+          <div className="bg-card w-full max-w-4xl rounded-2xl border border-border/50 shadow-2xl flex flex-col max-h-[90vh]">
             <div className="p-6 border-b border-border/50 flex justify-between items-center">
               <Typography variant="h3" className="font-bold">{editingId ? 'Duyuruyu Düzenle' : 'Yeni Duyuru Ekle'}</Typography>
               <button onClick={handleCloseModal} className="text-muted hover:text-text" disabled={isUploading}><XCircle size={24} /></button>
             </div>
-            <div className="p-6 flex flex-col gap-4 overflow-y-auto">
+            <div className="p-6 flex flex-col md:flex-row gap-8 overflow-y-auto">
               
-              {/* Image Upload Area */}
-              <div className="flex flex-col gap-2">
+              {/* Sol Kolon (Görsel) */}
+              <div className="w-full md:w-1/3 flex flex-col gap-2 shrink-0">
                 <label className="text-sm font-semibold text-text">Duyuru Görseli (1080x1350)</label>
                 <div className="relative w-full aspect-[4/5] bg-background border-2 border-dashed border-border/50 rounded-xl overflow-hidden hover:bg-muted/5 transition-colors flex items-center justify-center group cursor-pointer">
                   <input 
@@ -340,20 +354,35 @@ export default function AdminAnnouncementsPage() {
                 </div>
               </div>
 
-              <Input
-                label="Başlık *"
+              {/* Sağ Kolon (Form) */}
+              <div className="w-full md:w-2/3 flex flex-col gap-4">
+                <Input
+                  label="Başlık *"
                 placeholder="Örn: Yeni Güncelleme Yayında!"
                 value={formData.title}
                 onChangeText={(val) => setFormData({ ...formData, title: val })}
               />
               <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-semibold text-text">Kategori</label>
+                <select 
+                  className="w-full bg-background border border-border/50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                >
+                  <option value="general">Genel Duyuru</option>
+                  <option value="culture">Kültür & Sanat Gündemi</option>
+                </select>
+              </div>
+              <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-semibold text-text">İçerik *</label>
-                <textarea
-                  className="w-full bg-background border border-border/50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 min-h-[100px] resize-y"
-                  placeholder="Duyuru detaylarını buraya yazın..."
-                  value={formData.content}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                <div
+                  ref={editorRef}
+                  contentEditable
+                  suppressContentEditableWarning
+                  className="w-full bg-background border border-border/50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 min-h-[160px] max-h-[300px] overflow-y-auto outline-none"
+                  onInput={(e) => setFormData({ ...formData, content: e.currentTarget.innerHTML })}
                 />
+                <span className="text-xs text-muted">Metni kopyalayıp yapıştırabilirsiniz; tüm zengin metin özellikleri (kalın, italik vb.) korunur.</span>
               </div>
               <Input
                 label="Link (İsteğe bağlı)"
@@ -393,6 +422,7 @@ export default function AdminAnnouncementsPage() {
                   className="w-5 h-5 rounded border-border text-primary focus:ring-primary"
                 />
                 <label htmlFor="isActive" className="text-sm font-medium">Genel Durumu (Aktif/Pasif)</label>
+              </div>
               </div>
             </div>
             <div className="p-6 border-t border-border/50 flex justify-end gap-3">
