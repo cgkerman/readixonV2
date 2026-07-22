@@ -1,23 +1,16 @@
 import { Metadata } from 'next';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { BackButton } from '@/components/BackButton';
 
 export const metadata: Metadata = {
-  title: 'Kullanım Koşulları | Readixon',
-  description: 'Readixon Kullanım Koşulları Sözleşmesi',
+  title: 'Kullanım Şartları | Readixon',
+  description: 'Readixon Kullanım Şartları ve Kullanıcı Sözleşmesi',
 };
 
 export default function TermsOfServicePage() {
   return (
     <div className="min-h-screen bg-background py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
-        <Link 
-          href="/" 
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-8 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Ana Sayfaya Dön
-        </Link>
+        <BackButton />
         
         <div className="bg-card rounded-2xl border border-border/50 p-8 md:p-12 shadow-sm">
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2">
