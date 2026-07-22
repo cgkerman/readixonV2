@@ -63,7 +63,9 @@ export type {
   UserAchievements,
   ChapterActivity,
   ChapterActivityType,
-  ActivityAnswer
+  ActivityAnswer,
+  AdminPoll,
+  AdminPollOption
 } from './types';
 
 // Auth servisi
