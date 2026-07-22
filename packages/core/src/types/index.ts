@@ -670,3 +670,15 @@ export interface AdminPoll {
   isActive: boolean;
   createdAt: Timestamp;
 }
+
+// ─────────────────────────────────────────────────────────────────
+// Admin Quote of the Day
+// ─────────────────────────────────────────────────────────────────
+
+export interface AdminQuote {
+  id: string;
+  text: string;
+  author: string;
+  isActive: boolean;
+  createdAt: Timestamp;
+}

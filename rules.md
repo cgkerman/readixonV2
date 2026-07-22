@@ -235,5 +235,13 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAuthenticated(); // Yalnızca giriş yapanlar oy verebilir/anket oluşturabilir
     }
+
+    // ==========================================
+    // 8. GÜNÜN ALINTISI (ADMIN QUOTES)
+    // ==========================================
+    match /admin_quotes/{quoteId} {
+      allow read: if true;
+      allow write: if isAuthenticated(); // İdealde admin rolü kontrol edilmeli
+    }
   }
 }

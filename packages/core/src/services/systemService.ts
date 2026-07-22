@@ -1,6 +1,6 @@
 import { collection, query, where, orderBy, getDocs, limit, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { db } from '../firebase';
-import type { Announcement, AdminPoll } from '../types';
+import type { Announcement, AdminPoll, AdminQuote } from '../types';
 
 /**
  * Yayında olan duyuruları getirir.
@@ -265,6 +265,88 @@ export const voteAdminPoll = async (pollId: string, optionIndex: number, userId:
     });
   } catch (error) {
     console.error("Oy verme işlemi başarsız:", error);
+    throw error;
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────
+// ADMIN QUOTE OF THE DAY
+// ─────────────────────────────────────────────────────────────────
+
+export const getAllQuotes = async (): Promise<AdminQuote[]> => {
+  try {
+    const q = query(collection(db, 'admin_quotes'), orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AdminQuote));
+  } catch (error) {
+    console.error("Admin alıntıları çekilirken hata:", error);
+    return [];
+  }
+};
+
+export const getActiveQuote = async (): Promise<AdminQuote | null> => {
+  try {
+    const q = query(
+      collection(db, 'admin_quotes'),
+      where('isActive', '==', true),
+      orderBy('createdAt', 'desc'),
+      limit(1)
+    );
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return null;
+    return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as AdminQuote;
+  } catch (error) {
+    console.error("Aktif alıntı çekilirken hata:", error);
+    return null;
+  }
+};
+
+export const createQuote = async (
+  text: string,
+  author: string,
+  deactivateOthers: boolean = true
+): Promise<void> => {
+  try {
+    if (deactivateOthers) {
+      const activeQuotesQ = query(collection(db, 'admin_quotes'), where('isActive', '==', true));
+      const activeSnaps = await getDocs(activeQuotesQ);
+      const updatePromises = activeSnaps.docs.map(d => updateDoc(doc(db, 'admin_quotes', d.id), { isActive: false }));
+      await Promise.all(updatePromises);
+    }
+
+    const newRef = doc(collection(db, 'admin_quotes'));
+    await setDoc(newRef, {
+      text,
+      author,
+      isActive: true,
+      createdAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error("Alıntı oluşturulurken hata:", error);
+    throw error;
+  }
+};
+
+export const toggleQuoteStatus = async (quoteId: string, isActive: boolean): Promise<void> => {
+  try {
+    if (isActive) {
+      const activeQuotesQ = query(collection(db, 'admin_quotes'), where('isActive', '==', true));
+      const activeSnaps = await getDocs(activeQuotesQ);
+      const updatePromises = activeSnaps.docs.map(d => updateDoc(doc(db, 'admin_quotes', d.id), { isActive: false }));
+      await Promise.all(updatePromises);
+    }
+    await updateDoc(doc(db, 'admin_quotes', quoteId), { isActive });
+  } catch (error) {
+    console.error("Alıntı statüsü güncellenirken hata:", error);
+    throw error;
+  }
+};
+
+export const deleteQuote = async (quoteId: string): Promise<void> => {
+  try {
+    await deleteDoc(doc(db, 'admin_quotes', quoteId));
+  } catch (error) {
+    console.error("Alıntı silinirken hata:", error);
     throw error;
   }
 };

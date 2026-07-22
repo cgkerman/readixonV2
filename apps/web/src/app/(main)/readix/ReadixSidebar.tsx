@@ -3,11 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Typography, Button } from '@readixon/ui';
-import { X } from 'lucide-react';
+import { X, Phone, Mail, MapPin } from 'lucide-react';
 import { collection, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
-import { db, getTopStories, getActiveAdminPoll, voteAdminPoll, AdminPoll, useAuthStore } from '@readixon/core';
+import { db, getTopStories, getActiveAdminPoll, voteAdminPoll, AdminPoll, getActiveQuote, AdminQuote, useAuthStore } from '@readixon/core';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import Link from 'next/link';
 
 export function ReadixSidebar() {
   const [trendingTags, setTrendingTags] = useState<{id: string, count: number}[]>([]);
@@ -15,7 +16,9 @@ export function ReadixSidebar() {
   const [popularBooks, setPopularBooks] = useState<any[]>([]);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<any | null>(null);
   const [adminPoll, setAdminPoll] = useState<AdminPoll | null>(null);
+  const [adminQuote, setAdminQuote] = useState<AdminQuote | null>(null);
   const [votingOptionIndex, setVotingOptionIndex] = useState<number | null>(null);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   
   const { userProfile } = useAuthStore();
 
@@ -64,6 +67,10 @@ export function ReadixSidebar() {
         // Fetch Admin Poll
         const poll = await getActiveAdminPoll();
         setAdminPoll(poll);
+
+        // Fetch Admin Quote
+        const quote = await getActiveQuote();
+        setAdminQuote(quote);
 
       } catch (err) {
         console.error("Sidebar data fetch error", err);
@@ -149,13 +156,15 @@ export function ReadixSidebar() {
         )}
 
         {/* Quote of the Day Widget */}
-        <div className="bg-primary/5 rounded-3xl p-6 border border-primary/20 flex flex-col gap-3 shadow-sm">
-          <Typography variant="caption" className="text-primary font-bold tracking-widest uppercase text-[10px]">Günün Alıntısı</Typography>
-          <p className="text-text italic font-serif text-sm leading-relaxed">
-            "Yalnızca bir damla sudur insan, ama dalgaları okyanusları aşar."
-          </p>
-          <Typography variant="caption" className="text-muted text-right block">- @edebiyatci</Typography>
-        </div>
+        {adminQuote && (
+          <div className="bg-primary/5 rounded-3xl p-6 border border-primary/20 flex flex-col gap-3 shadow-sm">
+            <Typography variant="caption" className="text-primary font-bold tracking-widest uppercase text-[10px]">Günün Alıntısı</Typography>
+            <p className="text-text italic font-serif text-sm leading-relaxed">
+              "{adminQuote.text}"
+            </p>
+            <Typography variant="caption" className="text-muted text-right block">- {adminQuote.author}</Typography>
+          </div>
+        )}
 
         {/* Admin Poll Widget */}
         {adminPoll && (
@@ -204,17 +213,74 @@ export function ReadixSidebar() {
 
         {/* Footer Links */}
         <div className="flex flex-wrap gap-x-4 gap-y-2 px-2 pb-8">
-          <Typography variant="caption" className="text-muted/60 hover:text-text cursor-pointer transition-colors text-xs">Hakkımızda</Typography>
-          <Typography variant="caption" className="text-muted/60 hover:text-text cursor-pointer transition-colors text-xs">Yardım Merkezi</Typography>
-          <Typography variant="caption" className="text-muted/60 hover:text-text cursor-pointer transition-colors text-xs">Gizlilik Politikası</Typography>
-          <Typography variant="caption" className="text-muted/60 hover:text-text cursor-pointer transition-colors text-xs">Kullanım Şartları</Typography>
-          <Typography variant="caption" className="text-muted/60 hover:text-text cursor-pointer transition-colors text-xs">İletişim</Typography>
+          <Link href="/about" className="text-muted/60 hover:text-text cursor-pointer transition-colors text-xs font-medium">Hakkımızda</Link>
+          <Link href="/support" className="text-muted/60 hover:text-text cursor-pointer transition-colors text-xs font-medium">Yardım Merkezi</Link>
+          <Link href="/guidelines" className="text-muted/60 hover:text-text cursor-pointer transition-colors text-xs font-medium">Topluluk Kuralları</Link>
+          <Link href="/privacy" className="text-muted/60 hover:text-text cursor-pointer transition-colors text-xs font-medium">Gizlilik Politikası</Link>
+          <Link href="/terms" className="text-muted/60 hover:text-text cursor-pointer transition-colors text-xs font-medium">Kullanım Şartları</Link>
+          <Link href="/copyright" className="text-muted/60 hover:text-text cursor-pointer transition-colors text-xs font-medium">Telif Hakkı</Link>
+          <button onClick={() => setIsContactModalOpen(true)} className="text-muted/60 hover:text-text cursor-pointer transition-colors text-xs font-medium">İletişim</button>
           <div className="w-full mt-2">
             <Typography variant="caption" className="text-muted/40 text-[10px]">© 2026 Readixon. Tüm hakları saklıdır.</Typography>
           </div>
         </div>
 
       </div>
+
+      {/* Contact Modal */}
+      {isContactModalOpen && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 md:p-8 animate-in fade-in duration-200">
+          <div className="bg-card w-full max-w-md rounded-[2rem] border border-border/50 shadow-2xl flex flex-col relative overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary to-purple-500" />
+            
+            <div className="flex justify-between items-center p-6 pb-4 border-b border-border/30 shrink-0">
+              <Typography variant="h2" className="font-bold text-text">İletişim</Typography>
+              <button onClick={() => setIsContactModalOpen(false)} className="text-muted hover:text-text hover:bg-muted/10 transition-colors p-2 rounded-full">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-8 flex flex-col gap-6 text-sm text-text">
+              <div className="flex items-start gap-4 group">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:bg-primary group-hover:text-background transition-all duration-300">
+                  <Phone size={22} />
+                </div>
+                <div className="flex flex-col justify-center min-h-[3rem]">
+                  <Typography variant="caption" className="text-muted/70 font-bold tracking-widest uppercase mb-0.5 block text-[10px]">Telefon</Typography>
+                  <a href="tel:05524634140" className="font-semibold text-base hover:text-primary transition-colors">0552 463 4140</a>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-4 group">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:bg-primary group-hover:text-background transition-all duration-300">
+                  <Mail size={22} />
+                </div>
+                <div className="flex flex-col justify-center min-h-[3rem]">
+                  <Typography variant="caption" className="text-muted/70 font-bold tracking-widest uppercase mb-0.5 block text-[10px]">E-Posta</Typography>
+                  <a href="mailto:support@readixon.com" className="font-semibold text-base hover:text-primary transition-colors">support@readixon.com</a>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-4 group">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:bg-primary group-hover:text-background transition-all duration-300">
+                  <MapPin size={22} />
+                </div>
+                <div className="flex flex-col justify-center min-h-[3rem]">
+                  <Typography variant="caption" className="text-muted/70 font-bold tracking-widest uppercase mb-0.5 block text-[10px]">Adres</Typography>
+                  <span className="font-semibold text-base">Denizli / Türkiye</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 bg-card/60 border-t border-border/30 text-center backdrop-blur-sm">
+              <Typography variant="caption" className="text-muted block leading-relaxed text-xs">
+                Readixon bir <a href="https://www.turixon.com" target="_blank" rel="noopener noreferrer" className="text-primary font-bold hover:underline">Turixon</a> projesidir ve onun yönetimindedir.
+              </Typography>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Announcement Detail Modal */}
       {selectedAnnouncement && typeof document !== 'undefined' && createPortal(

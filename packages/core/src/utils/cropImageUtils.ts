@@ -54,14 +54,14 @@ export async function getCroppedImg(
   return new Promise((resolve, reject) => {
     canvas.toBlob((file) => {
       if (file) {
-        const croppedFile = new File([file], 'avatar_cropped.jpg', {
-          type: 'image/jpeg',
+        const croppedFile = new File([file], 'image_cropped.webp', {
+          type: 'image/webp',
           lastModified: Date.now(),
         })
         resolve(croppedFile)
       } else {
         reject(new Error('Canvas is empty'))
       }
-    }, 'image/jpeg', 0.9)
+    }, 'image/webp', 0.8)
   })
 }
