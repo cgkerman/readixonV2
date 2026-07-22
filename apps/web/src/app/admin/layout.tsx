@@ -83,7 +83,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Button variant="ghost" className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-950/30" onPress={handleSignOut}>
             <LogOut size={18} className="mr-2" /> Çıkış Yap
           </Button>
-          <Link href="/">
+          <Link href="/feed">
              <Button variant="outline" className="w-full justify-start border-primary/20 text-primary hover:bg-primary/10">
                Uygulamaya Dön
              </Button>
