@@ -586,12 +586,15 @@ export default function ReadPage() {
 
             <div className="space-y-6">
               {comments.length > 0 ? (
-                rootComments.map(c => (
-                  <div key={c.commentId}>
-                    {renderComment(c, false, false)}
-                    {repliesMap[c.commentId] && repliesMap[c.commentId].map(reply => renderComment(reply, true, false))}
-                  </div>
-                ))
+                rootComments.map(c => {
+                  const renderTree = (comment: Comment, depth: number): React.ReactNode => (
+                    <div key={`tree-${comment.commentId}`}>
+                      {renderComment(comment, depth > 0, false)}
+                      {repliesMap[comment.commentId] && repliesMap[comment.commentId].map(reply => renderTree(reply, depth + 1))}
+                    </div>
+                  );
+                  return renderTree(c, 0);
+                })
               ) : (
                 <div className="text-center py-8 opacity-50">
                   <Typography variant="body" style={{ color: currentThemeStyle.text }}>Henüz yorum yapılmamış. İlk yorumu sen yap!</Typography>

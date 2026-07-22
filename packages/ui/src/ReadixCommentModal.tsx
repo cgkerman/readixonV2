@@ -222,12 +222,15 @@ export const ReadixCommentModal: React.FC<ReadixCommentModalProps> = ({
             <div className="text-center text-muted py-10">Henüz yorum yok. İlk yorumu sen yap!</div>
           ) : (
             <div className="flex flex-col gap-3">
-              {rootComments.map(c => (
-                <div key={c.id}>
-                  {renderComment(c)}
-                  {repliesMap[c.id] && repliesMap[c.id].map(reply => renderComment(reply, true))}
-                </div>
-              ))}
+              {rootComments.map(c => {
+                const renderTree = (comment: ReadixComment, depth: number): React.ReactNode => (
+                  <div key={`tree-${comment.id}`}>
+                    {renderComment(comment, depth > 0)}
+                    {repliesMap[comment.id] && repliesMap[comment.id].map(reply => renderTree(reply, depth + 1))}
+                  </div>
+                );
+                return renderTree(c, 0);
+              })}
             </div>
           )}
         </div>
