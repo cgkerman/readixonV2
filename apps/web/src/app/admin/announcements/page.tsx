@@ -5,7 +5,7 @@ import { Typography, Button, Input } from '@readixon/ui';
 import { getAllAnnouncementsAdmin, createAnnouncement, updateAnnouncement, deleteAnnouncement, type Announcement, uploadFile, getCroppedImg } from '@readixon/core';
 import { Timestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
-import { BellRing, Plus, Pencil, Trash2, CheckCircle, XCircle, Image as ImageIcon } from 'lucide-react';
+import { BellRing, Plus, Pencil, Trash2, CheckCircle, XCircle, Image as ImageIcon, Bold, Italic, List } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 
 export default function AdminAnnouncementsPage() {
@@ -374,15 +374,34 @@ export default function AdminAnnouncementsPage() {
                 </select>
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-semibold text-text">İçerik *</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-semibold text-text">İçerik *</label>
+                  <div className="flex gap-1 bg-muted/10 rounded-lg p-1">
+                    <button 
+                      onClick={() => { document.execCommand('bold', false); if (editorRef.current) setFormData({ ...formData, content: editorRef.current.innerHTML }); }}
+                      className="p-1.5 text-muted hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
+                      title="Kalın"
+                    ><Bold size={16} /></button>
+                    <button 
+                      onClick={() => { document.execCommand('italic', false); if (editorRef.current) setFormData({ ...formData, content: editorRef.current.innerHTML }); }}
+                      className="p-1.5 text-muted hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
+                      title="İtalik"
+                    ><Italic size={16} /></button>
+                    <button 
+                      onClick={() => { document.execCommand('insertUnorderedList', false); if (editorRef.current) setFormData({ ...formData, content: editorRef.current.innerHTML }); }}
+                      className="p-1.5 text-muted hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
+                      title="Liste"
+                    ><List size={16} /></button>
+                  </div>
+                </div>
                 <div
                   ref={editorRef}
                   contentEditable
                   suppressContentEditableWarning
-                  className="w-full bg-background border border-border/50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 min-h-[160px] max-h-[300px] overflow-y-auto outline-none"
+                  className="w-full bg-background border border-border/50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 min-h-[160px] max-h-[300px] overflow-y-auto outline-none [&>ul]:list-disc [&>ul]:ml-4 [&>ol]:list-decimal [&>ol]:ml-4 [&>p]:mb-2"
                   onInput={(e) => setFormData({ ...formData, content: e.currentTarget.innerHTML })}
                 />
-                <span className="text-xs text-muted">Metni kopyalayıp yapıştırabilirsiniz; tüm zengin metin özellikleri (kalın, italik vb.) korunur.</span>
+                <span className="text-xs text-muted">Metni kopyalayıp yapıştırabilirsiniz veya üstteki butonlarla şekillendirebilirsiniz.</span>
               </div>
               <Input
                 label="Link (İsteğe bağlı)"

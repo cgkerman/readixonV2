@@ -488,7 +488,7 @@ export default function FeedPage() {
                       <div className="flex-1 flex flex-col text-center md:text-left h-full justify-center">
                         <Typography variant="h3" className="font-black text-xl md:text-2xl mb-3">{announcement.title}</Typography>
                         <div 
-                          className="text-muted text-sm md:text-base mb-6 leading-relaxed whitespace-pre-wrap [&>p]:mb-2 [&>ul]:list-disc [&>ul]:ml-5 [&>ul]:mb-2 [&>ol]:list-decimal [&>ol]:ml-5 [&>ol]:mb-2 [&>strong]:font-bold [&>em]:italic"
+                          className="text-muted text-sm md:text-base mb-6 leading-relaxed whitespace-pre-wrap [&>p]:mb-2 [&>ul]:list-disc [&>ul]:ml-5 [&>ul]:mb-2 [&>ol]:list-decimal [&>ol]:ml-5 [&>ol]:mb-2 [&>strong]:font-bold [&>em]:italic [&_*]:!text-inherit [&_*]:!bg-transparent"
                           dangerouslySetInnerHTML={{ __html: announcement.content }} 
                         />
                         {announcement.link && (
