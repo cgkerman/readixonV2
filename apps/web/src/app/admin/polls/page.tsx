@@ -136,7 +136,7 @@ export default function AdminPollsPage() {
               <Input
                 placeholder="Örn: Kitap okurken müzik dinler misiniz?"
                 value={question}
-                onChange={(e) => setQuestion(e.target.value)}
+                onChangeText={(val) => setQuestion(val)}
               />
             </div>
             
@@ -148,7 +148,7 @@ export default function AdminPollsPage() {
                     <Input
                       placeholder={`Seçenek ${idx + 1}`}
                       value={opt}
-                      onChange={(e) => handleOptionChange(idx, e.target.value)}
+                      onChangeText={(val) => handleOptionChange(idx, val)}
                       containerClassName="flex-1"
                     />
                     <button 
