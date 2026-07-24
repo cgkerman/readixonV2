@@ -54,7 +54,7 @@ export default function TermsOfServicePage() {
               <h2 className="text-xl font-semibold text-foreground mb-4">4. HESAP GÜVENLİĞİ VE KULLANICI YÜKÜMLÜLÜKLERİ</h2>
               <div className="space-y-4">
                 <p><strong className="text-foreground">Doğru Bilgi Beyanı:</strong> Hesap oluştururken verilen e-posta adresi, kullanıcı adı ve diğer profil bilgilerinin doğru, güncel ve eksiksiz olması zorunludur. Yanıltıcı veya başkasına ait bilgilerle hesap açılması yasaktır.</p>
-                <p><strong className="text-foreground">Hesap Güvenliği ve Şifre:</strong> Kullanıcı, hesap şifresinin gizliliğini korumakla yükümlüdür. Şifrenin yetkisiz üçüncü şahıslar tarafından ele geçirilmesi veya hesaba izinsiz erişim sağlanması şüphesi halinde Kullanıcı, durumu derhal <a href="mailto:destek@readixon.com" className="text-primary hover:underline">destek@readixon.com</a> adresinden Şirket’e bildirmek zorundadır.</p>
+                <p><strong className="text-foreground">Hesap Güvenliği ve Şifre:</strong> Kullanıcı, hesap şifresinin gizliliğini korumakla yükümlüdür. Şifrenin yetkisiz üçüncü şahıslar tarafından ele geçirilmesi veya hesaba izinsiz erişim sağlanması şüphesi halinde Kullanıcı, durumu derhal <a href="mailto:support@readixon.com" className="text-primary hover:underline">support@readixon.com</a> adresinden Şirket’e bildirmek zorundadır.</p>
                 <p><strong className="text-foreground">Hesap Devri Yasağı:</strong> Üyelik hesapları kişiseldir; üçüncü şahıslara devredilemez, satılamaz veya kiraya verilemez. Hesaptan gerçekleştirilen tüm işlemler doğrudan ilgili Kullanıcıya atfedilir ve hukuki sorumluluk Kullanıcıya aittir.</p>
               </div>
             </section>
@@ -100,7 +100,7 @@ export default function TermsOfServicePage() {
               <h2 className="text-xl font-semibold text-foreground mb-4">9. HESAP KISITLAMA VE FESİH</h2>
               <div className="space-y-4">
                 <p><strong className="text-foreground">Şirket Tarafından Fesih:</strong> Kullanıcı’nın bu Sözleşme’deki veya topluluk kurallarındaki herhangi bir maddeyi ihlal etmesi halinde Şirket; önceden bildirimde bulunmaksızın Kullanıcı'nın içeriğini kaldırma, hesabını geçici olarak askıya alma veya hesabı tamamen ve kalıcı olarak kapatma (fesih) hakkına sahiptir.</p>
-                <p><strong className="text-foreground">Kullanıcı Tarafından Fesih:</strong> Kullanıcı, dilediği zaman Platform üzerindeki ayarlar bölümünden hesabını kapatarak veya <a href="mailto:destek@readixon.com" className="text-primary hover:underline">destek@readixon.com</a> adresine yazılı talepte bulunarak üyelik ilişkisini sonlandırabilir. Hesap kapatıldığında, Kullanıcı'nın profil bilgileri ve paylaştığı içerikler sistemden silinir (yasal saklama yükümlülükleri hariç).</p>
+                <p><strong className="text-foreground">Kullanıcı Tarafından Fesih:</strong> Kullanıcı, dilediği zaman Platform üzerindeki ayarlar bölümünden hesabını kapatarak veya <a href="mailto:support@readixon.com" className="text-primary hover:underline">support@readixon.com</a> adresine yazılı talepte bulunarak üyelik ilişkisini sonlandırabilir. Hesap kapatıldığında, Kullanıcı'nın profil bilgileri ve paylaştığı içerikler sistemden silinir (yasal saklama yükümlülükleri hariç).</p>
               </div>
             </section>
 

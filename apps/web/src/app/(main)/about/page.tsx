@@ -1,6 +1,6 @@
 import React from 'react';
 import { Metadata } from 'next';
-import { Sparkles, MessageCircle, Quote, TrendingUp, Users, Swords, Zap, Heart, Shield, BookOpen, LayoutDashboard, Wand2, Award, FileText, AlertCircle, Book, LifeBuoy } from 'lucide-react';
+import { Sparkles, MessageCircle, Quote, TrendingUp, Users, Swords, Zap, Heart, Shield, BookOpen, LayoutDashboard, Wand2, Award, FileText, AlertCircle, Book, LifeBuoy, Building2, Briefcase, MapPin, Mail, Phone } from 'lucide-react';
 import Link from 'next/link';
 import { Typography, Button } from '@readixon/ui';
 
@@ -26,11 +26,14 @@ export default function AboutPage() {
     { title: 'Gizlilik Politikası', href: '/privacy', icon: Shield },
     { title: 'Topluluk Kuralları', href: '/guidelines', icon: Book },
     { title: 'Telif Hakkı', href: '/copyright', icon: AlertCircle },
+    { title: 'Mesafeli Satış', href: '/terms/mesafeli-satis', icon: FileText },
+    { title: 'Ön Bilgilendirme', href: '/terms/on-bilgilendirme', icon: FileText },
+    { title: 'İptal ve İade', href: '/terms/iptal-iade', icon: AlertCircle },
   ];
 
   return (
     <div className="flex flex-col w-full min-h-screen bg-background overflow-x-hidden pb-20">
-      
+
       {/* 1. HERO SECTION */}
       <section className="relative w-full min-h-[70vh] flex flex-col justify-center items-center text-center px-6 overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
@@ -40,14 +43,14 @@ export default function AboutPage() {
             <Sparkles size={16} />
             <span className="text-sm font-bold tracking-widest uppercase">Readixon V1 Yayında</span>
           </div>
-          
+
           <Typography variant="h1" className="text-5xl md:text-7xl font-black text-text leading-tight mb-6 tracking-tight">
             Okuma Deneyimi <br />
             <span className="text-primary">
               Yeniden Tanımlandı
             </span>
           </Typography>
-          
+
           <Typography variant="body" className="text-lg md:text-xl text-muted max-w-2xl leading-relaxed mb-10">
             Sadece bir okur olmayın. Kurgulara yön verin, karakterlerin istatistiklerini keşfedin, alıntılarla gündem yaratın ve yeni nesil hikaye ekosisteminin bir parçası olun.
           </Typography>
@@ -68,17 +71,17 @@ export default function AboutPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <FeatureCard 
+            <FeatureCard
               icon={<MessageCircle size={28} />}
               title="Satır İçi Yorumlar"
               desc="Bölüm sonunu beklemeden, kalbinize dokunan o spesifik satıra anında yorum bırakın. Diğer okurların tepkilerini gerçek zamanlı görün."
             />
-            <FeatureCard 
+            <FeatureCard
               icon={<Quote size={28} />}
               title="Kolay Alıntı Paylaşımı"
               desc="Etkilendiğiniz bir cümleyi seçin ve saniyeler içinde şık bir alıntı kartı olarak kaydedin. Kendi koleksiyonunuzu oluşturun."
             />
-            <FeatureCard 
+            <FeatureCard
               icon={<TrendingUp size={28} />}
               title="Readix (Sosyal Ağ)"
               desc="Kendi mini blogunuz! Okuduğunuz kitapları etiketleyin, yazarından bahsedin (mention) ve platformdaki diğer kitapkurtlarıyla etkileşime geçin."
@@ -97,21 +100,21 @@ export default function AboutPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Yazar Lobisi */}
-            <FeatureCard 
+            <FeatureCard
               icon={<Users size={28} />}
               title="Yazar Lobisi & Kör Oylama"
               desc="Belirli bir tema, kısıtlı süre (örn: 120 dk) ve kelime limitiyle açılan rekabetçi odalar. Hikayeler tamamlandığında yazar isimleri gizlenir (Kör Oylama) ve okurlar Konu, Dil ve Yaratıcılık üzerinden oylama yapar."
             />
 
             {/* Sürpriz Kırılma (Curveball) */}
-            <FeatureCard 
+            <FeatureCard
               icon={<Zap size={28} />}
               title="Sürpriz Kırılma (Curveball)"
               desc="Lobi heyecanını ikiye katlayan özel mod! Sürenin son %25'ine girildiğinde aniden bir kural ekranda belirir: Tabu Kelime, Zorunlu Enjeksiyon veya Noktalama Boykotu. Krizi fırsata çeviren kazanır."
             />
 
             {/* Meydan Okumalar (Duels) */}
-            <FeatureCard 
+            <FeatureCard
               icon={<Swords size={28} />}
               title="Yazar Düelloları (Meydan Okuma)"
               desc="Yazarlar arenaya çıkıyor! Belirli bir konu ve kurallarla yazılan hikayeler teke tek çarpışıyor. Kazananı belirlemek ve büyük ödül havuzunu kimin alacağına karar vermek tamamen okurların (sizin) elinizde!"
@@ -130,21 +133,21 @@ export default function AboutPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Blok Tabanlı Editör */}
-            <FeatureCard 
+            <FeatureCard
               icon={<LayoutDashboard size={28} />}
               title="Blok Tabanlı Akıllı Editör"
               desc="Hikayenizi dinamik bloklar halinde inşa edin. Word (.docx) veya Google Docs üzerinden yapacağınız kopyala-yapıştır aktarımları saniyeler içinde otomatik olarak bloklara dönüştürülür. İşiniz bittiğinde bölümünüzü anında ön izleyin."
             />
 
             {/* Karakter İstatistikleri (RPG) */}
-            <FeatureCard 
+            <FeatureCard
               icon={<Shield size={28} />}
               title="Karakter İstatistikleri (RPG)"
               desc="Platform genelinde hikayelerdeki karakterler sadece isimden ibaret değildir. Zeka, Güç, Çeviklik gibi RPG statlarına, özel yeteneklere ve Protagonist/Antagonist gibi rollere sahiptirler. Okurlar karakter evrimini sayısal olarak takip edebilir."
             />
 
             {/* AI Eklentisi */}
-            <FeatureCard 
+            <FeatureCard
               icon={<Sparkles size={28} />}
               title="Yapay Zeka (AI) Desteği"
               desc="Tıkandığınız yerde ilham periniz hazır. Gelişmiş AI asistanımızla karakter betimlemeleri üretebilir, cümlelerinizi zenginleştirebilir ve dilbilgisi hatalarını saniyeler içinde düzeltebilirsiniz (Günlük kota limitiyle)."
@@ -221,20 +224,105 @@ export default function AboutPage() {
         </Link>
       </section>
 
+      {/* 5.75. COMPANY & CONTACT BLOCK */}
+      <section className="relative w-full py-16 px-6 z-10 bg-card border-t border-border/50">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-6">
+              <Building2 size={32} />
+            </div>
+            <Typography variant="h2" className="text-3xl md:text-4xl font-black text-text mb-4">Şirket ve İletişim Bilgileri</Typography>
+            <Typography variant="body" className="text-muted text-lg max-w-2xl mx-auto">
+              Turixon Turizm Danışmanlık Sanayi ve Ticaret Limited Şirketi bünyesinde faaliyet gösteren platformumuz, yasalara ve BTK Yer Sağlayıcı mevzuatlarına tam uyumlu olarak hizmet vermektedir.
+            </Typography>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-background rounded-3xl p-8 border border-border/50 shadow-sm">
+              <h3 className="text-xl font-bold text-text mb-6 flex items-center gap-2">
+                <Briefcase className="text-primary" size={24} />
+                Kurumsal Bilgiler
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <Typography variant="caption" className="text-muted/80 uppercase tracking-wider block mb-1">Ticari Unvan</Typography>
+                  <Typography variant="body" className="font-medium text-text">Turixon Turizm Danışmanlık Sanayi ve Ticaret Limited Şirketi</Typography>
+                </div>
+                <div>
+                  <Typography variant="caption" className="text-muted/80 uppercase tracking-wider block mb-1">Mersis Numarası</Typography>
+                  <Typography variant="body" className="font-medium text-text">0871128699600001</Typography>
+                </div>
+                <div>
+                  <Typography variant="caption" className="text-muted/80 uppercase tracking-wider block mb-1">Vergi Dairesi ve No</Typography>
+                  <Typography variant="body" className="font-medium text-text">Pamukkale VD / 8711286996</Typography>
+                </div>
+                <div>
+                  <Typography variant="caption" className="text-muted/80 uppercase tracking-wider block mb-1">Yer Sağlayıcı Bildirimi</Typography>
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-green-500/10 text-green-500 text-xs font-bold border border-green-500/20">
+                    <Shield size={14} /> BTK Onaylı Yer Sağlayıcı
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-background rounded-3xl p-8 border border-border/50 shadow-sm">
+              <h3 className="text-xl font-bold text-text mb-6 flex items-center gap-2">
+                <MapPin className="text-primary" size={24} />
+                İletişim Adresleri
+              </h3>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <MapPin className="text-muted mt-1 shrink-0" size={18} />
+                  <div>
+                    <Typography variant="caption" className="text-muted/80 uppercase tracking-wider block mb-1">Şirket Adresi</Typography>
+                    <Typography variant="body" className="font-medium text-text">AKKONAK MAH. 1814 SK. NO: 87 İÇ KAPI NO: 2 MERKEZEFENDİ / DENİZLİ</Typography>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Mail className="text-muted mt-1 shrink-0" size={18} />
+                  <div>
+                    <Typography variant="caption" className="text-muted/80 uppercase tracking-wider block mb-1">E-posta</Typography>
+                    <Typography variant="body" className="font-medium text-text">
+                      <a href="mailto:support@readixon.com" className="hover:text-primary transition-colors">support@readixon.com</a>
+                    </Typography>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Mail className="text-muted mt-1 shrink-0" size={18} />
+                  <div>
+                    <Typography variant="caption" className="text-muted/80 uppercase tracking-wider block mb-1">KEP Adresi</Typography>
+                    <Typography variant="body" className="font-medium text-text">turixon.turizm@hs01.kep.tr</Typography>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Phone className="text-muted mt-1 shrink-0" size={18} />
+                  <div>
+                    <Typography variant="caption" className="text-muted/80 uppercase tracking-wider block mb-1">Telefon</Typography>
+                    <Typography variant="body" className="font-medium text-text">
+                      <a href="tel:[+905524634140]" className="hover:text-primary transition-colors">+905524634140</a>
+                    </Typography>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* 6. POLICIES & LINKS */}
       <section className="relative w-full py-16 px-6 max-w-5xl mx-auto z-10 border-t border-border/50">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="flex flex-wrap justify-center gap-4">
           {footerLinks.map((link) => (
-            <Link key={link.href} href={link.href} className="group flex flex-col items-center justify-center gap-3 p-6 rounded-3xl bg-card/50 hover:bg-card border border-transparent hover:border-border/50 transition-all text-center">
+            <Link key={link.href} href={link.href} className="group flex flex-col items-center justify-center gap-3 p-6 w-[160px] rounded-3xl bg-card/50 hover:bg-card border border-transparent hover:border-border/50 transition-all text-center">
               <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
                 <link.icon size={24} />
               </div>
-              <Typography variant="body" className="font-medium group-hover:text-primary transition-colors">{link.title}</Typography>
+              <Typography variant="body" className="font-medium text-sm group-hover:text-primary transition-colors">{link.title}</Typography>
             </Link>
           ))}
         </div>
       </section>
-      
+
     </div>
   );
 }

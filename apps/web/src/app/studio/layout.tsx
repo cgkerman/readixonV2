@@ -9,7 +9,16 @@ import { useAuthStore } from '@readixon/core';
 
 export default function StudioLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { firebaseUser } = useAuthStore();
+  const { firebaseUser, userProfile, isLoading } = useAuthStore();
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center h-screen bg-background text-center p-6">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+        <Typography variant="body" className="text-muted">Yükleniyor...</Typography>
+      </div>
+    );
+  }
 
   if (!firebaseUser) {
     return (
@@ -17,6 +26,20 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
         <Typography variant="h2" className="mb-4">Yazar Stüdyosuna Hoş Geldiniz</Typography>
         <Typography variant="body" className="text-muted">Hikaye yazmak ve yayınlamak için lütfen giriş yapın.</Typography>
         <Link href="/" className="mt-6 text-primary hover:underline">Ana Sayfaya Dön</Link>
+      </div>
+    );
+  }
+
+  if (userProfile && !userProfile.isAuthor) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center h-screen bg-background text-center p-6">
+        <Typography variant="h2" className="mb-4 text-red-500">Erişim Reddedildi</Typography>
+        <Typography variant="body" className="text-muted max-w-md mx-auto">
+          Yazar stüdyosuna erişmek için öncelikle "Yazar Ol" adımlarını (ve e-posta doğrulamasını) tamamlamanız gerekmektedir.
+        </Typography>
+        <Link href="/" className="mt-6 px-6 py-2 bg-primary text-primary-foreground rounded-full font-bold hover:bg-primary/90 transition-colors">
+          Ana Sayfaya Dön ve Yazar Ol
+        </Link>
       </div>
     );
   }

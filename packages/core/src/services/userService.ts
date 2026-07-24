@@ -217,7 +217,7 @@ export async function getFeaturedAuthors(limitCount: number = 10): Promise<User[
     const q = query(
       collection(db, USERS_COLLECTION),
       where('isAuthor', '==', true),
-      // orderBy('stats.followers', 'desc'), // Bu composite index gerektirir. Şimdilik sadece isAuthor filtresiyle çekelim.
+      orderBy('stats.followers', 'desc'),
       limit(limitCount)
     );
     

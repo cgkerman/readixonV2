@@ -5,21 +5,35 @@ import { Typography, Button } from '@readixon/ui';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@readixon/core';
 import { PayTRModal } from '@/components/payment/PayTRModal';
+import { CheckoutConfirmationModal } from '@/components/payment/CheckoutConfirmationModal';
 
 export default function PricingSection() {
   const { userProfile, firebaseUser } = useAuthStore();
   const currentPlan = userProfile?.status || 'free';
   const [paytrToken, setPaytrToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [selectedPlanType, setSelectedPlanType] = useState<'premium' | 'pro' | null>(null);
 
-  const handleSubscribe = async (planType: 'premium' | 'pro') => {
+  const plansInfo: Record<string, { id: string; name: string; price: string; period: string }> = {
+    premium: { id: 'premium', name: 'Premium Abonelik', price: '49,90 TL', period: 'Aylık' },
+    pro: { id: 'pro', name: 'Pro Abonelik', price: '109,90 TL', period: 'Aylık' },
+  };
+
+  const handleCheckoutClick = (planType: 'premium' | 'pro') => {
     if (!userProfile || !firebaseUser) {
       alert('Lütfen satın alma işlemi için önce giriş yapın.');
       return;
     }
+    setSelectedPlanType(planType);
+  };
+
+  const handleSubscribe = async () => {
+    if (!userProfile || !firebaseUser || !selectedPlanType) {
+      return;
+    }
     
     try {
-      setIsLoading(planType);
+      setIsLoading(true);
       const response = await fetch('/api/payment/get-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -28,7 +42,7 @@ export default function PricingSection() {
           email: firebaseUser.email || 'user@readixon.com',
           userName: userProfile.displayName,
           packageId: 'monthly', // Backend expects 'monthly' for both subscriptions
-          type: planType === 'premium' ? 'premium_subscription' : 'pro_subscription',
+          type: selectedPlanType === 'premium' ? 'premium_subscription' : 'pro_subscription',
         })
       });
 
@@ -41,7 +55,8 @@ export default function PricingSection() {
     } catch (err) {
       alert('Bir hata oluştu.');
     } finally {
-      setIsLoading(null);
+      setIsLoading(false);
+      setSelectedPlanType(null);
     }
   };
 
@@ -171,6 +186,18 @@ export default function PricingSection() {
           onClose={() => setPaytrToken(null)} 
         />
       )}
+
+      <CheckoutConfirmationModal
+        isOpen={selectedPlanType !== null}
+        onClose={() => setSelectedPlanType(null)}
+        onConfirm={handleSubscribe}
+        isLoading={isLoading}
+        packageInfo={selectedPlanType ? plansInfo[selectedPlanType] : null}
+        userInfo={{
+          name: userProfile?.displayName || '',
+          email: firebaseUser?.email || ''
+        }}
+      />
     </section>
   );
 }

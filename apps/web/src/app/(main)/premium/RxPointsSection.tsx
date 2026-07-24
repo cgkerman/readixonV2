@@ -5,20 +5,35 @@ import { Typography, Button } from '@readixon/ui';
 import { Zap, Coins, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@readixon/core';
 import { PayTRModal } from '@/components/payment/PayTRModal';
+import { CheckoutConfirmationModal } from '@/components/payment/CheckoutConfirmationModal';
 
 export default function RxPointsSection() {
   const { userProfile, firebaseUser } = useAuthStore();
   const [paytrToken, setPaytrToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
 
-  const handleBuyPoints = async (packageId: string) => {
+  const packagesInfo: Record<string, { id: string; name: string; price: string; period: string }> = {
+    start: { id: 'start', name: 'Başlangıç Paketi', price: '19,90 TL', period: 'Tek Seferlik' },
+    adventure: { id: 'adventure', name: 'Macera Paketi', price: '79,90 TL', period: 'Tek Seferlik' },
+    epic: { id: 'epic', name: 'Destansı Paket', price: '249,90 TL', period: 'Tek Seferlik' },
+  };
+
+  const handleCheckoutClick = (packageId: string) => {
     if (!userProfile || !firebaseUser) {
       alert('Lütfen satın alma işlemi için önce giriş yapın.');
       return;
     }
+    setSelectedPackageId(packageId);
+  };
+
+  const handleBuyPoints = async () => {
+    if (!userProfile || !firebaseUser || !selectedPackageId) {
+      return;
+    }
     
     try {
-      setIsLoading(packageId);
+      setIsLoading(true);
       const response = await fetch('/api/payment/get-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -26,7 +41,7 @@ export default function RxPointsSection() {
           uid: userProfile.uid,
           email: firebaseUser.email || 'user@readixon.com',
           userName: userProfile.displayName,
-          packageId,
+          packageId: selectedPackageId,
           type: 'rx_points',
         })
       });
@@ -40,7 +55,8 @@ export default function RxPointsSection() {
     } catch (err) {
       alert('Bir hata oluştu.');
     } finally {
-      setIsLoading(null);
+      setIsLoading(false);
+      setSelectedPackageId(null);
     }
   };
   return (
@@ -75,10 +91,9 @@ export default function RxPointsSection() {
           <Button 
             variant="outline" 
             className="w-full py-5 rounded-xl font-bold hover:bg-primary/5 hover:text-primary border-border"
-            disabled={isLoading === 'start'}
-            onPress={() => handleBuyPoints('start')}
+            onPress={() => handleCheckoutClick('start')}
           >
-            {isLoading === 'start' ? <Loader2 className="animate-spin" /> : 'Hemen Al'}
+            Hemen Al
           </Button>
         </div>
 
@@ -107,10 +122,9 @@ export default function RxPointsSection() {
           <Button 
             variant="primary" 
             className="w-full py-5 rounded-xl font-bold shadow-md shadow-primary/20 hover:-translate-y-1 transition-all"
-            disabled={isLoading === 'adventure'}
-            onPress={() => handleBuyPoints('adventure')}
+            onPress={() => handleCheckoutClick('adventure')}
           >
-            {isLoading === 'adventure' ? <Loader2 className="animate-spin" /> : 'Hemen Al'}
+            Hemen Al
           </Button>
         </div>
 
@@ -139,10 +153,9 @@ export default function RxPointsSection() {
           <Button 
             variant="outline" 
             className="w-full py-5 rounded-xl font-bold hover:bg-primary/5 hover:text-primary border-border"
-            disabled={isLoading === 'epic'}
-            onPress={() => handleBuyPoints('epic')}
+            onPress={() => handleCheckoutClick('epic')}
           >
-            {isLoading === 'epic' ? <Loader2 className="animate-spin" /> : 'Hemen Al'}
+            Hemen Al
           </Button>
         </div>
 
@@ -154,6 +167,18 @@ export default function RxPointsSection() {
           onClose={() => setPaytrToken(null)} 
         />
       )}
+
+      <CheckoutConfirmationModal
+        isOpen={selectedPackageId !== null}
+        onClose={() => setSelectedPackageId(null)}
+        onConfirm={handleBuyPoints}
+        isLoading={isLoading}
+        packageInfo={selectedPackageId ? packagesInfo[selectedPackageId] : null}
+        userInfo={{
+          name: userProfile?.displayName || '',
+          email: firebaseUser?.email || ''
+        }}
+      />
     </section>
   );
 }
