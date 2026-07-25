@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Loader2, TrendingUp, BookOpen, Newspaper, Quote as QuoteIcon, Vote, ChevronRight, Eye, Heart, Layers, Star } from 'lucide-react';
 import Link from 'next/link';
 import { createPortal } from 'react-dom';
+import { AgendaFooter } from './components/AgendaFooter';
 
 export default function AgendaPage() {
   const [trendingTags, setTrendingTags] = useState<{id: string, count: number}[]>([]);
@@ -434,6 +435,8 @@ export default function AgendaPage() {
         )}
 
       </div>
+      
+      <AgendaFooter />
 
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes marquee {
