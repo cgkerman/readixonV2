@@ -1,4 +1,4 @@
-import { collection, query, where, orderBy, getDocs, limit, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, getDoc, limit, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { Announcement, AdminPoll, AdminQuote } from '../types';
 
