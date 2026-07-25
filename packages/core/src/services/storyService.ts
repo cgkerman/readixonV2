@@ -242,14 +242,17 @@ export const createChapter = async (storyId: string, data: Partial<Chapter>) => 
     };
     await setDoc(newChapterRef, newChapter);
     
-    const storyRef = doc(db, 'stories', storyId);
-    const storySnap = await getDoc(storyRef);
-    if (storySnap.exists()) {
-      const stats = storySnap.data().stats;
-      await updateDoc(storyRef, {
-        'stats.chapterCount': (stats?.chapterCount || 0) + 1,
-        updatedAt: serverTimestamp()
-      });
+    // Yalnızca yayınlanan (published) bölümleri say
+    if (data.status === 'published') {
+      const storyRef = doc(db, 'stories', storyId);
+      const storySnap = await getDoc(storyRef);
+      if (storySnap.exists()) {
+        const stats = storySnap.data().stats;
+        await updateDoc(storyRef, {
+          'stats.chapterCount': (stats?.chapterCount || 0) + 1,
+          updatedAt: serverTimestamp()
+        });
+      }
     }
 
     return newChapterRef.id;
@@ -265,6 +268,33 @@ export const createChapter = async (storyId: string, data: Partial<Chapter>) => 
 export const updateChapter = async (storyId: string, chapterId: string, data: Partial<Chapter>) => {
   try {
     const chapterRef = doc(db, 'stories', storyId, 'chapters', chapterId);
+    
+    // Eğer status değişiyorsa chapterCount'u güncelle
+    if (data.status) {
+      const chapterSnap = await getDoc(chapterRef);
+      if (chapterSnap.exists()) {
+        const oldStatus = chapterSnap.data().status;
+        
+        if (oldStatus !== 'published' && data.status === 'published') {
+          // Taslaktan yayına geçti
+          const storyRef = doc(db, 'stories', storyId);
+          const storySnap = await getDoc(storyRef);
+          if (storySnap.exists()) {
+            const stats = storySnap.data().stats;
+            await updateDoc(storyRef, { 'stats.chapterCount': (stats?.chapterCount || 0) + 1 });
+          }
+        } else if (oldStatus === 'published' && data.status !== 'published') {
+          // Yayından kalktı
+          const storyRef = doc(db, 'stories', storyId);
+          const storySnap = await getDoc(storyRef);
+          if (storySnap.exists()) {
+            const stats = storySnap.data().stats;
+            await updateDoc(storyRef, { 'stats.chapterCount': Math.max(0, (stats?.chapterCount || 0) - 1) });
+          }
+        }
+      }
+    }
+    
     await updateDoc(chapterRef, data);
   } catch (error) {
     console.error("Bölüm güncellenirken hata:", error);
@@ -278,17 +308,24 @@ export const updateChapter = async (storyId: string, chapterId: string, data: Pa
 export const deleteChapter = async (storyId: string, chapterId: string) => {
   try {
     const chapterRef = doc(db, 'stories', storyId, 'chapters', chapterId);
+    
+    // Silinmeden önce yayında olup olmadığını kontrol et
+    const chapterSnap = await getDoc(chapterRef);
+    const wasPublished = chapterSnap.exists() && chapterSnap.data().status === 'published';
+    
     await deleteDoc(chapterRef);
     
-    // Hikayedeki chapterCount değerini güncelle
-    const storyRef = doc(db, 'stories', storyId);
-    const storySnap = await getDoc(storyRef);
-    if (storySnap.exists()) {
-      const stats = storySnap.data().stats;
-      await updateDoc(storyRef, {
-        'stats.chapterCount': Math.max(0, (stats?.chapterCount || 0) - 1),
-        updatedAt: serverTimestamp()
-      });
+    // Eğer yayınlanmış bir bölüm silindiyse chapterCount değerini düşür
+    if (wasPublished) {
+      const storyRef = doc(db, 'stories', storyId);
+      const storySnap = await getDoc(storyRef);
+      if (storySnap.exists()) {
+        const stats = storySnap.data().stats;
+        await updateDoc(storyRef, {
+          'stats.chapterCount': Math.max(0, (stats?.chapterCount || 0) - 1),
+          updatedAt: serverTimestamp()
+        });
+      }
     }
   } catch (error) {
     console.error("Bölüm silinirken hata:", error);
