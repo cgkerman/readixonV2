@@ -54,20 +54,39 @@ export const getActiveAnnouncements = async (limitCount: number = 5): Promise<An
 /**
  * Admin paneli için tüm duyuruları getirir (aktif/pasif).
  */
-export const getAllAnnouncementsAdmin = async (): Promise<Announcement[]> => {
+export const getAllAnnouncementsAdmin = async (categoryFilter?: string): Promise<Announcement[]> => {
   try {
-    const q = query(
-      collection(db, 'announcements'),
-      orderBy('createdAt', 'desc')
-    );
+    let q;
+    if (categoryFilter === 'platform') {
+      // Platform duyuruları: "platform", "general" ve kategorisi hiç atanmamış (eski) kayıtları kapsar.
+      q = query(collection(db, 'announcements'), orderBy('createdAt', 'desc'));
+    } else if (categoryFilter) {
+      q = query(
+        collection(db, 'announcements'),
+        where('category', '==', categoryFilter),
+        orderBy('createdAt', 'desc')
+      );
+    } else {
+      q = query(collection(db, 'announcements'), orderBy('createdAt', 'desc'));
+    }
 
     const snapshot = await getDocs(q);
     const announcements: Announcement[] = [];
     
     snapshot.forEach((doc) => {
+      const docData = doc.data();
+      
+      // Client-side filtering for 'platform' to catch legacy docs missing the category field
+      if (categoryFilter === 'platform') {
+        const cat = docData.category;
+        if (cat === 'culture') {
+          return; // 'culture' olanları atla (Editör panele ait olanlar)
+        }
+      }
+
       announcements.push({
         id: doc.id,
-        ...doc.data()
+        ...docData
       } as Announcement);
     });
 
@@ -75,6 +94,23 @@ export const getAllAnnouncementsAdmin = async (): Promise<Announcement[]> => {
   } catch (error) {
     console.error("Admin duyuruları çekilirken hata:", error);
     return [];
+  }
+};
+
+/**
+ * ID'ye göre tek bir duyuru getirir.
+ */
+export const getAnnouncementById = async (id: string): Promise<Announcement | null> => {
+  try {
+    const docRef = doc(db, 'announcements', id);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return { id: docSnap.id, ...docSnap.data() } as Announcement;
+    }
+    return null;
+  } catch (error) {
+    console.error("Duyuru detayı çekilirken hata:", error);
+    return null;
   }
 };
 

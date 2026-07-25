@@ -149,3 +149,4 @@ export * from './constants/badges';
 export * from './services/achievementService';
 export * from './services/systemService';
 export * from './services/activityService';
+export { slugify } from './utils/slugify';

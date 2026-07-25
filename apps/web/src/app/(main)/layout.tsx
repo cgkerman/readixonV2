@@ -302,6 +302,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   </Button>
                 </Link>
               )}
+              {(userProfile?.isEditor || userProfile?.isAdmin) && (
+                <Link href="/editor">
+                  <Button variant="outline" className="w-full justify-start mb-2 border-green-500/20 text-green-500 hover:bg-green-500/10">
+                    <LifeBuoy size={18} className="mr-2" /> Editör Paneli
+                  </Button>
+                </Link>
+              )}
               <Button variant="ghost" className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-950/30" onPress={handleSignOut}>
                 <LogOut size={18} className="mr-2" /> Çıkış Yap
               </Button>

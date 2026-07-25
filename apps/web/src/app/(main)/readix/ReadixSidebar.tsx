@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Typography, Button } from '@readixon/ui';
 import { X, Phone, Mail, MapPin } from 'lucide-react';
-import { collection, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
+import { collection, getDocs, limit, orderBy, query, where, onSnapshot } from 'firebase/firestore';
 import { db, getTopStories, getActiveAdminPoll, voteAdminPoll, AdminPoll, getActiveQuote, AdminQuote, useAuthStore } from '@readixon/core';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
@@ -23,23 +23,26 @@ export function ReadixSidebar() {
   const { userProfile } = useAuthStore();
 
   useEffect(() => {
+    // Realtime listener for Top Tags
+    const tagsQ = query(collection(db, 'tags'), orderBy('count', 'desc'), limit(5));
+    const unsubscribeTags = onSnapshot(tagsQ, (snapshot) => {
+      if (snapshot.empty) {
+        setTrendingTags([
+          { id: 'Edebiyat', count: 1245 },
+          { id: 'Şiir', count: 892 },
+          { id: 'Deneme', count: 534 },
+          { id: 'Roman', count: 412 },
+          { id: 'KitapÖnerisi', count: 328 }
+        ]);
+      } else {
+        setTrendingTags(snapshot.docs.map(d => ({ id: d.id, count: d.data().count })));
+      }
+    }, (error) => {
+      console.error("Trending tags realtime error:", error);
+    });
+
     const fetchSidebarData = async () => {
       try {
-        // Fetch Top Tags
-        const tagsQ = query(collection(db, 'tags'), orderBy('count', 'desc'), limit(5));
-        const tagsSnap = await getDocs(tagsQ);
-        if (tagsSnap.empty) {
-          setTrendingTags([
-            { id: 'Edebiyat', count: 1245 },
-            { id: 'Şiir', count: 892 },
-            { id: 'Deneme', count: 534 },
-            { id: 'Roman', count: 412 },
-            { id: 'KitapÖnerisi', count: 328 }
-          ]);
-        } else {
-          setTrendingTags(tagsSnap.docs.map(d => ({ id: d.id, count: d.data().count })));
-        }
-
         // Fetch Culture Announcements
         const newsQ = query(collection(db, 'announcements'), where('category', '==', 'culture'), where('isActive', '==', true), orderBy('createdAt', 'desc'), limit(3));
         const newsSnap = await getDocs(newsQ);
@@ -77,6 +80,10 @@ export function ReadixSidebar() {
       }
     };
     fetchSidebarData();
+
+    return () => {
+      unsubscribeTags();
+    };
   }, []);
 
   const handleVote = async (optionIndex: number) => {
@@ -106,7 +113,12 @@ export function ReadixSidebar() {
 
   return (
     <aside className="hidden lg:block w-80 pl-10 py-6 sticky top-0 h-screen overflow-y-auto scrollbar-hide pb-20">
-      <Typography variant="h3" className="mb-6 text-text">Gündem</Typography>
+      <Link href="/agenda" className="flex items-center gap-2 mb-6 group cursor-pointer w-fit">
+        <Typography variant="h3" className="text-text group-hover:text-primary transition-colors">Gündem</Typography>
+        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        </div>
+      </Link>
       
       <div className="flex flex-col gap-6">
         

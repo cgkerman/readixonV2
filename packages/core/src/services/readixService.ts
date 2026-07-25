@@ -34,11 +34,13 @@ export async function createReadix(
 ): Promise<Readix> {
   const readixRef = doc(collection(db, READIXES_COLLECTION));
   
-  // Extract tags (e.g. #book -> book)
-  const tags = content.match(/#[\p{L}\d_]+/gu)?.map(tag => tag.slice(1).toLowerCase()) || [];
+  // Extract tags (e.g. #book -> book) and deduplicate
+  const rawTags = content.match(/#[\p{L}\d_]+/gu)?.map(tag => tag.slice(1).toLowerCase()) || [];
+  const tags = [...new Set(rawTags)];
   
-  // Extract mentions (e.g. @user -> user)
-  const mentions = content.match(/@[\p{L}\d_]+/gu)?.map(mention => mention.slice(1)) || [];
+  // Extract mentions (e.g. @user -> user) and deduplicate
+  const rawMentions = content.match(/@[\p{L}\d_]+/gu)?.map(mention => mention.slice(1)) || [];
+  const mentions = [...new Set(rawMentions)];
 
   const newReadix = {
     id: readixRef.id,

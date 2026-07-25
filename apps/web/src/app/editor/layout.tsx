@@ -3,18 +3,18 @@
 import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, BookOpen, Feather, LogOut, Settings, Hash, Flag, Trophy, Zap, BellRing, HelpCircle, Quote } from 'lucide-react';
+import { LayoutDashboard, LogOut, BellRing, HelpCircle, Quote } from 'lucide-react';
 import { Typography, Button } from '@readixon/ui';
 import { useAuthStore, signOut } from '@readixon/core';
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function EditorLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { userProfile, isInitialized } = useAuthStore();
 
   useEffect(() => {
-    // Sadece auth yüklendiyse ve admin değilse yönlendir
-    if (isInitialized && userProfile && !userProfile.isAdmin) {
+    // Sadece auth yüklendiyse ve editor/admin değilse yönlendir
+    if (isInitialized && userProfile && !userProfile.isEditor && !userProfile.isAdmin) {
       router.push('/');
     } else if (isInitialized && !userProfile) {
       router.push('/login');
@@ -31,19 +31,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   const navItems = [
-    { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-    { name: 'Kullanıcılar', href: '/admin/users', icon: Users },
-    { name: 'Hikayeler', href: '/admin/stories', icon: BookOpen },
-    { name: 'Düellolar', href: '/admin/duels', icon: Feather },
-    { name: "Readix'ler", href: '/admin/readixes', icon: Hash },
-    { name: 'Lobi Yönetimi', href: '/admin/lobby', icon: Trophy },
-    { name: 'Sürpriz Kırılma', href: '/admin/curveball', icon: Zap },
-    { name: 'Şikayetler', href: '/admin/reports', icon: Flag },
-    { name: 'Duyurular', href: '/admin/announcements', icon: BellRing },
-    { name: 'Ayarlar', href: '/admin/settings', icon: Settings },
+    { name: 'Dashboard', href: '/editor', icon: LayoutDashboard },
+    { name: 'Kültür Sanat Haberleri', href: '/editor/news', icon: BellRing },
+    { name: 'Anketler', href: '/editor/polls', icon: HelpCircle },
+    { name: 'Alıntılar', href: '/editor/quote', icon: Quote },
   ];
 
-  if (!isInitialized || !userProfile?.isAdmin) {
+  if (!isInitialized || (!userProfile?.isEditor && !userProfile?.isAdmin)) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -53,11 +47,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="flex h-[100dvh] bg-background overflow-hidden selection:bg-primary/20 text-text">
-      {/* ── Sidebar (Admin) ── */}
+      {/* ── Sidebar (Editor) ── */}
       <aside className="w-64 flex-col border-r border-border/50 bg-card/20 p-6 hidden md:flex shrink-0">
         <div className="mb-8">
           <Typography variant="h2" className="font-bold text-primary tracking-tighter">readixon</Typography>
-          <span className="text-[10px] font-semibold text-red-500 uppercase tracking-wider bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">Admin Panel</span>
+          <span className="text-[10px] font-semibold text-green-500 uppercase tracking-wider bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20">Editör Paneli</span>
         </div>
         
         <nav className="flex-1 flex flex-col gap-2">
@@ -94,12 +88,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <main className="flex-1 flex flex-col overflow-y-auto relative bg-background">
         {/* Top bar for mobile and extra actions */}
         <header className="h-16 border-b border-border/50 bg-background/80 backdrop-blur flex items-center justify-between px-6 sticky top-0 z-10">
-          <Typography variant="h3" className="font-semibold text-text md:hidden">Admin Panel</Typography>
+          <Typography variant="h3" className="font-semibold text-text md:hidden">Editör Paneli</Typography>
           <div className="flex-1"></div>
           <div className="flex items-center gap-4">
              <div className="text-right hidden sm:block">
                <Typography variant="body" className="font-semibold text-sm leading-none">{userProfile.displayName}</Typography>
-               <Typography variant="caption" className="text-muted">Administrator</Typography>
+               <Typography variant="caption" className="text-muted">{userProfile.isAdmin ? 'Administrator' : 'Editor'}</Typography>
              </div>
              <div className="w-9 h-9 rounded-full bg-primary/20 overflow-hidden border border-primary/50">
                {userProfile.avatarUrl ? (

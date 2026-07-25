@@ -202,7 +202,7 @@ export const ReadixCard: React.FC<ReadixCardProps> = ({
         </div>
       </div>
 
-      <div className="mb-4 text-text/80 whitespace-pre-wrap text-[15px] leading-relaxed">
+      <div className="mb-4 text-text/80 whitespace-pre-wrap text-[15px] leading-relaxed break-words">
         {content.split(/(#[\p{L}\d_]+|@[\p{L}\d_]+|\*\*.*?\*\*|\*.*?\*)/gu).map((part, index) => {
           if (part.startsWith('#')) {
             return (

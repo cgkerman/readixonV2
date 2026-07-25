@@ -97,17 +97,17 @@ export default function FeedPage() {
   const slides = useMemo(() => {
     const arr: any[] = [];
 
-    // Readixon V1 Announcement Slide (Her zaman ilk sırada)
+    // Readixon V1.6 Update Announcement Slide (Her zaman ilk sırada)
     arr.push({
-      id: 'slide-readixon-v1',
+      id: 'slide-readixon-v1-6',
       type: 'announcement',
-      badge: 'YENİ NESİL OKUMA DENEYİMİ',
+      badge: 'DEV GÜNCELLEME',
       badgeIcon: Sparkles,
-      title: 'Readixon V1 Yayında!',
-      summary: 'Alışılmış platformları unutun. Readix ile yazarlarla etkileşime geçin, hikayenin gidişatını oylayın, RPG karakter istatistiklerini keşfedin ve yazar düellolarına şahit olun. Okuma deneyimi baştan yazılıyor!',
+      title: 'Readixon V1.6 Yayında!',
+      summary: 'Gündem sayfası baştan aşağı yenilendi! Yeni nesil 3D popüler eserler, kayan trend hashtag şeridi, yepyeni okur anketleri ve muazzam tasarım detaylarıyla okuma deneyiminiz sınıf atlıyor.',
       image: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&q=80', // Kozmik/Yıldızlı bir arkaplan
       primaryLabel: 'Hemen Keşfet',
-      primaryAction: () => router.push('/about'),
+      primaryAction: () => router.push('/agenda'),
     });
 
     // Beta Uyarı & Destek Slide

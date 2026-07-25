@@ -53,6 +53,7 @@ export interface User {
   createdAt: Timestamp;
   isAuthor?: boolean;
   isAdmin?: boolean;
+  isEditor?: boolean;
   status?: 'free' | 'premium' | 'pro'; // Premium status for features like Character Book
   rxPoints?: number; // Virtual currency balance
   termsAcceptedAt?: Timestamp; // Yasal onay timestamp

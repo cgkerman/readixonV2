@@ -23,7 +23,7 @@ export default function AdminAnnouncementsPage() {
     isActive: true,
     publishAt: '',
     expireAt: '',
-    category: 'general'
+    category: 'platform'
   });
 
   const editorRef = useRef<HTMLDivElement>(null);
@@ -47,7 +47,7 @@ export default function AdminAnnouncementsPage() {
   const fetchAnnouncements = async () => {
     setLoading(true);
     try {
-      const data = await getAllAnnouncementsAdmin();
+      const data = await getAllAnnouncementsAdmin('platform');
       setAnnouncements(data);
     } catch (error) {
       toast.error('Duyurular yüklenirken hata oluştu.');
@@ -79,7 +79,7 @@ export default function AdminAnnouncementsPage() {
         isActive: announcement.isActive,
         publishAt: formatDate(announcement.publishAt),
         expireAt: formatDate(announcement.expireAt),
-        category: announcement.category || 'general'
+        category: announcement.category || 'platform'
       });
     } else {
       setEditingId(null);
@@ -91,7 +91,7 @@ export default function AdminAnnouncementsPage() {
         isActive: true,
         publishAt: '',
         expireAt: '',
-        category: 'general'
+        category: 'platform'
       });
     }
     setImageFile(null);

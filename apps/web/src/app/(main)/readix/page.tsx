@@ -493,7 +493,7 @@ function ReadixContent() {
     <div className="flex-1 flex flex-col md:flex-row max-w-5xl mx-auto w-full p-0 md:p-6 lg:p-10">
       
       {/* Main Feed Column */}
-      <div className="flex-1 md:border-r border-white/10 md:pr-10 min-h-screen">
+      <div className="flex-1 min-w-0 md:border-r border-white/10 md:pr-10 min-h-screen">
         
         {/* Header & Tabs */}
         <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md pb-4 pt-6 px-4 md:px-0">

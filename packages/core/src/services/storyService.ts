@@ -579,20 +579,28 @@ export const searchStories = async (searchTerm: string = '', selectedTags: strin
 // Yardımcı Fonksiyon: Hikayeleri Zenginleştir (Eksik Yazar İsimlerini Tamamla)
 // ─────────────────────────────────────────────
 const enrichStories = async (docs: any[]): Promise<Story[]> => {
-  const authorCache: Record<string, string> = {};
+  const authorCache: Record<string, {name: string, avatar?: string}> = {};
   return Promise.all(docs.map(async (docSnap) => {
     const data = docSnap.data();
     let authorName = data.authorName;
-    if (!authorName && data.authorId) {
+    let authorAvatarUrl = data.authorAvatarUrl;
+    
+    if ((!authorName || !authorAvatarUrl) && data.authorId) {
       if (authorCache[data.authorId]) {
-        authorName = authorCache[data.authorId];
+        authorName = authorName || authorCache[data.authorId].name;
+        authorAvatarUrl = authorAvatarUrl || authorCache[data.authorId].avatar;
       } else {
         const profile = await getUserProfile(data.authorId);
-        authorName = profile?.displayName || profile?.username || 'Bilinmiyor';
-        authorCache[data.authorId] = authorName;
+        const fetchedName = profile?.displayName || profile?.username || 'Bilinmiyor';
+        const fetchedAvatar = profile?.avatarUrl;
+        
+        authorName = authorName || fetchedName;
+        authorAvatarUrl = authorAvatarUrl || fetchedAvatar;
+        
+        authorCache[data.authorId] = { name: fetchedName, avatar: fetchedAvatar };
       }
     }
-    return { storyId: docSnap.id, ...data, authorName } as Story;
+    return { storyId: docSnap.id, ...data, authorName, authorAvatarUrl } as Story;
   }));
 };
 
