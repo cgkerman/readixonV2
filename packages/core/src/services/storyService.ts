@@ -1,4 +1,4 @@
-import { collection, query, orderBy, limit, startAfter, getDocs, DocumentSnapshot, doc, setDoc, updateDoc, serverTimestamp, where, getDoc, onSnapshot, deleteDoc, documentId } from 'firebase/firestore';
+import { collection, query, orderBy, limit, startAfter, getDocs, DocumentSnapshot, doc, setDoc, updateDoc, serverTimestamp, where, getDoc, onSnapshot, deleteDoc, documentId, getCountFromServer } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { Story, Chapter, ReadingProgress, Review } from '../types';
 import { getUserProfile } from './userService';
@@ -637,6 +637,21 @@ const enrichStories = async (docs: any[]): Promise<Story[]> => {
         authorCache[data.authorId] = { name: fetchedName, avatar: fetchedAvatar };
       }
     }
+    
+    // Gerçek 'published' bölüm sayısını dinamik olarak hesapla (Önceki yanlış chapterCount kayıtlarını maskelemek için)
+    try {
+      const q = query(
+        collection(db, 'stories', docSnap.id, 'chapters'),
+        where('status', '==', 'published')
+      );
+      const countSnap = await getCountFromServer(q);
+      if (data.stats) {
+        data.stats.chapterCount = countSnap.data().count;
+      }
+    } catch (err) {
+      console.warn(`Hikaye ${docSnap.id} bölüm sayısı çekilemedi:`, err);
+    }
+    
     return { storyId: docSnap.id, ...data, authorName, authorAvatarUrl } as Story;
   }));
 };
