@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { BookOpen, Compass, Search, User, LogOut, PenTool, Hash, Settings, Bell, MessageCircle, Menu, X, LifeBuoy, Feather, ShieldAlert, Crown, Info } from 'lucide-react';
+import { BookOpen, Compass, Search, User, LogOut, PenTool, Hash, Settings, Bell, MessageCircle, Menu, X, LifeBuoy, Feather, ShieldAlert, Crown, Info, TrendingUp } from 'lucide-react';
 import { Typography, Button } from '@readixon/ui';
 import { useAuthStore, signOut, becomeAuthor, sendVerificationEmail, subscribeToChats } from '@readixon/core';
 import { toast } from "sonner";
@@ -185,6 +185,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   const topNavItems: NavItem[] = [
     { name: 'Keşfet', href: '/feed', icon: Compass },
+    { name: 'Gündem', href: '/agenda', icon: TrendingUp },
     { name: 'Arena', href: '/arena', icon: Feather },
     { name: 'Readix', href: '/readix', icon: Hash },
     { name: 'Ara', href: '/search', icon: Search },
@@ -369,8 +370,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           {topNavItems.map((item) => {
             const isActive = pathname === item.href;
             return (
-              <Link key={item.href} href={item.href} className="flex flex-col items-center justify-center w-16 h-full relative">
-                <item.icon size={24} className={isActive ? 'text-primary' : 'text-muted'} />
+              <Link key={item.href} href={item.href} className="flex flex-col items-center justify-center w-12 sm:w-16 h-full relative">
+                <item.icon size={22} className={isActive ? 'text-primary' : 'text-muted'} />
                 {item.badge ? (
                   <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full absolute top-2 right-2 border-2 border-background translate-x-1 -translate-y-1">
                     {item.badge > 99 ? '99+' : item.badge}
