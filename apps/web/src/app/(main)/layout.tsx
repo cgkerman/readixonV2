@@ -205,7 +205,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       <aside className="hidden md:flex w-64 flex-col border-r border-border/50 bg-card/20 p-6">
         <Typography variant="h2" className="font-bold text-primary tracking-tighter mb-10">readixon</Typography>
 
-        <nav className="flex-1 flex flex-col gap-2">
+        <nav className="flex-1 flex flex-col gap-2 overflow-y-auto pr-2 -mr-2" style={{ scrollbarWidth: 'thin' }}>
           {topNavItems.map((item) => {
             const isActive = pathname === item.href;
             return (
