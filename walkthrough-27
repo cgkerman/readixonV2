@@ -1,0 +1,34 @@
+# Hero Alanı (Manşet) Yönetimi Tamamlandı! 🎉
+
+Feed sayfasındaki kahraman (hero) alanı artık tamamen dinamik ve admin panelinden yönetilebilir hale getirildi! Ayrıca, haftanın en iyisi ve popüler yazarlar gibi dinamik story/yazar slidelarına hiçbir şekilde dokunulmadı; onlar her zaman olduğu gibi çıkmaya devam edecek.
+
+## Yapılan Geliştirmeler
+
+### 1. Firestore ve Core Entegrasyonu
+- `packages/core/src/types/index.ts` dosyasına `HeroBanner` modeli eklendi.
+- `packages/core/src/services/systemService.ts` dosyasına yeni manşetleri kaydetmek, silmek, listelemek ve çekmek için 6 adet CRUD (Create, Read, Update, Delete) fonksiyonu eklendi.
+
+### 2. Editör (Admin) Paneli
+Editör sayfalarının bulunduğu `apps/web/src/app/editor` dizinine yepyeni bir bölüm eklendi:
+- **Sidebar Güncellemesi:** "Manşet Yönetimi" linki sol menüye eklendi.
+- **Listeleme:** Eklediğiniz tüm manşetlerin listelendiği, "Yayında/Pasif" yapılabildiği veya sırasını görebileceğiniz ana ekran yapıldı.
+- **Ekleme & Düzenleme:** Yeni bir manşet oluştururken başlık, özet, buton metni, badge (örn: *ÇOK YAKINDA*), sıralama değeri ve butonun gideceği link (örn: `/agenda` veya harici bir site) gibi verilerin girilebildiği, ayrıca görsel yükleyip kırpılabildiği gelişmiş bir form (`HeroBannerForm.tsx`) tasarlandı.
+
+### 3. Kullanıcı Ekranı (Feed)
+- Ana sayfa (`feed/page.tsx`), artık veritabanındaki aktif `hero_banners` koleksiyonunu dinleyecek şekilde güncellendi.
+- Eğer veritabanına hiçbir şey eklemezseniz, hero alanında yalnızca dinamik hikayeler (haftanın en iyisi vb.) görünecektir. 
+
+## 🛠️ Nasıl Test Edebilirsiniz?
+1. Hesabınızla **Editör Paneli**ne giriş yapın ve sol menüden "Manşet Yönetimi" sekmesine tıklayın.
+2. Sağ üstten **"Yeni Manşet Ekle"** butonuna basın.
+3. Webtoon haberinizle ilgili bilgileri girin. Örneğin:
+   - Başlık: *Yeni Webtoon Serimiz Başlıyor!*
+   - Özet: *Uzun zamandır beklenen macera serimiz çok yakında sizlerle buluşuyor.*
+   - Rozet (Badge): *ÇOK YAKINDA*
+   - Buton Metni: *Habere Git*
+   - Buton Linki: */agenda* (veya tam URL)
+   - Sıralama: *1*
+4. Manşeti kaydedip yayına alın.
+5. Ana sayfaya (`/feed`) dönün. Eklediğiniz manşetin, o her zaman çıkan yıldız (`Sparkles`) ikonuyla birlikte harika bir şekilde hero alanında çıktığını göreceksiniz. Butona tıkladığınızda da girdiğiniz linke gidecektir.
+
+Ellerinize sağlık! Yeni manşet sisteminiz hayırlı olsun. 🚀

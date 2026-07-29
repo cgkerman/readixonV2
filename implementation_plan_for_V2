@@ -1,0 +1,65 @@
+# Readixon V2.0: Webtoon Entegrasyonu
+
+Bu belge, Readixon platformuna **Webtoon (Çizgi Roman/Manga)** formatının profesyonel ve ölçeklenebilir bir şekilde entegre edilmesi için gereken tüm mimari, veritabanı ve kullanıcı arayüzü (UI/UX) değişikliklerini kapsar.
+
+> [!IMPORTANT]
+> Webtoon okuyucu kitlesi ile klasik roman okuyucuları farklı dinamiklere sahiptir. Bu nedenle webtoonlar veritabanında romanlarla aynı `stories` koleksiyonunda tutulacak olsa da, arayüzde ve stüdyoda tamamen ayrı bir deneyim olarak sunulacaktır.
+
+## 📝 Veritabanı ve Tip Değişiklikleri (Firebase & TS Types)
+
+Mevcut yapıyı (Romanlar) bozmadan webtoonları sisteme dahil edeceğiz.
+
+### `packages/core/src/types/index.ts` Değişiklikleri
+- **Story Modeli:** Yeni bir alan eklenecek: `format?: 'novel' | 'webtoon'`.
+  - Eğer `format` tanımsız ise geriye dönük uyumluluk (backward compatibility) için `'novel'` olarak kabul edilecek.
+  - Webtoonlar için kapak görselleri genellikle dikey (aspect-ratio 2:3 veya 3:4) olduğundan UI bu formata göre şekillenecek.
+- **Chapter Modeli:** Webtoon bölümleri için mevcut `contentBlocks` yapısı kullanılabilir (Sadece `type: 'image'` blokları art arda dizilecek). Böylece veritabanı şemasında büyük bir değişikliğe gerek kalmayacak.
+
+## 🎨 Yazar Stüdyosu (Studio) Değişiklikleri
+
+Stüdyonun genel görünümünü bozmadan, sadece sol menüye eklenecek yepyeni bir "Webtoon" modülü oluşturulacak.
+
+### Yeni Rotalar ve Ekranlar
+- **`Studio` Sol Menü:** "Romanlarım", "İstatistikler" gibi menülerin arasına **"Webtoonlarım"** eklenecek.
+- **`/studio/webtoons`:** Yazarın mevcut webtoonlarını listeleyen bağımsız bir dashboard.
+- **`/studio/webtoons/create`:** Sadece webtoonlara özel (örneğin dikey kapak görseli isteyen) yeni eser oluşturma sayfası.
+- **`/studio/webtoons/[id]/episodes/create` (Toplu Görsel Yükleyici):**
+  - Webtoon bölümleri (bölüm = episode) tamamen görsellerden oluşur. 
+  - Bu sayfada yazarların onlarca sayfayı tek seferde seçip yükleyebileceği, **Sürükle-Bırak (Drag & Drop)** ile sıralamasını değiştirebileceği profesyonel bir "Upload" arayüzü tasarlanacak.
+  - Yüklenen görseller Firebase Storage'a optimize edilerek kaydedilecek.
+
+## 🚀 Keşfet (Feed) ve Ana Sayfa Düzenlemeleri
+
+Webtoonlar ve Romanlar arama veya keşfet sayfasında birbirine karışmayacak.
+
+### 1. Mevcut Keşfet Sayfası (`/feed`)
+- Romanların sergilendiği yapı korunacak. Sayfanın uygun bir bölümüne (örneğin "En Çok Okunanlar"ın altına) **yatay kaydırılabilir (horizontal scroll)** yeni bir blok eklenecek: *"Çizgilerin Gücü: Yeni Webtoonlar"*.
+- Bu bloğun başlığının yanında **"Tümünü Gör"** butonu olacak ve bu buton kullanıcıyı yepyeni Webtoon Ana Sayfasına yönlendirecek.
+
+### 2. Dedicated Webtoon Sayfası (`/webtoons`)
+- Platformun mevcut custom temasından sapmadan (ancak görselliği daha ön planda tutan) yepyeni bir keşfet sayfası.
+- Bu sayfada sadece `format: 'webtoon'` olan eserler filtrelenerek gösterilecek.
+- Büyük banner'lar (afişler), "Popüler Seriler", "Yeni Başlayanlar" gibi alt kategorilerle zenginleştirilecek.
+
+### 3. Gündem Sayfası (`/agenda`)
+- Gündem sayfasına Webtoonlar için özel bir alan açılacak. "Haftanın Yükselen Yıldızı" veya "Günün Webtoonu" formatında, doğrudan göze çarpan dikey bir afiş/kart eklenecek.
+
+## 📱 Okuyucu (Reader) Arayüzü Değişiklikleri
+
+Webtoon okuma deneyimi, metin okumaktan tamamen farklıdır. Kullanıcı bir webtoon bölümüne girdiğinde mevcut `reader` arayüzü bunu algılayıp kendini değiştirecek:
+
+- **Eğer `format === 'webtoon'` ise:**
+  - Font boyutu değiştirme, arka plan rengi seçme gibi metin ayarları menüleri **gizlenecek**.
+  - Sayfa kenarlarındaki boşluklar (padding/margin) **sıfırlanacak**.
+  - Görseller (`contentBlocks` içindeki resimler) aralarında **hiçbir boşluk kalmayacak şekilde (gap-0)** uç uca eklenerek dikey ve kesintisiz (seamless) bir kaydırma deneyimi sunulacak.
+  - Mobil cihazlarda tam ekran (full-screen) deneyimi optimize edilecek.
+
+---
+
+> [!WARNING]
+> **Kritik Teknik Not (Performans):** Webtoonlar çok sayıda görsel içerdiğinden, "Lazy Loading" (yalnızca ekranda belirdikçe resimlerin yüklenmesi) kesinlikle uygulanmalıdır. Aksi takdirde sunucu/ağ maliyetleri artar ve okuyucunun sayfası çok yavaş yüklenir.
+
+## Bekleyen Sorular (Feedback Required)
+
+1. Stüdyoda Webtoon yükleme işlemi sırasında görsellerin otomatik olarak WebP formatına sıkıştırılması (veya eninin 800-1000px gibi sınırlandırılması) gerekir mi, yoksa yazarın yüklediği ham dosya mı kaydedilsin? (Sıkıştırma, Storage maliyetlerini ciddi oranda düşürür).
+2. Webtoon bölümlerinin isimlendirmesinde "Bölüm 1" yerine "Episod 1" gibi farklı bir terminoloji kullanmak ister misiniz?

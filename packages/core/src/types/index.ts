@@ -297,6 +297,25 @@ export interface Announcement {
 }
 
 // ─────────────────────────────────────────────
+// 3.7.1 Manşetler (Hero Banners) (/hero_banners/{id})
+// Ana sayfadaki (feed) hero slider'da dinamik olarak gösterilecek manşetler
+// ─────────────────────────────────────────────
+
+export interface HeroBanner {
+  id: string;
+  badge: string; // Örn: "DEV GÜNCELLEME"
+  title: string;
+  summary: string;
+  imageUrl: string;
+  primaryLabel: string; // Buton metni (Örn: "Hemen Keşfet")
+  primaryLink: string;  // Buton linki (Örn: "/agenda")
+  isActive: boolean;
+  order: number;
+  createdAt: Timestamp;
+}
+
+
+// ─────────────────────────────────────────────
 // 3.8. Bildirimler (/users/{userId}/notifications/{notificationId})
 // ─────────────────────────────────────────────
 

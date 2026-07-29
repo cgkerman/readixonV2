@@ -243,5 +243,13 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAuthenticated(); // İdealde admin rolü kontrol edilmeli
     }
+
+    // ==========================================
+    // 9. ANA SAYFA MANŞETLERİ (HERO BANNERS)
+    // ==========================================
+    match /hero_banners/{bannerId} {
+      allow read: if true;
+      allow write: if isAuthenticated(); // İdealde admin rolü kontrol edilmeli
+    }
   }
 }

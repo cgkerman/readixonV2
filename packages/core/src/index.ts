@@ -59,6 +59,7 @@ export type {
   CharacterRole,
   CharacterRPGStats,
   Announcement,
+  HeroBanner,
   SavedQuote,
   UserAchievements,
   ChapterActivity,

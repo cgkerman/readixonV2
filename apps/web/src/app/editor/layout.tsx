@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, LogOut, BellRing, HelpCircle, Quote } from 'lucide-react';
+import { LayoutDashboard, LogOut, BellRing, HelpCircle, Quote, LayoutTemplate } from 'lucide-react';
 import { Typography, Button } from '@readixon/ui';
 import { useAuthStore, signOut } from '@readixon/core';
 
@@ -32,6 +32,7 @@ export default function EditorLayout({ children }: { children: React.ReactNode }
 
   const navItems = [
     { name: 'Dashboard', href: '/editor', icon: LayoutDashboard },
+    { name: 'Manşet Yönetimi', href: '/editor/hero', icon: LayoutTemplate },
     { name: 'Kültür Sanat Haberleri', href: '/editor/news', icon: BellRing },
     { name: 'Anketler', href: '/editor/polls', icon: HelpCircle },
     { name: 'Alıntılar', href: '/editor/quote', icon: Quote },

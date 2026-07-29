@@ -3,7 +3,7 @@
 import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Typography, StoryCard, Button } from '@readixon/ui';
-import { getRecentStoriesPaginated, getTopStoriesPaginated, getFeaturedAuthors, getRecommendedStories, getCompletedStories, getMostLikedStories, getActiveAnnouncements, getUserReadingProgress, getStoriesByIds, getTrendingDiscussions, POPULAR_TAGS, generateStorySlug, toggleStoryLike, followUser, unfollowUser, useAuthStore, type Story, type User, type Announcement } from '@readixon/core';
+import { getRecentStoriesPaginated, getTopStoriesPaginated, getFeaturedAuthors, getRecommendedStories, getCompletedStories, getMostLikedStories, getActiveAnnouncements, getActiveHeroBanners, getUserReadingProgress, getStoriesByIds, getTrendingDiscussions, POPULAR_TAGS, generateStorySlug, toggleStoryLike, followUser, unfollowUser, useAuthStore, type Story, type User, type Announcement } from '@readixon/core';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Flame, Sparkles, TrendingUp, Clock, ChevronRight, ChevronLeft, Play, Users, Heart, CheckCircle, BellRing, BookOpen, MessageCircle } from 'lucide-react';
 import { AuthorCard } from '@readixon/ui';
@@ -64,6 +64,11 @@ export default function FeedPage() {
     queryFn: () => getActiveAnnouncements(3),
   });
 
+  const { data: heroBanners = [], isLoading: heroBannersLoading } = useQuery({
+    queryKey: ['hero_banners', 'active'],
+    queryFn: () => getActiveHeroBanners(),
+  });
+
   const { data: readingHistory = [], isLoading: historyLoading } = useQuery({
     queryKey: ['stories', 'readingProgress', firebaseUser?.uid],
     queryFn: async () => {
@@ -91,36 +96,31 @@ export default function FeedPage() {
   const recentStories = recentData?.pages.flatMap((p: any) => p.stories) || [];
   const topStories = topData?.pages.flatMap((p: any) => p.stories) || [];
 
-  const isLoading = recentLoading || topLoading || authorsLoading || recLoading || compLoading || likedLoading || historyLoading || discussionsLoading;
+  const isLoading = recentLoading || topLoading || authorsLoading || recLoading || compLoading || likedLoading || historyLoading || discussionsLoading || heroBannersLoading;
 
   // Öne Çıkan Slaytlar (Carousel Verisi)
   const slides = useMemo(() => {
     const arr: any[] = [];
 
-    // Readixon V1.6 Update Announcement Slide (Her zaman ilk sırada)
-    arr.push({
-      id: 'slide-readixon-v1-6',
-      type: 'announcement',
-      badge: 'DEV GÜNCELLEME',
-      badgeIcon: Sparkles,
-      title: 'Readixon V1.6 Yayında!',
-      summary: 'Gündem sayfası baştan aşağı yenilendi! Yeni nesil 3D popüler eserler, kayan trend hashtag şeridi, yepyeni okur anketleri ve muazzam tasarım detaylarıyla okuma deneyiminiz sınıf atlıyor.',
-      image: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&q=80', // Kozmik/Yıldızlı bir arkaplan
-      primaryLabel: 'Hemen Keşfet',
-      primaryAction: () => router.push('/agenda'),
-    });
-
-    // Beta Uyarı & Destek Slide
-    arr.push({
-      id: 'slide-beta-announcement',
-      type: 'announcement',
-      badge: 'BETA SÜRÜMÜNDEYİZ',
-      badgeIcon: CheckCircle, // veya uygun bir ikon
-      title: 'Dürüst Olalım: Hatalar Çıkabilir',
-      summary: 'Platformumuz henüz çok yeni ve taze! Geliştirme sürecimizde karşınıza ufak tefek hatalar veya pürüzler çıkabilir. Karşılaştığınız sorunları çözebilmemiz ve deneyimi iyileştirmemiz için bize doğrudan yazın.',
-      image: 'https://images.unsplash.com/photo-1457369804613-52c61a468e7d?auto=format&fit=crop&q=80', // Cozy reading/writing theme
-      primaryLabel: 'Hata Bildir / Destek',
-      primaryAction: () => router.push('/support'),
+    // Dinamik Manşetler (Admin panelinden eklenenler)
+    heroBanners.forEach(banner => {
+      arr.push({
+        id: `slide-banner-${banner.id}`,
+        type: 'announcement',
+        badge: banner.badge,
+        badgeIcon: Sparkles, // Standart ikon
+        title: banner.title,
+        summary: banner.summary,
+        image: banner.imageUrl,
+        primaryLabel: banner.primaryLabel,
+        primaryAction: () => {
+          if (banner.primaryLink?.startsWith('http')) {
+            window.open(banner.primaryLink, '_blank');
+          } else if (banner.primaryLink) {
+            router.push(banner.primaryLink);
+          }
+        },
+      });
     });
 
     if (topStories.length > 0) {
@@ -183,7 +183,7 @@ export default function FeedPage() {
       });
     }
     return arr;
-  }, [topStories, mostLikedStories, featuredAuthors, router]);
+  }, [topStories, mostLikedStories, featuredAuthors, heroBanners, router]);
 
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   

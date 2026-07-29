@@ -1,6 +1,6 @@
 import { collection, query, where, orderBy, getDocs, getDoc, limit, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { db } from '../firebase';
-import type { Announcement, AdminPoll, AdminQuote } from '../types';
+import type { Announcement, AdminPoll, AdminQuote, HeroBanner } from '../types';
 
 /**
  * Yayında olan duyuruları getirir.
@@ -383,6 +383,87 @@ export const deleteQuote = async (quoteId: string): Promise<void> => {
     await deleteDoc(doc(db, 'admin_quotes', quoteId));
   } catch (error) {
     console.error("Alıntı silinirken hata:", error);
+    throw error;
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────
+// HERO BANNERS (Ana Sayfa Manşetleri)
+// ─────────────────────────────────────────────────────────────────
+
+export const getActiveHeroBanners = async (): Promise<HeroBanner[]> => {
+  try {
+    const q = query(
+      collection(db, 'hero_banners'),
+      where('isActive', '==', true),
+      orderBy('order', 'asc')
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HeroBanner));
+  } catch (error) {
+    console.error("Aktif manşetler çekilirken hata:", error);
+    return [];
+  }
+};
+
+export const getAllHeroBannersAdmin = async (): Promise<HeroBanner[]> => {
+  try {
+    const q = query(collection(db, 'hero_banners'), orderBy('order', 'asc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HeroBanner));
+  } catch (error) {
+    console.error("Manşetler çekilirken hata:", error);
+    return [];
+  }
+};
+
+export const getHeroBannerById = async (id: string): Promise<HeroBanner | null> => {
+  try {
+    const docRef = doc(db, 'hero_banners', id);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return { id: docSnap.id, ...docSnap.data() } as HeroBanner;
+    }
+    return null;
+  } catch (error) {
+    console.error("Manşet çekilirken hata:", error);
+    return null;
+  }
+};
+
+export const createHeroBanner = async (data: Omit<HeroBanner, 'id' | 'createdAt'>): Promise<string> => {
+  try {
+    const newRef = doc(collection(db, 'hero_banners'));
+    await setDoc(newRef, {
+      ...data,
+      createdAt: serverTimestamp()
+    });
+    return newRef.id;
+  } catch (error) {
+    console.error("Manşet oluşturulurken hata:", error);
+    throw error;
+  }
+};
+
+export const updateHeroBanner = async (id: string, data: Partial<HeroBanner>): Promise<void> => {
+  try {
+    const ref = doc(db, 'hero_banners', id);
+    await updateDoc(ref, {
+      ...data,
+      updatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error("Manşet güncellenirken hata:", error);
+    throw error;
+  }
+};
+
+export const deleteHeroBanner = async (id: string): Promise<void> => {
+  try {
+    const ref = doc(db, 'hero_banners', id);
+    await deleteDoc(ref);
+  } catch (error) {
+    console.error("Manşet silinirken hata:", error);
     throw error;
   }
 };
