@@ -201,6 +201,25 @@ export const getActiveAdminPoll = async (): Promise<AdminPoll | null> => {
 };
 
 /**
+ * Tüm aktif anketleri getirir (Gündem sayfasında listelemek için).
+ */
+export const getActiveAdminPolls = async (): Promise<AdminPoll[]> => {
+  try {
+    const q = query(
+      collection(db, 'admin_polls'),
+      where('isActive', '==', true),
+      orderBy('createdAt', 'desc')
+    );
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return [];
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AdminPoll));
+  } catch (error) {
+    console.error("Aktif anketler çekilirken hata:", error);
+    return [];
+  }
+};
+
+/**
  * Yeni anket oluşturur. (İsteğe bağlı olarak mevcut aktif anketleri pasife çekebiliriz)
  */
 export const createAdminPoll = async (
@@ -237,13 +256,6 @@ export const createAdminPoll = async (
  */
 export const toggleAdminPollStatus = async (pollId: string, isActive: boolean): Promise<void> => {
   try {
-    // Eğer aktif ediliyorsa diğerlerini kapatmak iyi olabilir, ama şimdilik sadece kendi statüsünü güncelleyelim
-    if (isActive) {
-      const activePollsQ = query(collection(db, 'admin_polls'), where('isActive', '==', true));
-      const activeSnaps = await getDocs(activePollsQ);
-      const updatePromises = activeSnaps.docs.map(d => updateDoc(doc(db, 'admin_polls', d.id), { isActive: false }));
-      await Promise.all(updatePromises);
-    }
     await updateDoc(doc(db, 'admin_polls', pollId), { isActive });
   } catch (error) {
     console.error("Anket statüsü güncellenirken hata:", error);
@@ -465,5 +477,45 @@ export const deleteHeroBanner = async (id: string): Promise<void> => {
   } catch (error) {
     console.error("Manşet silinirken hata:", error);
     throw error;
+  }
+};
+
+/**
+ * Platform değerlendirme geri bildirimini Firestore'a kaydeder.
+ */
+export const submitPlatformFeedback = async (
+  rating: number,
+  comment: string,
+  userId?: string | null
+): Promise<void> => {
+  try {
+    const newRef = doc(collection(db, 'platform_feedbacks'));
+    await setDoc(newRef, {
+      rating,
+      comment,
+      userId: userId || 'anonymous',
+      createdAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error("Değerlendirme kaydedilirken hata:", error);
+    throw error;
+  }
+};
+
+/**
+ * Tüm platform değerlendirmelerini (feedbacks) getirir.
+ */
+export const getPlatformFeedbacks = async (): Promise<any[]> => {
+  try {
+    const q = query(
+      collection(db, 'platform_feedbacks'),
+      orderBy('createdAt', 'desc')
+    );
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return [];
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error("Değerlendirmeler çekilirken hata:", error);
+    return [];
   }
 };

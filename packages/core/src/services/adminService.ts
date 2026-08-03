@@ -9,6 +9,7 @@ export interface PlatformStats {
   totalStories: number;
   totalDuels: number;
   totalReadixes: number;
+  totalFeedbacks: number;
 }
 
 /**
@@ -21,12 +22,14 @@ export async function getPlatformStats(): Promise<PlatformStats> {
     const storiesColl = collection(db, 'stories');
     const duelsColl = collection(db, 'duels');
     const readixesColl = collection(db, 'readixes');
+    const feedbacksColl = collection(db, 'platform_feedbacks');
 
-    const [usersSnap, storiesSnap, duelsSnap, readixesSnap] = await Promise.all([
+    const [usersSnap, storiesSnap, duelsSnap, readixesSnap, feedbacksSnap] = await Promise.all([
       getCountFromServer(usersColl),
       getCountFromServer(storiesColl),
       getCountFromServer(duelsColl),
-      getCountFromServer(readixesColl)
+      getCountFromServer(readixesColl),
+      getCountFromServer(feedbacksColl)
     ]);
 
     return {
@@ -34,6 +37,7 @@ export async function getPlatformStats(): Promise<PlatformStats> {
       totalStories: storiesSnap.data().count,
       totalDuels: duelsSnap.data().count,
       totalReadixes: readixesSnap.data().count,
+      totalFeedbacks: feedbacksSnap.data().count,
     };
   } catch (error) {
     console.error('getPlatformStats hatası:', error);
@@ -43,6 +47,7 @@ export async function getPlatformStats(): Promise<PlatformStats> {
       totalStories: 0,
       totalDuels: 0,
       totalReadixes: 0,
+      totalFeedbacks: 0,
     };
   }
 }

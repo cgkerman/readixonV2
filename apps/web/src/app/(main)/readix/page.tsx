@@ -22,10 +22,11 @@ import {
   getReadixById,
   searchUsers,
   Readix,
-  User
+  User,
+  Story
 } from '@readixon/core';
-import { Typography, Button, ReadixCard, Input, ReadixCommentModal, ReadixShareModal, ShareReadixData, EditReadixModal, ReportModal, ConfirmationDialog } from '@readixon/ui';
-import { Loader2, Image as ImageIcon, Send, User as UserIcon, Bold, Italic, Smile } from 'lucide-react';
+import { Typography, Button, ReadixCard, Input, ReadixCommentModal, ReadixShareModal, ShareReadixData, EditReadixModal, ReportModal, ConfirmationDialog, StorySearchModal } from '@readixon/ui';
+import { Loader2, Image as ImageIcon, Send, User as UserIcon, Bold, Italic, Smile, BookOpen } from 'lucide-react';
 import EmojiPicker, { Theme } from 'emoji-picker-react';
 import ContentEditable, { ContentEditableEvent } from 'react-contenteditable';
 import { toast } from "sonner";
@@ -53,6 +54,8 @@ function ReadixContent() {
   const [activeReadix, setActiveReadix] = useState<Readix | null>(null);
   
   const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedStory, setSelectedStory] = useState<Story | null>(null);
+  const [isStorySearchOpen, setIsStorySearchOpen] = useState(false);
 
   const handleEditSave = async (newContent: string) => {
     if (!activeReadix) return;
@@ -380,8 +383,8 @@ function ReadixContent() {
 
       const finalMarkdownContent = htmlToMarkdown(newContent);
       
-      // Look for storyId in URL
-      const linkedStoryId = searchParams.get('storyId') || undefined;
+      // Look for storyId in state or URL
+      const linkedStoryId = selectedStory?.storyId || searchParams.get('storyId') || undefined;
 
       const newReadix = await createReadix(
         firebaseUser.uid,
@@ -390,6 +393,15 @@ function ReadixContent() {
         linkedStoryId,
         pollData
       );
+
+      if (selectedStory) {
+        newReadix.linkedStory = {
+          storyId: selectedStory.storyId,
+          title: selectedStory.title,
+          coverUrl: selectedStory.coverImage,
+          authorName: selectedStory.authorName || 'Bilinmiyor',
+        };
+      }
 
       // Add to feed immediately
       setReadixes([newReadix, ...readixes]);
@@ -405,6 +417,7 @@ function ReadixContent() {
       setPollQuestion('');
       setPollOptions(['', '']);
       setPollDuration(1);
+      setSelectedStory(null);
     } catch (e) {
       console.error("Paylaşım yapılamadı", e);
       toast.error("Bir hata oluştu.");
@@ -586,6 +599,22 @@ function ReadixContent() {
                 )}
               </div>
               
+              {selectedStory && (
+                <div className="relative mb-4 p-3 bg-background/50 border border-primary/20 rounded-xl flex items-center gap-3">
+                  <img src={selectedStory.coverImage} alt={selectedStory.title} className="w-10 h-14 object-cover rounded-md" />
+                  <div className="flex-1 min-w-0">
+                    <Typography variant="body" className="font-semibold text-text truncate leading-tight">{selectedStory.title}</Typography>
+                    <Typography variant="body" className="text-[13px] text-muted truncate mt-0.5">{selectedStory.authorName || 'Bilinmiyor'}</Typography>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedStory(null)}
+                    className="w-7 h-7 flex items-center justify-center hover:bg-black/20 text-muted hover:text-text rounded-full transition-colors"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+              
               {previewUrls.length > 0 && (
                 <div className="relative mb-4 rounded-xl overflow-x-auto flex gap-2 pb-2 snap-x">
                   {previewUrls.map((url, idx) => (
@@ -691,6 +720,14 @@ function ReadixContent() {
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
                   </button>
+
+                  <button 
+                    onClick={() => setIsStorySearchOpen(true)}
+                    className={`hover:bg-primary/10 p-2 rounded-full inline-flex transition-colors ${selectedStory ? 'text-primary bg-primary/10' : 'text-muted hover:text-primary'}`}
+                    title="Kitap Ekle"
+                  >
+                    <BookOpen size={20} />
+                  </button>
                   
                   <button 
                     onClick={() => insertFormat('bold')}
@@ -770,6 +807,7 @@ function ReadixContent() {
                 return (
                   <ReadixCard
                     key={readix.id}
+                    linkedStory={targetReadix.linkedStory}
                     authorName={author?.displayName || 'Bilinmeyen Kullanıcı'}
                     authorUsername={author?.username || 'user'}
                     authorAvatarUrl={author?.avatarUrl}
@@ -864,6 +902,11 @@ function ReadixContent() {
         confirmText="Engelle"
         variant="warning"
         isLoading={isProcessing}
+      />
+      <StorySearchModal 
+        isOpen={isStorySearchOpen} 
+        onClose={() => setIsStorySearchOpen(false)} 
+        onSelect={(story) => setSelectedStory(story)} 
       />
     </div>
   );

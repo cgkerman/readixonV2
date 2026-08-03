@@ -1,0 +1,33 @@
+# Webtoon Altyapı ve Arayüz Güncellemeleri
+
+İstediğiniz gibi Webtoon (Çizgi Roman) deneyimini normal romanlardan tamamen ayırarak, hem okuyucular hem de yaratıcılar (yazarlar/çizerler) için çok daha profesyonel bir hale getirdim.
+
+## 🛠️ Neler Yapıldı?
+
+### 1. Yepyeni Webtoon Stüdyosu (Yaratıcı Paneli)
+Artık stüdyoda bir webtoon oluşturduğunuzda eski roman paneline değil, **sadece Webtoonlara özel, sadeleştirilmiş bir yönetim paneline (`/studio/webtoons/[id]`)** yönlendirileceksiniz.
+- **Kurgu Sihirbazı Kaldırıldı:** Romanlara özgü olan planlama araçları çıkarıldı.
+- **Odaklı Tasarım:** Sadece kapak, başlık, özet, yayın durumu ve episodlar listesi var.
+- **Yazar ve Çizer Desteği:** Ekip kısmında artık varsayılan olarak "Yazar" ve "Çizer" gibi roller atanabiliyor ve Contributors (Katkıda Bulunanlar) olarak eklenebiliyor.
+- **Episod Aktiviteleri:** Bölüm sonu anket ve soru blokları Webtoonlar için "Episod Aktiviteleri" adıyla korundu.
+- **Taslak Yönetimi:** Mangakaların bölümleri taslakta bırakabilmesi için "Yayında / Taslak" statü özellikleri editöre de yansıtıldı.
+
+### 2. Sinematik Okuyucu Detay Sayfası
+Okuyucular bir webtoon kartına tıkladığında artık eski roman tasarımına değil, **yepyeni uçtan uca sinematik Webtoon detay sayfasına (`/webtoons/[slug]`)** gidiyorlar.
+- **Tek Sayfa Düzeni:** Romanlardaki sekmeli yapı (Hakkında, Bölümler vb.) tamamen kaldırıldı. Aşağı doğru akan akıcı bir okuma öncesi sayfası tasarlandı.
+- **Sinematik Başlık (Header):** Seçtiğiniz Webtoon'un kapağı arka planda "blur" (bulanık) ve geniş bir şekilde yer alıyor, bu da okuyucuya çok premium bir his veriyor.
+- **Sıralı İçerik:** 
+  1. Hakkında (Özet)
+  2. Episodlar (Alt alta sıralı, büyük formatlı)
+  3. Bahsedilenler (Readix paylaşımları)
+- **Sağ Bilgi Bloğu (Sidebar):**
+  - **Ekip:** Asıl yazar ve eklenen diğer çizer, renklendiren vb. kişiler burada şık bir şekilde listeleniyor.
+  - **Etiketler:** Webtoon'un türleri.
+  - **İncelemeler:** İstediğiniz gibi puanlama ve yorumlar sağ bloğun en altına güzelce oturtuldu.
+
+### 3. Tüm Platform Yönlendirmeleri (Routing) Güncellendi
+Platformun her yerindeki "StoryCard"lara tıklandığında uygulamanın zekice davranması sağlandı:
+- Keşfet, Arama, Kütüphane, Yazar Profili ve Feed sayfalarında yer alan kartlara tıklandığında; **eğer içerik Webtoon ise** yeni `/webtoons/` sayfasına, **eğer roman ise** eski `/story/` sayfasına yönlendiriyor.
+
+> [!NOTE]  
+> Stüdyonuzda yeni bir Webtoon oluşturarak ya da Keşfet sayfasındaki Webtoonlardan birine tıklayarak bu yeni muazzam deneyimi canlı olarak test edebilirsiniz! Eline sağlık diyelim mi? 🚀

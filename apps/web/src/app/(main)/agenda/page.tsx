@@ -1,22 +1,23 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Typography, Button } from '@readixon/ui';
+import { Typography, Button, LiveLiteratureCard } from '@readixon/ui';
 import { collection, getDocs, limit, orderBy, query, where, onSnapshot } from 'firebase/firestore';
-import { db, getTopStories, getActiveAdminPoll, voteAdminPoll, AdminPoll, getActiveQuote, AdminQuote, useAuthStore, slugify } from '@readixon/core';
+import { db, getTopStories, getActiveAdminPolls, voteAdminPoll, AdminPoll, getActiveQuote, AdminQuote, useAuthStore, slugify } from '@readixon/core';
 import { toast } from 'sonner';
 import { Loader2, TrendingUp, BookOpen, Newspaper, Quote as QuoteIcon, Vote, ChevronRight, Eye, Heart, Layers, Star } from 'lucide-react';
 import Link from 'next/link';
 import { createPortal } from 'react-dom';
 import { AgendaFooter } from './components/AgendaFooter';
+import { PlatformFeedback } from './components/PlatformFeedback';
 
 export default function AgendaPage() {
   const [trendingTags, setTrendingTags] = useState<{id: string, count: number}[]>([]);
   const [cultureNews, setCultureNews] = useState<any[]>([]);
   const [popularBooks, setPopularBooks] = useState<any[]>([]);
-  const [adminPoll, setAdminPoll] = useState<AdminPoll | null>(null);
+  const [adminPolls, setAdminPolls] = useState<AdminPoll[]>([]);
   const [adminQuote, setAdminQuote] = useState<AdminQuote | null>(null);
-  const [votingOptionIndex, setVotingOptionIndex] = useState<number | null>(null);
+  const [votingState, setVotingState] = useState<{pollId: string, optionIndex: number} | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const { userProfile } = useAuthStore();
@@ -73,8 +74,8 @@ export default function AgendaPage() {
           setPopularBooks(topStories);
         }
 
-        const poll = await getActiveAdminPoll();
-        setAdminPoll(poll);
+        const polls = await getActiveAdminPolls();
+        setAdminPolls(polls);
 
         const quote = await getActiveQuote();
         setAdminQuote(quote);
@@ -90,25 +91,28 @@ export default function AgendaPage() {
     return () => unsubscribeTags();
   }, []);
 
-  const handleVote = async (optionIndex: number) => {
+  const handleVote = async (pollId: string, optionIndex: number) => {
     if (!userProfile?.uid) {
       toast.error('Oy vermek için giriş yapmalısınız!');
       return;
     }
-    if (!adminPoll) return;
+    const pollIndex = adminPolls.findIndex(p => p.id === pollId);
+    if (pollIndex === -1) return;
 
-    setVotingOptionIndex(optionIndex);
+    setVotingState({ pollId, optionIndex });
     try {
-      await voteAdminPoll(adminPoll.id, optionIndex, userProfile.uid);
-      const newPoll = { ...adminPoll };
+      await voteAdminPoll(pollId, optionIndex, userProfile.uid);
+      const newPolls = [...adminPolls];
+      const newPoll = { ...newPolls[pollIndex] };
       newPoll.options[optionIndex].votes += 1;
       newPoll.votedUsers = [...(newPoll.votedUsers || []), userProfile.uid];
-      setAdminPoll(newPoll);
+      newPolls[pollIndex] = newPoll;
+      setAdminPolls(newPolls);
       toast.success('Oyunuz kaydedildi!');
     } catch (err: any) {
       toast.error(err.message || 'Oy verirken bir hata oluştu');
     } finally {
-      setVotingOptionIndex(null);
+      setVotingState(null);
     }
   };
 
@@ -137,18 +141,28 @@ export default function AgendaPage() {
             </Typography>
           </div>
           
-          {/* Quote of the Day in Hero */}
-          {adminQuote && (
-            <div className="w-full md:w-2/5 shrink-0 bg-card/60 backdrop-blur-xl border border-white/10 rounded-[2rem] p-8 shadow-2xl relative">
-              <Typography variant="caption" className="text-primary font-bold tracking-widest uppercase text-xs mb-4 block">Günün Alıntısı</Typography>
-              <p className="text-text italic font-serif text-lg leading-relaxed relative z-10">
-                "{adminQuote.text}"
-              </p>
-              <Typography variant="caption" className="text-muted/80 text-right mt-4 block font-medium">
-                — {adminQuote.author}
-              </Typography>
-            </div>
-          )}
+          {/* Right Column: Widgets */}
+          <div className="w-full md:w-2/5 shrink-0 flex flex-col gap-6">
+            {/* Quote of the Day in Hero */}
+            {adminQuote && (
+              <div className="bg-card/60 backdrop-blur-xl border border-white/10 rounded-[2rem] p-8 shadow-2xl relative">
+                <Typography variant="caption" className="text-primary font-bold tracking-widest uppercase text-xs mb-4 block">Günün Alıntısı</Typography>
+                <p className="text-text italic font-serif text-lg leading-relaxed relative z-10">
+                  "{adminQuote.text}"
+                </p>
+                <Typography variant="caption" className="text-muted/80 text-right mt-4 block font-medium">
+                  — {adminQuote.author}
+                </Typography>
+              </div>
+            )}
+            
+            {/* Canlı Edebiyat Widget - Şimdilik Pasif (İleride platform yoğunlaşınca açılacak)
+            <LiveLiteratureCard 
+              topStoryTitle={popularBooks[0]?.title} 
+              topStoryAuthor={popularBooks[0]?.authorName || popularBooks[0]?.authorUsername} 
+            />
+            */}
+          </div>
         </div>
       </div>
 
@@ -377,62 +391,72 @@ export default function AgendaPage() {
         )}
 
         {/* Poll Section */}
-        {adminPoll && (
-          <section className="w-full flex justify-center mt-4">
-            <div className="w-full max-w-2xl bg-card/40 backdrop-blur-sm border border-border rounded-3xl p-8 relative overflow-hidden group flex flex-col shadow-sm hover:shadow-lg transition-all">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-purple-500" />
-              <div className="flex items-center gap-4 mb-8">
-                <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:bg-primary group-hover:text-background transition-all duration-300">
-                  <Vote size={22} />
+        {adminPolls.length > 0 && (
+          <section className="w-full mt-4">
+            <div className="flex items-center gap-4 mb-6 group">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:bg-primary group-hover:text-background transition-all duration-300">
+                <Vote size={20} />
+              </div>
+              <Typography variant="h3" className="font-bold text-text">Okur Anketleri</Typography>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {adminPolls.map((poll) => (
+                <div key={poll.id} className="w-full bg-card/40 backdrop-blur-sm border border-border rounded-2xl p-6 relative overflow-hidden group flex flex-col shadow-sm hover:shadow-md transition-all">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-purple-500 opacity-50 group-hover:opacity-100 transition-opacity" />
+                  
+                  <Typography variant="body" className="font-semibold text-lg mb-5 leading-tight flex-1">{poll.question}</Typography>
+                  
+                  <div className="flex flex-col gap-3">
+                    {(() => {
+                      const hasVoted = userProfile?.uid && poll.votedUsers?.includes(userProfile.uid);
+                      const totalVotes = poll.options.reduce((sum, opt) => sum + opt.votes, 0);
+
+                      return poll.options.map((opt, idx) => {
+                        if (hasVoted) {
+                          const percent = totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0;
+                          return (
+                            <div key={idx} className="relative overflow-hidden rounded-xl border border-border bg-black/20 p-3.5 text-sm">
+                              <div 
+                                className="absolute left-0 top-0 bottom-0 bg-primary/20 transition-all duration-1000" 
+                                style={{ width: `${percent}%` }}
+                              />
+                              <div className="relative z-10 flex justify-between items-center gap-3">
+                                <span className="font-medium text-text line-clamp-2">{opt.text}</span>
+                                <span className="font-bold text-lg shrink-0">%{percent}</span>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        const isVotingThisOption = votingState?.pollId === poll.id && votingState?.optionIndex === idx;
+                        const isVotingAny = votingState !== null;
+
+                        return (
+                          <button 
+                            key={idx}
+                            onClick={() => handleVote(poll.id, idx)}
+                            disabled={isVotingAny}
+                            className="w-full text-left p-3.5 rounded-xl border border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5 transition-all flex items-center justify-between group/btn text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <span className="group-hover/btn:text-primary transition-colors font-medium">{opt.text}</span>
+                            {isVotingThisOption ? (
+                              <Loader2 size={16} className="animate-spin text-primary shrink-0" />
+                            ) : (
+                              <ChevronRight size={16} className="text-muted group-hover/btn:text-primary transition-colors opacity-0 group-hover/btn:opacity-100 transform -translate-x-2 group-hover/btn:translate-x-0" />
+                            )}
+                          </button>
+                        );
+                      });
+                    })()}
+                  </div>
                 </div>
-                <Typography variant="h3" className="font-bold text-text">Günün Okur Anketi</Typography>
-              </div>
-              
-              <Typography variant="body" className="font-semibold text-xl md:text-2xl mb-8 leading-tight flex-1">{adminPoll.question}</Typography>
-              
-              <div className="flex flex-col gap-4">
-                {(() => {
-                  const hasVoted = userProfile?.uid && adminPoll.votedUsers?.includes(userProfile.uid);
-                  const totalVotes = adminPoll.options.reduce((sum, opt) => sum + opt.votes, 0);
-
-                  return adminPoll.options.map((opt, idx) => {
-                    if (hasVoted) {
-                      const percent = totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0;
-                      return (
-                        <div key={idx} className="relative overflow-hidden rounded-2xl border border-border bg-black/20 p-5 text-base">
-                          <div 
-                            className="absolute left-0 top-0 bottom-0 bg-primary/20 transition-all duration-1000" 
-                            style={{ width: `${percent}%` }}
-                          />
-                          <div className="relative z-10 flex justify-between items-center gap-4">
-                            <span className="font-medium text-text line-clamp-2">{opt.text}</span>
-                            <span className="font-bold text-xl shrink-0">%{percent}</span>
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <button 
-                        key={idx}
-                        onClick={() => handleVote(idx)}
-                        disabled={votingOptionIndex !== null}
-                        className="w-full text-left p-5 rounded-2xl border border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5 transition-all flex items-center justify-between group/btn text-base"
-                      >
-                        <span className="group-hover/btn:text-primary transition-colors font-medium">{opt.text}</span>
-                        {votingOptionIndex === idx ? (
-                          <Loader2 size={20} className="animate-spin text-primary shrink-0" />
-                        ) : (
-                          <ChevronRight size={20} className="text-muted group-hover/btn:text-primary transition-colors opacity-0 group-hover/btn:opacity-100 transform -translate-x-2 group-hover/btn:translate-x-0" />
-                        )}
-                      </button>
-                    );
-                  });
-                })()}
-              </div>
+              ))}
             </div>
           </section>
         )}
+
+        <PlatformFeedback />
 
       </div>
       

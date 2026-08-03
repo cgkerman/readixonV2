@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Typography, Button, Input } from '@readixon/ui';
-import { ArrowLeft, PlusCircle, Save, GripVertical, CheckCircle, Wand2, Info, MessageSquare } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Save, GripVertical, CheckCircle, Wand2, Info, MessageSquare, Loader2, ChevronDown } from 'lucide-react';
 import {
   getStoryById,
   updateStory,
@@ -42,6 +42,9 @@ export default function StoryDetailAdminPage() {
   const [foreword, setForeword] = useState('');
   const [backCover, setBackCover] = useState('');
   const [contributors, setContributors] = useState<Contributor[]>([]);
+  const [trailerVideoUrl, setTrailerVideoUrl] = useState('');
+  const [videoUploading, setVideoUploading] = useState(false);
+  const videoInputRef = React.useRef<HTMLInputElement>(null);
 
   const { userProfile } = useAuthStore();
 
@@ -65,6 +68,7 @@ export default function StoryDetailAdminPage() {
         setStatus(realStory.status || 'draft');
         setForeword(realStory.foreword || '');
         setBackCover(realStory.backCover || '');
+        setTrailerVideoUrl(realStory.trailerVideoUrl || '');
 
         // Geriye dönük uyumluluk: eski string dizisi (veya string) ise nesneye çevir
         const rawContributors = realStory.contributors || [];
@@ -96,6 +100,7 @@ export default function StoryDetailAdminPage() {
         status,
         foreword,
         backCover,
+        trailerVideoUrl,
         contributors: validContributors
       });
       toast.success('Kaydedildi');
@@ -117,6 +122,7 @@ export default function StoryDetailAdminPage() {
         status,
         foreword,
         backCover,
+        trailerVideoUrl,
         contributors: validContributors
       });
       setAutoSaveStatus('saved');
@@ -140,16 +146,57 @@ export default function StoryDetailAdminPage() {
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [title, summary, coverImage, status, foreword, backCover, contributors, loading, story]);
+  }, [title, summary, coverImage, status, foreword, backCover, contributors, trailerVideoUrl, loading, story]);
+
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error('Video boyutu en fazla 50MB olabilir.');
+      return;
+    }
+
+    const videoElement = document.createElement('video');
+    videoElement.preload = 'metadata';
+    
+    videoElement.onloadedmetadata = async () => {
+      window.URL.revokeObjectURL(videoElement.src);
+      if (videoElement.duration > 32) {
+        toast.error('Video süresi en fazla 30 saniye olabilir.');
+        return;
+      }
+
+      setVideoUploading(true);
+      try {
+        const path = `stories/${storyId}/trailer_${Date.now()}.mp4`;
+        const url = await uploadFile(file, path);
+        setTrailerVideoUrl(url);
+        toast.success('Video başarıyla yüklendi.');
+      } catch (err) {
+        console.error(err);
+        toast.error('Video yüklenirken hata oluştu.');
+      } finally {
+        setVideoUploading(false);
+      }
+    };
+
+    videoElement.src = URL.createObjectURL(file);
+  };
 
   const handleAddChapter = async () => {
     try {
+      const titlePrefix = story?.format === 'webtoon' ? 'Episod' : 'Bölüm';
       const newChapId = await createChapter(storyId, {
-        title: `Bölüm ${chapters.length + 1}`,
+        title: `${titlePrefix} ${chapters.length + 1}`,
         order: chapters.length + 1,
         contentBlocks: []
       });
-      router.push(`/studio/story/${storyId}/chapter/${newChapId}`);
+      if (story?.format === 'webtoon') {
+        router.push(`/studio/webtoons/${storyId}/episodes/${newChapId}`);
+      } else {
+        router.push(`/studio/story/${storyId}/chapter/${newChapId}`);
+      }
     } catch (e) {
       toast.error("Bölüm oluşturulamadı.");
     }
@@ -396,23 +443,66 @@ export default function StoryDetailAdminPage() {
               )}
             </div>
 
+            <div className="flex flex-col gap-2 mt-4 mb-4 p-4 border border-border/20 bg-background rounded-2xl">
+              <div className="flex justify-between items-center">
+                <Typography variant="caption" className="font-bold text-muted uppercase">Kitap Fragmanı (Video)</Typography>
+                {trailerVideoUrl && (
+                  <button onClick={() => setTrailerVideoUrl('')} className="text-red-400 text-sm font-medium hover:text-red-300">
+                    Kaldır
+                  </button>
+                )}
+              </div>
+              <Typography variant="caption" className="text-muted/70 mb-2">
+                Okuyucuların kitabınızı keşfetmesi için maksimum 30 saniyelik, yatay (1080p önerilir) bir tanıtım videosu veya podcast ekleyebilirsiniz (Maks 50MB).
+              </Typography>
+              
+              {trailerVideoUrl ? (
+                <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden mt-2 border border-border/20 shadow-inner">
+                  <video src={trailerVideoUrl} controls className="w-full h-full object-contain" />
+                </div>
+              ) : (
+                <div 
+                  onClick={() => !videoUploading && videoInputRef.current?.click()}
+                  className={`w-full aspect-video border-2 border-dashed border-border/50 rounded-xl flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors hover:border-primary hover:bg-primary/5 ${videoUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <input type="file" accept="video/mp4,video/webm,video/quicktime" className="hidden" ref={videoInputRef} onChange={handleVideoUpload} />
+                  {videoUploading ? (
+                    <>
+                      <Loader2 size={30} className="text-primary animate-spin" />
+                      <Typography variant="body" className="text-muted">Video Yükleniyor...</Typography>
+                    </>
+                  ) : (
+                    <>
+                      <PlusCircle size={30} className="text-muted/50" />
+                      <Typography variant="body" className="text-muted font-medium">Video Seç (Maks 30sn)</Typography>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div className="flex flex-col gap-2 mt-2">
               <Typography variant="caption" className="font-bold text-muted uppercase">Yayın Durumu</Typography>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as any)}
-                className="w-full bg-background border border-border/50 rounded-xl p-4 text-text focus:outline-none focus:border-primary appearance-none"
-              >
-                <option value="draft">Taslak (Sadece siz görebilirsiniz)</option>
-                <option value="ongoing">Yayında (Devam Ediyor)</option>
-                <option value="completed">Yayında (Tamamlandı)</option>
-              </select>
+              <div className="relative">
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as any)}
+                  className="w-full bg-background border border-border/50 rounded-xl p-4 text-text focus:outline-none focus:border-primary appearance-none cursor-pointer"
+                >
+                  <option value="draft">Taslak (Sadece siz görebilirsiniz)</option>
+                  <option value="ongoing">Yayında (Devam Ediyor)</option>
+                  <option value="completed">Yayında (Tamamlandı)</option>
+                </select>
+                <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-muted">
+                  <ChevronDown size={20} />
+                </div>
+              </div>
             </div>
           </div>
 
           <div className="bg-card p-6 rounded-2xl border border-border/20">
             <div className="flex justify-between items-center mb-6">
-              <Typography variant="h3">Bölümler</Typography>
+              <Typography variant="h3">{story?.format === 'webtoon' ? 'Episodlar' : 'Bölümler'}</Typography>
               <Button variant="outline" onPress={handleAddChapter} className="text-sm py-2">
                 <PlusCircle size={16} className="mr-2" /> Yeni Ekle
               </Button>
@@ -421,13 +511,22 @@ export default function StoryDetailAdminPage() {
             <div className="flex flex-col gap-3">
               {chapters.length === 0 ? (
                 <div className="text-center py-8 text-muted border-2 border-dashed border-border/20 rounded-xl">
-                  Henüz bölüm eklenmemiş.
+                  {story?.format === 'webtoon' ? 'Henüz episod eklenmemiş.' : 'Henüz bölüm eklenmemiş.'}
                 </div>
               ) : (
                 chapters.map(chap => (
                   <div key={chap.chapterId} className="flex items-center gap-3 p-4 bg-background rounded-xl border border-border/10 group">
                     <GripVertical size={20} className="text-muted/50 cursor-grab" />
-                    <div className="flex-1 cursor-pointer" onClick={() => router.push(`/studio/story/${storyId}/chapter/${chap.chapterId}`)}>
+                    <div 
+                      className="flex-1 cursor-pointer" 
+                      onClick={() => {
+                        if (story?.format === 'webtoon') {
+                          router.push(`/studio/webtoons/${storyId}/episodes/${chap.chapterId}`);
+                        } else {
+                          router.push(`/studio/story/${storyId}/chapter/${chap.chapterId}`);
+                        }
+                      }}
+                    >
                       <Typography variant="body" className="font-bold group-hover:text-primary transition-colors">{chap.title}</Typography>
                       <Typography variant="caption" className="text-muted">Sıra: {chap.order}</Typography>
                     </div>

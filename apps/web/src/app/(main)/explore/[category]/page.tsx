@@ -163,11 +163,16 @@ export default function ExploreCategoryPage() {
                     title={story.title}
                     authorName={story.authorName || 'Bilinmiyor'}
                     authorUsername={story.authorUsername} 
+                    authorAvatarUrl={story.authorAvatarUrl}
                     coverImage={story.coverImage}
                     views={story.stats?.views || 0}
                     likes={story.stats?.likes || 0}
                     tags={story.tags || []}
-                    onPress={() => router.push(`/story/${generateStorySlug(story.title, story.storyId)}`)}
+                    isWebtoon={story.format === 'webtoon'}
+                    onPress={() => {
+                      const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
+                      router.push(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
+                    }}
                     onLikePress={(e) => handleLikePress(e, story.storyId)}
                   />
                 </div>

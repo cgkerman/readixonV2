@@ -28,7 +28,8 @@ export default function StudioDashboard() {
     
     setLoading(true);
     const unsubscribe = subscribeToAuthorStories(firebaseUser.uid, (updatedStories) => {
-      setStories(updatedStories);
+      const novels = updatedStories.filter(s => s.format !== 'webtoon');
+      setStories(novels);
       setLoading(false);
     });
 
@@ -160,7 +161,7 @@ export default function StudioDashboard() {
       {/* Hikaye Oluşturma Modalı */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-          <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between p-6 border-b border-border/50">
               <Typography variant="h2">Yeni Hikaye Oluştur</Typography>
               <button onClick={() => setIsModalOpen(false)} className="text-muted hover:text-text transition-colors">
@@ -176,7 +177,7 @@ export default function StudioDashboard() {
                   <strong className="block mb-1 text-base">Hangi seçeneği seçmeliyim?</strong>
                   <ul className="list-disc ml-4 space-y-2 opacity-90 mt-2">
                     <li><strong className="font-semibold">Düz Metin İle Başla:</strong> Klasik yöntem. Karakterlerinizi ve evreninizi sıfırdan, kendi hayal gücünüzle özgürce yazarak inşa edersiniz.</li>
-                    <li><strong className="font-semibold">Sihirbazla Başla:</strong> Yapay zeka asistanı size yönlendirici sorular sorar. RPG yeteneklerini ve kurguyu dakikalar içinde birlikte tasarlarsınız. <span className="font-medium text-orange-500">(Premium - Önerilen)</span></li>
+                    <li><strong className="font-semibold">Sihirbazla Başla:</strong> Tüm kurguyu ve evreninizi önceden detaylıca planlayarak ileride unutmanızı engeller. Yönlendirici sorularla adım adım tasarlamanızı sağlayarak size çok büyük bir yazarlık desteği sunar. <span className="font-medium text-orange-500">(Premium - Önerilen)</span></li>
                   </ul>
                 </div>
               </div>

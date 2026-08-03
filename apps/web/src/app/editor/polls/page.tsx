@@ -76,7 +76,7 @@ export default function AdminPollsPage() {
 
     setIsSubmitting(true);
     try {
-      await createAdminPoll(question, validOptions, true); // true = diğerlerini pasif yap
+      await createAdminPoll(question, validOptions, false); // false = diğerlerini pasif yapma (çoklu anket desteği)
       toast.success('Günün anketi başarıyla oluşturuldu ve aktif edildi!');
       setQuestion('');
       setOptions(['', '']);

@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Typography } from '@readixon/ui';
-import { BookOpen, PenTool, BarChart3, ArrowLeft, Users } from 'lucide-react';
+import { BookOpen, PenTool, BarChart3, ArrowLeft, Users, GalleryVertical } from 'lucide-react';
 import { useAuthStore } from '@readixon/core';
 
 export default function StudioLayout({ children }: { children: React.ReactNode }) {
@@ -61,7 +61,14 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
             className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${pathname === '/studio' ? 'bg-primary/10 text-primary' : 'text-muted hover:text-text hover:bg-muted/10'}`}
           >
             <BookOpen size={20} />
-            <span className="font-medium">Hikayelerim</span>
+            <span className="font-medium">Romanlarım</span>
+          </Link>
+          <Link 
+            href="/studio/webtoons" 
+            className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${pathname.includes('/studio/webtoons') ? 'bg-primary/10 text-primary' : 'text-muted hover:text-text hover:bg-muted/10'}`}
+          >
+            <GalleryVertical size={20} />
+            <span className="font-medium">Webtoonlarım</span>
           </Link>
           <Link 
             href="/studio/stats" 

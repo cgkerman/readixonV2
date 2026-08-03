@@ -157,6 +157,40 @@ export async function populateReposts(readixes: Readix[]): Promise<Readix[]> {
   });
 }
 
+export async function populateLinkedStories(readixes: Readix[]): Promise<Readix[]> {
+  const storyIds = [...new Set(readixes.filter(r => r.linkedStoryId).map(r => r.linkedStoryId!))];
+  if (storyIds.length === 0) return readixes;
+
+  const storyMap: Record<string, any> = {};
+  await Promise.all(storyIds.map(async (id) => {
+    const snap = await getDoc(doc(db, 'stories', id));
+    if (snap.exists()) {
+      const data = snap.data();
+      let authorName = data.authorName;
+      
+      // Fetch missing author name
+      if (!authorName && data.authorId) {
+        const profile = await getUserProfile(data.authorId);
+        authorName = profile?.displayName || profile?.username || 'Bilinmiyor';
+      }
+
+      storyMap[id] = { 
+        storyId: snap.id, 
+        title: data.title,
+        coverUrl: data.coverImage, // Map coverImage to coverUrl
+        authorName: authorName || 'Bilinmiyor'
+      };
+    }
+  }));
+
+  return readixes.map(r => {
+    if (r.linkedStoryId && storyMap[r.linkedStoryId]) {
+      return { ...r, linkedStory: storyMap[r.linkedStoryId] };
+    }
+    return r;
+  });
+}
+
 export async function getMentionedReadixes(
   username: string,
   limitCount = 20,
@@ -183,6 +217,7 @@ export async function getMentionedReadixes(
     } as Readix));
 
     readixes = await populateReposts(readixes);
+    readixes = await populateLinkedStories(readixes);
 
     // Filter blocked users
     const filteredReadixes = blockedUsers && blockedUsers.length > 0
@@ -218,6 +253,7 @@ export async function getForYouReadixes(
   let readixes = snapshot.docs.map(doc => doc.data() as Readix);
   
   readixes = await populateReposts(readixes);
+  readixes = await populateLinkedStories(readixes);
   
   if (blockedUsers && blockedUsers.length > 0) {
     readixes = readixes.filter(r => !blockedUsers.includes(r.authorId));
@@ -265,6 +301,7 @@ export async function getFollowingReadixes(
   let readixes = snapshot.docs.map(doc => doc.data() as Readix);
 
   readixes = await populateReposts(readixes);
+  readixes = await populateLinkedStories(readixes);
 
   if (blockedUsers && blockedUsers.length > 0) {
     readixes = readixes.filter(r => !blockedUsers.includes(r.authorId));
@@ -354,6 +391,7 @@ export async function getReadixesByTag(
   let readixes = snapshot.docs.map(doc => doc.data() as Readix);
 
   readixes = await populateReposts(readixes);
+  readixes = await populateLinkedStories(readixes);
 
   if (blockedUsers && blockedUsers.length > 0) {
     readixes = readixes.filter(r => !blockedUsers.includes(r.authorId));
@@ -386,6 +424,7 @@ export async function getUserReadixes(
   let readixes = snapshot.docs.map(doc => doc.data() as Readix);
 
   readixes = await populateReposts(readixes);
+  readixes = await populateLinkedStories(readixes);
 
   return {
     readixes,
@@ -541,4 +580,38 @@ export async function toggleReadixPin(readixId: string, currentPinStatus: boolea
     isPinned: !currentPinStatus
   });
   return !currentPinStatus;
+}
+
+export async function getReadixesByStoryId(
+  storyId: string,
+  pageSize = 10,
+  lastDoc?: DocumentSnapshot,
+  blockedUsers?: string[]
+) {
+  let q = query(
+    collection(db, READIXES_COLLECTION),
+    where('linkedStoryId', '==', storyId),
+    orderBy('createdAt', 'desc'),
+    limit(pageSize)
+  );
+
+  if (lastDoc) {
+    q = query(q, startAfter(lastDoc));
+  }
+
+  const snapshot = await getDocs(q);
+  let readixes = snapshot.docs.map(doc => doc.data() as Readix);
+
+  readixes = await populateReposts(readixes);
+  readixes = await populateLinkedStories(readixes);
+
+  if (blockedUsers && blockedUsers.length > 0) {
+    readixes = readixes.filter(r => !blockedUsers.includes(r.authorId));
+  }
+
+  return {
+    readixes,
+    lastDoc: snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null,
+    hasMore: snapshot.docs.length === pageSize
+  };
 }

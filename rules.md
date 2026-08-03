@@ -84,6 +84,12 @@ service cloud.firestore {
           allow write: if isAuthenticated() && request.auth.uid == likeUserId;
         }
 
+        // YENİ EKLENEN: Maskot Tepkileri (Reactions) için İzin
+        match /userReactions/{reactionUserId} {
+          allow read: if true;
+          allow write: if isAuthenticated() && request.auth.uid == reactionUserId;
+        }
+
         // YENİ EKLENEN: Bölüm Sonu Aktiviteleri (Cevaplar/Anketler) için İzin
         match /activity_answers/{userId} {
           allow read: if true;
@@ -250,6 +256,17 @@ service cloud.firestore {
     match /hero_banners/{bannerId} {
       allow read: if true;
       allow write: if isAuthenticated(); // İdealde admin rolü kontrol edilmeli
+    }
+
+    // ==========================================
+    // 10. PLATFORM GERİ BİLDİRİMLERİ (PLATFORM FEEDBACKS)
+    // ==========================================
+    match /platform_feedbacks/{feedbackId} {
+      // Herkes geri bildirim oluşturabilir (anonim kullanıcılar dahil)
+      allow create: if true;
+      // Sadece giriş yapanlar (Adminler) okuyabilir
+      allow read: if isAuthenticated();
+      allow update, delete: if false; 
     }
   }
 }

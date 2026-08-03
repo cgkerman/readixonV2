@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Typography, Button } from "@readixon/ui";
+import { motion } from "framer-motion";
 import { useAuthStore } from "@readixon/core";
 import { Sparkles, Users, BookOpen, TrendingUp, MessageCircle, Feather, Compass } from "lucide-react";
 
@@ -33,7 +34,12 @@ export default function Home() {
       onMouseMove={handleMouseMove}
     >
       {/* Sol Taraf - İçerik ve Aksiyon */}
-      <div className="w-full md:w-1/2 shrink-0 flex flex-col justify-between px-8 md:px-12 lg:px-20 py-8 relative z-10 bg-card/30">
+      <motion.div 
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 1.0, duration: 0.8, ease: "easeOut" }}
+        className="w-full md:w-1/2 shrink-0 flex flex-col justify-between px-8 md:px-12 lg:px-20 py-8 relative z-10 bg-card/30"
+      >
 
         {/* Üst Kısım: Marka Logosu */}
         <div className="flex items-center">
@@ -159,17 +165,24 @@ export default function Home() {
             © {new Date().getFullYear()} readixon. Tüm hakları saklıdır. Platform özellikleri ve özgün içerikleri izinsiz kopyalanamaz; haksız rekabet ve fikri mülkiyet ihlallerine karşı tüm yasal haklarımız saklıdır.
           </Typography>
         </div>
-      </div>
+      </motion.div>
 
       {/* Sağ Taraf - Görsel Alan */}
       <div className="hidden md:flex w-full md:w-1/2 shrink-0 relative items-center justify-center bg-gradient-to-br from-purple-50/50 to-indigo-50/50 dark:from-purple-950/20 dark:to-indigo-950/20 overflow-hidden">
 
         {/* Orta Kısım Geçiş Efekti (Keskinliği Yumuşatmak İçin) */}
-        <div className="absolute inset-y-0 left-0 w-24 md:w-32 lg:w-48 bg-gradient-to-r from-background via-background/80 to-transparent z-30 pointer-events-none" />
+        <motion.div 
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.0, duration: 0.8 }}
+          className="absolute inset-y-0 left-0 w-24 md:w-32 lg:w-48 bg-gradient-to-r from-background via-background/80 to-transparent z-30 pointer-events-none" 
+        />
 
         {/* Zarif Degrade Işıklar */}
-        <div className="absolute top-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-primary/10 blur-[120px] rounded-full pointer-events-none" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-purple-500/10 blur-[120px] rounded-full pointer-events-none" />
+        <motion.div 
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.0, duration: 0.8 }}
+        >
+          <div className="absolute top-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-primary/10 blur-[120px] rounded-full pointer-events-none" />
+          <div className="absolute bottom-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-purple-500/10 blur-[120px] rounded-full pointer-events-none" />
+        </motion.div>
 
         {/* Platformu Yansıtan Süslemeler - Parallax Etkili */}
 
@@ -221,26 +234,53 @@ export default function Home() {
         </div>
 
         {/* Maskot Zemin Gölgesi (Derinlik algısı için) */}
-        <div
-          className="absolute top-[65%] left-1/2 w-64 h-12 bg-black/5 dark:bg-black/30 blur-2xl rounded-[100%] pointer-events-none transition-transform duration-75"
+        <motion.div
+          initial={{ opacity: 0, scale: 0 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1, delay: 1.0 }}
+          className="absolute top-[65%] left-1/2 w-full max-w-[300px] h-12 pointer-events-none transition-transform duration-75"
           style={{ transform: `translateX(calc(-50% + ${mousePos.x * -8}px))` }}
-        />
+        >
+          <div className="w-full h-full bg-black/5 dark:bg-black/30 blur-2xl rounded-[100%]" />
+        </motion.div>
 
         {/* Maskot - Parallax Etkili */}
         <div
-          className="relative z-10 w-4/5 max-w-[500px] aspect-square drop-shadow-[0_20px_40px_rgba(0,0,0,0.1)] transition-transform duration-75"
+          className="relative z-10 w-4/5 max-w-[500px] aspect-square drop-shadow-[0_20px_40px_rgba(0,0,0,0.15)] transition-transform duration-75"
           style={{ transform: `translate(${mousePos.x * -25}px, ${mousePos.y * -25}px)` }}
         >
-          <div className="relative w-full h-full transition-transform duration-700 hover:scale-105">
-            <Image
-              src="/panda-mascot.png"
-              alt="Readixon Panda Mascot"
-              fill
-              sizes="(max-width: 768px) 100vw, 500px"
-              className="object-contain"
-              priority
-            />
-          </div>
+          {/* Giriş Animasyonu Wrapper'ı */}
+          <motion.div
+            initial={{ x: "-100vw", y: 0, scale: 0.5, rotate: -45 }}
+            animate={{ x: 0, y: 0, scale: 1, rotate: 0 }}
+            transition={{ type: "spring", stiffness: 100, damping: 12, duration: 1.0 }}
+            className="w-full h-full"
+          >
+            {/* Sürekli Havada Süzülme Animasyonu Wrapper'ı */}
+            <motion.div 
+              className="relative w-full h-full"
+              animate={{ 
+                y: [0, -15, 0],
+                scale: [1, 1.02, 1],
+                rotate: [0, 1, -1, 0]
+              }}
+              transition={{ 
+                duration: 5, 
+                repeat: Infinity, 
+                ease: "easeInOut",
+                delay: 1.2 // Giriş bittikten sonra başlasın
+              }}
+            >
+              <Image
+                src="/cekirix.png"
+                alt="Readixon Cekirix Mascot"
+                fill
+                sizes="(max-width: 768px) 100vw, 500px"
+                className="object-contain"
+                priority
+              />
+            </motion.div>
+          </motion.div>
         </div>
 
       </div>

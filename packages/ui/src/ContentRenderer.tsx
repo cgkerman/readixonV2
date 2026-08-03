@@ -13,6 +13,7 @@ export interface ContentRendererProps {
   paragraphCommentCounts?: Record<number, number>;
   onQuoteSave?: (text: string) => void;
   onQuoteShare?: (text: string) => void;
+  isWebtoon?: boolean;
 }
 
 export const ContentRenderer: React.FC<ContentRendererProps> = ({ 
@@ -22,7 +23,8 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
   onParagraphCommentClick, 
   paragraphCommentCounts = {},
   onQuoteSave,
-  onQuoteShare
+  onQuoteShare,
+  isWebtoon = false
 }) => {
   let globalParagraphIndex = 0;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -96,7 +98,14 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
   };
 
   return (
-    <div className="readixon-content flex flex-col gap-6 relative" ref={containerRef}>
+    <div className={`readixon-content flex flex-col relative ${isWebtoon ? 'gap-0' : 'gap-6'}`} ref={containerRef}>
+      <style dangerouslySetInnerHTML={{ __html: `
+        .readixon-content p, 
+        .readixon-content span {
+           color: inherit !important;
+           background-color: transparent !important;
+        }
+      ` }} />
       
       {selection && (onQuoteSave || onQuoteShare) && (
         <div 
@@ -224,12 +233,25 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
               </blockquote>
             );
           case 'image':
+            if (isWebtoon) {
+              return (
+                <div key={blockIndex} className="w-full">
+                  <img 
+                    src={block.url} 
+                    alt="Webtoon Slice" 
+                    className="w-full h-auto object-cover block" 
+                    loading="lazy"
+                  />
+                </div>
+              );
+            }
             return (
               <div key={blockIndex} className="w-full rounded-xl overflow-hidden my-4">
                 <img 
                   src={block.url} 
                   alt="Story Image" 
                   className="w-full h-auto object-cover" 
+                  loading="lazy"
                 />
               </div>
             );

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Typography, Button } from '@readixon/ui';
 import { getStoryById, fetchChapters, getUserProfile, Story, Chapter, User } from '@readixon/core';
-import { ArrowLeft, BookOpen, Clock, Heart, Eye, List, Hash } from 'lucide-react';
+import { ArrowLeft, BookOpen, Clock, Heart, Eye, List, Hash, Download } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
@@ -13,6 +13,23 @@ export default function AdminStoryDetailPage() {
   const [author, setAuthor] = useState<User | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const handleDownload = async (url: string, filename: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(objectUrl);
+    } catch (error) {
+      console.error("Resim indirilemedi", error);
+    }
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -89,9 +106,20 @@ export default function AdminStoryDetailPage() {
         {/* Sol Kolon: Temel Bilgiler */}
         <div className="lg:col-span-2 space-y-8">
           <div className="flex flex-col sm:flex-row gap-6">
-            <div className="w-32 h-48 sm:w-48 sm:h-72 rounded-xl bg-card overflow-hidden shrink-0 border border-border/50 shadow-xl">
+            <div className="w-32 h-48 sm:w-48 sm:h-72 rounded-xl bg-card overflow-hidden shrink-0 border border-border/50 shadow-xl relative group">
               {story.coverImage ? (
-                <img src={story.coverImage} alt={story.title} className="w-full h-full object-cover" />
+                <>
+                  <img src={story.coverImage} alt={story.title} className="w-full h-full object-cover transition-opacity group-hover:opacity-80" />
+                  <button
+                    onClick={() => handleDownload(story.coverImage!, `${story.title}-kapak.jpg`)}
+                    className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Kapağı İndir"
+                  >
+                    <div className="bg-background/80 p-3 rounded-full text-foreground hover:bg-background hover:scale-110 transition-all shadow-lg backdrop-blur-sm">
+                      <Download size={24} />
+                    </div>
+                  </button>
+                </>
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-muted bg-card/40">
                   <BookOpen size={40} />

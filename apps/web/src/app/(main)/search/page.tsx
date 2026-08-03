@@ -131,7 +131,11 @@ function SearchContent() {
                 views={story.stats?.views || 0}
                 likes={story.stats?.likes || 0}
                 tags={story.tags || []}
-                onPress={() => router.push(`/story/${generateStorySlug(story.title, story.storyId)}`)}
+                isWebtoon={story.format === 'webtoon'}
+                onPress={() => {
+                  const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
+                  router.push(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
+                }}
               />
             ))}
           </div>
@@ -190,8 +194,8 @@ function SearchContent() {
   };
 
   return (
-    <div className="flex-1 p-6 lg:p-10 max-w-7xl mx-auto w-full">
-      <div className="mb-8 max-w-3xl">
+    <div className="flex flex-col w-full px-6 md:px-16 py-8 md:py-12 bg-background overflow-x-hidden">
+      <div className="mb-8 w-full max-w-4xl">
         <Typography variant="h1" className="font-bold tracking-tight mb-2 text-text">Ara ve Keşfet</Typography>
         <Typography variant="body" className="text-muted mb-8">
           Milyonlarca hikaye arasında kaybol. İlgini çeken bir yazar, kitap adı veya kategori ara.
@@ -230,18 +234,21 @@ function SearchContent() {
           />
         </div>
 
-        {/* Etiketler (Chips) Sadece Hikayelerde Göster */}
-        {searchType === 'stories' && (
-          <div className="mt-6">
-            <Typography variant="caption" className="text-muted font-medium mb-3 uppercase tracking-wider flex items-center gap-1.5">
-              <Hash size={14} /> Popüler Kategoriler
-            </Typography>
-            <div className="flex flex-wrap gap-2">
+      </div>
+
+      {/* Etiketler (Chips) Sadece Hikayelerde Göster */}
+      {searchType === 'stories' && (
+        <div className="mb-8">
+          <Typography variant="caption" className="text-muted font-medium mb-3 uppercase tracking-wider flex items-center gap-1.5">
+            <Hash size={14} /> Popüler Kategoriler
+          </Typography>
+          <div className="overflow-x-auto pb-4 scrollbar-hide snap-x -mx-6 px-6 md:-mx-16 md:px-16">
+            <div className="grid grid-rows-2 grid-flow-col gap-3 w-max">
               {POPULAR_TAGS.map(tag => (
                 <button
                   key={tag.id}
                   onClick={() => handleTagToggle(tag.id)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  className={`snap-start flex-shrink-0 whitespace-nowrap px-5 py-2.5 rounded-full text-sm font-medium transition-all ${
                     selectedTag === tag.id
                       ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-105'
                       : 'bg-card/60 text-muted hover:bg-card hover:text-text border border-border/40'
@@ -252,8 +259,8 @@ function SearchContent() {
               ))}
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Sonuç Alanı */}
       {renderContent()}

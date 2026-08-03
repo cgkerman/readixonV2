@@ -1,6 +1,6 @@
 import { collection, query, orderBy, limit, startAfter, getDocs, DocumentSnapshot, doc, setDoc, updateDoc, serverTimestamp, where, getDoc, onSnapshot, deleteDoc, documentId, getCountFromServer } from 'firebase/firestore';
 import { db } from '../firebase';
-import type { Story, Chapter, ReadingProgress, Review } from '../types';
+import type { Story, StoryWithLatestChapter, Chapter, ReadingProgress, Review } from '../types';
 import { getUserProfile } from './userService';
 
 
@@ -18,7 +18,7 @@ export const fetchStories = async (limitCount: number = 10, lastDoc?: DocumentSn
     storiesRef,
     where('status', 'in', ['ongoing', 'completed']),
     orderBy('createdAt', 'desc'),
-    limit(limitCount)
+    limit(limitCount + 10)
   );
 
   if (lastDoc) {
@@ -38,10 +38,11 @@ export const fetchStories = async (limitCount: number = 10, lastDoc?: DocumentSn
   
   const stories: Story[] = [];
   querySnapshot.forEach((doc) => {
-    stories.push({
-      storyId: doc.id,
-      ...doc.data()
-    } as Story);
+    if (stories.length >= limitCount) return;
+    const data = doc.data();
+    if (data.format !== 'webtoon') {
+      stories.push({ storyId: doc.id, ...data } as Story);
+    }
   });
 
   const lastVisible = querySnapshot.docs.length > 0 ? querySnapshot.docs[querySnapshot.docs.length - 1] : undefined;
@@ -50,6 +51,155 @@ export const fetchStories = async (limitCount: number = 10, lastDoc?: DocumentSn
     stories,
     lastDoc: lastVisible,
   };
+};
+
+/**
+ * Webtoonları Firestore'dan çeker (sadece format: 'webtoon' olanlar)
+ */
+export const getWebtoonsPaginated = async (limitCount: number = 10, lastDoc?: DocumentSnapshot) => {
+  const storiesRef = collection(db, 'stories');
+  
+  let q = query(
+    storiesRef,
+    where('format', '==', 'webtoon'),
+    limit(50) // Fetch a bit more and filter locally
+  );
+
+  if (lastDoc) {
+    q = query(q, startAfter(lastDoc));
+  }
+
+  try {
+    const querySnapshot = await getDocs(q);
+    let allStories = await enrichStories(querySnapshot.docs);
+    let stories = allStories.filter(s => s.status === 'ongoing' || s.status === 'completed');
+
+    // Local sort by createdAt desc
+    stories.sort((a, b) => {
+      const aTime = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+      const bTime = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+      return bTime - aTime;
+    });
+
+    // Slice for limit
+    stories = stories.slice(0, limitCount);
+
+    const lastVisible = querySnapshot.docs.length > 0 ? querySnapshot.docs[querySnapshot.docs.length - 1] : undefined;
+    return { stories, lastDoc: lastVisible };
+  } catch (error: any) {
+    console.error("getWebtoonsPaginated Firebase error:", error.message);
+    return { stories: [], lastDoc: undefined };
+  }
+};
+
+/**
+ * Son güncellenen (yeni bölüm eklenen) hikayeleri Firestore'dan çeker.
+ */
+export const getRecentlyUpdatedStories = async (limitCount: number = 10): Promise<StoryWithLatestChapter[]> => {
+  try {
+    const storiesRef = collection(db, 'stories');
+    const q = query(
+      storiesRef,
+      where('status', 'in', ['ongoing', 'completed']),
+      orderBy('updatedAt', 'desc'),
+      limit(limitCount + 10)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const stories: StoryWithLatestChapter[] = [];
+    
+    // Hikayeleri al
+    for (const docSnapshot of querySnapshot.docs) {
+      if (stories.length >= limitCount) break;
+
+      const data = docSnapshot.data();
+      if (data.format === 'webtoon') continue;
+
+      let authorName = data.authorName;
+      let authorAvatarUrl = data.authorAvatarUrl;
+      let authorUsername = data.authorUsername;
+      
+      if ((!authorName || !authorAvatarUrl) && data.authorId) {
+        const profile = await getUserProfile(data.authorId);
+        authorName = authorName || profile?.displayName || profile?.username || 'Bilinmiyor';
+        authorAvatarUrl = authorAvatarUrl || profile?.avatarUrl;
+        authorUsername = authorUsername || profile?.username;
+      }
+
+      const storyData = { 
+        storyId: docSnapshot.id, 
+        ...data,
+        authorName,
+        authorAvatarUrl,
+        authorUsername
+      } as Story;
+      
+      // Her hikaye için en son bölümü (Chapter) bul
+      let latestChapter: { title: string, excerpt: string, order?: number } | undefined = undefined;
+      try {
+        const chaptersRef = collection(db, 'stories', storyData.storyId, 'chapters');
+        const chapterQ = query(
+          chaptersRef, 
+          where('status', '==', 'published'),
+          orderBy('order', 'desc'), 
+          limit(1)
+        );
+        const chapterSnap = await getDocs(chapterQ);
+        
+        if (!chapterSnap.empty) {
+          const chapData = chapterSnap.docs[0].data() as Chapter;
+          
+          // İlk anlamlı metni bul (sadece boş HTML etiketleri olan blokları atla)
+          let excerpt = '';
+          if (chapData.contentBlocks) {
+            for (const block of chapData.contentBlocks) {
+              if (block.text) {
+                // 1. Önce HTML entity'lerini normal karakterlere çevir
+                let unescaped = block.text
+                  .replace(/&lt;/g, '<')
+                  .replace(/&gt;/g, '>')
+                  .replace(/&quot;/g, '"')
+                  .replace(/&#39;/g, "'")
+                  .replace(/&nbsp;/g, ' ')
+                  .replace(/&amp;/g, '&');
+                  
+                // 2. Sonra HTML etiketlerini tamamen temizle
+                let stripped = unescaped.replace(/<[^>]+>/g, '').trim();
+                
+                // 3. Eğer temizlenmiş metin boş değilse (örneğin sadece <p><br></p> değilse), bunu kullan ve döngüden çık
+                if (stripped.length > 0) {
+                  excerpt = stripped;
+                  break;
+                }
+              }
+            }
+          }
+          
+          if (excerpt.length > 120) {
+            excerpt = excerpt.substring(0, 117) + '...';
+          }
+          
+          latestChapter = {
+            title: chapData.title,
+            excerpt: excerpt,
+            order: chapData.order
+          };
+        }
+      } catch (err) {
+        console.error(`Bölüm çekilirken hata (Story: ${storyData.storyId}):`, err);
+      }
+      
+      stories.push({
+        ...storyData,
+        latestChapter
+      });
+    }
+    
+    return stories;
+  } catch (error) {
+    console.error("getRecentlyUpdatedStories hatası:", error);
+    return [];
+  }
 };
 
 /**
@@ -294,8 +444,12 @@ export const updateChapter = async (storyId: string, chapterId: string, data: Pa
         }
       }
     }
-    
-    await updateDoc(chapterRef, data);
+    // Undefined alanları null'a çevir, Firestore undefined desteklemez
+    const sanitizedData = Object.fromEntries(
+      Object.entries(data).map(([key, val]) => [key, val === undefined ? null : val])
+    );
+
+    await updateDoc(chapterRef, sanitizedData);
   } catch (error) {
     console.error("Bölüm güncellenirken hata:", error);
     throw error;
@@ -589,11 +743,7 @@ export const searchStories = async (searchTerm: string = '', selectedTags: strin
     }
 
     const querySnapshot = await getDocs(q);
-    const stories: Story[] = [];
-    
-    querySnapshot.forEach((docSnap) => {
-      stories.push({ storyId: docSnap.id, ...docSnap.data() } as Story);
-    });
+    const stories: Story[] = await enrichStories(querySnapshot.docs);
 
     // Metin araması varsa lokal olarak filtrele
     const term = searchTerm.trim().toLowerCase();
@@ -638,18 +788,8 @@ const enrichStories = async (docs: any[]): Promise<Story[]> => {
       }
     }
     
-    // Gerçek 'published' bölüm sayısını dinamik olarak hesapla (Önceki yanlış chapterCount kayıtlarını maskelemek için)
-    try {
-      const q = query(
-        collection(db, 'stories', docSnap.id, 'chapters'),
-        where('status', '==', 'published')
-      );
-      const countSnap = await getCountFromServer(q);
-      if (data.stats) {
-        data.stats.chapterCount = countSnap.data().count;
-      }
-    } catch (err) {
-      console.warn(`Hikaye ${docSnap.id} bölüm sayısı çekilemedi:`, err);
+    if (!data.stats) {
+      data.stats = { views: 0, likes: 0, chapterCount: 0 };
     }
     
     return { storyId: docSnap.id, ...data, authorName, authorAvatarUrl } as Story;
@@ -689,7 +829,7 @@ export const getRecentStoriesPaginated = async (limitCount: number = 10, lastDoc
       collection(db, 'stories'),
       where('status', 'in', ['ongoing', 'completed']),
       orderBy('createdAt', 'desc'),
-      limit(limitCount)
+      limit(limitCount + 10)
     );
     
     if (lastDoc) {
@@ -697,7 +837,8 @@ export const getRecentStoriesPaginated = async (limitCount: number = 10, lastDoc
     }
     
     const snap = await getDocs(q);
-    const stories = await enrichStories(snap.docs);
+    let stories = await enrichStories(snap.docs);
+    stories = stories.filter(s => s.format !== 'webtoon').slice(0, limitCount);
     
     const newLastDoc = snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : undefined;
     
@@ -719,10 +860,11 @@ export const getTopStories = async (limitCount: number = 10): Promise<Story[]> =
       collection(db, 'stories'),
       where('status', 'in', ['ongoing', 'completed']),
       orderBy('stats.views', 'desc'),
-      limit(limitCount)
+      limit(limitCount + 10)
     );
     const snap = await getDocs(q);
-    const stories = await enrichStories(snap.docs);
+    let stories = await enrichStories(snap.docs);
+    stories = stories.filter(s => s.format !== 'webtoon').slice(0, limitCount);
     return stories;
   } catch (error) {
     console.error("Popüler hikayeler çekilirken hata (Kompozit indeks eksik olabilir):", error);
@@ -740,7 +882,7 @@ export const getTopStoriesPaginated = async (limitCount: number = 10, lastDoc?: 
       collection(db, 'stories'),
       where('status', 'in', ['ongoing', 'completed']),
       orderBy('stats.views', 'desc'),
-      limit(limitCount)
+      limit(limitCount + 10)
     );
     
     if (lastDoc) {
@@ -748,7 +890,8 @@ export const getTopStoriesPaginated = async (limitCount: number = 10, lastDoc?: 
     }
     
     const snap = await getDocs(q);
-    const stories = await enrichStories(snap.docs);
+    let stories = await enrichStories(snap.docs);
+    stories = stories.filter(s => s.format !== 'webtoon').slice(0, limitCount);
     
     const newLastDoc = snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : undefined;
     
@@ -772,10 +915,12 @@ export const getTrendingDiscussions = async (limitCount: number = 10): Promise<S
       collection(db, 'stories'),
       where('status', 'in', ['ongoing', 'completed']),
       orderBy('stats.commentCount', 'desc'),
-      limit(limitCount)
+      limit(limitCount + 10)
     );
     const snap = await getDocs(q);
-    return await enrichStories(snap.docs);
+    let stories = await enrichStories(snap.docs);
+    stories = stories.filter(s => s.format !== 'webtoon').slice(0, limitCount);
+    return stories;
   } catch (error) {
     console.error("Tartışılan hikayeler çekilirken hata:", error);
     // Eğer index eksikse fallback olarak popüler hikayeleri döndür
@@ -800,11 +945,12 @@ export const getRecommendedStories = async (preferredGenres?: string[], limitCou
       collection(db, 'stories'),
       where('status', 'in', ['ongoing', 'completed']),
       where('tags', 'array-contains-any', genresToQuery),
-      limit(limitCount)
+      limit(limitCount + 10)
     );
     
     const snap = await getDocs(q);
-    const stories = await enrichStories(snap.docs);
+    let stories = await enrichStories(snap.docs);
+    stories = stories.filter(s => s.format !== 'webtoon').slice(0, limitCount);
     
     // Eğer önerilen hiç hikaye yoksa, yine en popülerleri dön
     if (stories.length === 0) {
@@ -819,6 +965,83 @@ export const getRecommendedStories = async (preferredGenres?: string[], limitCou
 };
 
 /**
+ * Gelişmiş Kişiselleştirme: Kullanıcının hem kendi seçtiği türleri (preferredGenres) 
+ * hem de okuma geçmişini (implicit) harmanlayarak nokta atışı hikaye önerir.
+ */
+export const getAdvancedPersonalizedStories = async (userId?: string, preferredGenres?: string[], limitCount: number = 10): Promise<Story[]> => {
+  try {
+    let combinedGenres: string[] = [...(preferredGenres || [])];
+
+    if (userId) {
+      // 1. Okuma geçmişinden tür çıkarımı
+      const progressList = await getUserReadingProgress(userId);
+      if (progressList.length > 0) {
+        const storyIds = progressList.map(p => p.storyId);
+        // İlgili hikayeleri çekelim (ilk 10)
+        const recentStories = await getStoriesByIds(storyIds.slice(0, 10));
+        
+        // Etiketlerin frekansını sayalım
+        const tagCounts: Record<string, number> = {};
+        recentStories.forEach(story => {
+          if (story.tags) {
+            story.tags.forEach(tag => {
+              tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+            });
+          }
+        });
+
+        // En çok okunan 5 türü çıkar
+        const implicitGenres = Object.entries(tagCounts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5)
+          .map(entry => entry[0]);
+
+        // Kullanıcının tercihleriyle birleştir ve tekrarları sil
+        combinedGenres = Array.from(new Set([...combinedGenres, ...implicitGenres]));
+      }
+    }
+
+    if (combinedGenres.length === 0) {
+      return getTopStories(limitCount);
+    }
+
+    // Firebase array-contains-any limiti 10'dur. En çok önemseyebileceği 10'unu al.
+    const queryGenres = combinedGenres.slice(0, 10);
+
+    const q = query(
+      collection(db, 'stories'),
+      where('status', 'in', ['ongoing', 'completed']),
+      where('tags', 'array-contains-any', queryGenres),
+      limit(limitCount + 10) // Fazla çekelim ki okuduklarını filtreleyebilelim
+    );
+
+    const snap = await getDocs(q);
+    let stories = await enrichStories(snap.docs);
+
+    // 2. Filtreleme (Webtoonları ve kullanıcının zaten okuduklarını çıkar)
+    stories = stories.filter(story => story.format !== 'webtoon');
+
+    if (userId) {
+      const progressList = await getUserReadingProgress(userId);
+      const readStoryIds = new Set(progressList.map(p => p.storyId));
+      stories = stories.filter(story => !readStoryIds.has(story.storyId));
+    }
+
+    // 3. İstenen sayıya indir
+    stories = stories.slice(0, limitCount);
+
+    if (stories.length === 0) {
+      return getTopStories(limitCount);
+    }
+
+    return stories;
+  } catch (error) {
+    console.error("Gelişmiş kişiselleştirilmiş hikayeler çekilirken hata:", error);
+    return getTopStories(limitCount);
+  }
+};
+
+/**
  * Kısa ve Öz: Sadece tamamlanmış hikayeleri getirir.
  */
 export const getCompletedStories = async (limitCount: number = 10): Promise<Story[]> => {
@@ -827,10 +1050,11 @@ export const getCompletedStories = async (limitCount: number = 10): Promise<Stor
       collection(db, 'stories'),
       where('status', '==', 'completed'),
       orderBy('stats.views', 'desc'),
-      limit(limitCount)
+      limit(limitCount + 10)
     );
     const snap = await getDocs(q);
-    const stories = await enrichStories(snap.docs);
+    let stories = await enrichStories(snap.docs);
+    stories = stories.filter(s => s.format !== 'webtoon').slice(0, limitCount);
     return stories;
   } catch (error) {
     console.error("Tamamlanmış hikayeler çekilirken hata:", error);
@@ -847,10 +1071,11 @@ export const getMostLikedStories = async (limitCount: number = 10): Promise<Stor
       collection(db, 'stories'),
       where('status', 'in', ['ongoing', 'completed']),
       orderBy('stats.likes', 'desc'),
-      limit(limitCount)
+      limit(limitCount + 10)
     );
     const snap = await getDocs(q);
-    const stories = await enrichStories(snap.docs);
+    let stories = await enrichStories(snap.docs);
+    stories = stories.filter(s => s.format !== 'webtoon').slice(0, limitCount);
     return stories;
   } catch (error) {
     console.error("En çok beğenilen hikayeler çekilirken hata:", error);
@@ -963,5 +1188,89 @@ export const deleteStoryCompletely = async (storyId: string): Promise<void> => {
   } catch (error) {
     console.error("Hikaye tamamen silinirken hata:", error);
     throw error;
+  }
+};
+/**
+ * ─────────────────────────────────────────────
+ * Chapter Mascot Reactions (Tepki Sistemi)
+ * ─────────────────────────────────────────────
+ */
+
+export const getUserChapterReactions = async (storyId: string, chapterId: string, userId: string): Promise<string[]> => {
+  if (!storyId || !chapterId || !userId) return [];
+  try {
+    const userReactionRef = doc(db, 'stories', storyId, 'chapters', chapterId, 'userReactions', userId);
+    const snap = await getDoc(userReactionRef);
+    if (snap.exists()) {
+      const data = snap.data();
+      return data.reactions || [];
+    }
+    return [];
+  } catch (error) {
+    console.error("Error fetching user chapter reactions:", error);
+    return [];
+  }
+};
+
+export const toggleChapterReaction = async (
+  storyId: string, 
+  chapterId: string, 
+  userId: string, 
+  reactionId: string
+): Promise<{ success: boolean; activeReactions: string[]; newCounts?: Record<string, number> }> => {
+  if (!storyId || !chapterId || !userId || !reactionId) return { success: false, activeReactions: [] };
+  
+  try {
+    const chapterRef = doc(db, 'stories', storyId, 'chapters', chapterId);
+    const userReactionRef = doc(chapterRef, 'userReactions', userId);
+    
+    // Get user's current reactions
+    const userReactionSnap = await getDoc(userReactionRef);
+    let activeReactions: string[] = [];
+    
+    if (userReactionSnap.exists()) {
+      activeReactions = userReactionSnap.data().reactions || [];
+    }
+    
+    const isCurrentlySelected = activeReactions.includes(reactionId);
+    let incrementVal = 0;
+    
+    if (isCurrentlySelected) {
+      activeReactions = activeReactions.filter(id => id !== reactionId);
+      incrementVal = -1;
+    } else {
+      if (activeReactions.length >= 5) {
+        return { success: false, activeReactions }; // Reached max 5 limit
+      }
+      activeReactions.push(reactionId);
+      incrementVal = 1;
+    }
+    
+    await setDoc(userReactionRef, {
+      reactions: activeReactions,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+    
+    const chapterSnap = await getDoc(chapterRef);
+    let newCounts: Record<string, number> = {};
+    if (chapterSnap.exists()) {
+      const data = chapterSnap.data();
+      const currentCounts = data.reactionCounts || {};
+      const currentVal = currentCounts[reactionId] || 0;
+      
+      newCounts = {
+        ...currentCounts,
+        [reactionId]: Math.max(0, currentVal + incrementVal)
+      };
+      
+      await updateDoc(chapterRef, {
+        reactionCounts: newCounts
+      });
+    }
+    
+    return { success: true, activeReactions, newCounts };
+  } catch (error) {
+    console.error("Error toggling chapter reaction:", error);
+    return { success: false, activeReactions: [] };
   }
 };

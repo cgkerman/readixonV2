@@ -18,6 +18,7 @@ export type {
   UserStats,
   CreateUserInput,
   Story,
+  StoryWithLatestChapter,
   StoryStats,
   StoryStatus,
   Chapter,

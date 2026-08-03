@@ -73,7 +73,10 @@ export default function StoryEntryPage() {
     <div className="min-h-screen bg-background text-text pb-24">
       {/* Top Navbar */}
       <div className="sticky top-0 z-10 flex items-center p-4 bg-background/80 backdrop-blur-md border-b border-border/10">
-        <Button variant="ghost" onPress={() => router.push(`/story/${generateStorySlug(story.title, story.storyId)}`)} className="rounded-full p-2 mr-4">
+        <Button variant="ghost" onPress={() => {
+          const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
+          router.push(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
+        }} className="rounded-full p-2 mr-4">
           <ArrowLeft size={24} />
         </Button>
         <Typography variant="h3">Hikaye Detayı</Typography>

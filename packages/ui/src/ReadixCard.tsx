@@ -26,6 +26,12 @@ export interface ReadixCardProps {
     voterIds: string[];
   };
   hasVotedInPoll?: boolean;
+  linkedStory?: {
+    storyId: string;
+    title: string;
+    coverUrl?: string;
+    authorName?: string;
+  };
   hasReposted?: boolean;
   currentUserId?: string;
   onLikePress?: () => void;
@@ -40,6 +46,7 @@ export interface ReadixCardProps {
   onReportPress?: () => void;
   onBlockPress?: () => void;
   onPollVote?: (optionId: string) => void;
+  readOnlyStats?: boolean;
   className?: string;
 }
 
@@ -59,6 +66,7 @@ export const ReadixCard: React.FC<ReadixCardProps> = ({
   repostOfAuthorName,
   poll,
   hasVotedInPoll = false,
+  linkedStory,
   hasReposted = false,
   currentUserId,
   onLikePress,
@@ -73,6 +81,7 @@ export const ReadixCard: React.FC<ReadixCardProps> = ({
   onReportPress,
   onBlockPress,
   onPollVote,
+  readOnlyStats = false,
   className = '',
 }) => {
   const [showMenu, setShowMenu] = useState(false);
@@ -288,54 +297,96 @@ export const ReadixCard: React.FC<ReadixCardProps> = ({
         </div>
       )}
 
+      {/* Eklenen Kitap (Varsa) */}
+      {linkedStory && (
+        <a 
+          href={`/story/${linkedStory.storyId}`}
+          onClick={(e) => e.stopPropagation()}
+          className="mb-4 block"
+        >
+          <div className="flex items-center gap-3 p-3 bg-card border border-primary/20 hover:border-primary/50 hover:bg-primary/5 transition-colors rounded-xl group relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent pointer-events-none" />
+            <img 
+              src={linkedStory.coverUrl || ''} 
+              alt={linkedStory.title} 
+              className="w-12 h-16 object-cover rounded-md shadow-sm border border-border/50 group-hover:border-primary/30 transition-colors z-10" 
+            />
+            <div className="flex-1 min-w-0 z-10">
+              <Typography variant="caption" className="text-primary font-medium mb-0.5 block uppercase tracking-wider text-[10px]">Bahsedilen Kitap</Typography>
+              <Typography variant="body" className="font-bold text-text truncate leading-tight group-hover:text-primary transition-colors">{linkedStory.title}</Typography>
+              <Typography variant="caption" className="text-muted truncate mt-0.5 block">{linkedStory.authorName || 'Bilinmiyor'}</Typography>
+            </div>
+          </div>
+        </a>
+      )}
+
       {/* Alt Kısım: Etkileşim Butonları */}
       <div className="flex items-center gap-6 mt-2 pt-4 border-t border-border">
-        <button 
-          onClick={(e) => {
-            e.stopPropagation();
-            onLikePress?.();
-          }}
-          className={`flex items-center gap-2 text-sm font-medium transition-colors ${
-            isLiked ? 'text-pink-500' : 'text-muted hover:text-pink-500'
-          }`}
-        >
-          <Heart size={20} className={isLiked ? 'fill-current' : ''} />
-          <span>{likesCount > 0 ? likesCount : 'Beğen'}</span>
-        </button>
+        {readOnlyStats ? (
+          <>
+            <div className={`flex items-center gap-2 text-sm font-medium ${isLiked ? 'text-pink-500' : 'text-muted'}`}>
+              <Heart size={20} className={isLiked ? 'fill-current' : ''} />
+              <span>{likesCount}</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm font-medium text-muted">
+              <MessageCircle size={20} />
+              <span>{commentsCount}</span>
+            </div>
+            <div className={`flex items-center gap-2 text-sm font-medium ${hasReposted ? 'text-green-500' : 'text-muted'}`}>
+              <Repeat size={20} className={hasReposted ? 'fill-current' : ''} />
+              <span>{repostsCount}</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                onLikePress?.();
+              }}
+              className={`flex items-center gap-2 text-sm font-medium transition-colors ${
+                isLiked ? 'text-pink-500' : 'text-muted hover:text-pink-500'
+              }`}
+            >
+              <Heart size={20} className={isLiked ? 'fill-current' : ''} />
+              <span>{likesCount > 0 ? likesCount : 'Beğen'}</span>
+            </button>
 
-        <button 
-          onClick={(e) => {
-            e.stopPropagation();
-            onCommentPress?.();
-          }}
-          className="flex items-center gap-2 text-sm font-medium text-muted hover:text-blue-400 transition-colors"
-        >
-          <MessageCircle size={20} />
-          <span>{commentsCount > 0 ? commentsCount : 'Yorum'}</span>
-        </button>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                onCommentPress?.();
+              }}
+              className="flex items-center gap-2 text-sm font-medium text-muted hover:text-blue-400 transition-colors"
+            >
+              <MessageCircle size={20} />
+              <span>{commentsCount > 0 ? commentsCount : 'Yorum'}</span>
+            </button>
 
-        <button 
-          onClick={(e) => {
-            e.stopPropagation();
-            onRepostPress?.();
-          }}
-          className={`flex items-center gap-2 text-sm font-medium transition-colors ${
-            hasReposted ? 'text-green-500' : 'text-muted hover:text-green-500'
-          }`}
-        >
-          <Repeat size={20} className={hasReposted ? 'fill-current' : ''} />
-          <span>{repostsCount > 0 ? repostsCount : 'Alıntıla'}</span>
-        </button>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                onRepostPress?.();
+              }}
+              className={`flex items-center gap-2 text-sm font-medium transition-colors ${
+                hasReposted ? 'text-green-500' : 'text-muted hover:text-green-500'
+              }`}
+            >
+              <Repeat size={20} className={hasReposted ? 'fill-current' : ''} />
+              <span>{repostsCount > 0 ? repostsCount : 'Alıntıla'}</span>
+            </button>
 
-        <button 
-          onClick={(e) => {
-            e.stopPropagation();
-            onSharePress?.();
-          }}
-          className="flex items-center gap-2 text-sm font-medium text-muted hover:text-blue-400 transition-colors ml-auto"
-        >
-          <Share2 size={20} />
-        </button>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                onSharePress?.();
+              }}
+              className="flex items-center gap-2 text-sm font-medium text-muted hover:text-blue-400 transition-colors ml-auto"
+            >
+              <Share2 size={20} />
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

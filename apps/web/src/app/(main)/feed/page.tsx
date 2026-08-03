@@ -2,10 +2,10 @@
 
 import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Typography, StoryCard, Button } from '@readixon/ui';
-import { getRecentStoriesPaginated, getTopStoriesPaginated, getFeaturedAuthors, getRecommendedStories, getCompletedStories, getMostLikedStories, getActiveAnnouncements, getActiveHeroBanners, getUserReadingProgress, getStoriesByIds, getTrendingDiscussions, POPULAR_TAGS, generateStorySlug, toggleStoryLike, followUser, unfollowUser, useAuthStore, type Story, type User, type Announcement } from '@readixon/core';
+import { Typography, StoryCard, Button, HorizontalStoryCard } from '@readixon/ui';
+import { getRecentStoriesPaginated, getTopStoriesPaginated, getFeaturedAuthors, getAdvancedPersonalizedStories, getCompletedStories, getMostLikedStories, getRecentlyUpdatedStories, getActiveAnnouncements, getActiveHeroBanners, getUserReadingProgress, getStoriesByIds, getTrendingDiscussions, getWebtoonsPaginated, POPULAR_TAGS, generateStorySlug, toggleStoryLike, followUser, unfollowUser, useAuthStore, type Story, type User, type Announcement } from '@readixon/core';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Flame, Sparkles, TrendingUp, Clock, ChevronRight, ChevronLeft, Play, Users, Heart, CheckCircle, BellRing, BookOpen, MessageCircle } from 'lucide-react';
+import { Flame, Sparkles, TrendingUp, Clock, ChevronRight, ChevronLeft, Play, Users, Heart, CheckCircle, BellRing, BookOpen, MessageCircle, RotateCcw, Gem, Award, GalleryVertical } from 'lucide-react';
 import { AuthorCard } from '@readixon/ui';
 import { toast } from "sonner";
 
@@ -46,7 +46,7 @@ export default function FeedPage() {
 
   const { data: recommendedStories = [], isLoading: recLoading } = useQuery({
     queryKey: ['stories', 'recommended', userProfile?.uid],
-    queryFn: () => getRecommendedStories(userProfile?.preferredGenres, 10),
+    queryFn: () => getAdvancedPersonalizedStories(firebaseUser?.uid, userProfile?.preferredGenres, 10),
   });
 
   const { data: completedStories = [], isLoading: compLoading } = useQuery({
@@ -57,6 +57,17 @@ export default function FeedPage() {
   const { data: mostLikedStories = [], isLoading: likedLoading } = useQuery({
     queryKey: ['stories', 'mostLiked'],
     queryFn: () => getMostLikedStories(10),
+  });
+
+  const { data: webtoonsData, isLoading: webtoonsLoading } = useQuery({
+    queryKey: ['stories', 'webtoons', 'feed'],
+    queryFn: () => getWebtoonsPaginated(10),
+  });
+  const webtoons = webtoonsData?.stories || [];
+
+  const { data: recentlyUpdatedStories = [], isLoading: recentlyUpdatedLoading } = useQuery({
+    queryKey: ['stories', 'recentlyUpdated'],
+    queryFn: () => getRecentlyUpdatedStories(10),
   });
 
   const { data: announcements = [], isLoading: announcementsLoading } = useQuery({
@@ -79,9 +90,9 @@ export default function FeedPage() {
       const storyIds = history.map(h => h.storyId);
       const stories = await getStoriesByIds(storyIds);
 
-      // Hikayeleri bul ve ilerlemeyi eşleştir (Sadece yayınlanmış olanları göster)
+      // Hikayeleri bul ve ilerlemeyi eşleştir (Sadece yayınlanmış olan romanları göster)
       return history.map(h => {
-        const story = stories.find(s => s.storyId === h.storyId && s.status !== 'draft');
+        const story = stories.find(s => s.storyId === h.storyId && s.status !== 'draft' && s.format !== 'webtoon');
         return story ? { story, progress: h.scrollPercentage || 0, chapterId: h.currentChapterId } : null;
       }).filter(Boolean) as { story: Story; progress: number; chapterId: string }[];
     },
@@ -96,7 +107,7 @@ export default function FeedPage() {
   const recentStories = recentData?.pages.flatMap((p: any) => p.stories) || [];
   const topStories = topData?.pages.flatMap((p: any) => p.stories) || [];
 
-  const isLoading = recentLoading || topLoading || authorsLoading || recLoading || compLoading || likedLoading || historyLoading || discussionsLoading || heroBannersLoading;
+  const isLoading = recentLoading || topLoading || authorsLoading || recLoading || compLoading || likedLoading || historyLoading || discussionsLoading || heroBannersLoading || webtoonsLoading;
 
   // Öne Çıkan Slaytlar (Carousel Verisi)
   const slides = useMemo(() => {
@@ -135,7 +146,10 @@ export default function FeedPage() {
         primaryLabel: 'Hemen Oku',
         primaryAction: () => router.push(`/read/${topStories[0].storyId}`),
         secondaryLabel: 'Detaylar',
-        secondaryAction: () => router.push(`/story/${generateStorySlug(topStories[0].title, topStories[0].storyId)}`)
+        secondaryAction: () => {
+          const slug = (topStories[0] as any).slug || generateStorySlug(topStories[0].title, topStories[0].storyId);
+          router.push(topStories[0].format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
+        }
       });
     }
     if (mostLikedStories.length > 0 && mostLikedStories[0].storyId !== topStories[0]?.storyId) {
@@ -150,7 +164,10 @@ export default function FeedPage() {
         primaryLabel: 'Hemen Oku',
         primaryAction: () => router.push(`/read/${mostLikedStories[0].storyId}`),
         secondaryLabel: 'Detaylar',
-        secondaryAction: () => router.push(`/story/${generateStorySlug(mostLikedStories[0].title, mostLikedStories[0].storyId)}`)
+        secondaryAction: () => {
+          const slug = (mostLikedStories[0] as any).slug || generateStorySlug(mostLikedStories[0].title, mostLikedStories[0].storyId);
+          router.push(mostLikedStories[0].format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
+        }
       });
     }
     if (topStories.length > 1) {
@@ -165,7 +182,10 @@ export default function FeedPage() {
         primaryLabel: 'Hemen Oku',
         primaryAction: () => router.push(`/read/${topStories[1].storyId}`),
         secondaryLabel: 'Detaylar',
-        secondaryAction: () => router.push(`/story/${generateStorySlug(topStories[1].title, topStories[1].storyId)}`)
+        secondaryAction: () => {
+          const slug = (topStories[1] as any).slug || generateStorySlug(topStories[1].title, topStories[1].storyId);
+          router.push(topStories[1].format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
+        }
       });
     }
     if (featuredAuthors.length > 0) {
@@ -408,16 +428,18 @@ export default function FeedPage() {
           <div className="flex items-center gap-2 mb-4">
             <Typography variant="h3" className="font-semibold">Neler Okumak İstersin?</Typography>
           </div>
-          <div className="flex overflow-x-auto pb-4 gap-3 scrollbar-hide snap-x">
-            {POPULAR_TAGS.map(tag => (
-              <button
-                key={tag.id}
-                onClick={() => router.push(`/search?tag=${tag.id}`)}
-                className="snap-start flex-shrink-0 px-5 py-2.5 rounded-full bg-card/50 border border-border/50 hover:bg-primary/10 hover:border-primary/50 hover:text-primary transition-all text-sm font-medium whitespace-nowrap"
-              >
-                {tag.label}
-              </button>
-            ))}
+          <div className="overflow-x-auto pb-4 scrollbar-hide snap-x">
+            <div className="grid grid-rows-2 grid-flow-col gap-3 w-max">
+              {POPULAR_TAGS.map(tag => (
+                <button
+                  key={tag.id}
+                  onClick={() => router.push(`/search?tag=${tag.id}`)}
+                  className="snap-start flex-shrink-0 px-5 py-2.5 rounded-full bg-card/50 border border-border/50 hover:bg-primary/10 hover:border-primary/50 hover:text-primary transition-all text-sm font-medium whitespace-nowrap"
+                >
+                  {tag.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -508,34 +530,58 @@ export default function FeedPage() {
             </div>
           )}
 
+          {/* 1. Sana Özel / Günün Trendleri */}
+          {recommendedStories.length > 0 && (
+            <CarouselRow
+              title={firebaseUser ? "Sana Özel" : "Günün Trendleri"}
+              subtitle={firebaseUser ? "Okuma geçmişiniz ve favori türlerinize göre sizin için özel seçildi." : "Platformdaki en trend hikayeler."}
+              icon={<Sparkles className="text-primary" size={24} />}
+              stories={recommendedStories}
+              seeAllHref="/explore/recommended"
+              size="small"
+              onStoryClick={(story) => {
+                const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
+                router.push(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
+              }}
+              onLikePress={handleLikePress}
+            />
+          )}
+
           {/* Okumaya Devam Et Bloğu */}
           {readingHistory.length > 0 && (
             <CarouselRow
               title="Okumaya Devam Et"
+              subtitle="Kaldığınız yerden okumaya devam edin."
               icon={<BookOpen className="text-primary" size={24} />}
               stories={readingHistory.map(h => h.story)}
               progresses={readingHistory.reduce((acc, h) => ({ ...acc, [h.story.storyId]: h.progress }), {})}
+              size="small"
               onStoryClick={(story) => {
                 const historyItem = readingHistory.find(h => h.story.storyId === story.storyId);
                 if (historyItem?.chapterId) {
                   router.push(`/read/${story.storyId}/${historyItem.chapterId}`);
                 } else {
-                  router.push(`/story/${generateStorySlug(story.title, story.storyId)}`);
+                  const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
+                  router.push(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
                 }
               }}
               onLikePress={handleLikePress}
             />
           )}
 
-          {/* 1. Sana Özel / Günün Trendleri */}
-          {recommendedStories.length > 0 && (
-            <CarouselRow
-              title={firebaseUser && userProfile?.preferredGenres?.length ? "Sana Özel" : "Günün Trendleri"}
-              icon={<Sparkles className="text-primary" size={24} />}
-              stories={recommendedStories}
-              seeAllHref="/explore/recommended"
-              onStoryClick={(story) => router.push(`/story/${generateStorySlug(story.title, story.storyId)}`)}
-              onLikePress={handleLikePress}
+          {/* Taze Çıkanlar (Yeni Bölüm Eklenenler) */}
+          {recentlyUpdatedStories.length > 0 && (
+            <HorizontalCarouselRow
+              title="Taze Çıkanlar"
+              subtitle="Yazarlarından yepyeni bölümlerle güncellenen hikayeler."
+              icon={<RotateCcw className="text-primary" size={24} />}
+              stories={recentlyUpdatedStories}
+              seeAllHref="/explore/recently-updated"
+              onStoryClick={(story) => {
+                const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
+                router.push(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
+              }}
+              getBadgeText={(story) => story.latestChapter?.order ? `${story.latestChapter.order}. Bölüm Yayında` : 'Yeni Güncellendi'}
             />
           )}
 
@@ -543,18 +589,69 @@ export default function FeedPage() {
           {trendingDiscussions.length > 0 && (
             <CarouselRow
               title="Son Tartışılanlar"
+              subtitle="Topluluğun şu an en çok konuştuğu eserler."
               icon={<MessageCircle className="text-primary" size={24} />}
               stories={trendingDiscussions}
               seeAllHref="/explore/discussions"
-              onStoryClick={(story) => router.push(`/story/${generateStorySlug(story.title, story.storyId)}`)}
+              onStoryClick={(story) => {
+                const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
+                router.push(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
+              }}
               onLikePress={handleLikePress}
             />
           )}
+
+          {/* Günün Trendleri (En Çok Beğenilenler) */}
+          {mostLikedStories.length > 0 && (
+            <CarouselRow
+              title="Günün Trendleri"
+              subtitle="Okurlarımızın en çok etkileşime girdiği favori hikayeler."
+              icon={<Flame className="text-primary" size={24} />}
+              stories={mostLikedStories}
+              seeAllHref="/explore/trending"
+              onStoryClick={(story) => {
+                const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
+                router.push(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
+              }}
+              onLikePress={handleLikePress}
+            />
+          )}
+
+          {/* Editörün Seçimi (Yakında) */}
+          <ComingSoonBlock
+            title="Editörün Seçimi"
+            subtitle="Editörlerimiz tarafından özenle seçilmiş ve mutlaka okumanız gereken başyapıtlar."
+            icon={<Award className="text-primary" size={24} />}
+          />
+
+          {/* Webtoons / Çizgilerin Gücü */}
+          {webtoons.length > 0 && (
+            <CarouselRow
+              title="Çizgilerin Gücü: Yeni Webtoonlar"
+              subtitle="Kelimenin bittiği, çizginin konuştuğu en yeni manga ve webtoon serileri."
+              icon={<GalleryVertical className="text-primary" size={24} />}
+              stories={webtoons}
+              seeAllHref="/webtoons"
+              onStoryClick={(story) => {
+                const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
+                router.push(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
+              }}
+              onLikePress={handleLikePress}
+            />
+          )}
+
+          {/* Gizli Hazineler (Yakında) */}
+          <ComingSoonBlock
+            title="Gizli Hazineler"
+            subtitle="Henüz çok keşfedilmemiş ama okuyanların hayran kaldığı edebi şaheserler."
+            icon={<Gem className="text-primary" size={24} />}
+          />
 
           {/* 2. En Çok Okunanlar */}
           {topStories.length > 0 && (
             <CarouselRow
               title="Haftanın En Çok Okunanları"
+              subtitle="Bu hafta okurlarımızın elinden düşüremediği başyapıtlar."
               icon={<TrendingUp className="text-primary" size={24} />}
               stories={topStories}
               seeAllHref="/explore/top"
@@ -570,6 +667,7 @@ export default function FeedPage() {
           {recentStories.length > 0 && (
             <CarouselRow
               title="Yeni Çıkanlar"
+              subtitle="Platforma yeni eklenen, keşfedilmeyi bekleyen taze hikayeler."
               icon={<Clock className="text-primary" size={24} />}
               stories={recentStories}
               seeAllHref="/explore/recent"
@@ -585,6 +683,7 @@ export default function FeedPage() {
           {featuredAuthors.length > 0 && (
             <AuthorCarouselRow
               title="Öne Çıkan Yazarlar"
+              subtitle="Kalemiyle büyüleyen, platformun en sevilen kalemleri."
               icon={<Users className="text-primary" size={24} />}
               authors={featuredAuthors}
               seeAllHref="/explore/authors"
@@ -619,6 +718,7 @@ export default function FeedPage() {
               icon={<CheckCircle className="text-emerald-500" size={24} />}
               stories={completedStories}
               seeAllHref="/explore/completed"
+              size="small"
               onStoryClick={(story) => router.push(`/story/${generateStorySlug(story.title, story.storyId)}`)}
               onLikePress={handleLikePress}
             />
@@ -636,16 +736,19 @@ export default function FeedPage() {
 
 interface CarouselRowProps {
   title: string;
-  icon: React.ReactNode;
+  subtitle?: string;
+  icon?: React.ReactNode;
   stories: Story[];
   progresses?: Record<string, number>;
   seeAllHref?: string;
-  onStoryClick: (story: Story) => void;
-  onLikePress: (e: React.MouseEvent, storyId: string) => void;
+  size?: 'default' | 'small' | 'large';
+  onStoryClick?: (story: Story) => void;
+  onLikePress?: (e: React.MouseEvent, storyId: string, currentStatus: boolean) => void;
   onEndReached?: () => void;
+  getBadgeText?: (story: Story) => string | undefined;
 }
 
-function CarouselRow({ title, icon, stories, progresses, seeAllHref, onStoryClick, onLikePress, onEndReached }: CarouselRowProps) {
+function CarouselRow({ title, subtitle, icon, stories, progresses, seeAllHref, size = 'default', onStoryClick, onLikePress, onEndReached, getBadgeText }: CarouselRowProps) {
   const router = useRouter();
   const { userProfile } = useAuthStore();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -674,9 +777,14 @@ function CarouselRow({ title, icon, stories, progresses, seeAllHref, onStoryClic
   return (
     <div className="relative group">
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          {icon}
-          <Typography variant="h2" className="text-2xl font-bold">{title}</Typography>
+        <div>
+          <div className="flex items-center gap-3">
+            {icon}
+            <Typography variant="h2" className="text-2xl font-bold">{title}</Typography>
+          </div>
+          {subtitle && (
+            <Typography variant="body" className="text-muted text-sm mt-1">{subtitle}</Typography>
+          )}
         </div>
         {seeAllHref && (
           <button onClick={() => router.push(seeAllHref)} className="text-primary text-sm font-semibold hover:underline flex items-center">
@@ -711,19 +819,127 @@ function CarouselRow({ title, icon, stories, progresses, seeAllHref, onStoryClic
         style={{ scrollSnapType: 'x mandatory' }}
       >
         {stories.map((story) => (
-          <div key={story.storyId} className="w-[180px] md:w-[220px] flex-shrink-0 snap-start transition-transform duration-300 hover:-translate-y-2">
+          <div key={story.storyId} className={`${size === 'small' ? 'w-[130px] md:w-[150px]' : 'w-[180px] md:w-[220px]'} flex-shrink-0 snap-start transition-transform duration-300 hover:-translate-y-2`}>
             <StoryCard
               title={story.title}
               authorName={story.authorName || 'Bilinmiyor'}
               authorUsername={story.authorUsername}
+              authorAvatarUrl={story.authorAvatarUrl}
               coverImage={story.coverImage}
               views={story.stats?.views || 0}
               likes={story.stats?.likes || 0}
               tags={story.tags || []}
-              isLiked={userProfile?.likedStoryIds?.includes(story.storyId)}
+              isLiked={!!userProfile?.likedStoryIds?.includes(story.storyId)}
               progress={progresses?.[story.storyId]}
-              onPress={() => onStoryClick(story)}
-              onLikePress={(e) => onLikePress(e, story.storyId)}
+              isWebtoon={story.format === 'webtoon'}
+              status={story.status}
+              chapterCount={story.stats?.chapterCount}
+              onPress={() => onStoryClick?.(story)}
+              onLikePress={(e) => onLikePress?.(e, story.storyId, !!userProfile?.likedStoryIds?.includes(story.storyId))}
+              badgeText={getBadgeText ? getBadgeText(story) : undefined}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Yardımcı Bileşen: Horizontal Carousel Row
+// ─────────────────────────────────────────────
+
+interface HorizontalCarouselRowProps {
+  title: string;
+  subtitle?: string;
+  icon?: React.ReactNode;
+  stories: any[]; // StoryWithLatestChapter[]
+  seeAllHref?: string;
+  onStoryClick?: (story: any) => void;
+  getBadgeText?: (story: any) => string | undefined;
+}
+
+function HorizontalCarouselRow({ title, subtitle, icon, stories, seeAllHref, onStoryClick, getBadgeText }: HorizontalCarouselRowProps) {
+  const router = useRouter();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(true);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const scrollAmount = direction === 'left' ? -400 : 400;
+      scrollRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
+  const handleScroll = () => {
+    if (scrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+      setShowLeftArrow(scrollLeft > 20);
+      setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 20);
+    }
+  };
+
+  useEffect(() => {
+    handleScroll();
+  }, [stories]);
+
+  return (
+    <div className="relative group/section">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <div className="flex items-center gap-3">
+            {icon}
+            <Typography variant="h2" className="text-2xl font-bold">{title}</Typography>
+          </div>
+          {subtitle && (
+            <Typography variant="body" className="text-muted text-sm mt-1">{subtitle}</Typography>
+          )}
+        </div>
+        {seeAllHref && (
+          <button onClick={() => router.push(seeAllHref)} className="text-primary text-sm font-semibold hover:underline flex items-center">
+            Tümünü Gör <ChevronRight size={16} />
+          </button>
+        )}
+      </div>
+
+      {showLeftArrow && (
+        <button 
+          onClick={() => scroll('left')}
+          className="hidden md:flex absolute left-[-24px] top-[55%] -translate-y-1/2 z-20 w-12 h-12 bg-card/90 backdrop-blur-md border border-border/50 rounded-full items-center justify-center text-primary shadow-xl hover:bg-primary/10 hover:scale-110 transition-all"
+        >
+          <ChevronLeft size={24} />
+        </button>
+      )}
+      {showRightArrow && stories.length > 2 && (
+        <button 
+          onClick={() => scroll('right')}
+          className="hidden md:flex absolute right-[-24px] top-[55%] -translate-y-1/2 z-20 w-12 h-12 bg-card/90 backdrop-blur-md border border-border/50 rounded-full items-center justify-center text-primary shadow-xl hover:bg-primary/10 hover:scale-110 transition-all"
+        >
+          <ChevronRight size={24} />
+        </button>
+      )}
+
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex gap-6 overflow-x-auto pb-8 pt-2 scrollbar-hide snap-x"
+        style={{ scrollSnapType: 'x mandatory' }}
+      >
+        {stories.map((story) => (
+          <div key={story.storyId} className="w-[320px] md:w-[380px] lg:w-[420px] flex-shrink-0 snap-start transition-transform duration-300 hover:-translate-y-2">
+            <HorizontalStoryCard
+              title={story.title}
+              authorName={story.authorName || 'Bilinmiyor'}
+              authorUsername={story.authorUsername}
+              authorAvatarUrl={story.authorAvatarUrl}
+              coverImage={story.coverImage}
+              views={story.stats?.views || 0}
+              likes={story.stats?.likes || 0}
+              latestChapterTitle={story.latestChapter?.title}
+              latestChapterExcerpt={story.latestChapter?.excerpt}
+              badgeText={getBadgeText ? getBadgeText(story) : undefined}
+              onPress={() => onStoryClick?.(story)}
             />
           </div>
         ))}
@@ -738,6 +954,7 @@ function CarouselRow({ title, icon, stories, progresses, seeAllHref, onStoryClic
 
 interface AuthorCarouselRowProps {
   title: string;
+  subtitle?: string;
   icon: React.ReactNode;
   authors: User[];
   seeAllHref?: string;
@@ -746,7 +963,7 @@ interface AuthorCarouselRowProps {
   onFollowToggle: (e: React.MouseEvent, userId: string) => void;
 }
 
-function AuthorCarouselRow({ title, icon, authors, seeAllHref, onAuthorClick, followingIds, onFollowToggle }: AuthorCarouselRowProps) {
+function AuthorCarouselRow({ title, subtitle, icon, authors, seeAllHref, onAuthorClick, followingIds, onFollowToggle }: AuthorCarouselRowProps) {
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
@@ -769,9 +986,14 @@ function AuthorCarouselRow({ title, icon, authors, seeAllHref, onAuthorClick, fo
   return (
     <div className="relative group">
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          {icon}
-          <Typography variant="h2" className="text-2xl font-bold">{title}</Typography>
+        <div>
+          <div className="flex items-center gap-3">
+            {icon}
+            <Typography variant="h2" className="text-2xl font-bold">{title}</Typography>
+          </div>
+          {subtitle && (
+            <Typography variant="body" className="text-muted text-sm mt-1">{subtitle}</Typography>
+          )}
         </div>
         {seeAllHref && (
           <button onClick={() => router.push(seeAllHref)} className="text-primary text-sm font-semibold hover:underline flex items-center">
@@ -818,6 +1040,37 @@ function AuthorCarouselRow({ title, icon, authors, seeAllHref, onAuthorClick, fo
             />
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Yardımcı Bileşen: Coming Soon Block (Yakında)
+// ─────────────────────────────────────────────
+
+function ComingSoonBlock({ title, subtitle, icon }: { title: string, subtitle: string, icon: React.ReactNode }) {
+  return (
+    <div className="relative group/section opacity-80 mt-2 mb-4">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <div className="flex items-center gap-3">
+            {icon}
+            <Typography variant="h2" className="text-2xl font-bold flex items-center gap-2">
+              {title}
+              <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ml-1">Yakında</span>
+            </Typography>
+          </div>
+          {subtitle && (
+            <Typography variant="body" className="text-muted text-sm mt-1">{subtitle}</Typography>
+          )}
+        </div>
+      </div>
+      <div className="h-32 border-2 border-dashed border-border/40 rounded-2xl flex flex-col items-center justify-center bg-card/10 gap-2">
+        <Typography variant="body" className="text-muted font-medium flex items-center gap-2">
+          <Sparkles size={16} />
+          Burası yakında çok şenlenecek!
+        </Typography>
       </div>
     </div>
   );

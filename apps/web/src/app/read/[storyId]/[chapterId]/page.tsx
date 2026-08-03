@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { fetchChapter, getPublishedChapters, syncReadingProgress, incrementChapterView, checkChapterLiked, toggleChapterLike, addChapterComment, getAllChapterComments, getStoryById, saveQuote, getUserProfile, trackInteraction, toggleChapterCommentLike } from '@readixon/core';
+import { fetchChapter, getPublishedChapters, syncReadingProgress, incrementChapterView, checkChapterLiked, toggleChapterLike, addChapterComment, getAllChapterComments, getStoryById, saveQuote, getUserProfile, trackInteraction, toggleChapterCommentLike, generateStorySlug } from '@readixon/core';
 import type { Chapter, Comment, Story, User } from '@readixon/core';
 import { useReaderStore } from '@readixon/core/src/store/useReaderStore';
 import { useAuthStore } from '@readixon/core/src/store/useAuthStore';
@@ -11,6 +11,7 @@ import { ContentRenderer, ReadingSettingsPanel, Button, Typography } from '@read
 import { ArrowLeft, Settings, List, ChevronLeft, ChevronRight, CheckCircle, X, Heart, MessageSquare, Eye, Reply } from 'lucide-react';
 import { toast } from 'sonner';
 import { ChapterEndActivity } from '@/components/ChapterEndActivity';
+import { ChapterReactions } from '@/components/ChapterReactions';
 
 export default function ReadPage() {
   const params = useParams();
@@ -427,7 +428,14 @@ export default function ReadPage() {
       <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b border-border/10 bg-opacity-90 backdrop-blur"
            style={{ backgroundColor: `${currentThemeStyle.bg}E6` }}>
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onPress={() => router.replace(`/read/${storyId}`)} className="rounded-full p-2">
+          <Button variant="ghost" onPress={() => {
+            if (story) {
+              const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
+              router.replace(story.format === 'webtoon' ? `/webtoons/${slug}` : `/read/${storyId}`);
+            } else {
+              router.back();
+            }
+          }} className="rounded-full p-2">
             <ArrowLeft size={24} color={currentThemeStyle.text} />
           </Button>
           <Typography variant="h3" style={{ color: currentThemeStyle.text }}>
@@ -438,13 +446,15 @@ export default function ReadPage() {
           <Button variant="ghost" onPress={() => setShowChapterList(true)} className="rounded-full p-2">
             <List size={24} color={currentThemeStyle.text} />
           </Button>
-          <Button 
-            variant="ghost" 
-            onPress={() => setShowSettings(!showSettings)} 
-            className="rounded-full p-2"
-          >
-            <Settings size={24} color={currentThemeStyle.text} />
-          </Button>
+          {story?.format !== 'webtoon' && (
+            <Button 
+              variant="ghost" 
+              onPress={() => setShowSettings(!showSettings)} 
+              className="rounded-full p-2"
+            >
+              <Settings size={24} color={currentThemeStyle.text} />
+            </Button>
+          )}
         </div>
       </div>
 
@@ -457,9 +467,10 @@ export default function ReadPage() {
       </div>
 
       {/* Main Content */}
-      <main className="max-w-2xl mx-auto px-6 py-12">
+      <main className={`${story?.format === 'webtoon' ? 'max-w-3xl w-full px-0' : 'max-w-2xl px-6 py-12'} mx-auto`}>
         <ContentRenderer 
           blocks={chapter.contentBlocks} 
+          isWebtoon={story?.format === 'webtoon'}
           fontSize={fontSize} 
           textColor={currentThemeStyle.text}
           onParagraphCommentClick={openParagraphComments}
@@ -506,8 +517,15 @@ export default function ReadPage() {
           />
         )}
         
+        {/* Maskot Tepkileri */}
+        <ChapterReactions 
+          storyId={storyId} 
+          chapterId={chapterId} 
+          initialCounts={chapter.reactionCounts || {}} 
+        />
+        
         {/* Bölüm Beğeni ve Tartışma Alanı */}
-        <div className="mt-20 pt-8 border-t border-border/20">
+        <div className="mt-12 pt-8 border-t border-border/20">
           <div className="flex flex-col items-center justify-center mb-16 space-y-4">
             <div className="flex items-center gap-6 mb-4 opacity-70" style={{ color: currentThemeStyle.text }}>
               <div className="flex items-center gap-2" title="Okunma">

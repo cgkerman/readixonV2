@@ -11,6 +11,8 @@ import { toast } from 'sonner';
 
 export default function LibraryPage() {
   const [activeTab, setActiveTab] = useState<'reading' | 'saved' | 'quotes'>('reading');
+  const [readingSubTab, setReadingSubTab] = useState<'novels' | 'webtoons'>('novels');
+  const [savedSubTab, setSavedSubTab] = useState<'novels' | 'webtoons'>('novels');
   const [loading, setLoading] = useState(true);
   const [readingStories, setReadingStories] = useState<(Story & { progress?: number })[]>([]);
   const [savedStories, setSavedStories] = useState<Story[]>([]);
@@ -122,7 +124,14 @@ export default function LibraryPage() {
       );
     }
 
-    const items = activeTab === 'reading' ? readingStories : activeTab === 'saved' ? savedStories : savedQuotes;
+    let items: any[] = [];
+    if (activeTab === 'reading') {
+      items = readingStories.filter(s => readingSubTab === 'webtoons' ? s.format === 'webtoon' : s.format !== 'webtoon');
+    } else if (activeTab === 'saved') {
+      items = savedStories.filter(s => savedSubTab === 'webtoons' ? s.format === 'webtoon' : s.format !== 'webtoon');
+    } else {
+      items = savedQuotes;
+    }
 
     if (items.length === 0) {
       return (
@@ -203,32 +212,31 @@ export default function LibraryPage() {
     }
 
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mt-8">
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-4 md:gap-6 mt-8">
         {items.map((item) => {
           const story = item as Story;
           const progress = 'progress' in story ? (story as any).progress : undefined;
           
           return (
-            <div key={story.storyId} className="relative group">
+            <div key={story.storyId} className="relative group transition-transform duration-300 hover:-translate-y-2">
               <StoryCard
                 title={story.title}
                 authorName={story.authorName || `Yazar: ${story.authorId.substring(0, 6)}`}
                 authorUsername={story.authorUsername}
+                authorAvatarUrl={story.authorAvatarUrl}
                 coverImage={story.coverImage}
                 views={story.stats?.views || 0}
                 likes={story.stats?.likes || 0}
                 tags={story.tags || []}
-                onPress={() => router.push(`/story/${generateStorySlug(story.title, story.storyId)}`)}
+                isWebtoon={story.format === 'webtoon'}
+                status={story.status}
+                chapterCount={story.stats?.chapterCount}
+                progress={activeTab === 'reading' ? progress : undefined}
+                onPress={() => {
+                  const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
+                  router.push(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
+                }}
               />
-              {/* Progress Bar for Reading Tab */}
-              {activeTab === 'reading' && progress !== undefined && (
-                <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-background overflow-hidden rounded-b-xl z-20">
-                  <div 
-                    className="h-full bg-primary" 
-                    style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
-                  />
-                </div>
-              )}
             </div>
           );
         })}
@@ -278,6 +286,25 @@ export default function LibraryPage() {
           Alıntılar
         </button>
       </div>
+
+      {(activeTab === 'reading' || activeTab === 'saved') && (
+        <div className="flex items-center gap-2 mt-6">
+          <Button 
+            variant={activeTab === 'reading' ? (readingSubTab === 'novels' ? 'primary' : 'outline') : (savedSubTab === 'novels' ? 'primary' : 'outline')}
+            onPress={() => activeTab === 'reading' ? setReadingSubTab('novels') : setSavedSubTab('novels')}
+            className="rounded-full text-sm py-1.5 px-4"
+          >
+            Hikayeler
+          </Button>
+          <Button 
+            variant={activeTab === 'reading' ? (readingSubTab === 'webtoons' ? 'primary' : 'outline') : (savedSubTab === 'webtoons' ? 'primary' : 'outline')}
+            onPress={() => activeTab === 'reading' ? setReadingSubTab('webtoons') : setSavedSubTab('webtoons')}
+            className="rounded-full text-sm py-1.5 px-4"
+          >
+            Çizgi Romanlar
+          </Button>
+        </div>
+      )}
 
       {renderContent()}
     </div>

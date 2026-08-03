@@ -39,6 +39,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: 'Lobi Yönetimi', href: '/admin/lobby', icon: Trophy },
     { name: 'Sürpriz Kırılma', href: '/admin/curveball', icon: Zap },
     { name: 'Şikayetler', href: '/admin/reports', icon: Flag },
+    { name: 'Değerlendirmeler', href: '/admin/feedbacks', icon: HelpCircle },
     { name: 'Duyurular', href: '/admin/announcements', icon: BellRing },
     { name: 'Ayarlar', href: '/admin/settings', icon: Settings },
   ];

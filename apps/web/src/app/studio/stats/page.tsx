@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { Typography, Card } from '@readixon/ui';
-import { BarChart3, Eye, Heart, MessageSquare, TrendingUp, BookOpen, Star } from 'lucide-react';
+import { BarChart3, Eye, Heart, MessageSquare, TrendingUp, BookOpen, Star, Images } from 'lucide-react';
 import { subscribeToAuthorStories, getPublishedChapters, useAuthStore, type Story } from '@readixon/core';
 
 export default function StudioStats() {
@@ -47,12 +47,14 @@ export default function StudioStats() {
   }, [stories]);
 
   // Aggregated Stats
-  const { totalViews, totalLikes, totalReviews, totalStories, avgRating } = useMemo(() => {
+  const { totalViews, totalLikes, totalReviews, totalNovels, totalWebtoons, avgRating } = useMemo(() => {
     let views = 0;
     let likes = 0;
     let reviews = 0;
     let totalRating = 0;
     let ratedStoriesCount = 0;
+    let novels = 0;
+    let webtoons = 0;
 
     stories.forEach(story => {
       views += story.stats.views || 0;
@@ -63,13 +65,16 @@ export default function StudioStats() {
         totalRating += story.stats.rating;
         ratedStoriesCount += 1;
       }
+      if (story.format === 'webtoon') webtoons++;
+      else novels++;
     });
 
     return {
       totalViews: views,
       totalLikes: likes,
       totalReviews: reviews,
-      totalStories: stories.length,
+      totalNovels: novels,
+      totalWebtoons: webtoons,
       avgRating: ratedStoriesCount > 0 ? (totalRating / ratedStoriesCount).toFixed(1) : '0.0'
     };
   }, [stories]);
@@ -111,35 +116,48 @@ export default function StudioStats() {
         <div className="flex flex-col gap-8 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
           
           {/* Main KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatCard 
-              icon={<Eye size={24} className="text-primary" />} 
-              label="Toplam Okunma" 
-              value={totalViews.toLocaleString('tr-TR')} 
-              bgColor="bg-primary/10"
-              borderColor="border-primary/20"
-            />
-            <StatCard 
-              icon={<Heart size={24} className="text-primary" />} 
-              label="Toplam Beğeni" 
-              value={totalLikes.toLocaleString('tr-TR')} 
-              bgColor="bg-primary/10"
-              borderColor="border-primary/20"
-            />
-            <StatCard 
-              icon={<MessageSquare size={24} className="text-primary" />} 
-              label="Yorum & İnceleme" 
-              value={(totalReviews + globalTotalComments).toLocaleString('tr-TR')} 
-              bgColor="bg-primary/10"
-              borderColor="border-primary/20"
-            />
-            <StatCard 
-              icon={<BookOpen size={24} className="text-primary" />} 
-              label="Yayınlanan Hikaye" 
-              value={totalStories.toString()} 
-              bgColor="bg-primary/10"
-              borderColor="border-primary/20"
-            />
+          <div className="flex flex-col gap-6">
+            {/* Top Row (3 Items) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <StatCard 
+                icon={<Eye size={24} className="text-primary" />} 
+                label="Toplam Okunma" 
+                value={totalViews.toLocaleString('tr-TR')} 
+                bgColor="bg-primary/10"
+                borderColor="border-primary/20"
+              />
+              <StatCard 
+                icon={<Heart size={24} className="text-primary" />} 
+                label="Toplam Beğeni" 
+                value={totalLikes.toLocaleString('tr-TR')} 
+                bgColor="bg-primary/10"
+                borderColor="border-primary/20"
+              />
+              <StatCard 
+                icon={<MessageSquare size={24} className="text-primary" />} 
+                label="Yorum & İnceleme" 
+                value={(totalReviews + globalTotalComments).toLocaleString('tr-TR')} 
+                bgColor="bg-primary/10"
+                borderColor="border-primary/20"
+              />
+            </div>
+            {/* Bottom Row (2 Items - Centered) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full md:w-[66.666%] mx-auto">
+              <StatCard 
+                icon={<BookOpen size={24} className="text-primary" />} 
+                label="Yayınlanan Roman" 
+                value={totalNovels.toString()} 
+                bgColor="bg-primary/10"
+                borderColor="border-primary/20"
+              />
+              <StatCard 
+                icon={<Images size={24} className="text-primary" />} 
+                label="Yayınlanan Webtoon" 
+                value={totalWebtoons.toString()} 
+                bgColor="bg-primary/10"
+                borderColor="border-primary/20"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-4">
@@ -169,7 +187,12 @@ export default function StudioStats() {
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <Typography variant="body" className="font-bold truncate mb-1">{story.title}</Typography>
+                          <Typography variant="body" className="font-bold truncate mb-1 flex items-center gap-2">
+                            {story.title}
+                            <span className="px-2 py-0.5 text-[10px] font-black rounded-md bg-primary/10 text-primary uppercase tracking-wider shrink-0 border border-primary/20">
+                              {story.format === 'webtoon' ? 'Webtoon' : 'Roman'}
+                            </span>
+                          </Typography>
                           <Typography variant="caption" className="text-muted flex items-center gap-2 mb-2">
                             {story.status === 'ongoing' || story.status === 'completed' ? (
                               <span className="w-2 h-2 rounded-full bg-primary" />

@@ -47,6 +47,18 @@ export interface User {
   username: string;
   displayName: string;
   avatarUrl: string;
+  coverUrl?: string;
+  socials?: {
+    twitter?: string;
+    instagram?: string;
+    tiktok?: string;
+    website?: string;
+    linkedin?: string;
+    youtube?: string;
+  };
+  pinnedStoryId?: string; // Profilde vitrin olarak sergilenecek hikaye/webtoon ID'si
+  authorQuote?: string; // Yazarın Sözü (Profildeki estetik şerit için)
+  location?: string; // Kullanıcının konumu
   bio: string;
   preferredGenres: string[];
   stats: UserStats;
@@ -103,6 +115,7 @@ export interface Story {
   title: string;
   summary: string;
   coverImage: string;
+  trailerVideoUrl?: string;
   tags: string[];
   isAdultContent?: boolean;
   stats: StoryStats;
@@ -116,7 +129,16 @@ export interface Story {
   status: StoryStatus;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  format?: 'novel' | 'webtoon';
 }
+
+export type StoryWithLatestChapter = Story & {
+  latestChapter?: {
+    title: string;
+    excerpt: string;
+    order?: number;
+  };
+};
 
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // 3.3. BÃ¶lÃ¼mler (/stories/{storyId}/chapters/{chapterId})
@@ -170,6 +192,7 @@ export interface Chapter {
   publishDate: Timestamp;
   status?: 'draft' | 'published' | 'scheduled';
   stats?: ChapterStats;
+  reactionCounts?: Record<string, number>;
   endActivity?: ChapterActivity;
 }
 
@@ -257,6 +280,7 @@ export interface Readix {
   content: string; // GÃ¶nderi metni
   mediaUrls?: string[]; // Varsa gÃ¶rseller
   linkedStoryId?: string; // GÃ¶nderiye konu olan kitap/hikaye
+  linkedStory?: any; // (Client-side) GÃ¶nderiye konu olan kitap/hikaye nesnesi
   tags?: string[]; // Metinden Ã§Ä±karÄ±lan hashtagler
   mentions?: string[]; // Bahsedilen kullanÄ±cÄ±lar (@kullaniciadi)
   poll?: ReadixPoll; // Eger anket varsa
@@ -700,5 +724,17 @@ export interface AdminQuote {
   text: string;
   author: string;
   isActive: boolean;
+  createdAt: Timestamp;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Platform Feedback
+// ─────────────────────────────────────────────────────────────────
+
+export interface PlatformFeedbackType {
+  id: string;
+  rating: number;
+  comment: string;
+  userId: string;
   createdAt: Timestamp;
 }

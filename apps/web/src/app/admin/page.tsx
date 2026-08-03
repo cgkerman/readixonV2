@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Typography } from '@readixon/ui';
-import { Users, BookOpen, Feather, Hash, Activity } from 'lucide-react';
+import { Users, BookOpen, Feather, Hash, MessageSquareHeart } from 'lucide-react';
 import { getPlatformStats, PlatformStats } from '@readixon/core';
 import Link from 'next/link';
 import { ActivityChart } from './components/ActivityChart';
@@ -30,6 +30,7 @@ export default function AdminDashboardPage() {
     { title: 'Hikayeler', value: stats?.totalStories ?? 0, icon: BookOpen, color: 'text-green-500', bg: 'bg-green-500/10', href: '/admin/stories' },
     { title: 'Düellolar', value: stats?.totalDuels ?? 0, icon: Feather, color: 'text-orange-500', bg: 'bg-orange-500/10' },
     { title: "Readix'ler", value: stats?.totalReadixes ?? 0, icon: Hash, color: 'text-purple-500', bg: 'bg-purple-500/10', href: '/admin/readixes' },
+    { title: 'Değerlendirmeler', value: stats?.totalFeedbacks ?? 0, icon: MessageSquareHeart, color: 'text-rose-500', bg: 'bg-rose-500/10', href: '/admin/feedbacks' },
   ];
 
   return (
