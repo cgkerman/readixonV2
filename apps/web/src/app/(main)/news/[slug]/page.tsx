@@ -4,6 +4,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { notFound } from 'next/navigation';
 import { Typography, Button } from '@readixon/ui';
 import Link from 'next/link';
+import { NewsViewTracker } from './NewsViewTracker';
 
 // Type representing the params object
 type Props = {
@@ -70,6 +71,7 @@ export default async function NewsDetailPage({ params }: Props) {
 
   return (
     <main className="min-h-screen bg-background">
+      <NewsViewTracker id={news.id} />
       {/* Header Section */}
       <section className="pt-24 pb-8 max-w-4xl mx-auto px-6 md:px-12">
         <div className="mb-6 flex flex-wrap items-center gap-4">

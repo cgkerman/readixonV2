@@ -1,4 +1,4 @@
-import { collection, query, where, orderBy, getDocs, getDoc, limit, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, getDoc, limit, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, runTransaction, increment } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { Announcement, AdminPoll, AdminQuote, HeroBanner } from '../types';
 
@@ -123,6 +123,7 @@ export const createAnnouncement = async (data: Omit<Announcement, 'id' | 'create
     const docData = {
       ...data,
       id: newRef.id,
+      views: 0,
       createdAt: serverTimestamp()
     };
     await setDoc(newRef, docData);
@@ -159,6 +160,20 @@ export const deleteAnnouncement = async (id: string): Promise<void> => {
   } catch (error) {
     console.error("Duyuru silinirken hata:", error);
     throw error;
+  }
+};
+
+/**
+ * Duyuru görüntülenme sayısını 1 artırır.
+ */
+export const incrementAnnouncementViews = async (id: string): Promise<void> => {
+  try {
+    const ref = doc(db, 'announcements', id);
+    await updateDoc(ref, {
+      views: increment(1)
+    });
+  } catch (error) {
+    console.error("Duyuru görüntülenme sayısı artırılırken hata:", error);
   }
 };
 

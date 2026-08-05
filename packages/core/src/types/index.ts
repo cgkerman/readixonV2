@@ -314,6 +314,7 @@ export interface Announcement {
   imageUrl?: string; // İsteğe bağlı görsel
   category?: 'system' | 'culture' | 'event'; // Haber/Duyuru kategorisi
   isActive: boolean; // Yayında olup olmadığı
+  views?: number; // Okunma/görüntülenme sayısı
   publishAt?: Timestamp; // Otomatik yayınlama zamanı (opsiyonel)
   expireAt?: Timestamp; // Otomatik yayından kalkma zamanı (opsiyonel)
   createdAt: Timestamp;

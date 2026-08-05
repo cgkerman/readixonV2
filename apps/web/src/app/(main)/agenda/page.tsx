@@ -56,6 +56,7 @@ export default function AgendaPage() {
           setCultureNews(newsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
         }
 
+
         const topStories = await getTopStories(10);
         if (!topStories || topStories.length === 0) {
           setPopularBooks([
@@ -211,12 +212,16 @@ export default function AgendaPage() {
                       {cultureNews[0].title}
                     </Typography>
                     
-                    <div className="flex items-center gap-3 text-white/80 text-sm md:text-base font-medium">
+                    <div className="flex items-center gap-4 text-white/80 text-sm md:text-base font-medium">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0">
                           <span className="text-xs text-white">R</span>
                         </div>
                         <span>Readix Kültür Sanat</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-white/70">
+                        <Eye size={18} />
+                        <span>{cultureNews[0].views?.toLocaleString('tr-TR') || cultureNews[0].stats?.views?.toLocaleString('tr-TR') || 0}</span>
                       </div>
                     </div>
                   </div>
@@ -253,11 +258,17 @@ export default function AgendaPage() {
                           {news.title}
                         </Typography>
                         
-                        <div className="flex items-center gap-2 text-white/70 text-xs font-medium">
-                          <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center shrink-0">
-                            <span className="text-[10px] text-white">R</span>
+                        <div className="flex items-center justify-between w-full">
+                          <div className="flex items-center gap-2 text-white/70 text-xs font-medium">
+                            <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                              <span className="text-[10px] text-white">R</span>
+                            </div>
+                            <span>Readix</span>
                           </div>
-                          <span>Readix</span>
+                          <div className="flex items-center gap-1.5 text-white/70 text-xs font-medium">
+                            <Eye size={14} />
+                            <span>{news.views?.toLocaleString('tr-TR') || news.stats?.views?.toLocaleString('tr-TR') || 0}</span>
+                          </div>
                         </div>
                       </div>
                     </Link>
