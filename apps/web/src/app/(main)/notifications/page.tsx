@@ -70,6 +70,7 @@ export default function NotificationsPage() {
         }
         break;
       case 'story_like':
+      case 'comment_like':
       case 'story_comment':
       case 'paragraph_comment':
       case 'new_chapter':
@@ -120,6 +121,7 @@ export default function NotificationsPage() {
         return <div className="w-10 h-10 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center shrink-0"><UserPlus size={20} /></div>;
       case 'story_like':
       case 'chapter_like':
+      case 'comment_like':
       case 'readix_like':
         return <div className="w-10 h-10 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center shrink-0"><Heart size={20} /></div>;
       case 'story_comment':
@@ -152,6 +154,8 @@ export default function NotificationsPage() {
         return <>{actor} seni takip etmeye başladı.</>;
       case 'story_like':
         return <>{actor}, {entity} hikayeni beğendi.</>;
+      case 'comment_like':
+        return <>{actor}, {entity} yorumunu beğendi.</>;
       case 'chapter_like':
         return <>{actor}, {entity} hikayenin {notif.subEntityTitle ? `"${notif.subEntityTitle}" bölümünü` : 'bir bölümünü'} beğendi.</>;
       case 'story_comment':

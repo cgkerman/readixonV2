@@ -349,6 +349,7 @@ export type NotificationType =
   | 'story_like' 
   | 'chapter_like'
   | 'story_comment' 
+  | 'comment_like'
   | 'chapter_activity'
   | 'paragraph_comment'
   | 'readix_like' 

@@ -537,7 +537,7 @@ export default function ProfilePage() {
     <div className="flex-1 pb-20">
       {/* Kapak Görseli ve Profil Bilgileri */}
       <div className="relative">
-        <div className="h-48 md:h-64 w-full relative overflow-hidden bg-gradient-to-r from-primary/20 via-purple-500/10 to-primary/5">
+        <div className="w-full aspect-[3/1] relative overflow-hidden bg-gradient-to-r from-primary/20 via-purple-500/10 to-primary/5">
           {profileUser.coverUrl && (
             <img src={profileUser.coverUrl} alt="Cover" className="absolute inset-0 w-full h-full object-cover" />
           )}

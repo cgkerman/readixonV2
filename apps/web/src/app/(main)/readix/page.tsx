@@ -502,6 +502,17 @@ function ReadixContent() {
     setReadixes(prev => prev.map(r => r.id === selectedReadix.id ? { ...r, stats: { ...r.stats, comments: (r.stats?.comments || 0) + 1 } } : r));
   };
 
+  // Character Limit Logic
+  const plainTextContent = newContent.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+  const charCount = plainTextContent.length;
+  const maxChars = 500;
+  const isOverLimit = charCount > maxChars;
+  
+  const circleRadius = 10;
+  const circleCircumference = 2 * Math.PI * circleRadius;
+  const strokeDashoffset = circleCircumference - (Math.min(charCount / maxChars, 1)) * circleCircumference;
+  const isWarning = charCount >= maxChars - 20;
+
   return (
     <div className="flex-1 flex flex-col md:flex-row max-w-5xl mx-auto w-full p-0 md:p-6 lg:p-10">
       
@@ -553,7 +564,7 @@ function ReadixContent() {
                 </div>
               )}
             </div>
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col min-w-0">
               <div className="relative">
                 <ContentEditable
                   innerRef={contentEditableRef}
@@ -770,10 +781,49 @@ function ReadixContent() {
                   </div>
                 </div>
                 
-                <Button 
-                  variant="primary" 
-                  className="!p-0 aspect-square w-11 h-11 rounded-full shrink-0 ml-auto flex items-center justify-center"
-                  disabled={isPosting || (!newContent.trim() && selectedFiles.length === 0 && !pollActive)}
+                <div className="ml-auto flex items-center gap-2">
+                  {/* Character Limit Ring */}
+                  {charCount > 0 && (
+                    <div className="flex items-center">
+                      <div className="relative flex items-center justify-center transition-all duration-300 w-8 h-8">
+                        <svg className="w-full h-full transform -rotate-90 overflow-visible" viewBox="0 0 24 24">
+                          <circle
+                            cx="12"
+                            cy="12"
+                            r={circleRadius}
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className="text-white/10"
+                          />
+                          <circle
+                            cx="12"
+                            cy="12"
+                            r={circleRadius}
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeDasharray={circleCircumference}
+                            strokeDashoffset={strokeDashoffset}
+                            strokeLinecap="round"
+                            className={`transition-all duration-300 ease-out ${
+                              isOverLimit ? 'text-red-500' : isWarning ? 'text-yellow-500' : 'text-primary'
+                            }`}
+                          />
+                        </svg>
+                        
+                        <span className={`absolute text-[10px] font-bold ${isOverLimit ? 'text-red-500' : isWarning ? 'text-yellow-500' : 'text-muted'}`}>
+                          {maxChars - charCount}
+                        </span>
+                      </div>
+                      <div className="h-6 w-px bg-white/10 mx-3"></div>
+                    </div>
+                  )}
+
+                  <Button 
+                    variant="primary" 
+                    className="!p-0 aspect-square w-11 h-11 rounded-full shrink-0 flex items-center justify-center"
+                    disabled={isPosting || (!newContent.trim() && selectedFiles.length === 0 && !pollActive) || isOverLimit}
                   onPress={handlePost}
                   title="Paylaş"
                 >
@@ -782,7 +832,8 @@ function ReadixContent() {
                   ) : (
                     <Send size={20} className="ml-[-2px]" />
                   )}
-                </Button>
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

@@ -372,15 +372,13 @@ export const toggleChapterCommentLike = async (userId: string, storyId: string, 
         
         if (commentSnap.exists() && userProfile) {
           const commentData = commentSnap.data();
-          const isParagraph = commentData.type === 'paragraph';
-          
           await createNotification({
             userId: commentData.userId,
             actorId: userId,
             actorName: userProfile.displayName,
             actorAvatar: userProfile.avatarUrl,
             actorUsername: userProfile.username,
-            type: isParagraph ? 'paragraph_comment' : 'story_comment',
+            type: 'comment_like',
             entityId: storyId,
             entityTitle: commentData.text.substring(0, 30) + (commentData.text.length > 30 ? '...' : ''),
             subEntityId: chapterId
