@@ -294,7 +294,7 @@ export default function WebtoonDetailPage() {
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
         </div>
 
-        <div className="relative z-10 w-full max-w-6xl mx-auto px-4 md:px-8 pt-32 md:pt-40 pb-8 flex flex-col md:flex-row items-center md:items-end text-center md:text-left gap-6 md:gap-8">
+        <div className="relative z-10 w-full max-w-6xl mx-auto px-4 md:px-8 pt-32 md:pt-40 pb-8 flex flex-col xl:flex-row items-center xl:items-end text-center xl:text-left gap-6 md:gap-8">
           {/* Main Cover Image */}
           <div className="w-40 md:w-64 shrink-0 rounded-xl overflow-hidden border-4 border-background shadow-2xl relative aspect-[2/3] bg-muted">
             <img src={story.coverImage} alt={story.title} className="w-full h-full object-cover" />
@@ -303,8 +303,8 @@ export default function WebtoonDetailPage() {
             </div>
           </div>
           
-          <div className="flex-1 pb-2 w-full flex flex-col items-center md:items-start">
-            <div className="flex flex-wrap gap-2 mb-3 justify-center md:justify-start">
+          <div className="flex-1 pb-2 w-full flex flex-col items-center xl:items-start">
+            <div className="flex flex-wrap gap-2 mb-3 justify-center xl:justify-start">
               <span className="px-3 py-1 bg-background/80 backdrop-blur-md text-text text-xs font-bold rounded-full border border-border/50 shadow-sm">
                 {story.status === 'completed' ? 'Tamamlandı' : story.status === 'ongoing' ? 'Devam Ediyor' : 'Taslak'}
               </span>
@@ -327,13 +327,13 @@ export default function WebtoonDetailPage() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <span className="text-sm md:text-base font-bold text-primary uppercase">
+                    <span className="text-sm xl:text-base font-bold text-primary uppercase">
                       {author.displayName?.charAt(0) || author.username?.charAt(0) || 'U'}
                     </span>
                   )}
                 </div>
                 <div className="flex flex-col text-left">
-                  <span className="text-sm md:text-base font-bold text-text group-hover:text-primary transition-colors">{author.displayName}</span>
+                  <span className="text-sm xl:text-base font-bold text-text group-hover:text-primary transition-colors">{author.displayName}</span>
                   <span className="text-xs text-muted-foreground font-medium">@{author.username}</span>
                 </div>
               </Link>
@@ -341,7 +341,7 @@ export default function WebtoonDetailPage() {
 
             {/* Tags / Genres */}
             {story.tags && story.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mb-2 justify-center md:justify-start max-w-sm md:max-w-none">
+              <div className="flex flex-wrap gap-1.5 mb-2 justify-center xl:justify-start max-w-sm xl:max-w-none">
                 {story.tags.map(t => (
                   <Link href={`/search?tag=${t}`} key={t}>
                     <span className="px-2.5 py-1 bg-background/50 backdrop-blur-md border border-border/20 text-text hover:bg-primary hover:text-primary-foreground hover:border-primary/50 transition-all rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm block">
@@ -352,7 +352,7 @@ export default function WebtoonDetailPage() {
               </div>
             )}
             
-            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 mt-6 w-full max-w-sm mx-auto md:mx-0 md:max-w-none">
+            <div className="flex flex-col xl:flex-row items-stretch xl:items-center gap-3 mt-6 w-full max-w-sm mx-auto xl:mx-0 xl:max-w-none">
               <Button variant="primary" onPress={() => chapters.length > 0 && router.push(`/read/${storyId}/${chapters[0].chapterId}`)} className="w-full md:w-auto shadow-lg shadow-primary/20 text-base md:px-8 py-3">
                 <BookOpen size={20} className="mr-2" /> İlk Episodu Oku
               </Button>
@@ -389,7 +389,7 @@ export default function WebtoonDetailPage() {
       </div>
 
       {/* Main Content Layout */}
-      <div className="w-full max-w-6xl mx-auto px-4 md:px-8 py-12 flex flex-col md:flex-row gap-12">
+      <div className="w-full max-w-6xl mx-auto px-4 md:px-8 py-12 flex flex-col xl:flex-row gap-12">
         
         {/* Left Column (Content) */}
         <div className="flex-1 flex flex-col gap-12">
@@ -519,7 +519,7 @@ export default function WebtoonDetailPage() {
         </div>
 
         {/* Right Column (Sidebar) */}
-        <div className="w-full md:w-80 lg:w-96 shrink-0 flex flex-col gap-8">
+        <div className="w-full xl:w-80 2xl:w-96 shrink-0 flex flex-col gap-8">
           
 
 

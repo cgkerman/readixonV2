@@ -4,12 +4,21 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Typography } from '@readixon/ui';
-import { BookOpen, PenTool, BarChart3, ArrowLeft, Users, GalleryVertical } from 'lucide-react';
+import { BookOpen, PenTool, BarChart3, ArrowLeft, Users, GalleryVertical, Menu } from 'lucide-react';
 import { useAuthStore } from '@readixon/core';
 
 export default function StudioLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { firebaseUser, userProfile, isLoading } = useAuthStore();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+
+  const studioNavItems = [
+    { name: 'Romanlarım', href: '/studio', icon: BookOpen },
+    { name: 'Webtoon', href: '/studio/webtoons', icon: GalleryVertical },
+    { name: 'İstatistik', href: '/studio/stats', icon: BarChart3 },
+    { name: 'Karakterler', href: '/studio/characters', icon: Users },
+    { name: 'Akademi', href: '/studio/academy', icon: PenTool },
+  ];
 
   if (isLoading) {
     return (
@@ -45,9 +54,9 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
   }
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-[100dvh] bg-background overflow-hidden relative">
       {/* Studio Sidebar */}
-      <aside className="w-64 border-r border-border/10 bg-card/30 flex flex-col hidden md:flex">
+      <aside className="w-64 border-r border-border/10 bg-card/30 flex-col hidden xl:flex transition-all duration-300">
         <div className="p-6 border-b border-border/10">
           <Link href="/studio" className="flex items-center gap-2">
             <PenTool className="text-primary" size={24} />
@@ -105,9 +114,35 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto flex flex-col">
+        {/* ── Mobile Top Header ── */}
+        <div className="xl:hidden sticky top-0 z-40 flex items-center justify-between p-4 bg-background/80 backdrop-blur-md border-b border-border/10 shrink-0">
+          <div className="flex items-center gap-2">
+            <PenTool className="text-primary" size={20} />
+            <Typography variant="h3" className="font-bold text-primary tracking-tighter">stüdyo</Typography>
+          </div>
+          <Link href="/feed" className="text-muted hover:text-text transition-colors flex items-center gap-1">
+            <Typography variant="caption" className="font-semibold">Okuyucuya Dön</Typography>
+          </Link>
+        </div>
+
         {children}
       </main>
+
+      {/* ── Bottom Nav (Mobile/Tablet) ── */}
+      <div className="xl:hidden fixed bottom-0 left-0 right-0 h-16 bg-card/90 backdrop-blur-xl border-t border-border/10 flex items-center justify-around px-2 z-50 pb-safe">
+        {studioNavItems.map((item) => {
+          const isActive = pathname === item.href || (item.href !== '/studio' && pathname.includes(item.href));
+          return (
+            <Link key={item.href} href={item.href} className="flex flex-col items-center justify-center w-16 h-full relative">
+              <item.icon size={22} className={isActive ? 'text-primary' : 'text-muted'} />
+              <Typography variant="caption" className={`text-[9px] font-bold mt-1 ${isActive ? 'text-primary' : 'text-muted'}`}>
+                {item.name}
+              </Typography>
+            </Link>
+          );
+        })}
+      </div>
     </div>
   );
 }

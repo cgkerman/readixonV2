@@ -411,6 +411,8 @@ export interface Chat {
   lastMessage: string;
   lastMessageAt: Timestamp | null;
   unreadCounts: Record<string, number>; // uid -> unread count
+  lastSeenAt?: Record<string, Timestamp>; // uid -> last seen timestamp for read receipts
+  typingStatuses?: Record<string, Timestamp>; // uid -> last typing timestamp
   status: ChatStatus;
   requestedBy: string; // UID of the user who initiated the chat
   createdAt: Timestamp;
@@ -420,6 +422,14 @@ export interface Message {
   id: string;
   senderId: string;
   text: string;
+  imageUrl?: string;
+  audioUrl?: string;
+  linkedStory?: {
+    id: string;
+    title: string;
+    coverUrl?: string;
+    authorName?: string;
+  };
   isRead: boolean;
   createdAt: Timestamp;
 }

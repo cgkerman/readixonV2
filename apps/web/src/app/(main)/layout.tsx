@@ -202,7 +202,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   return (
     <div className="flex h-[100dvh] bg-background overflow-hidden">
       {/* ── Sidebar (Desktop) ── */}
-      <aside className="hidden md:flex w-64 flex-col border-r border-border/50 bg-card/20 p-6">
+      <aside className="hidden xl:flex flex-col border-r border-border/50 bg-card/20 w-64 p-6 transition-all duration-300">
         <Typography variant="h2" className="font-bold text-primary tracking-tighter mb-10">readixon</Typography>
 
         <nav className="flex-1 flex flex-col gap-2">
@@ -212,10 +212,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors relative ${isActive ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-card hover:text-text'
+                className={`flex items-center gap-3 py-3 rounded-xl transition-colors relative group px-4 ${isActive ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-card hover:text-text'
                   }`}
               >
-                <item.icon size={20} />
+                <item.icon size={22} className="shrink-0" />
                 <Typography variant="body" className="font-medium flex-1">{item.name}</Typography>
               </Link>
             );
@@ -227,10 +227,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors relative ${isActive ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-card hover:text-text'
+                className={`flex items-center gap-3 py-3 rounded-xl transition-colors relative group px-4 ${isActive ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-card hover:text-text'
                   }`}
               >
-                <item.icon size={20} />
+                <item.icon size={22} className="shrink-0" />
                 <Typography variant="body" className="font-medium flex-1">{item.name}</Typography>
                 {item.badge ? (
                   <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full absolute right-4">
@@ -246,7 +246,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           {firebaseUser ? (
             <>
               <Link href="/profile" className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-card/50 transition-colors group cursor-pointer">
-                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden border border-transparent group-hover:border-primary/30 transition-colors">
+                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden border border-transparent group-hover:border-primary/30 transition-colors shrink-0">
                   {userProfile?.avatarUrl ? (
                     <img src={userProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
@@ -336,7 +336,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none -z-10" />
 
         {/* ── Mobile Top Header ── */}
-        <div className="md:hidden sticky top-0 z-40 flex items-center justify-between p-4 bg-background/80 backdrop-blur-md border-b border-border/50 shrink-0">
+        <div className="xl:hidden sticky top-0 z-40 flex items-center justify-between p-4 bg-background/80 backdrop-blur-md border-b border-border/50 shrink-0">
           <Typography variant="h3" className="font-bold text-primary tracking-tighter">readixon</Typography>
           <div className="flex items-center gap-5">
             <Link href="/messages" className="relative">
@@ -366,7 +366,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
       {/* ── Bottom Nav (Mobile) ── */}
       {!(pathname.startsWith('/messages/') && pathname.split('/').length > 2) && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-card/90 backdrop-blur-xl border-t border-border/50 flex items-center justify-around px-2 z-50 pb-safe">
+        <div className="xl:hidden fixed bottom-0 left-0 right-0 h-16 bg-card/90 backdrop-blur-xl border-t border-border/50 flex items-center justify-around px-2 z-50 pb-safe">
           {topNavItems.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -454,7 +454,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
       {/* ── Mobile Slide-out Drawer ── */}
       {isMobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-[100] flex justify-end">
+        <div className="xl:hidden fixed inset-0 z-[100] flex justify-end">
           <div className="absolute inset-0 bg-background/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsMobileMenuOpen(false)} />
           <div className="relative w-[80%] max-w-sm h-[100dvh] bg-card shadow-2xl flex flex-col border-l border-border/50 animate-in slide-in-from-right duration-300">
             <div className="flex items-center justify-between p-4 border-b border-border/50 shrink-0">

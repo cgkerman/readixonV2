@@ -53,4 +53,6 @@ export type { BlockEditorProps } from './BlockEditor';
 export * from './PaywallModal';
 export * from './BadgeCard';
 export * from './HorizontalStoryCard';
+export * from './ConfirmationDialog';
 export * from './StorySearchModal';
+export * from './CustomAudioPlayer';

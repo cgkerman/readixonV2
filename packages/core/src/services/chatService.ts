@@ -130,7 +130,7 @@ export function subscribeToMessages(chatId: string, callback: (messages: Message
 /**
  * Sends a new message in a chat.
  */
-export async function sendMessage(chatId: string, senderId: string, text: string): Promise<void> {
+export async function sendMessage(chatId: string, senderId: string, text: string, imageUrl?: string, linkedStory?: any, audioUrl?: string): Promise<void> {
   const chatRef = doc(db, CHATS_COLLECTION, chatId);
   const chatSnap = await getDoc(chatRef);
   
@@ -143,13 +143,26 @@ export async function sendMessage(chatId: string, senderId: string, text: string
 
   const messagesRef = collection(db, `${CHATS_COLLECTION}/${chatId}/messages`);
   
-  // 1. Add message
-  await addDoc(messagesRef, {
+  const messageData: any = {
     senderId,
     text,
     isRead: false,
     createdAt: serverTimestamp()
-  });
+  };
+  
+  if (imageUrl) {
+    messageData.imageUrl = imageUrl;
+  }
+  
+  if (linkedStory) {
+    messageData.linkedStory = linkedStory;
+  }
+  
+  if (audioUrl) {
+    messageData.audioUrl = audioUrl;
+  }
+
+  await addDoc(messagesRef, messageData);
 
   // 2. Update chat metadata
   await updateDoc(chatRef, {
@@ -165,7 +178,22 @@ export async function sendMessage(chatId: string, senderId: string, text: string
 export async function markChatAsRead(chatId: string, uid: string): Promise<void> {
   const chatRef = doc(db, CHATS_COLLECTION, chatId);
   await updateDoc(chatRef, {
-    [`unreadCounts.${uid}`]: 0
+    [`unreadCounts.${uid}`]: 0,
+    [`lastSeenAt.${uid}`]: serverTimestamp()
+  });
+}
+
+/**
+ * Updates the typing status for a user in a chat.
+ */
+export async function updateTypingStatus(chatId: string, uid: string, isTyping: boolean): Promise<void> {
+  const chatRef = doc(db, CHATS_COLLECTION, chatId);
+  
+  // We use the firestore field delete instead of keeping old timestamps 
+  // or we can just set it to null. Firebase 'deleteField' is imported if needed.
+  // Wait, I haven't imported deleteField. Let's just set to null if not typing.
+  await updateDoc(chatRef, {
+    [`typingStatuses.${uid}`]: isTyping ? serverTimestamp() : null
   });
 }
 

@@ -318,7 +318,7 @@ export default function FeedPage() {
     <div className="flex flex-col w-full pb-24 md:pb-10 bg-background overflow-x-hidden">
 
       {/* ── 1. Hero Banner (Carousel) ── */}
-      <div className="relative w-full min-h-[65vh] md:min-h-[70vh] flex flex-col justify-center mb-16 overflow-hidden">
+      <div className="relative w-full min-h-[50vh] md:min-h-[70vh] flex flex-col justify-center mb-10 md:mb-16 overflow-hidden">
         {/* Bulanık Arka Plan Görseli */}
         {activeSlide?.image ? (
           <div className="absolute inset-0 z-0 overflow-hidden">
@@ -336,7 +336,7 @@ export default function FeedPage() {
         )}
 
         {/* Hero İçerik (Kapak Resmi + Metinler) */}
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 md:px-16 pt-16 pb-24 md:py-24 flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16">
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-16 pt-10 pb-16 md:py-24 flex flex-col md:flex-row items-center justify-center gap-5 md:gap-16">
 
           {/* Sol/Üst Kısım: Net Kapak Resmi */}
           <div
@@ -358,7 +358,7 @@ export default function FeedPage() {
           </div>
 
           {/* Sağ/Alt Kısım: Metinler ve Butonlar */}
-          <div key={`content-${activeSlide?.id}`} className="flex-1 flex flex-col items-center md:items-start text-center md:text-left animate-in fade-in slide-in-from-bottom-8 duration-700" style={{ animationDelay: '100ms' }}>
+          <div key={`content-${activeSlide?.id}`} className="w-full md:flex-1 flex flex-col items-center md:items-start text-center md:text-left animate-in fade-in slide-in-from-bottom-8 duration-700" style={{ animationDelay: '100ms' }}>
             <div className="flex items-center gap-2 mb-4">
               {activeSlide?.badge && (
                 <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-1.5 border border-primary/30 shadow-lg">
@@ -368,29 +368,29 @@ export default function FeedPage() {
               )}
             </div>
 
-            <Typography variant="h1" className="text-3xl md:text-5xl lg:text-6xl font-black text-text mb-4 leading-tight drop-shadow-2xl">
+            <Typography variant="h1" className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black text-text mb-3 leading-tight drop-shadow-2xl">
               {activeSlide?.title || "Okunmaya Değer Başyapıtlar"}
             </Typography>
 
-            <Typography variant="body" className="text-sm md:text-lg lg:text-xl text-text/80 mb-8 line-clamp-4 drop-shadow-md max-w-2xl">
+            <Typography variant="body" className="text-xs sm:text-sm md:text-lg lg:text-xl text-text/80 mb-6 line-clamp-3 md:line-clamp-4 drop-shadow-md max-w-2xl px-2 md:px-0">
               {activeSlide?.summary || "Farklı dünyalara yelken açmak ve yeni serüvenlere atılmak için binlerce hikaye arasından sizin için seçtiklerimizi keşfedin."}
             </Typography>
 
-            <div className="flex flex-row flex-wrap justify-center md:justify-start gap-3 md:gap-4 w-full">
+            <div className="flex flex-row flex-wrap justify-center md:justify-start gap-2.5 md:gap-4 w-full px-2 md:px-0">
               {activeSlide?.primaryLabel && (
                 <Button
                   variant="primary"
-                  className="rounded-full flex-1 md:flex-none min-w-[140px] px-6 py-3.5 md:py-6 text-sm md:text-lg shadow-primary/30 shadow-lg font-bold flex items-center justify-center gap-2"
+                  className="rounded-full flex-1 md:flex-none min-w-[120px] px-4 py-2.5 md:px-6 md:py-6 text-xs sm:text-sm md:text-lg shadow-primary/30 shadow-lg font-bold flex items-center justify-center gap-1.5 md:gap-2"
                   onPress={activeSlide.primaryAction}
                 >
-                  {activeSlide.type === 'story' && <Play size={20} className="fill-current" />}
+                  {activeSlide.type === 'story' && <Play size={16} className="md:w-5 md:h-5 fill-current" />}
                   {activeSlide.primaryLabel}
                 </Button>
               )}
               {activeSlide?.secondaryLabel && (
                 <Button
                   variant="secondary"
-                  className="rounded-full flex-1 md:flex-none min-w-[140px] px-6 py-3.5 md:py-6 text-sm md:text-lg font-semibold bg-text/5 hover:bg-text/10 text-text border border-text/20 backdrop-blur-md transition-colors"
+                  className="rounded-full flex-1 md:flex-none min-w-[120px] px-4 py-2.5 md:px-6 md:py-6 text-xs sm:text-sm md:text-lg font-semibold bg-text/5 hover:bg-text/10 text-text border border-text/20 backdrop-blur-md transition-colors"
                   onPress={activeSlide.secondaryAction}
                 >
                   {activeSlide.secondaryLabel}

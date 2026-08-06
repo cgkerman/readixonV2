@@ -443,7 +443,7 @@ export default function StoryDetailPage() {
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
         </div>
 
-        <div className="relative z-10 max-w-6xl mx-auto px-6 pt-24 md:pt-32 pb-8 flex flex-col md:flex-row gap-10 items-center md:items-end">
+        <div className="relative z-10 max-w-6xl mx-auto px-6 pt-24 md:pt-32 pb-8 flex flex-col lg:flex-row gap-10 items-center lg:items-end">
           {/* Kapak Resmi */}
           <div className="w-48 md:w-64 flex-shrink-0 aspect-[2/3] rounded-xl overflow-hidden shadow-2xl shadow-black/60 border border-text/10">
             {story.coverImage ? (
@@ -456,10 +456,10 @@ export default function StoryDetailPage() {
           </div>
 
           {/* Kitap Bilgileri */}
-          <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left animate-fade-in-up">
+          <div className="flex-1 flex flex-col items-center lg:items-start text-center lg:text-left animate-fade-in-up">
             
             {/* Status & Puan Rozetleri */}
-            <div className="flex flex-wrap gap-2 mb-3 justify-center md:justify-start">
+            <div className="flex flex-wrap gap-2 mb-3 justify-center lg:justify-start">
               <span className="px-3 py-1 bg-background/80 backdrop-blur-md text-text text-xs font-bold rounded-full border border-border/50 shadow-sm">
                 {story.status === 'completed' ? 'Tamamlandı' : story.status === 'ongoing' ? 'Devam Ediyor' : 'Taslak'}
               </span>
@@ -496,7 +496,7 @@ export default function StoryDetailPage() {
 
             {/* Tags / Genres */}
             {story.tags && story.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mb-4 justify-center md:justify-start max-w-sm md:max-w-none">
+              <div className="flex flex-wrap gap-1.5 mb-4 justify-center lg:justify-start max-w-sm lg:max-w-none">
                 {story.tags.map(t => (
                   <Link href={`/search?tag=${t}`} key={t}>
                     <span className="px-2.5 py-1 bg-background/50 backdrop-blur-md border border-border/20 text-text hover:bg-primary hover:text-primary-foreground hover:border-primary/50 transition-all rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm block">
@@ -508,7 +508,7 @@ export default function StoryDetailPage() {
             )}
 
             {/* İstatistikler */}
-            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-8">
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 mb-8">
               <div className="flex items-center gap-1.5 text-text/80 bg-background/30 border border-border/20 px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-sm shadow-sm cursor-default" title="Okunma Sayısı">
                 <Eye size={14} /> <span>{story.stats?.views?.toLocaleString('tr-TR') || '0'}</span>
               </div>
@@ -529,7 +529,7 @@ export default function StoryDetailPage() {
             </div>
 
             {/* Aksiyon Butonları */}
-            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 mt-2 w-full max-w-sm mx-auto md:mx-0 md:max-w-none">
+            <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 mt-2 w-full max-w-sm mx-auto lg:mx-0 lg:max-w-none">
               <Button 
                 variant="primary" 
                 onPress={() => chapters.length > 0 && router.push(`/read/${storyId}/${chapters[0].chapterId}`)} 
@@ -563,12 +563,12 @@ export default function StoryDetailPage() {
       </div>
 
       {/* ── Alt İçerik Alanı (3 Sütunlu Yapı) ── */}
-      <div className="max-w-[1600px] mx-auto px-6 md:px-8 w-full animate-fade-in grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-10 pb-20 mt-10">
+      <div className="max-w-[1600px] mx-auto px-6 md:px-8 w-full animate-fade-in grid grid-cols-1 xl:grid-cols-4 gap-6 xl:gap-10 pb-20 mt-10">
         
         {/* ================================== */}
         {/* SÜTUN 1: HAKKINDA & KARAKTERLER   */}
         {/* ================================== */}
-        <div className="lg:col-span-1 flex flex-col gap-10">
+        <div className="xl:col-span-1 flex flex-col gap-10">
           
           <div className="space-y-10">
               
@@ -734,7 +734,7 @@ export default function StoryDetailPage() {
         {/* ================================== */}
         {/* SÜTUN 2: BÖLÜMLER                 */}
         {/* ================================== */}
-        <div className="lg:col-span-2 flex flex-col gap-10">
+        <div className="xl:col-span-2 flex flex-col gap-10">
           <div className="w-full">
             <div className="bg-card/30 border border-white/5 rounded-3xl p-6 md:p-8">
               <div className="flex items-center justify-between mb-8">
@@ -846,9 +846,9 @@ export default function StoryDetailPage() {
         </div>
 
         {/* ================================== */}
-        {/* SÜTUN 3: EKİP, İNCELEMELER & READIX */}
+        {/* SÜTUN 3: SAĞ PANEL (İncelemeler)  */}
         {/* ================================== */}
-        <div className="lg:col-span-1 flex flex-col gap-10">
+        <div className="xl:col-span-1 flex flex-col gap-10">
           
           {/* Katkıda Bulunanlar (Ekip) */}
           {story.contributors && story.contributors.length > 0 && (

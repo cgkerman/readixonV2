@@ -4,14 +4,15 @@ import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Typography, ChatListItem } from '@readixon/ui';
 import { useAuthStore, subscribeToChats, Chat } from '@readixon/core';
-import { Loader2, MessageSquare, UserPlus } from 'lucide-react';
+import { Loader2, MessageSquare, UserPlus, Search } from 'lucide-react';
 
 export default function MessagesLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { firebaseUser } = useAuthStore();
+  const { firebaseUser, isInitialized } = useAuthStore();
   
   const [activeTab, setActiveTab] = useState<'accepted' | 'pending'>('accepted');
+  const [searchQuery, setSearchQuery] = useState('');
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -19,6 +20,8 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
   const isChatOpen = pathname !== '/messages';
 
   useEffect(() => {
+    if (!isInitialized) return;
+
     if (!firebaseUser) {
       router.push('/login');
       return;
@@ -30,23 +33,45 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
     });
 
     return () => unsubscribe();
-  }, [firebaseUser, router]);
+  }, [firebaseUser, isInitialized, router]);
 
   const acceptedChats = chats.filter(c => c.status === 'accepted' || (c.status === 'pending' && c.requestedBy === firebaseUser?.uid));
   const pendingRequests = chats.filter(c => c.status === 'pending' && c.requestedBy !== firebaseUser?.uid);
 
-  const displayChats = activeTab === 'accepted' ? acceptedChats : pendingRequests;
+  let displayChats = activeTab === 'accepted' ? acceptedChats : pendingRequests;
+
+  if (searchQuery.trim() && firebaseUser) {
+    const q = searchQuery.toLowerCase();
+    displayChats = displayChats.filter(chat => {
+      const otherUserId = chat.participants.find(id => id !== firebaseUser.uid) || '';
+      const otherUser = chat.participantDetails[otherUserId];
+      if (!otherUser) return false;
+      return otherUser.displayName.toLowerCase().includes(q) || otherUser.username.toLowerCase().includes(q);
+    });
+  }
 
   return (
-    <div className="flex flex-1 h-[calc(100vh-80px)] md:h-screen overflow-hidden bg-background">
+    <div className="flex flex-1 h-[calc(100dvh-73px)] xl:h-full overflow-hidden bg-background">
       {/* Inbox Sidebar */}
       <div 
-        className={`w-full md:w-80 lg:w-96 flex flex-col border-r border-border/50 bg-card/20 ${
-          isChatOpen ? 'hidden md:flex' : 'flex'
+        className={`w-full xl:w-80 2xl:w-96 flex flex-col border-r border-border/50 bg-card/20 transition-all duration-300 pb-16 xl:pb-0 ${
+          isChatOpen ? 'hidden xl:flex' : 'flex'
         }`}
       >
         <div className="p-4 border-b border-border/50">
           <Typography variant="h2" className="font-bold text-xl mb-4">Mesajlar</Typography>
+          
+          {/* Search Bar */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={16} />
+            <input
+              type="text"
+              placeholder="İsim veya @kullanıcı adı ara..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-muted/10 border border-border/50 rounded-lg pl-9 pr-4 py-2 text-sm text-text focus:outline-none focus:border-primary/50 transition-colors"
+            />
+          </div>
           
           {/* Tabs */}
           <div className="flex bg-muted/10 p-1 rounded-lg">
@@ -140,7 +165,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
       {/* Active Chat Area */}
       <div 
         className={`flex-1 flex flex-col bg-background ${
-          !isChatOpen ? 'hidden md:flex' : 'flex'
+          !isChatOpen ? 'hidden xl:flex' : 'flex'
         }`}
       >
         {children}
