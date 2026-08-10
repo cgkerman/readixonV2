@@ -21,12 +21,16 @@ import {
   blockUser,
   getReadixById,
   searchUsers,
+  getTrendingReadixes,
+  toggleReadixBookmark,
+  getActiveQuote,
+  AdminQuote,
   Readix,
   User,
   Story
 } from '@readixon/core';
-import { Typography, Button, ReadixCard, Input, ReadixCommentModal, ReadixShareModal, ShareReadixData, EditReadixModal, ReportModal, ConfirmationDialog, StorySearchModal } from '@readixon/ui';
-import { Loader2, Image as ImageIcon, Send, User as UserIcon, Bold, Italic, Smile, BookOpen } from 'lucide-react';
+import { Typography, Button, ReadixCard, Input, ReadixCommentModal, ReadixShareModal, ShareReadixData, EditReadixModal, ReportModal, ConfirmationDialog, StorySearchModal, QuillIcon } from '@readixon/ui';
+import { Loader2, Image as ImageIcon, Send, User as UserIcon, Bold, Italic, Smile, BookOpen, Award, Sparkles, BarChart2, ImagePlus, BookPlus, Feather } from 'lucide-react';
 import EmojiPicker, { Theme } from 'emoji-picker-react';
 import ContentEditable, { ContentEditableEvent } from 'react-contenteditable';
 import { toast } from "sonner";
@@ -38,10 +42,15 @@ function ReadixContent() {
   const hashtag = searchParams.get('hashtag');
   const { firebaseUser, userProfile } = useAuthStore();
   
-  const [activeTab, setActiveTab] = useState<'foryou' | 'following' | 'hashtag'>(hashtag ? 'hashtag' : 'foryou');
+  const [activeTab, setActiveTab] = useState<'foryou' | 'following' | 'trending' | 'webtoon' | 'hashtag'>(hashtag ? 'hashtag' : 'foryou');
   const [readixes, setReadixes] = useState<Readix[]>([]);
   const [authors, setAuthors] = useState<Record<string, User>>({});
   const [loading, setLoading] = useState(true);
+  const [dailyQuote, setDailyQuote] = useState<AdminQuote | null>(null);
+
+  useEffect(() => {
+    getActiveQuote().then(setDailyQuote).catch(console.error);
+  }, []);
   
   // Share Modal State
   const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -288,6 +297,10 @@ function ReadixContent() {
         response = await getReadixesByTag(hashtag, 20, undefined, userProfile?.blockedUsers);
       } else if (activeTab === 'following' && firebaseUser) {
         response = await getFollowingReadixes(firebaseUser.uid, 20, undefined, userProfile?.blockedUsers);
+      } else if (activeTab === 'trending') {
+        response = await getTrendingReadixes(20, undefined, userProfile?.blockedUsers);
+      } else if (activeTab === 'webtoon') {
+        response = { readixes: [], lastDoc: null, hasMore: false };
       } else {
         response = await getForYouReadixes(20, undefined, userProfile?.blockedUsers);
       }
@@ -322,6 +335,10 @@ function ReadixContent() {
         response = await getReadixesByTag(hashtag, 20, lastDoc, userProfile?.blockedUsers);
       } else if (activeTab === 'following' && firebaseUser) {
         response = await getFollowingReadixes(firebaseUser.uid, 20, lastDoc, userProfile?.blockedUsers);
+      } else if (activeTab === 'trending') {
+        response = await getTrendingReadixes(20, lastDoc, userProfile?.blockedUsers);
+      } else if (activeTab === 'webtoon') {
+        response = { readixes: [], lastDoc: null, hasMore: false };
       } else {
         response = await getForYouReadixes(20, lastDoc, userProfile?.blockedUsers);
       }
@@ -460,6 +477,53 @@ function ReadixContent() {
     }
   };
 
+  const handleBookmark = async (readixId: string) => {
+    if (!firebaseUser) return router.push('/login');
+    
+    // Optimistic UI Update
+    setReadixes(prev => prev.map(r => {
+      if (r.id === readixId) {
+        return { ...r, stats: { ...r.stats, bookmarks: (r.stats?.bookmarks || 0) + 1 } };
+      }
+      return r;
+    }));
+
+    // Update user profile optimistically
+    if (userProfile) {
+      const currentBookmarks = userProfile.bookmarkedReadixIds || [];
+      if (!currentBookmarks.includes(readixId)) {
+        useAuthStore.getState().setUserProfile({
+          ...userProfile,
+          bookmarkedReadixIds: [...currentBookmarks, readixId]
+        });
+      }
+    }
+
+    try {
+      const isBookmarkedNow = await toggleReadixBookmark(firebaseUser.uid, readixId);
+      if (!isBookmarkedNow) {
+        // Revert optimistically
+        setReadixes(prev => prev.map(r => {
+          if (r.id === readixId) {
+            return { ...r, stats: { ...r.stats, bookmarks: Math.max(0, (r.stats?.bookmarks || 0) - 1) } };
+          }
+          return r;
+        }));
+        if (userProfile) {
+          useAuthStore.getState().setUserProfile({
+            ...userProfile,
+            bookmarkedReadixIds: (userProfile.bookmarkedReadixIds || []).filter(id => id !== readixId)
+          });
+        }
+      } else {
+        toast.success("Gönderi kaydedildi.");
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("İşlem başarısız.");
+    }
+  };
+
   const handleRepost = async (readixId: string) => {
     if (!firebaseUser) return router.push('/login');
     try {
@@ -520,42 +584,56 @@ function ReadixContent() {
       <div className="flex-1 min-w-0 md:border-r border-white/10 md:pr-10 min-h-screen">
         
         {/* Header & Tabs */}
-        <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md pb-4 pt-6 px-4 md:px-0">
-          <Typography variant="h1" className="text-3xl font-bold mb-6 text-text">Readix</Typography>
+        <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md pb-0 pt-6 px-4 md:px-0 border-b border-border mb-6">
+          <Typography variant="h1" className="text-3xl font-bold mb-6 text-text">Readix<span className="text-primary">.</span></Typography>
           
-          <div className="flex border-b border-white/10">
+          <div className="flex gap-6 overflow-x-auto scrollbar-hide">
             <button 
               onClick={() => setActiveTab('foryou')}
-              className={`flex-1 pb-3 text-center font-semibold transition-colors relative ${activeTab === 'foryou' ? 'text-primary' : 'text-muted hover:text-text'}`}
+              className={`pb-3 text-center font-semibold transition-colors relative whitespace-nowrap ${activeTab === 'foryou' ? 'text-primary' : 'text-muted hover:text-text'}`}
             >
               Sana Özel
-              {activeTab === 'foryou' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-t-full" />}
+              {activeTab === 'foryou' && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-primary rounded-t-full" />}
             </button>
             <button 
               onClick={() => {
                 if (!firebaseUser) router.push('/login');
                 else setActiveTab('following');
               }}
-              className={`flex-1 pb-3 text-center font-semibold transition-colors relative ${activeTab === 'following' ? 'text-primary' : 'text-muted hover:text-text'}`}
+              className={`pb-3 text-center font-semibold transition-colors relative whitespace-nowrap ${activeTab === 'following' ? 'text-primary' : 'text-muted hover:text-text'}`}
             >
               Takip Ettiklerin
-              {activeTab === 'following' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-t-full" />}
+              {activeTab === 'following' && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-primary rounded-t-full" />}
+            </button>
+            <button 
+              onClick={() => setActiveTab('trending')}
+              className={`pb-3 text-center font-semibold transition-colors relative whitespace-nowrap ${activeTab === 'trending' ? 'text-primary' : 'text-muted hover:text-text'}`}
+            >
+              Trend
+              {activeTab === 'trending' && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-primary rounded-t-full" />}
+            </button>
+            <button 
+              onClick={() => setActiveTab('webtoon')}
+              className={`pb-3 text-center font-semibold transition-colors relative whitespace-nowrap ${activeTab === 'webtoon' ? 'text-primary' : 'text-muted hover:text-text'}`}
+            >
+              Webtoon
+              {activeTab === 'webtoon' && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-primary rounded-t-full" />}
             </button>
             {activeTab === 'hashtag' && hashtag && (
               <button 
-                className="flex-1 pb-3 text-center font-semibold transition-colors relative text-primary"
+                className="pb-3 text-center font-semibold transition-colors relative whitespace-nowrap text-primary"
               >
                 #{hashtag}
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-t-full" />
+                <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-primary rounded-t-full" />
               </button>
             )}
           </div>
         </div>
 
         {/* Create Post Area */}
-        <div className="p-4 md:p-6 border border-border/80 bg-card/50 rounded-2xl mx-4 md:mx-0 mb-6 shadow-sm backdrop-blur-sm">
+        <div className="p-4 md:p-6 bg-card/60 backdrop-blur-xl rounded-3xl mx-4 md:mx-0 mb-6 shadow-sm border border-border/50 transition-all focus-within:bg-card focus-within:border-primary/30 focus-within:shadow-md">
           <div className="flex gap-4">
-            <div className="w-12 h-12 rounded-full bg-primary/20 flex-shrink-0 border border-white/10 overflow-hidden">
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex-shrink-0 border border-primary/20 overflow-hidden shadow-sm">
               {userProfile?.avatarUrl ? (
                 <img src={userProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
@@ -564,14 +642,14 @@ function ReadixContent() {
                 </div>
               )}
             </div>
-            <div className="flex-1 flex flex-col min-w-0">
+            <div className="flex-1 flex flex-col min-w-0 pt-1">
               <div className="relative">
                 <ContentEditable
                   innerRef={contentEditableRef}
                   html={newContent}
                   onChange={handleContentChange}
                   tagName="div"
-                  className="bg-transparent border-none focus:outline-none text-text resize-none text-[15px] leading-relaxed min-h-[80px] w-full break-words outline-none empty:before:content-['Hangi_kitaptan_bahsediyoruz?'] empty:before:text-muted/50 empty:before:pointer-events-none"
+                  className="bg-transparent border-none focus:outline-none text-text resize-none text-[16px] leading-relaxed min-h-[60px] w-full break-words outline-none empty:before:content-['Neler_okuyorsun?_Düşüncelerini_paylaş...'] empty:before:text-muted/60 empty:before:font-medium empty:before:pointer-events-none"
                 />
                 {activeHashtag !== null && filteredTags.length > 0 && (
                   <div className="absolute top-full left-0 mt-1 w-64 bg-card border border-border/50 rounded-xl shadow-xl overflow-hidden z-50">
@@ -701,8 +779,8 @@ function ReadixContent() {
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center justify-between border-t border-white/5 pt-3 relative gap-y-3">
-                <div className="flex items-center gap-0.5 sm:gap-1">
+              <div className="flex flex-wrap items-center justify-between border-t border-border/40 pt-3 mt-2 relative gap-y-3">
+                <div className="flex items-center gap-1 sm:gap-2">
                   <input
                     type="file"
                     accept="image/*"
@@ -720,65 +798,46 @@ function ReadixContent() {
                       }
                     }}
                   />
-                  <label htmlFor="readix-image" className={`cursor-pointer hover:bg-primary/10 p-2 rounded-full inline-flex transition-colors ${selectedFiles.length >= 4 ? 'opacity-50 cursor-not-allowed text-muted' : 'text-primary'}`}>
-                    <ImageIcon size={20} />
+                  <label htmlFor="readix-image" className={`cursor-pointer hover:bg-primary/10 p-2.5 rounded-full inline-flex items-center justify-center transition-colors ${selectedFiles.length >= 4 ? 'opacity-50 cursor-not-allowed text-muted' : 'text-primary'}`}>
+                    <ImagePlus size={20} strokeWidth={2.2} />
                   </label>
                   
                   <button 
                     onClick={() => setPollActive(!pollActive)}
-                    className={`hover:bg-primary/10 p-2 rounded-full inline-flex transition-colors ${pollActive ? 'text-primary bg-primary/10' : 'text-muted hover:text-primary'}`}
+                    className={`hover:bg-primary/10 p-2.5 rounded-full inline-flex items-center justify-center transition-colors ${pollActive ? 'text-primary bg-primary/10' : 'text-primary'}`}
                     title="Anket Ekle"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
+                    <BarChart2 size={20} strokeWidth={2.2} className="rotate-90" />
                   </button>
 
                   <button 
                     onClick={() => setIsStorySearchOpen(true)}
-                    className={`hover:bg-primary/10 p-2 rounded-full inline-flex transition-colors ${selectedStory ? 'text-primary bg-primary/10' : 'text-muted hover:text-primary'}`}
+                    className={`hover:bg-primary/10 p-2.5 rounded-full inline-flex items-center justify-center transition-colors ${selectedStory ? 'text-primary bg-primary/10' : 'text-primary'}`}
                     title="Kitap Ekle"
                   >
-                    <BookOpen size={20} />
+                    <BookPlus size={20} strokeWidth={2.2} />
                   </button>
                   
-                  <button 
-                    onClick={() => insertFormat('bold')}
-                    className="text-muted hover:text-primary hover:bg-primary/10 p-2 rounded-full inline-flex transition-colors"
-                    title="Kalın"
-                  >
-                    <Bold size={20} />
-                  </button>
-                  <button 
-                    onClick={() => insertFormat('italic')}
-                    className="text-muted hover:text-primary hover:bg-primary/10 p-2 rounded-full inline-flex transition-colors"
-                    title="İtalik"
-                  >
-                    <Italic size={20} />
-                  </button>
-                  
-                  <div className="relative">
-                    <button 
-                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                      className={`hover:bg-primary/10 p-2 rounded-full inline-flex transition-colors ${showEmojiPicker ? 'text-primary bg-primary/10' : 'text-muted hover:text-primary'}`}
-                      title="Emoji Ekle"
-                    >
-                      <Smile size={20} />
-                    </button>
-                    {showEmojiPicker && (
-                      <div className="absolute top-full left-0 mt-2 z-50 shadow-2xl rounded-2xl overflow-hidden border border-border">
-                        <EmojiPicker 
-                          onEmojiClick={(emoji) => {
-                            onEmojiClick(emoji);
-                            setShowEmojiPicker(false);
-                          }}
-                          theme={Theme.DARK}
-                          searchDisabled={true}
-                          skinTonesDisabled={true}
-                          height={350}
-                          width={300}
-                        />
-                      </div>
-                    )}
-                  </div>
+                  {charCount > 0 && (
+                    <>
+                      <div className="w-px h-6 bg-border/60 mx-1"></div>
+                      
+                      <button 
+                        onClick={() => insertFormat('bold')}
+                        className="text-muted hover:text-primary hover:bg-primary/10 p-2.5 rounded-full inline-flex items-center justify-center transition-colors"
+                        title="Kalın"
+                      >
+                        <Bold size={18} strokeWidth={2.5} />
+                      </button>
+                      <button 
+                        onClick={() => insertFormat('italic')}
+                        className="text-muted hover:text-primary hover:bg-primary/10 p-2.5 rounded-full inline-flex items-center justify-center transition-colors"
+                        title="İtalik"
+                      >
+                        <Italic size={18} strokeWidth={2.5} />
+                      </button>
+                    </>
+                  )}
                 </div>
                 
                 <div className="ml-auto flex items-center gap-2">
@@ -822,15 +881,14 @@ function ReadixContent() {
 
                   <Button 
                     variant="primary" 
-                    className="!p-0 aspect-square w-11 h-11 rounded-full shrink-0 flex items-center justify-center"
+                    className="rounded-full px-6 py-2 h-10 font-bold"
                     disabled={isPosting || (!newContent.trim() && selectedFiles.length === 0 && !pollActive) || isOverLimit}
                   onPress={handlePost}
-                  title="Paylaş"
                 >
                   {isPosting ? (
-                    <Loader2 size={20} className="animate-spin" />
+                    <Loader2 size={18} className="animate-spin" />
                   ) : (
-                    <Send size={20} className="ml-[-2px]" />
+                    'Yayınla'
                   )}
                   </Button>
                 </div>
@@ -849,40 +907,95 @@ function ReadixContent() {
             </div>
           ) : (
             <>
-              {readixes.map((readix) => {
+              {readixes.map((readix, index) => {
                 const isRepost = !!readix.originalReadix;
                 const targetReadix = isRepost ? readix.originalReadix! : readix;
                 const reposter = isRepost ? authors[readix.authorId] : null;
                 const author = authors[targetReadix.authorId];
                 
                 return (
-                  <ReadixCard
-                    key={readix.id}
-                    linkedStory={targetReadix.linkedStory}
-                    authorName={author?.displayName || 'Bilinmeyen Kullanıcı'}
-                    authorUsername={author?.username || 'user'}
-                    authorAvatarUrl={author?.avatarUrl}
-                    repostOfAuthorName={reposter?.displayName}
-                    content={targetReadix.content}
-                    mediaUrls={targetReadix.mediaUrls}
-                    createdAtStr={targetReadix.createdAt ? new Date((targetReadix.createdAt as any).seconds ? (targetReadix.createdAt as any).seconds * 1000 : (targetReadix.createdAt as unknown as number)).toLocaleDateString() : 'Şimdi'}
-                    likesCount={targetReadix.stats?.likes || 0}
-                    commentsCount={targetReadix.stats?.comments || 0}
-                    repostsCount={targetReadix.stats?.reposts || 0}
-                    poll={targetReadix.poll as any}
-                    isOwner={firebaseUser?.uid === readix.authorId}
-                    currentUserId={firebaseUser?.uid}
-                    onAuthorPress={() => author?.username && router.push(`/profile/@${author.username}`)}
-                    onLikePress={() => handleLike(targetReadix.id, targetReadix.stats?.likes || 0)}
-                    onCommentPress={() => openComments(targetReadix)}
-                    onSharePress={() => openShare(targetReadix, author)}
-                    onRepostPress={() => handleRepost(targetReadix.id)}
-                    onPress={() => openComments(targetReadix)}
-                    onEditPress={() => { setActiveReadix(readix); setEditModalOpen(true); }}
-                    onDeletePress={() => { setActiveReadix(readix); setDeleteConfirmOpen(true); }}
-                    onReportPress={() => { setActiveReadix(targetReadix); setReportModalOpen(true); }}
-                    onBlockPress={() => { setActiveReadix(targetReadix); setBlockConfirmOpen(true); }}
-                  />
+                  <React.Fragment key={readix.id}>
+                    <ReadixCard
+                      linkedStory={targetReadix.linkedStory}
+                      authorName={author?.displayName || 'Bilinmeyen Kullanıcı'}
+                      authorUsername={author?.username || 'user'}
+                      authorAvatarUrl={author?.avatarUrl}
+                      repostOfAuthorName={reposter?.displayName}
+                      content={targetReadix.content}
+                      mediaUrls={targetReadix.mediaUrls}
+                      createdAtStr={targetReadix.createdAt ? new Date((targetReadix.createdAt as any).seconds ? (targetReadix.createdAt as any).seconds * 1000 : (targetReadix.createdAt as unknown as number)).toLocaleDateString() : 'Şimdi'}
+                      likesCount={targetReadix.stats?.likes || 0}
+                      commentsCount={targetReadix.stats?.comments || 0}
+                      repostsCount={targetReadix.stats?.reposts || 0}
+                      bookmarksCount={targetReadix.stats?.bookmarks || 0}
+                      poll={targetReadix.poll as any}
+                      isOwner={firebaseUser?.uid === readix.authorId}
+                      currentUserId={firebaseUser?.uid}
+                      isBookmarked={userProfile?.bookmarkedReadixIds?.includes(targetReadix.id) || false}
+                      onAuthorPress={() => author?.username && router.push(`/profile/@${author.username}`)}
+                      onLikePress={() => handleLike(targetReadix.id, targetReadix.stats?.likes || 0)}
+                      onCommentPress={() => openComments(targetReadix)}
+                      onSharePress={() => openShare(targetReadix, author)}
+                      onRepostPress={() => handleRepost(targetReadix.id)}
+                      onBookmarkPress={() => handleBookmark(targetReadix.id)}
+                      onPress={() => openComments(targetReadix)}
+                      onEditPress={() => { setActiveReadix(readix); setEditModalOpen(true); }}
+                      onDeletePress={() => { setActiveReadix(readix); setDeleteConfirmOpen(true); }}
+                      onReportPress={() => { setActiveReadix(targetReadix); setReportModalOpen(true); }}
+                      onBlockPress={() => { setActiveReadix(targetReadix); setBlockConfirmOpen(true); }}
+                    />
+                    
+                    {/* Günün Alıntısı (Interstitial) */}
+                    {index === 0 && dailyQuote && activeTab !== 'hashtag' && (
+                      <div className="relative my-4 p-6 sm:p-8 bg-gradient-to-r from-purple-500/5 via-background to-primary/10 border border-border/50 rounded-[2rem] overflow-hidden flex items-center shadow-sm">
+                        
+                        {/* Decorative Icon (Right aligned) */}
+                        <div className="absolute right-0 top-0 bottom-0 w-1/3 min-w-[150px] pointer-events-none flex items-center justify-end pr-2 sm:pr-8">
+                          <QuillIcon className="w-32 h-32 sm:w-40 sm:h-40 -rotate-12" />
+                        </div>
+                        
+                        {/* Content */}
+                        <div className="relative z-10 flex flex-col justify-center w-[65%] sm:w-[70%]">
+                          <div className="flex items-center gap-2 mb-2 sm:hidden">
+                            <Typography variant="body" className="text-primary font-semibold text-sm">Günün Alıntısı</Typography>
+                          </div>
+                          <Typography variant="body" className="hidden sm:block text-primary font-semibold text-sm mb-1">Günün Alıntısı</Typography>
+                            
+                            <Typography variant="h3" className="text-base sm:text-lg font-bold text-text leading-snug mb-3">
+                              “{dailyQuote.text}”
+                            </Typography>
+                            
+                            <div className="flex flex-col">
+                              {dailyQuote.author && <Typography variant="body" className="text-muted text-sm font-medium">- {dailyQuote.author}</Typography>}
+                            </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Editörün Seçimi (Placeholder Interstitial) */}
+                    {index === 3 && activeTab !== 'hashtag' && (
+                      <div className="relative group/section opacity-80 mt-2 mb-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <div className="flex items-center gap-3">
+                              <Award className="text-primary" size={24} />
+                              <Typography variant="h2" className="text-xl font-bold flex items-center gap-2">
+                                Editörün Seçimi
+                                <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ml-1">Yakında</span>
+                              </Typography>
+                            </div>
+                            <Typography variant="body" className="text-muted text-sm mt-1">Editörlerimiz tarafından özenle seçilmiş ve mutlaka okumanız gereken başyapıtlar.</Typography>
+                          </div>
+                        </div>
+                        <div className="h-32 border-2 border-dashed border-border/40 rounded-2xl flex flex-col items-center justify-center bg-card/10 gap-2">
+                          <Typography variant="body" className="text-muted font-medium flex items-center gap-2">
+                            <Sparkles size={16} />
+                            Burası yakında çok şenlenecek!
+                          </Typography>
+                        </div>
+                      </div>
+                    )}
+                  </React.Fragment>
                 );
               })}
               {hasMore && (

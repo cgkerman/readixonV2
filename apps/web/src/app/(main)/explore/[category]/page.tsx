@@ -2,19 +2,20 @@
 
 import React, { useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Typography, StoryCard } from '@readixon/ui';
+import { Typography, StoryCard, HorizontalStoryCard } from '@readixon/ui';
 import { 
   getRecentStoriesPaginated, 
   getTopStoriesPaginated, 
   getRecommendedStories, 
   getCompletedStories, 
   getMostLikedStories,
+  getRecentlyUpdatedStories,
   toggleStoryLike,
   generateStorySlug,
   useAuthStore
 } from '@readixon/core';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import { Sparkles, TrendingUp, Clock, Heart, CheckCircle, ArrowLeft } from 'lucide-react';
+import { Sparkles, TrendingUp, Clock, Heart, CheckCircle, ArrowLeft, RotateCcw } from 'lucide-react';
 
 const CATEGORY_CONFIG: Record<string, { title: string; icon: React.ReactNode; queryKey: string; getStories: (limit: number, pageParam: any, userProfile?: any) => Promise<{ stories: any[]; lastDoc?: any }> }> = {
   'recent': {
@@ -22,6 +23,16 @@ const CATEGORY_CONFIG: Record<string, { title: string; icon: React.ReactNode; qu
     icon: <Clock className="text-blue-500" size={32} />,
     queryKey: 'recent',
     getStories: (limit, pageParam) => getRecentStoriesPaginated(limit, pageParam)
+  },
+  'recently-updated': {
+    title: 'Taze Çıkanlar',
+    icon: <RotateCcw className="text-primary" size={32} />,
+    queryKey: 'recentlyUpdated',
+    getStories: async (limit, pageParam) => {
+      if (pageParam) return { stories: [], lastDoc: null };
+      const stories = await getRecentlyUpdatedStories(50);
+      return { stories, lastDoc: true };
+    }
   },
   'top': {
     title: 'Haftanın En Çok Okunanları',
@@ -156,25 +167,48 @@ export default function ExploreCategoryPage() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+            <div className={
+              config.queryKey === 'recentlyUpdated' 
+                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" 
+                : "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6"
+            }>
               {stories.map((story) => (
                 <div key={story.storyId} className="w-full transition-transform duration-300 hover:-translate-y-2">
-                  <StoryCard
-                    title={story.title}
-                    authorName={story.authorName || 'Bilinmiyor'}
-                    authorUsername={story.authorUsername} 
-                    authorAvatarUrl={story.authorAvatarUrl}
-                    coverImage={story.coverImage}
-                    views={story.stats?.views || 0}
-                    likes={story.stats?.likes || 0}
-                    tags={story.tags || []}
-                    isWebtoon={story.format === 'webtoon'}
-                    onPress={() => {
-                      const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
-                      router.push(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
-                    }}
-                    onLikePress={(e) => handleLikePress(e, story.storyId)}
-                  />
+                  {config.queryKey === 'recentlyUpdated' ? (
+                    <HorizontalStoryCard
+                      title={story.title}
+                      authorName={story.authorName || 'Bilinmiyor'}
+                      authorUsername={story.authorUsername} 
+                      authorAvatarUrl={story.authorAvatarUrl}
+                      coverImage={story.coverImage}
+                      views={story.stats?.views || 0}
+                      likes={story.stats?.likes || 0}
+                      latestChapterTitle={story.latestChapter?.title}
+                      latestChapterExcerpt={story.latestChapter?.excerpt}
+                      badgeText={story.latestChapter?.order ? `${story.latestChapter.order}. Bölüm Yayında` : 'Yeni Güncellendi'}
+                      onPress={() => {
+                        const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
+                        router.push(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
+                      }}
+                    />
+                  ) : (
+                    <StoryCard
+                      title={story.title}
+                      authorName={story.authorName || 'Bilinmiyor'}
+                      authorUsername={story.authorUsername} 
+                      authorAvatarUrl={story.authorAvatarUrl}
+                      coverImage={story.coverImage}
+                      views={story.stats?.views || 0}
+                      likes={story.stats?.likes || 0}
+                      tags={story.tags || []}
+                      isWebtoon={story.format === 'webtoon'}
+                      onPress={() => {
+                        const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
+                        router.push(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
+                      }}
+                      onLikePress={(e) => handleLikePress(e, story.storyId)}
+                    />
+                  )}
                 </div>
               ))}
             </div>

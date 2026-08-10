@@ -200,136 +200,161 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   ];
 
   return (
-    <div className="flex h-[100dvh] bg-background overflow-hidden">
-      {/* ── Sidebar (Desktop) ── */}
-      <aside className="hidden xl:flex flex-col border-r border-border/50 bg-card/20 w-64 p-6 transition-all duration-300">
-        <Typography variant="h2" className="font-bold text-primary tracking-tighter mb-10">readixon</Typography>
+    <div className="flex flex-col h-[100dvh] bg-background overflow-hidden">
+      {/* ── Top Navbar (Desktop) ── */}
+      <header className="hidden xl:flex items-center justify-between border-b border-border/50 bg-card/20 px-8 h-[76px] shrink-0 backdrop-blur-md z-50">
+        {/* Left: Logo */}
+        <Link href="/feed" className="shrink-0 flex items-center">
+          <Typography variant="h2" className="font-bold text-primary tracking-tighter">readixon</Typography>
+        </Link>
 
-        <nav className="flex-1 flex flex-col gap-2">
+        {/* Center: Main Navigation */}
+        <nav className="flex items-center gap-2">
           {topNavItems.map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 py-3 rounded-xl transition-colors relative group px-4 ${isActive ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-card hover:text-text'
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl transition-all relative ${isActive ? 'bg-primary/10 text-primary font-bold' : 'text-muted hover:bg-muted/10 hover:text-text font-medium'
                   }`}
               >
-                <item.icon size={22} className="shrink-0" />
-                <Typography variant="body" className="font-medium flex-1">{item.name}</Typography>
+                <item.icon size={20} className={isActive ? "text-primary" : ""} />
+                <span className="text-[15px]">{item.name}</span>
               </Link>
             );
           })}
-
-          {bottomNavItems.map((item) => {
-            const isActive = pathname === item.href || (item.href === '/messages' && pathname.startsWith('/messages'));
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 py-3 rounded-xl transition-colors relative group px-4 ${isActive ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-card hover:text-text'
-                  }`}
-              >
-                <item.icon size={22} className="shrink-0" />
-                <Typography variant="body" className="font-medium flex-1">{item.name}</Typography>
-                {item.badge ? (
-                  <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full absolute right-4">
-                    {item.badge > 99 ? '99+' : item.badge}
-                  </span>
-                ) : null}
-              </Link>
-            );
-          })}
+          {/* Include Library in top nav for desktop */}
+          <Link
+            href="/library"
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl transition-all relative ${pathname === '/library' ? 'bg-primary/10 text-primary font-bold' : 'text-muted hover:bg-muted/10 hover:text-text font-medium'
+              }`}
+          >
+            <BookOpen size={20} className={pathname === '/library' ? "text-primary" : ""} />
+            <span className="text-[15px]">Kütüphane</span>
+          </Link>
         </nav>
 
-        <div className="pt-6 border-t border-border/50 flex flex-col gap-3 overflow-y-auto pr-2 -mr-2" style={{ scrollbarWidth: 'thin' }}>
+        {/* Right: Actions & Profile */}
+        <div className="flex items-center gap-4 shrink-0">
           {firebaseUser ? (
             <>
-              <Link href="/profile" className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-card/50 transition-colors group cursor-pointer">
-                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden border border-transparent group-hover:border-primary/30 transition-colors shrink-0">
-                  {userProfile?.avatarUrl ? (
-                    <img src={userProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-xl font-bold text-primary uppercase">
-                      {userProfile?.displayName?.charAt(0) || 'U'}
-                    </span>
-                  )}
-                </div>
-                <div className="flex-1 overflow-hidden">
-                  <Typography variant="body" className="font-semibold truncate group-hover:text-primary transition-colors">
-                    {userProfile?.displayName || 'Yükleniyor...'}
-                  </Typography>
-                  <Typography variant="caption" className="text-muted truncate block">
-                    {userProfile?.username ? `@${userProfile.username}` : `@${userProfile?.uid?.substring(0, 6)}`}
-                  </Typography>
-                  <div className="flex items-center gap-1 mt-0.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                    <Typography variant="caption" className="text-amber-500 font-bold text-[10px]">
-                      {userProfile?.rxPoints || 0} RX
-                    </Typography>
-                  </div>
-                </div>
-              </Link>
-              {userProfile?.status !== 'pro' && (
-                <Link href="/premium">
-                  <div className="bg-primary/10 border border-primary/20 rounded-xl p-3 text-primary shadow-sm hover:bg-primary/20 transition-all cursor-pointer flex flex-col items-start gap-0.5 mb-3 group">
-                    <div className="flex items-center gap-2">
-                      <Crown size={18} className="text-primary group-hover:scale-110 transition-transform" />
-                      <Typography variant="body" className="font-bold text-sm">
-                        {userProfile?.status === 'premium' ? 'Pro\'ya Yükselt' : 'Premium Ol'}
-                      </Typography>
-                    </div>
-                    <Typography variant="caption" className="text-primary/70 text-xs">
-                      {userProfile?.status === 'premium' ? 'Sınırsız yaratıcılığa adım at' : 'Okuma deneyimini zirveye taşı'}
-                    </Typography>
-                  </div>
-                </Link>
-              )}
               {userProfile?.isAuthor ? (
                 <Link href="/studio">
-                  <Button variant="outline" className="w-full justify-start mb-2 border-primary/20 text-primary hover:bg-primary/10">
-                    <PenTool size={18} className="mr-2" /> Studio'ya Git
+                  <Button variant="outline" className="h-9 px-4 border-primary/20 text-primary hover:bg-primary/10 rounded-xl">
+                    <PenTool size={16} className="mr-2" /> Studio
                   </Button>
                 </Link>
               ) : (
-                <Button variant="outline" className="w-full justify-start mb-2 border-primary/20 text-primary hover:bg-primary/10" onPress={handleBecomeAuthor}>
-                  <PenTool size={18} className="mr-2" /> Yazar Ol
+                <Button variant="outline" className="h-9 px-4 border-primary/20 text-primary hover:bg-primary/10 rounded-xl" onPress={handleBecomeAuthor}>
+                  <PenTool size={16} className="mr-2" /> Yazar Ol
                 </Button>
               )}
-              {userProfile?.isAdmin && (
-                <Link href="/admin">
-                  <Button variant="outline" className="w-full justify-start mb-2 border-primary/20 text-primary hover:bg-primary/10">
-                    <ShieldAlert size={18} className="mr-2" /> Admin Paneli
-                  </Button>
+
+              <div className="w-px h-6 bg-border/50 mx-2" />
+
+              <Link href="/messages" className="relative p-2 text-muted hover:text-text hover:bg-muted/10 rounded-full transition-colors">
+                <MessageCircle size={22} className={pathname.startsWith('/messages') ? 'text-primary' : ''} />
+                {unreadMessageCount > 0 && (
+                  <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full absolute top-1 right-1 border-2 border-background">
+                    {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
+                  </span>
+                )}
+              </Link>
+
+              <Link href="/notifications" className="relative p-2 text-muted hover:text-text hover:bg-muted/10 rounded-full transition-colors mr-2">
+                <Bell size={22} className={pathname === '/notifications' ? 'text-primary' : ''} />
+                {unreadNotificationCount > 0 && (
+                  <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full absolute top-1 right-1 border-2 border-background">
+                    {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                  </span>
+                )}
+              </Link>
+
+              {/* Profile Dropdown (Hover) */}
+              <div className="relative group/profile">
+                <Link href="/profile" className="flex items-center gap-2 cursor-pointer p-1 pr-3 rounded-full hover:bg-muted/10 transition-colors border border-transparent hover:border-border/50">
+                  <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden border border-border/50 shrink-0">
+                    {userProfile?.avatarUrl ? (
+                      <img src={userProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-base font-bold text-primary uppercase">
+                        {userProfile?.displayName?.charAt(0) || 'U'}
+                      </span>
+                    )}
+                  </div>
+                  <span className="font-semibold text-sm truncate max-w-[100px]">
+                    {userProfile?.displayName?.split(' ')[0] || 'Profil'}
+                  </span>
                 </Link>
-              )}
-              {(userProfile?.isEditor || userProfile?.isAdmin) && (
-                <Link href="/editor">
-                  <Button variant="outline" className="w-full justify-start mb-2 border-green-500/20 text-green-500 hover:bg-green-500/10">
-                    <LifeBuoy size={18} className="mr-2" /> Editör Paneli
-                  </Button>
-                </Link>
-              )}
-              <Button variant="ghost" className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-950/30" onPress={handleSignOut}>
-                <LogOut size={18} className="mr-2" /> Çıkış Yap
-              </Button>
+
+                {/* Dropdown Menu */}
+                <div className="absolute right-0 top-[110%] w-64 bg-card border border-border shadow-2xl rounded-2xl overflow-hidden opacity-0 invisible group-hover/profile:opacity-100 group-hover/profile:visible transition-all duration-200 transform translate-y-2 group-hover/profile:translate-y-0 z-50">
+                  <div className="p-4 border-b border-border/50 bg-muted/5">
+                    <Typography variant="body" className="font-bold truncate">{userProfile?.displayName}</Typography>
+                    <Typography variant="caption" className="text-muted truncate block mb-2">@{userProfile?.username}</Typography>
+                    <div className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                      <Typography variant="caption" className="text-amber-500 font-bold">
+                        {userProfile?.rxPoints || 0} RX Puanı
+                      </Typography>
+                    </div>
+                  </div>
+                  
+                  <div className="p-2 flex flex-col gap-1">
+                    {userProfile?.status !== 'pro' && (
+                      <Link href="/premium" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-primary hover:bg-primary/10 transition-colors">
+                        <Crown size={18} />
+                        <span className="font-bold text-sm">Premium'a Geç</span>
+                      </Link>
+                    )}
+                    <Link href="/profile" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted/10 transition-colors text-text/80">
+                      <User size={18} />
+                      <span className="font-medium text-sm">Profilime Git</span>
+                    </Link>
+                    <Link href="/settings" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted/10 transition-colors text-text/80">
+                      <Settings size={18} />
+                      <span className="font-medium text-sm">Ayarlar</span>
+                    </Link>
+                    <Link href="/about" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted/10 transition-colors text-text/80">
+                      <Info size={18} />
+                      <span className="font-medium text-sm">Hakkımızda</span>
+                    </Link>
+                    
+                    {userProfile?.isAdmin && (
+                      <Link href="/admin" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted/10 transition-colors text-text/80 border-t border-border/50 mt-1 pt-3">
+                        <ShieldAlert size={18} />
+                        <span className="font-medium text-sm">Admin Paneli</span>
+                      </Link>
+                    )}
+                    {(userProfile?.isEditor || userProfile?.isAdmin) && (
+                      <Link href="/editor" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-green-500/10 transition-colors text-green-500">
+                        <LifeBuoy size={18} />
+                        <span className="font-medium text-sm">Editör Paneli</span>
+                      </Link>
+                    )}
+                    
+                    <button onClick={handleSignOut} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-500/10 transition-colors text-red-500 text-left w-full mt-1 border-t border-border/50 pt-3">
+                      <LogOut size={18} />
+                      <span className="font-medium text-sm">Çıkış Yap</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
             </>
           ) : (
-            <div className="flex flex-col items-center gap-3 p-4 rounded-xl bg-card border border-border/50">
-              <div className="w-12 h-12 rounded-full bg-muted/10 flex items-center justify-center overflow-hidden border border-border/50">
-                <User size={24} className="text-muted" />
-              </div>
-              <div className="text-center mb-1">
-                <Typography variant="body" className="font-semibold text-text">Misafir Kullanıcı</Typography>
-                <Typography variant="caption" className="text-muted block mt-1 text-xs">Platformun tüm özelliklerini kullanmak için giriş yapın.</Typography>
-              </div>
-              <Link href="/login" className="w-full block">
-                <Button variant="primary" className="w-full h-10">Giriş Yap</Button>
+            <div className="flex items-center gap-3">
+              <Link href="/login">
+                <Button variant="ghost" className="h-9 px-4 rounded-xl">Giriş Yap</Button>
+              </Link>
+              <Link href="/register">
+                <Button variant="primary" className="h-9 px-5 rounded-xl shadow-md">Kayıt Ol</Button>
               </Link>
             </div>
           )}
         </div>
-      </aside>
+      </header>
+
 
       {/* ── Main Content ── */}
       <main className="flex-1 flex flex-col overflow-y-auto relative">

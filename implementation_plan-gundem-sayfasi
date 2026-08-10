@@ -1,0 +1,69 @@
+# Gündem Sayfası: "Dijital Edebiyat Dergisi" Dönüşüm Planı
+
+Bu plan, Readixon'un Gündem (Agenda) sayfasını klasik bir listeden çıkarıp, kullanıcıların her gün ziyaret etmek isteyeceği interaktif, yaşayan bir **Dijital Dergi (Magazine)** formatına dönüştürmeyi amaçlamaktadır.
+
+## User Review Required
+
+> [!IMPORTANT]
+> Aşağıdaki özelliklerden hangilerinin **ilk aşamada (Faz 1)**, hangilerinin **ikinci aşamada (Faz 2)** sisteme eklenmesini istersiniz? Tüm özellikleri aynı anda geliştirmek yerine önceliklendirme yapmak daha sağlıklı olacaktır.
+
+## 1. Planlanan Yeni Özellikler (Modüller)
+
+### A. Köşe Yazıları ve Misafir Kalemler
+- **Konsept:** Readixon'un öne çıkan yazarları veya platform editörleri tarafından yazılan edebi denemeler, kitap incelemeleri veya yazarlık ipuçları.
+- **Tasarım:** Dergi kapağı tarzında büyük, göz alıcı görseller. Yazarın profil fotoğrafı ve isminin şık bir tipografi ile sunumu.
+
+### B. Edebi Burç Yorumları (Literary Horoscopes)
+- **Konsept:** Klasik "Bugün şanslısınız" yerine edebi tavsiyeler içeren günlük burç yorumları.
+- **Mekanizma:** Kullanıcı burcunu seçtiğinde veya profiline kaydettiğinde o günkü edebi ruh hali ve o ruha uygun bir **kitap/hikaye önerisi** alır.
+- **Örnek:** *"İkizler: Bugün zihniniz çok kalabalık. Olay örgüsü karmaşık bir polisiye roman tam size göre. Önerimiz: [Platformdaki bir eser]"*
+
+### C. Günün Edebi Kelimesi (Word of the Day)
+- **Konsept:** Türkçedeki veya dünya dillerindeki estetik, derin anlamlı kelimelerin günlük olarak sergilenmesi.
+- **Tasarım:** Sadece metne odaklanan, çok şık tırnaklı (serif) fontlarla süslenmiş minimalist bir kart. Kelimenin okunuşu, sözlük anlamı ve bir cümle içinde kullanımı yer alacak.
+
+### D. Yazar İlham Kıvılcımları (Writing Prompts)
+- **Konsept:** Yazarları yazmaya teşvik edecek günlük veya haftalık ufak meydan okumalar.
+- **Etkileşim:** Kullanıcılar bu görevi "Kabul Et" butonuna basarak doğrudan **Readix** veya **Studio** sayfasına yönlendirilebilir.
+
+---
+
+## 2. Veri Tabanı (Firebase) Mimari Güncellemeleri
+
+Bu içerikleri dinamik olarak yönetebilmek için `packages/core/src/types` içerisine yeni veri modelleri eklenecek ve Firestore'da yeni koleksiyonlar oluşturulacaktır:
+
+- **`columns` Koleksiyonu:** 
+  - `id, authorId, title, content (Markdown/HTML), coverImage, category, views, createdAt`
+- **`daily_content` Koleksiyonu (Kelime ve Egzersizler için):**
+  - `id, date, type ('word' | 'prompt'), content, metadata`
+- **`horoscopes` Koleksiyonu:**
+  - `id, date, sign, text, recommendedStoryId`
+
+---
+
+## 3. Arayüz (UI) ve Yerleşim Değişiklikleri
+
+### [MODIFY] `apps/web/src/app/(main)/agenda/page.tsx`
+Gündem sayfası bir "Bento Box" (ızgara) tasarımına geçirilecek:
+
+1. **Hero Section (En Üst):** O günün en önemli Köşe Yazısı (Tam genişlikte, slider veya devasa bir kart).
+2. **Orta Grid (3'lü veya 2'li yapı):**
+   - Sol tarafta: Edebi Burç Yorumları Widget'ı.
+   - Sağ tarafta: Günün Kelimesi kartı (Gradient veya karanlık premium bir arka plan ile).
+3. **Alt Grid:**
+   - Yazarlık Egzersizi (Call-to-action butonu ile).
+   - Diğer Köşe Yazıları ve Haberler.
+   - Okur Anketleri (Mevcut anket yapısı bu gridin içine şıkça yedirilecek).
+
+---
+
+## 4. Open Questions (Açık Sorular)
+
+> [!TIP]
+> **Admin Paneli İhtiyacı:** Bu verileri her gün sizin veya editörlerinizin girebilmesi için Admin veya Editör paneline özel giriş formları eklememiz gerekecek. Bu özelliklerin veri girişini şimdilik "manuel" mi (veritabanından benim eklememle mi) yoksa doğrudan **Admin Paneline arayüz ekleyerek mi** başlatalım?
+
+## 5. Verification Plan
+
+1. **Veri Modellerinin Eklenmesi:** Gerekli TypeScript interfaceleri oluşturulacak.
+2. **Sahte Veri (Mock Data) ile UI İnşası:** Gerçek veriler bağlanmadan önce bu modüllerin tasarımı sahte verilerle Agenda sayfasına yerleştirilip size sunulacak.
+3. **Görsel Onay:** Sayfa düzeni ve "Premium" hissiyatı onaylandığında Admin tarafına ve veritabanı fonksiyonlarına geçilecek.

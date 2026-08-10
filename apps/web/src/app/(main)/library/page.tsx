@@ -2,21 +2,22 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { BookOpen, Bookmark, Loader2, Compass, Quote, Trash2 } from 'lucide-react';
-import { Typography, Button } from '@readixon/ui';
-import { StoryCard } from '@readixon/ui';
-import { useAuthStore, getUserReadingProgress, getSavedStories, getStoriesByIds, generateStorySlug, getUserProfile, getUserQuotes, deleteSavedQuote } from '@readixon/core';
-import type { Story, SavedQuote } from '@readixon/core';
+import { BookOpen, Bookmark, Loader2, Compass, Quote, Trash2, MessageCircle } from 'lucide-react';
+import { Typography, Button, StoryCard, ReadixCard } from '@readixon/ui';
+import { useAuthStore, getUserReadingProgress, getSavedStories, getStoriesByIds, generateStorySlug, getUserProfile, getUserQuotes, deleteSavedQuote, getBookmarkedReadixes, toggleReadixBookmark, toggleReadixLike } from '@readixon/core';
+import type { Story, SavedQuote, Readix, User } from '@readixon/core';
 import { toast } from 'sonner';
 
 export default function LibraryPage() {
-  const [activeTab, setActiveTab] = useState<'reading' | 'saved' | 'quotes'>('reading');
+  const [activeTab, setActiveTab] = useState<'reading' | 'saved' | 'quotes' | 'readixes'>('reading');
   const [readingSubTab, setReadingSubTab] = useState<'novels' | 'webtoons'>('novels');
   const [savedSubTab, setSavedSubTab] = useState<'novels' | 'webtoons'>('novels');
   const [loading, setLoading] = useState(true);
   const [readingStories, setReadingStories] = useState<(Story & { progress?: number })[]>([]);
   const [savedStories, setSavedStories] = useState<Story[]>([]);
   const [savedQuotes, setSavedQuotes] = useState<SavedQuote[]>([]);
+  const [savedReadixes, setSavedReadixes] = useState<Readix[]>([]);
+  const [readixAuthors, setReadixAuthors] = useState<Record<string, User>>({});
   
   const { firebaseUser } = useAuthStore();
   const router = useRouter();
@@ -87,6 +88,22 @@ export default function LibraryPage() {
         } else if (activeTab === 'quotes') {
           const quotes = await getUserQuotes(firebaseUser.uid);
           setSavedQuotes(quotes);
+        } else if (activeTab === 'readixes') {
+          const readixes = await getBookmarkedReadixes(firebaseUser.uid);
+          setSavedReadixes(readixes);
+          
+          const authorsMap: Record<string, User> = {};
+          for (const r of readixes) {
+            if (!authorsMap[r.authorId]) {
+              const profile = await getUserProfile(r.authorId);
+              if (profile) authorsMap[r.authorId] = profile as User;
+            }
+            if (r.originalReadix && !authorsMap[r.originalReadix.authorId]) {
+              const profile = await getUserProfile(r.originalReadix.authorId);
+              if (profile) authorsMap[r.originalReadix.authorId] = profile as User;
+            }
+          }
+          setReadixAuthors(authorsMap);
         }
       } catch (error) {
         console.error('Kütüphane verileri çekilirken hata:', error);
@@ -129,6 +146,8 @@ export default function LibraryPage() {
       items = readingStories.filter(s => readingSubTab === 'webtoons' ? s.format === 'webtoon' : s.format !== 'webtoon');
     } else if (activeTab === 'saved') {
       items = savedStories.filter(s => savedSubTab === 'webtoons' ? s.format === 'webtoon' : s.format !== 'webtoon');
+    } else if (activeTab === 'readixes') {
+      items = savedReadixes;
     } else {
       items = savedQuotes;
     }
@@ -141,6 +160,8 @@ export default function LibraryPage() {
               <BookOpen size={40} className="text-muted/40" />
             ) : activeTab === 'saved' ? (
               <Bookmark size={40} className="text-muted/40" />
+            ) : activeTab === 'readixes' ? (
+              <MessageCircle size={40} className="text-muted/40" />
             ) : (
               <Quote size={40} className="text-muted/40" />
             )}
@@ -151,6 +172,8 @@ export default function LibraryPage() {
               ? 'Henüz okumaya başladığınız bir hikaye bulunmuyor. Yeni dünyalar keşfetmeye hemen başlayın.' 
               : activeTab === 'saved' 
                 ? 'Daha sonra okumak için henüz hiçbir hikayeyi kaydetmemişsiniz.'
+                : activeTab === 'readixes'
+                ? 'Henüz hiçbir Readix gönderisini kaydetmemişsiniz.'
                 : 'Okurken altını çizdiğiniz veya kaydettiğiniz hiçbir alıntı bulunmuyor.'}
           </Typography>
           <Button variant="primary" onPress={() => router.push('/feed')} className="rounded-full px-6">
@@ -207,6 +230,59 @@ export default function LibraryPage() {
               </button>
             </div>
           ))}
+        </div>
+      );
+    }
+
+    if (activeTab === 'readixes') {
+      return (
+        <div className="flex flex-col gap-4 mt-8 max-w-2xl mx-auto">
+          {savedReadixes.map(readix => {
+            const isRepost = !!readix.originalReadix;
+            const targetReadix = isRepost ? readix.originalReadix! : readix;
+            const reposter = isRepost ? readixAuthors[readix.authorId] : null;
+            const author = readixAuthors[targetReadix.authorId];
+            
+            return (
+              <ReadixCard
+                key={readix.id}
+                linkedStory={targetReadix.linkedStory}
+                authorName={author?.displayName || 'Bilinmeyen Kullanıcı'}
+                authorUsername={author?.username || 'user'}
+                authorAvatarUrl={author?.avatarUrl}
+                repostOfAuthorName={reposter?.displayName}
+                content={targetReadix.content}
+                mediaUrls={targetReadix.mediaUrls}
+                createdAtStr={targetReadix.createdAt ? new Date((targetReadix.createdAt as any).seconds ? (targetReadix.createdAt as any).seconds * 1000 : (targetReadix.createdAt as unknown as number)).toLocaleDateString() : 'Şimdi'}
+                likesCount={targetReadix.stats?.likes || 0}
+                commentsCount={targetReadix.stats?.comments || 0}
+                repostsCount={targetReadix.stats?.reposts || 0}
+                bookmarksCount={targetReadix.stats?.bookmarks || 0}
+                poll={targetReadix.poll as any}
+                isOwner={firebaseUser?.uid === readix.authorId}
+                currentUserId={firebaseUser?.uid}
+                isBookmarked={true}
+                onAuthorPress={() => author?.username && router.push(`/profile/@${author.username}`)}
+                onLikePress={async () => {
+                  if (!firebaseUser) return;
+                  await toggleReadixLike(firebaseUser.uid, targetReadix.id);
+                  toast.success("Beğeni güncellendi.");
+                }}
+                onBookmarkPress={async () => {
+                  if (!firebaseUser) return;
+                  const newStatus = await toggleReadixBookmark(firebaseUser.uid, targetReadix.id);
+                  if (!newStatus) {
+                    setSavedReadixes(prev => prev.filter(r => r.id !== readix.id));
+                    toast.success("Gönderi kaydedilenlerden çıkarıldı.");
+                  }
+                }}
+                onCommentPress={() => toast('Detaylı etkileşim için Readix sayfasına gidin.')}
+                onSharePress={() => toast('Detaylı etkileşim için Readix sayfasına gidin.')}
+                onRepostPress={() => toast('Detaylı etkileşim için Readix sayfasına gidin.')}
+                onPress={() => toast('Detaylı etkileşim için Readix sayfasına gidin.')}
+              />
+            );
+          })}
         </div>
       );
     }
@@ -284,6 +360,17 @@ export default function LibraryPage() {
         >
           <Quote size={18} />
           Alıntılar
+        </button>
+        <button
+          onClick={() => setActiveTab('readixes')}
+          className={`flex items-center gap-2 py-4 border-b-2 transition-all ${
+            activeTab === 'readixes' 
+              ? 'border-primary text-primary font-semibold' 
+              : 'border-transparent text-muted hover:text-text'
+          }`}
+        >
+          <MessageCircle size={18} />
+          Gönderiler
         </button>
       </div>
 

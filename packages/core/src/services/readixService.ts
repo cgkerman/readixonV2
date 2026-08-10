@@ -14,7 +14,10 @@ import {
   increment,
   writeBatch,
   deleteDoc,
-  updateDoc
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
+  documentId
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Readix, ReadixComment } from '../types';
@@ -312,6 +315,118 @@ export async function getFollowingReadixes(
     lastDoc: snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null,
     hasMore: snapshot.docs.length === pageSize
   };
+}
+
+export async function getTrendingReadixes(
+  pageSize: number = 20, 
+  lastDocParam: any = null, 
+  blockedUsers?: string[]
+): Promise<{ readixes: Readix[], lastDoc: any, hasMore: boolean }> {
+  let q = query(
+    collection(db, READIXES_COLLECTION),
+    // Trendleri hesaplarken basitçe son 7 günde en çok like alanları çekebiliriz, ama Firestore'da dinamik date filter ile sort zordur.
+    // Şimdilik en çok like alanları genel olarak çekelim:
+    orderBy('stats.likes', 'desc'),
+    orderBy('createdAt', 'desc'),
+    limit(pageSize)
+  );
+
+  if (lastDocParam) {
+    q = query(q, startAfter(lastDocParam));
+  }
+
+  const snapshot = await getDocs(q);
+  let readixes = snapshot.docs.map(doc => doc.data() as Readix);
+
+  readixes = await populateReposts(readixes);
+  readixes = await populateLinkedStories(readixes);
+
+  if (blockedUsers && blockedUsers.length > 0) {
+    readixes = readixes.filter(r => !blockedUsers.includes(r.authorId));
+  }
+
+  return {
+    readixes,
+    lastDoc: snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null,
+    hasMore: snapshot.docs.length === pageSize
+  };
+}
+
+export async function toggleReadixBookmark(userId: string, readixId: string): Promise<boolean> {
+  const userRef = doc(db, 'users', userId);
+  const readixRef = doc(db, READIXES_COLLECTION, readixId);
+  
+  // We need to fetch the user profile to see if it's bookmarked
+  const userSnap = await getDoc(userRef);
+  if (!userSnap.exists()) return false;
+  
+  const userData = userSnap.data();
+  const bookmarkedIds = userData.bookmarkedReadixIds || [];
+  const isBookmarked = bookmarkedIds.includes(readixId);
+
+  const batch = writeBatch(db);
+
+  if (isBookmarked) {
+    // Unbookmark
+    batch.update(userRef, {
+      bookmarkedReadixIds: arrayRemove(readixId)
+    });
+    batch.update(readixRef, {
+      'stats.bookmarks': increment(-1)
+    });
+    await batch.commit();
+    return false;
+  } else {
+    // Bookmark
+    batch.update(userRef, {
+      bookmarkedReadixIds: arrayUnion(readixId)
+    });
+    batch.update(readixRef, {
+      'stats.bookmarks': increment(1)
+    });
+    await batch.commit();
+    return true;
+  }
+}
+
+
+export async function getBookmarkedReadixes(userId: string): Promise<Readix[]> {
+  const userRef = doc(db, 'users', userId);
+  const userSnap = await getDoc(userRef);
+  if (!userSnap.exists()) return [];
+
+  const bookmarkedIds = userSnap.data().bookmarkedReadixIds || [];
+  if (bookmarkedIds.length === 0) return [];
+
+  // Firestore in queries are limited to 30 items
+  const chunkedIds = [];
+  for (let i = 0; i < bookmarkedIds.length; i += 30) {
+    chunkedIds.push(bookmarkedIds.slice(i, i + 30));
+  }
+
+  let allReadixes: Readix[] = [];
+  for (const chunk of chunkedIds) {
+    const q = query(
+      collection(db, READIXES_COLLECTION),
+      where(documentId(), 'in', chunk)
+    );
+    const snapshot = await getDocs(q);
+    const chunkReadixes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Readix));
+    allReadixes = [...allReadixes, ...chunkReadixes];
+  }
+
+  // Populate linked content
+  allReadixes = await populateReposts(allReadixes);
+  allReadixes = await populateLinkedStories(allReadixes);
+
+  // Sort them by createdAt desc (newest first)
+  allReadixes.sort((a, b) => {
+    const dateA = a.createdAt ? ((a.createdAt as any).seconds ? (a.createdAt as any).seconds * 1000 : a.createdAt as unknown as number) : 0;
+    const dateB = b.createdAt ? ((b.createdAt as any).seconds ? (b.createdAt as any).seconds * 1000 : b.createdAt as unknown as number) : 0;
+    return dateB - dateA;
+  });
+
+  return allReadixes;
 }
 
 export async function checkHasLikedReadix(userId: string, readixId: string): Promise<boolean> {

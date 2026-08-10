@@ -80,6 +80,8 @@ export interface User {
   freeCharacterBookStoryId?: string; // Hangi hikaye için karakter defterini ücretsiz açtığı
   achievements?: UserAchievements; // Kullanıcı başarımları ve rozetleri
   likedStoryIds?: string[]; // Kullanıcının beğendiği hikaye ID'leri
+  likedReadixIds?: string[]; // Kullanıcının beğendiği readix (gönderi) ID'leri
+  bookmarkedReadixIds?: string[]; // Kullanıcının kaydettiği readix ID'leri
 }
 
 /** Yeni kullanÄ±cÄ± oluÅŸturulurken kullanÄ±lan kÄ±smi tip */
@@ -259,6 +261,7 @@ export interface ReadixStats {
   comments: number;
   shares: number;
   reposts?: number; // Repost/Retweet sayisi
+  bookmarks?: number; // Kaydetme sayısı
 }
 
 export interface ReadixPollOption {

@@ -56,3 +56,5 @@ export * from './HorizontalStoryCard';
 export * from './ConfirmationDialog';
 export * from './StorySearchModal';
 export * from './CustomAudioPlayer';
+
+export * from './QuillIcon';

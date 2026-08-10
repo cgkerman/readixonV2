@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Heart, MessageCircle, Share2, MoreHorizontal, Edit, Trash2, Flag, ShieldBan, Repeat } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MoreHorizontal, Edit, Trash2, Flag, ShieldBan, Repeat, Bookmark, BadgeCheck, ArrowRight, BookOpen } from 'lucide-react';
 import { Typography } from './Typography';
 import { Button } from './Button';
 
@@ -15,7 +15,10 @@ export interface ReadixCardProps {
   likesCount: number;
   commentsCount: number;
   repostsCount?: number;
+  bookmarksCount?: number;
   isLiked?: boolean;
+  isBookmarked?: boolean;
+  isVerified?: boolean;
   isOwner?: boolean;
   isPinned?: boolean;
   repostOfAuthorName?: string;
@@ -38,6 +41,7 @@ export interface ReadixCardProps {
   onCommentPress?: () => void;
   onSharePress?: () => void;
   onRepostPress?: () => void;
+  onBookmarkPress?: () => void;
   onPinPress?: () => void;
   onAuthorPress?: () => void;
   onPress?: () => void;
@@ -60,7 +64,10 @@ export const ReadixCard: React.FC<ReadixCardProps> = ({
   likesCount,
   commentsCount,
   repostsCount = 0,
+  bookmarksCount = 0,
   isLiked = false,
+  isBookmarked = false,
+  isVerified = false,
   isOwner = false,
   isPinned = false,
   repostOfAuthorName,
@@ -73,6 +80,7 @@ export const ReadixCard: React.FC<ReadixCardProps> = ({
   onCommentPress,
   onSharePress,
   onRepostPress,
+  onBookmarkPress,
   onPinPress,
   onAuthorPress,
   onPress,
@@ -85,7 +93,9 @@ export const ReadixCard: React.FC<ReadixCardProps> = ({
   className = '',
 }) => {
   const [showMenu, setShowMenu] = useState(false);
+  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -138,9 +148,12 @@ export const ReadixCard: React.FC<ReadixCardProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <Typography variant="body" className="font-bold text-text/90 group-hover:text-primary transition-colors">
-                {authorName}
-              </Typography>
+              <div className="flex items-center gap-1">
+                <Typography variant="body" className="font-bold text-text/90 group-hover:text-primary transition-colors">
+                  {authorName}
+                </Typography>
+                {isVerified && <BadgeCheck size={16} className="text-blue-500 fill-blue-50" />}
+              </div>
               <Typography variant="caption" className="text-muted/60">
                 • {createdAtStr}
               </Typography>
@@ -244,19 +257,67 @@ export const ReadixCard: React.FC<ReadixCardProps> = ({
         })}
       </div>
 
-      {/* Medya (Varsa) - Carousel */}
+      {/* Medya (Varsa) - Instagram Style Carousel */}
       {mediaUrls.length > 0 && (
-        <div className="mb-4 flex overflow-x-auto gap-2 snap-x pb-2 scrollbar-thin scrollbar-thumb-white/10">
-          {mediaUrls.map((url, index) => (
-            <div key={index} className={`flex-shrink-0 ${mediaUrls.length === 1 ? 'w-full' : 'w-[85%]'} rounded-2xl overflow-hidden border border-border bg-background/50 snap-center aspect-square sm:aspect-[4/3] relative`}>
-              <img src={url} alt="Readix Media" className="w-full h-full object-cover" />
-              {mediaUrls.length > 1 && (
-                <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
-                  {index + 1} / {mediaUrls.length}
-                </div>
-              )}
+        <div className="mb-4 relative rounded-2xl overflow-hidden border border-border bg-background/50 group">
+          <div 
+            ref={scrollContainerRef}
+            onScroll={(e) => {
+              const scrollLeft = e.currentTarget.scrollLeft;
+              const width = e.currentTarget.offsetWidth;
+              setActiveMediaIndex(Math.round(scrollLeft / width));
+            }}
+            className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {mediaUrls.map((url, index) => (
+              <div key={index} className="w-full flex-shrink-0 snap-center relative aspect-square sm:aspect-[4/3] bg-black/5">
+                <img src={url} alt={`Readix Media ${index + 1}`} className="w-full h-full object-cover" />
+              </div>
+            ))}
+          </div>
+
+          {/* Pagination Dots */}
+          {mediaUrls.length > 1 && (
+            <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-10 pointer-events-none">
+              {mediaUrls.map((_, idx) => (
+                <div 
+                  key={idx} 
+                  className={`h-1.5 rounded-full transition-all duration-300 shadow-sm ${
+                    idx === activeMediaIndex ? 'w-4 bg-primary' : 'w-1.5 bg-white/60'
+                  }`}
+                />
+              ))}
             </div>
-          ))}
+          )}
+
+          {/* Navigation Arrows (Desktop overlay) */}
+          {mediaUrls.length > 1 && (
+            <>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (scrollContainerRef.current) {
+                    scrollContainerRef.current.scrollBy({ left: -scrollContainerRef.current.offsetWidth, behavior: 'smooth' });
+                  }
+                }}
+                className={`absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity ${activeMediaIndex === 0 ? 'hidden' : ''}`}
+              >
+                <span className="text-sm font-bold leading-none -ml-0.5">‹</span>
+              </button>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (scrollContainerRef.current) {
+                    scrollContainerRef.current.scrollBy({ left: scrollContainerRef.current.offsetWidth, behavior: 'smooth' });
+                  }
+                }}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity ${activeMediaIndex === mediaUrls.length - 1 ? 'hidden' : ''}`}
+              >
+                <span className="text-sm font-bold leading-none -mr-0.5">›</span>
+              </button>
+            </>
+          )}
         </div>
       )}
 
@@ -302,39 +363,83 @@ export const ReadixCard: React.FC<ReadixCardProps> = ({
         <a 
           href={`/story/${linkedStory.storyId}`}
           onClick={(e) => e.stopPropagation()}
-          className="mb-4 block"
+          className="mb-4 block relative group"
         >
-          <div className="flex items-center gap-3 p-3 bg-card border border-primary/20 hover:border-primary/50 hover:bg-primary/5 transition-colors rounded-xl group relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent pointer-events-none" />
-            <img 
-              src={linkedStory.coverUrl || ''} 
-              alt={linkedStory.title} 
-              className="w-12 h-16 object-cover rounded-md shadow-sm border border-border/50 group-hover:border-primary/30 transition-colors z-10" 
-            />
-            <div className="flex-1 min-w-0 z-10">
-              <Typography variant="caption" className="text-primary font-medium mb-0.5 block uppercase tracking-wider text-[10px]">Bahsedilen Kitap</Typography>
-              <Typography variant="body" className="font-bold text-text truncate leading-tight group-hover:text-primary transition-colors">{linkedStory.title}</Typography>
-              <Typography variant="caption" className="text-muted truncate mt-0.5 block">{linkedStory.authorName || 'Bilinmiyor'}</Typography>
+          {/* Ambient Glow from the cover */}
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-purple-500/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none rounded-3xl" />
+          
+          <div className="flex items-stretch gap-4 p-4 sm:p-5 bg-card/80 backdrop-blur-xl border border-border/60 group-hover:border-primary/30 transition-all duration-500 rounded-3xl relative overflow-hidden shadow-sm group-hover:shadow-md">
+            
+            {/* Book Cover (3D Physical Look) */}
+            <div className="w-24 sm:w-28 flex-shrink-0 relative rounded-xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.12)] group-hover:shadow-[0_8px_30px_rgba(139,92,246,0.3)] transition-shadow duration-500 aspect-[2/3]">
+              {/* Kitap Sırtı Gölgesi (Spine Shadow) */}
+              <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-black/40 via-black/10 to-transparent w-6 z-10 pointer-events-none" />
+              <img 
+                src={linkedStory.coverUrl || ''} 
+                alt={linkedStory.title} 
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+              />
+              {/* Parlama Efekti */}
+              <div className="absolute inset-0 border border-white/20 rounded-xl pointer-events-none z-10" />
+            </div>
+            
+            {/* Details */}
+            <div className="flex flex-col flex-1 min-w-0 justify-between py-1">
+              <div>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <div className="bg-primary/10 text-primary p-1 rounded-md">
+                    <BookOpen size={12} strokeWidth={2.5} />
+                  </div>
+                  <Typography variant="caption" className="text-primary font-bold tracking-widest text-[10px] uppercase">
+                    Önerilen Kitap
+                  </Typography>
+                </div>
+                <Typography variant="h3" className="font-extrabold text-text text-lg sm:text-xl truncate leading-tight group-hover:text-primary transition-colors">
+                  {linkedStory.title}
+                </Typography>
+                <Typography variant="body" className="text-muted truncate mt-1 text-sm font-medium">
+                  {linkedStory.authorName || 'Bilinmiyor'}
+                </Typography>
+              </div>
+              
+              {/* Tags & Action */}
+              <div className="flex items-center justify-between mt-3">
+                <div className="flex items-center gap-1.5">
+                  <span className="px-2.5 py-1 rounded-full bg-border/50 text-muted-foreground text-[10px] font-bold uppercase tracking-wider">Romantik</span>
+                  <span className="px-2.5 py-1 rounded-full bg-border/50 text-muted-foreground text-[10px] font-bold uppercase tracking-wider">Gençlik</span>
+                </div>
+                
+                <div className="flex items-center gap-2 bg-text text-background font-bold px-4 py-2 rounded-full group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 transform group-hover:scale-105 shadow-sm">
+                  <span className="text-xs">İncele</span>
+                </div>
+              </div>
             </div>
           </div>
         </a>
       )}
 
       {/* Alt Kısım: Etkileşim Butonları */}
-      <div className="flex items-center gap-6 mt-2 pt-4 border-t border-border">
+      <div className="flex items-center gap-6 mt-2 pt-4 border-t border-border/50 text-muted">
         {readOnlyStats ? (
           <>
-            <div className={`flex items-center gap-2 text-sm font-medium ${isLiked ? 'text-pink-500' : 'text-muted'}`}>
-              <Heart size={20} className={isLiked ? 'fill-current' : ''} />
-              <span>{likesCount}</span>
+            <div className={`flex items-center gap-1.5 text-[13px] font-semibold ${isLiked ? 'text-pink-500' : ''}`}>
+              <Heart size={18} strokeWidth={isLiked ? 2 : 1.5} className={isLiked ? 'fill-current' : ''} />
+              {likesCount > 0 && <span>{likesCount}</span>}
             </div>
-            <div className="flex items-center gap-2 text-sm font-medium text-muted">
-              <MessageCircle size={20} />
-              <span>{commentsCount}</span>
+            <div className="flex items-center gap-1.5 text-[13px] font-semibold">
+              <MessageCircle size={18} strokeWidth={1.5} />
+              {commentsCount > 0 && <span>{commentsCount}</span>}
             </div>
-            <div className={`flex items-center gap-2 text-sm font-medium ${hasReposted ? 'text-green-500' : 'text-muted'}`}>
-              <Repeat size={20} className={hasReposted ? 'fill-current' : ''} />
-              <span>{repostsCount}</span>
+            <div className={`flex items-center gap-1.5 text-[13px] font-semibold ${hasReposted ? 'text-green-500' : ''}`}>
+              <Repeat size={18} strokeWidth={hasReposted ? 2 : 1.5} className={hasReposted ? 'fill-current' : ''} />
+              {repostsCount > 0 && <span>{repostsCount}</span>}
+            </div>
+            <div className={`flex items-center gap-1.5 text-[13px] font-semibold ${isBookmarked ? 'text-primary' : ''}`}>
+              <Bookmark size={18} strokeWidth={isBookmarked ? 2 : 1.5} className={isBookmarked ? 'fill-current' : ''} />
+              {bookmarksCount > 0 && <span>{bookmarksCount}</span>}
+            </div>
+            <div className="flex items-center gap-1.5 text-[13px] font-semibold ml-auto">
+              <Share2 size={18} strokeWidth={1.5} />
             </div>
           </>
         ) : (
@@ -344,12 +449,12 @@ export const ReadixCard: React.FC<ReadixCardProps> = ({
                 e.stopPropagation();
                 onLikePress?.();
               }}
-              className={`flex items-center gap-2 text-sm font-medium transition-colors ${
-                isLiked ? 'text-pink-500' : 'text-muted hover:text-pink-500'
+              className={`flex items-center gap-1.5 text-[13px] font-semibold transition-colors ${
+                isLiked ? 'text-pink-500' : 'hover:text-pink-500'
               }`}
             >
-              <Heart size={20} className={isLiked ? 'fill-current' : ''} />
-              <span>{likesCount > 0 ? likesCount : 'Beğen'}</span>
+              <Heart size={18} strokeWidth={isLiked ? 2 : 1.5} className={isLiked ? 'fill-current' : ''} />
+              {likesCount > 0 && <span>{likesCount}</span>}
             </button>
 
             <button 
@@ -357,10 +462,10 @@ export const ReadixCard: React.FC<ReadixCardProps> = ({
                 e.stopPropagation();
                 onCommentPress?.();
               }}
-              className="flex items-center gap-2 text-sm font-medium text-muted hover:text-blue-400 transition-colors"
+              className="flex items-center gap-1.5 text-[13px] font-semibold hover:text-blue-500 transition-colors"
             >
-              <MessageCircle size={20} />
-              <span>{commentsCount > 0 ? commentsCount : 'Yorum'}</span>
+              <MessageCircle size={18} strokeWidth={1.5} />
+              {commentsCount > 0 && <span>{commentsCount}</span>}
             </button>
 
             <button 
@@ -368,12 +473,25 @@ export const ReadixCard: React.FC<ReadixCardProps> = ({
                 e.stopPropagation();
                 onRepostPress?.();
               }}
-              className={`flex items-center gap-2 text-sm font-medium transition-colors ${
-                hasReposted ? 'text-green-500' : 'text-muted hover:text-green-500'
+              className={`flex items-center gap-1.5 text-[13px] font-semibold transition-colors ${
+                hasReposted ? 'text-green-500' : 'hover:text-green-500'
               }`}
             >
-              <Repeat size={20} className={hasReposted ? 'fill-current' : ''} />
-              <span>{repostsCount > 0 ? repostsCount : 'Alıntıla'}</span>
+              <Repeat size={18} strokeWidth={hasReposted ? 2 : 1.5} className={hasReposted ? 'fill-current' : ''} />
+              {repostsCount > 0 && <span>{repostsCount}</span>}
+            </button>
+
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                onBookmarkPress?.();
+              }}
+              className={`flex items-center gap-1.5 text-[13px] font-semibold transition-colors ${
+                isBookmarked ? 'text-primary' : 'hover:text-primary'
+              }`}
+            >
+              <Bookmark size={18} strokeWidth={isBookmarked ? 2 : 1.5} className={isBookmarked ? 'fill-current' : ''} />
+              {bookmarksCount > 0 && <span>{bookmarksCount}</span>}
             </button>
 
             <button 
@@ -381,9 +499,9 @@ export const ReadixCard: React.FC<ReadixCardProps> = ({
                 e.stopPropagation();
                 onSharePress?.();
               }}
-              className="flex items-center gap-2 text-sm font-medium text-muted hover:text-blue-400 transition-colors ml-auto"
+              className="flex items-center gap-1.5 text-[13px] font-semibold hover:text-blue-500 transition-colors ml-auto"
             >
-              <Share2 size={20} />
+              <Share2 size={18} strokeWidth={1.5} />
             </button>
           </>
         )}

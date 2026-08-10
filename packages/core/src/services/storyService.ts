@@ -431,7 +431,10 @@ export const updateChapter = async (storyId: string, chapterId: string, data: Pa
           const storySnap = await getDoc(storyRef);
           if (storySnap.exists()) {
             const stats = storySnap.data().stats;
-            await updateDoc(storyRef, { 'stats.chapterCount': (stats?.chapterCount || 0) + 1 });
+            await updateDoc(storyRef, { 
+              'stats.chapterCount': (stats?.chapterCount || 0) + 1,
+              updatedAt: serverTimestamp()
+            });
           }
         } else if (oldStatus === 'published' && data.status !== 'published') {
           // Yayından kalktı
@@ -439,7 +442,10 @@ export const updateChapter = async (storyId: string, chapterId: string, data: Pa
           const storySnap = await getDoc(storyRef);
           if (storySnap.exists()) {
             const stats = storySnap.data().stats;
-            await updateDoc(storyRef, { 'stats.chapterCount': Math.max(0, (stats?.chapterCount || 0) - 1) });
+            await updateDoc(storyRef, { 
+              'stats.chapterCount': Math.max(0, (stats?.chapterCount || 0) - 1),
+              updatedAt: serverTimestamp()
+            });
           }
         }
       }

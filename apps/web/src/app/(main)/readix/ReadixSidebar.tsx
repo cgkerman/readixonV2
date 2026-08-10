@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Typography, Button } from '@readixon/ui';
-import { X, Phone, Mail, MapPin } from 'lucide-react';
+import { X, Phone, Mail, MapPin, BarChart2, MoreHorizontal, TrendingUp } from 'lucide-react';
 import { collection, getDocs, limit, orderBy, query, where, onSnapshot } from 'firebase/firestore';
 import { db, getTopStories, getActiveAdminPoll, voteAdminPoll, AdminPoll, getActiveQuote, AdminQuote, useAuthStore } from '@readixon/core';
 import { toast } from 'sonner';
@@ -123,17 +123,47 @@ export function ReadixSidebar() {
       <div className="flex flex-col gap-6">
         
         {/* Trending Tags Widget */}
-        <div className="bg-card/40 rounded-3xl p-6 border border-border flex flex-col gap-4 shadow-sm backdrop-blur-sm">
-          <Typography variant="body" className="font-bold text-text border-b border-border pb-2">Türkiye'de Trend</Typography>
-          {trendingTags.length > 0 ? trendingTags.map((tag, idx) => (
-            <div key={tag.id} className="group">
-              <Typography variant="caption" className="text-muted block text-[10px]">#{idx + 1} Trend</Typography>
-              <Typography variant="body" className="font-bold text-text group-hover:text-primary cursor-pointer transition-colors">#{tag.id}</Typography>
-              <Typography variant="caption" className="text-muted mt-0.5 block">{tag.count} Gönderi</Typography>
-            </div>
-          )) : (
-            <div className="text-sm text-muted">Henüz trend yok.</div>
-          )}
+        <div className="bg-card/40 rounded-3xl p-6 border border-border/60 flex flex-col gap-5 shadow-sm backdrop-blur-xl relative overflow-hidden group/widget">
+          {/* Subtle background glow */}
+          <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl group-hover/widget:bg-primary/20 transition-colors duration-700 pointer-events-none" />
+          
+          <div className="flex items-center gap-2 border-b border-border/50 pb-3 relative z-10">
+            <TrendingUp size={22} className="text-primary" />
+            <Typography variant="body" className="font-extrabold text-text tracking-wide text-lg">Türkiye'de Trend</Typography>
+          </div>
+          
+          <div className="flex flex-col gap-4 relative z-10">
+            {trendingTags.length > 0 ? trendingTags.map((tag, idx) => (
+              <a 
+                key={tag.id}
+                href={`/readix?hashtag=${tag.id}`}
+                className="group flex items-center gap-4 cursor-pointer"
+              >
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 group-hover:bg-primary group-hover:text-background transition-all">
+                  <span className="text-lg font-black text-primary group-hover:text-background transition-colors">
+                    {idx + 1}
+                  </span>
+                </div>
+                
+                <div className="flex flex-col flex-1 min-w-0">
+                  <span className="text-[9px] font-bold text-muted mb-0.5 tracking-widest uppercase">
+                    Gündemdekiler
+                  </span>
+                  <span className="font-bold text-text group-hover:text-primary transition-colors text-sm break-words leading-tight">
+                    #{tag.id}
+                  </span>
+                  <div className="mt-0.5 text-[11px] font-medium text-muted/70 flex items-center gap-1.5">
+                    <span className="font-bold text-primary">
+                      {tag.count.toLocaleString('tr-TR')}
+                    </span>
+                    <span>Gönderi</span>
+                  </div>
+                </div>
+              </a>
+            )) : (
+              <div className="text-sm text-muted">Henüz trend yok.</div>
+            )}
+          </div>
         </div>
 
         {/* Popular Books Widget */}
