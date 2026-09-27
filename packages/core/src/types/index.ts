@@ -226,6 +226,12 @@ export interface ChapterStats {
   commentCount: number;
 }
 
+export interface ChapterAudioTrack {
+  url: string;
+  title?: string;
+  platform?: 'youtube' | 'spotify' | 'direct' | 'other';
+}
+
 export interface Chapter {
   chapterId: string;
   title: string;
@@ -236,6 +242,7 @@ export interface Chapter {
   stats?: ChapterStats;
   reactionCounts?: Record<string, number>;
   endActivity?: ChapterActivity;
+  audioTrack?: ChapterAudioTrack;
 }
 
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

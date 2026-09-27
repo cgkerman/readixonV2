@@ -52,6 +52,8 @@ export const StoryCard: React.FC<StoryCardProps> = ({
           src={coverImage || ''} 
           alt={title} 
           className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+          loading="lazy"
+          decoding="async"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90 group-hover:opacity-100 transition-opacity" />
         
@@ -95,7 +97,7 @@ export const StoryCard: React.FC<StoryCardProps> = ({
           </Typography>
           <div className="flex items-center gap-1.5 opacity-90">
              <div className="w-5 h-5 rounded-full overflow-hidden border border-white/30 bg-muted flex items-center justify-center shrink-0">
-               {authorAvatarUrl ? <img src={authorAvatarUrl} className="w-full h-full object-cover"/> : <User size={12} className="text-white"/>}
+               {authorAvatarUrl ? <img src={authorAvatarUrl} className="w-full h-full object-cover" loading="lazy" decoding="async"/> : <User size={12} className="text-white"/>}
              </div>
              <Typography variant="caption" className="text-white/80 font-medium text-[11px] line-clamp-1 drop-shadow">
                {authorUsername ? `@${authorUsername}` : authorName}
@@ -138,6 +140,7 @@ export const StoryCard: React.FC<StoryCardProps> = ({
             alt={title} 
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
             loading="lazy"
+            decoding="async"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-black">
@@ -194,6 +197,8 @@ export const StoryCard: React.FC<StoryCardProps> = ({
               src={authorAvatarUrl} 
               alt={authorName} 
               className="w-5 h-5 rounded-full object-cover border border-border/50 bg-muted"
+              loading="lazy"
+              decoding="async"
             />
           ) : (
             <div className="w-5 h-5 min-w-[20px] rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center border border-border/50 shadow-sm">

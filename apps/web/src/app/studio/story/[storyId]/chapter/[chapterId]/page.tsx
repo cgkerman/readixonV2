@@ -3,8 +3,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Typography, Button, BlockEditor, Input, ContentRenderer } from '@readixon/ui';
-import { ArrowLeft, Save, PlusCircle, CheckCircle, FileText, Globe, Calendar, GripVertical, Trash2, Sparkles, Wand2, Eye, EyeOff, Info, X, HelpCircle, BarChart2, Plus } from 'lucide-react';
-import { fetchChapter, updateChapter, compressImage, fetchChapters, createChapter, deleteChapter, createNotification, getUserFollowerIds, getStoryById, updateStory, useAuthStore, trackWordCount, trackInteraction, type Chapter } from '@readixon/core';
+import { ArrowLeft, Save, PlusCircle, CheckCircle, FileText, Globe, Calendar, GripVertical, Trash2, Sparkles, Wand2, Eye, EyeOff, Info, X, HelpCircle, BarChart2, Plus, Music, Volume2, ExternalLink } from 'lucide-react';
+import { fetchChapter, updateChapter, compressImage, fetchChapters, createChapter, deleteChapter, createNotification, getUserFollowerIds, getStoryById, updateStory, useAuthStore, trackWordCount, trackInteraction, parseAudioTrack, getAudioPlatformLabel, type Chapter, type ChapterAudioTrack } from '@readixon/core';
 import { ReadixonAIAssistant } from '@/components/ReadixonAIAssistant';
 import { uploadFile } from '@readixon/core/src/services/storageService';
 import { toast } from "sonner";
@@ -27,6 +27,8 @@ export default function ChapterEditorPage() {
   const [isPlannerOpen, setIsPlannerOpen] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [isAudioSectionOpen, setIsAudioSectionOpen] = useState(false);
+  const [previewAudio, setPreviewAudio] = useState(false);
   
   const isInitialLoad = useRef(true);
   const publishedRef = useRef(false);
@@ -385,6 +387,175 @@ export default function ChapterEditorPage() {
               placeholder="Örn: Bölüm 1 - Yeni Başlangıçlar"
               className="text-lg md:text-xl font-bold bg-transparent border-b-2 border-border/50 focus:border-primary rounded-none px-0 pb-2 shadow-none"
             />
+          </div>
+
+          {/* Bölüm Fon Müziği (Soundtrack) Alanı */}
+          <div className="bg-card p-4 md:p-6 rounded-2xl border border-border/20 shadow-sm mb-8 transition-all">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                  <Music size={20} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Typography variant="body" className="font-bold">
+                      Bölüm Fon Müziği (Soundtrack)
+                    </Typography>
+                    {chapter.audioTrack?.url ? (
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        {getAudioPlatformLabel(chapter.audioTrack.platform || 'other')}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-muted/10 text-muted">
+                        İsteğe bağlı
+                      </span>
+                    )}
+                  </div>
+                  <Typography variant="caption" className="text-muted text-xs">
+                    Okuyucu bu bölüme girdiğinde üst barda çalacak fon müziğini YouTube veya Spotify linkiyle ekleyebilirsiniz.
+                  </Typography>
+                </div>
+              </div>
+
+              {chapter.audioTrack?.url && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChapter({ ...chapter, audioTrack: undefined });
+                    setPreviewAudio(false);
+                  }}
+                  className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1 transition-colors self-start sm:self-center"
+                >
+                  <Trash2 size={13} /> Müziği Kaldır
+                </button>
+              )}
+            </div>
+
+            <div className="space-y-4 pt-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col">
+                  <div className="h-5 flex items-center mb-1.5">
+                    <Typography variant="caption" className="text-muted uppercase font-bold tracking-wider text-[11px] truncate">
+                      Müzik Bağlantısı (URL)
+                    </Typography>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="url"
+                      value={chapter.audioTrack?.url || ''}
+                      onChange={(e) => {
+                        const url = e.target.value;
+                        if (!url.trim()) {
+                          setChapter({ ...chapter, audioTrack: undefined });
+                          return;
+                        }
+                        const parsed = parseAudioTrack(url);
+                        setChapter({
+                          ...chapter,
+                          audioTrack: {
+                            url,
+                            title: chapter.audioTrack?.title || '',
+                            platform: parsed.platform
+                          }
+                        });
+                      }}
+                      placeholder="YouTube, Spotify veya MP3 linki yapıştırın..."
+                      className="w-full bg-background border border-border/40 focus:border-primary rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted/50 focus:outline-none transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col">
+                  <div className="h-5 flex items-center mb-1.5">
+                    <Typography variant="caption" className="text-muted uppercase font-bold tracking-wider text-[11px] truncate">
+                      Parça / Müzik Başlığı (İsteğe Bağlı)
+                    </Typography>
+                  </div>
+                  <input
+                    type="text"
+                    value={chapter.audioTrack?.title || ''}
+                    onChange={(e) => {
+                      const title = e.target.value;
+                      if (!chapter.audioTrack?.url) {
+                        setChapter({
+                          ...chapter,
+                          audioTrack: { url: '', title, platform: 'other' }
+                        });
+                      } else {
+                        setChapter({
+                          ...chapter,
+                          audioTrack: { ...chapter.audioTrack, title }
+                        });
+                      }
+                    }}
+                    placeholder="Örn: Ludovico Einaudi - Nuvole Bianche"
+                    className="w-full bg-background border border-border/40 focus:border-primary rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted/50 focus:outline-none transition-colors"
+                  />
+                </div>
+              </div>
+
+              {/* Önizleme Alanı */}
+              {chapter.audioTrack?.url && (
+                <div className="mt-3 p-3.5 bg-background/80 rounded-xl border border-border/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-muted flex items-center gap-1.5">
+                      <Volume2 size={14} className="text-primary" /> Önizleme Player
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewAudio(!previewAudio)}
+                      className="text-xs text-primary hover:underline font-medium"
+                    >
+                      {previewAudio ? 'Önizlemeyi Gizle' : 'Önizlemeyi Göster ve Test Et'}
+                    </button>
+                  </div>
+
+                  {previewAudio && (() => {
+                    const parsed = parseAudioTrack(chapter.audioTrack.url);
+                    if (parsed.platform === 'youtube' && parsed.id) {
+                      return (
+                        <div className="aspect-video max-w-sm rounded-lg overflow-hidden border border-border/30 bg-black mt-2">
+                          <iframe
+                            src={`https://www.youtube.com/embed/${parsed.id}`}
+                            title="YouTube Preview"
+                            className="w-full h-full"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                          />
+                        </div>
+                      );
+                    }
+                    if (parsed.platform === 'spotify' && parsed.embedUrl) {
+                      return (
+                        <div className="max-w-md rounded-xl overflow-hidden mt-2">
+                          <iframe
+                            src={parsed.embedUrl}
+                            width="100%"
+                            height="80"
+                            frameBorder="0"
+                            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                            loading="lazy"
+                          />
+                        </div>
+                      );
+                    }
+                    if (parsed.platform === 'direct') {
+                      return (
+                        <div className="mt-2">
+                          <audio src={chapter.audioTrack.url} controls className="w-full max-w-md" />
+                        </div>
+                      );
+                    }
+                    return (
+                      <p className="text-xs text-muted mt-1">
+                        Bağlantı geçerli bir formatta algılanamadı, ancak okuyucu sayfasında çalınması denenecektir.
+                      </p>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="mb-4 flex items-center justify-between">

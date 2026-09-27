@@ -118,7 +118,7 @@ export default function FeedPage() {
   const recentStories = recentData?.pages.flatMap((p: any) => p.stories) || [];
   const topStories = topData?.pages.flatMap((p: any) => p.stories) || [];
 
-  const isLoading = recentLoading || topLoading || authorsLoading || recLoading || compLoading || likedLoading || historyLoading || discussionsLoading || heroBannersLoading || webtoonsLoading || editorPicksLoading;
+  // Veriler sayfayı kilitlemeden aşamalı (progressive) olarak yüklenir
 
   // Öne Çıkan Slaytlar (Carousel Verisi)
   const slides = useMemo(() => {
@@ -427,68 +427,57 @@ export default function FeedPage() {
         )}
       </div>
 
-      {isLoading && (
-        <div className="flex justify-center py-20">
-          <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+      {/* ── 2. Hızlı Kategori Filtreleri (Anında Görünür) ── */}
+      <div className="px-6 md:px-16 mb-12">
+        <div className="flex items-center gap-2 mb-4">
+          <Typography variant="h3" className="font-semibold">Neler Okumak İstersin?</Typography>
         </div>
-      )}
-
-      {/* ── 2. Hızlı Kategori Filtreleri ── */}
-      {!isLoading && (
-        <div className="px-6 md:px-16 mb-12">
-          <div className="flex items-center gap-2 mb-4">
-            <Typography variant="h3" className="font-semibold">Neler Okumak İstersin?</Typography>
-          </div>
-          <div className="overflow-x-auto pb-4 scrollbar-hide snap-x">
-            <div className="grid grid-rows-2 grid-flow-col gap-3 w-max">
-              {POPULAR_TAGS.map(tag => (
-                <button
-                  key={tag.id}
-                  onClick={() => router.push(`/search?tag=${tag.id}`)}
-                  className="snap-start flex-shrink-0 px-5 py-2.5 rounded-full bg-card/50 border border-border/50 hover:bg-primary/10 hover:border-primary/50 hover:text-primary transition-all text-sm font-medium whitespace-nowrap"
-                >
-                  {tag.label}
-                </button>
-              ))}
-            </div>
+        <div className="overflow-x-auto pb-4 scrollbar-hide snap-x">
+          <div className="grid grid-rows-2 grid-flow-col gap-3 w-max">
+            {POPULAR_TAGS.map(tag => (
+              <button
+                key={tag.id}
+                onClick={() => router.push(`/search?tag=${tag.id}`)}
+                className="snap-start flex-shrink-0 px-5 py-2.5 rounded-full bg-card/50 border border-border/50 hover:bg-primary/10 hover:border-primary/50 hover:text-primary transition-all text-sm font-medium whitespace-nowrap"
+              >
+                {tag.label}
+              </button>
+            ))}
           </div>
         </div>
-      )}
+      </div>
 
       {/* ── 3. Editör Değerlendirmeleri Banner ── */}
-      {!isLoading && (
-        <div className="px-6 md:px-16 mb-12">
-          <div className="bg-gradient-to-r from-primary/20 via-background to-card border border-primary/20 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm overflow-hidden relative">
-            <div className="absolute -right-20 -top-20 text-primary/10">
-              <BookOpen size={200} />
-            </div>
-
-            <div className="flex items-start md:items-center gap-6 relative z-10">
-              <div className="w-16 h-16 rounded-2xl bg-primary/20 text-primary flex items-center justify-center shrink-0 shadow-inner">
-                <Sparkles size={32} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">Gold Standart</span>
-                </div>
-                <Typography variant="h2" className="text-xl md:text-2xl font-bold mb-1">Editör Değerlendirmeleri</Typography>
-                <Typography variant="body" className="text-muted text-sm md:text-base max-w-xl">Platformdaki eserlerin profesyonel editörlerimiz tarafından yapılan detaylı ve bağımsız incelemelerini keşfedin.</Typography>
-              </div>
-            </div>
-
-            <Button
-              onPress={() => router.push('/reviews')}
-              className="w-full md:w-auto shrink-0 z-10"
-            >
-              İncelemeleri Gör <ChevronRight size={18} className="ml-1" />
-            </Button>
+      <div className="px-6 md:px-16 mb-12">
+        <div className="bg-gradient-to-r from-primary/20 via-background to-card border border-primary/20 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm overflow-hidden relative">
+          <div className="absolute -right-20 -top-20 text-primary/10">
+            <BookOpen size={200} />
           </div>
+
+          <div className="flex items-start md:items-center gap-6 relative z-10">
+            <div className="w-16 h-16 rounded-2xl bg-primary/20 text-primary flex items-center justify-center shrink-0 shadow-inner">
+              <Sparkles size={32} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">Gold Standart</span>
+              </div>
+              <Typography variant="h2" className="text-xl md:text-2xl font-bold mb-1">Editör Değerlendirmeleri</Typography>
+              <Typography variant="body" className="text-muted text-sm md:text-base max-w-xl">Platformdaki eserlerin profesyonel editörlerimiz tarafından yapılan detaylı ve bağımsız incelemelerini keşfedin.</Typography>
+            </div>
+          </div>
+
+          <Button
+            onPress={() => router.push('/reviews')}
+            className="w-full md:w-auto shrink-0 z-10"
+          >
+            İncelemeleri Gör <ChevronRight size={18} className="ml-1" />
+          </Button>
         </div>
-      )}
+      </div>
 
       {/* ── 4. Yatay Kaydırmalı Listeler (Carousels) & Duyurular ── */}
-      {!isLoading && (
-        <div className="flex flex-col gap-12 px-6 md:px-16">
+      <div className="flex flex-col gap-12 px-6 md:px-16">
 
           {/* Duyurular Bloğu */}
           {announcements.length > 0 && (
@@ -573,7 +562,13 @@ export default function FeedPage() {
           )}
 
           {/* 1. Sana Özel / Günün Trendleri */}
-          {recommendedStories.length > 0 && (
+          {recLoading ? (
+            <CarouselRowSkeleton 
+              title={firebaseUser ? "Sana Özel" : "Günün Trendleri"}
+              subtitle={firebaseUser ? "Okuma geçmişiniz ve favori türlerinize göre sizin için özel seçildi." : "Platformdaki en trend hikayeler."}
+              icon={<Sparkles className="text-primary" size={24} />}
+            />
+          ) : recommendedStories.length > 0 ? (
             <CarouselRow
               title={firebaseUser ? "Sana Özel" : "Günün Trendleri"}
               subtitle={firebaseUser ? "Okuma geçmişiniz ve favori türlerinize göre sizin için özel seçildi." : "Platformdaki en trend hikayeler."}
@@ -587,7 +582,7 @@ export default function FeedPage() {
               }}
               onLikePress={handleLikePress}
             />
-          )}
+          ) : null}
 
           {/* Okumaya Devam Et Bloğu */}
           {readingHistory.length > 0 && (
@@ -612,7 +607,13 @@ export default function FeedPage() {
           )}
 
           {/* Taze Çıkanlar (Yeni Bölüm Eklenenler) */}
-          {recentlyUpdatedStories.length > 0 && (
+          {recentlyUpdatedLoading ? (
+            <CarouselRowSkeleton 
+              title="Taze Çıkanlar"
+              subtitle="Yazarlarından yepyeni bölümlerle güncellenen hikayeler."
+              icon={<RotateCcw className="text-primary" size={24} />}
+            />
+          ) : recentlyUpdatedStories.length > 0 ? (
             <HorizontalCarouselRow
               title="Taze Çıkanlar"
               subtitle="Yazarlarından yepyeni bölümlerle güncellenen hikayeler."
@@ -625,7 +626,7 @@ export default function FeedPage() {
               }}
               getBadgeText={(story) => story.latestChapter?.order ? `${story.latestChapter.order}. Bölüm Yayında` : 'Yeni Güncellendi'}
             />
-          )}
+          ) : null}
 
           {/* 1.5 Son Tartışılanlar */}
           {trendingDiscussions.length > 0 && (
@@ -699,7 +700,13 @@ export default function FeedPage() {
           />
 
           {/* 2. En Çok Okunanlar */}
-          {topStories.length > 0 && (
+          {topLoading ? (
+            <CarouselRowSkeleton 
+              title="Haftanın En Çok Okunanları"
+              subtitle="Bu hafta okurlarımızın elinden düşüremediği başyapıtlar."
+              icon={<TrendingUp className="text-primary" size={24} />}
+            />
+          ) : topStories.length > 0 ? (
             <CarouselRow
               title="Haftanın En Çok Okunanları"
               subtitle="Bu hafta okurlarımızın elinden düşüremediği başyapıtlar."
@@ -712,7 +719,7 @@ export default function FeedPage() {
                 if (hasNextTop) fetchNextTop();
               }}
             />
-          )}
+          ) : null}
 
           {/* 3. Yeni Çıkanlar */}
           {recentStories.length > 0 && (
@@ -776,7 +783,37 @@ export default function FeedPage() {
           )}
 
         </div>
-      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Yardımcı Bileşen: Carousel Row Skeleton
+// ─────────────────────────────────────────────
+
+function CarouselRowSkeleton({ title, subtitle, icon }: { title?: string; subtitle?: string; icon?: React.ReactNode }) {
+  return (
+    <div className="relative animate-pulse mb-2">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <div className="flex items-center gap-3">
+            {icon}
+            <div className="h-7 w-48 sm:w-64 bg-card/60 border border-border/40 rounded-xl" />
+          </div>
+          {subtitle && (
+            <div className="h-4 w-40 sm:w-80 bg-card/30 rounded-lg mt-2" />
+          )}
+        </div>
+      </div>
+      <div className="flex gap-6 overflow-hidden pb-8 pt-2">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <div key={i} className="w-[180px] md:w-[220px] flex-shrink-0">
+            <div className="aspect-[2/3] rounded-xl bg-card/40 border border-border/30 mb-3" />
+            <div className="h-4 w-3/4 bg-card/50 rounded mb-2" />
+            <div className="h-3 w-1/2 bg-card/30 rounded" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

@@ -70,7 +70,8 @@ export type {
   AdminPollOption,
   AdminQuote,
   EditorialReview,
-  SitePopup
+  SitePopup,
+  ChapterAudioTrack
 } from './types';
 
 // Auth servisi
@@ -137,6 +138,7 @@ export * from './services/editorialService';
 export * from './services/popupService';
 export * from './utils/imageUtils';
 export * from './utils/cropImageUtils';
+export * from './utils/audioUtils';
 export * from './constants/tags';
 export * from './utils/slug';
 

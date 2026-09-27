@@ -41,6 +41,8 @@ export const AuthorCard: React.FC<AuthorCardProps> = ({
               src={avatarUrl} 
               alt={name} 
               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+              loading="lazy"
+              decoding="async"
             />
           ) : (
             <div className="w-full h-full bg-primary/20 flex items-center justify-center text-primary">

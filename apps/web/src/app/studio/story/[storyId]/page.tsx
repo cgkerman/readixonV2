@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Typography, Button, Input } from '@readixon/ui';
-import { ArrowLeft, PlusCircle, Save, GripVertical, CheckCircle, Wand2, Info, MessageSquare, Loader2, ChevronDown } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Save, GripVertical, CheckCircle, Wand2, Info, MessageSquare, Loader2, ChevronDown, Music } from 'lucide-react';
 import {
   getStoryById,
   updateStory,
@@ -527,7 +527,14 @@ export default function StoryDetailAdminPage() {
                         }
                       }}
                     >
-                      <Typography variant="body" className="font-bold group-hover:text-primary transition-colors">{chap.title}</Typography>
+                      <div className="flex items-center gap-2">
+                        <Typography variant="body" className="font-bold group-hover:text-primary transition-colors">{chap.title}</Typography>
+                        {chap.audioTrack?.url && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full" title="Fon Müziği Eklendi">
+                            <Music size={11} /> Müzikli
+                          </span>
+                        )}
+                      </div>
                       <Typography variant="caption" className="text-muted">Sıra: {chap.order}</Typography>
                     </div>
                   </div>

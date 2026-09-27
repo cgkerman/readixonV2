@@ -106,94 +106,115 @@ export const getRecentlyUpdatedStories = async (limitCount: number = 10): Promis
     );
     
     const querySnapshot = await getDocs(q);
-    const stories: StoryWithLatestChapter[] = [];
     
-    // Hikayeleri al
-    for (const docSnapshot of querySnapshot.docs) {
-      if (stories.length >= limitCount) break;
+    // Webtoon olmayan geçerli dökümanları seç
+    const validDocs = querySnapshot.docs
+      .filter(docSnap => docSnap.data().format !== 'webtoon')
+      .slice(0, limitCount);
 
-      const data = docSnapshot.data();
-      if (data.format === 'webtoon') continue;
+    if (validDocs.length === 0) return [];
 
-      let authorName = data.authorName;
-      let authorAvatarUrl = data.authorAvatarUrl;
-      let authorUsername = data.authorUsername;
-      
-      if ((!authorName || !authorAvatarUrl) && data.authorId) {
-        const profile = await getUserProfile(data.authorId);
-        authorName = authorName || profile?.displayName || profile?.username || 'Bilinmiyor';
-        authorAvatarUrl = authorAvatarUrl || profile?.avatarUrl;
-        authorUsername = authorUsername || profile?.username;
-      }
+    const authorCache: Record<string, { name: string; avatar?: string; username?: string }> = {};
 
-      const storyData = { 
-        storyId: docSnapshot.id, 
-        ...data,
-        authorName,
-        authorAvatarUrl,
-        authorUsername
-      } as Story;
-      
-      // Her hikaye için en son bölümü (Chapter) bul
-      let latestChapter: { title: string, excerpt: string, order?: number } | undefined = undefined;
-      try {
-        const chaptersRef = collection(db, 'stories', storyData.storyId, 'chapters');
-        const chapterQ = query(
-          chaptersRef, 
-          where('status', '==', 'published'),
-          orderBy('order', 'desc'), 
-          limit(1)
-        );
-        const chapterSnap = await getDocs(chapterQ);
+    // Tüm hikayeleri ve son bölümlerini paralel olarak işle
+    const stories = await Promise.all(
+      validDocs.map(async (docSnapshot): Promise<StoryWithLatestChapter> => {
+        const data = docSnapshot.data();
+        let authorName = data.authorName;
+        let authorAvatarUrl = data.authorAvatarUrl;
+        let authorUsername = data.authorUsername;
         
-        if (!chapterSnap.empty) {
-          const chapData = chapterSnap.docs[0].data() as Chapter;
+        if ((!authorName || !authorAvatarUrl) && data.authorId) {
+          if (authorCache[data.authorId]) {
+            authorName = authorName || authorCache[data.authorId].name;
+            authorAvatarUrl = authorAvatarUrl || authorCache[data.authorId].avatar;
+            authorUsername = authorUsername || authorCache[data.authorId].username;
+          } else {
+            try {
+              const profile = await getUserProfile(data.authorId);
+              const fetchedName = profile?.displayName || profile?.username || 'Bilinmiyor';
+              const fetchedAvatar = profile?.avatarUrl;
+              const fetchedUsername = profile?.username;
+
+              authorName = authorName || fetchedName;
+              authorAvatarUrl = authorAvatarUrl || fetchedAvatar;
+              authorUsername = authorUsername || fetchedUsername;
+
+              authorCache[data.authorId] = { 
+                name: fetchedName, 
+                avatar: fetchedAvatar,
+                username: fetchedUsername 
+              };
+            } catch (profileErr) {
+              console.error("Yazar profili alınamadı:", profileErr);
+            }
+          }
+        }
+
+        const storyData: Story = { 
+          storyId: docSnapshot.id, 
+          ...data,
+          authorName: authorName || 'Bilinmiyor',
+          authorAvatarUrl,
+          authorUsername
+        } as Story;
+        
+        let latestChapter: { title: string; excerpt: string; order?: number } | undefined = undefined;
+        try {
+          const chaptersRef = collection(db, 'stories', storyData.storyId, 'chapters');
+          const chapterQ = query(
+            chaptersRef, 
+            where('status', '==', 'published'),
+            orderBy('order', 'desc'), 
+            limit(1)
+          );
+          const chapterSnap = await getDocs(chapterQ);
           
-          // İlk anlamlı metni bul (sadece boş HTML etiketleri olan blokları atla)
-          let excerpt = '';
-          if (chapData.contentBlocks) {
-            for (const block of chapData.contentBlocks) {
-              if (block.text) {
-                // 1. Önce HTML entity'lerini normal karakterlere çevir
-                let unescaped = block.text
-                  .replace(/&lt;/g, '<')
-                  .replace(/&gt;/g, '>')
-                  .replace(/&quot;/g, '"')
-                  .replace(/&#39;/g, "'")
-                  .replace(/&nbsp;/g, ' ')
-                  .replace(/&amp;/g, '&');
+          if (!chapterSnap.empty) {
+            const chapData = chapterSnap.docs[0].data() as Chapter;
+            
+            let excerpt = '';
+            if (chapData.contentBlocks) {
+              for (const block of chapData.contentBlocks) {
+                if (block.text) {
+                  let unescaped = block.text
+                    .replace(/&lt;/g, '<')
+                    .replace(/&gt;/g, '>')
+                    .replace(/&quot;/g, '"')
+                    .replace(/&#39;/g, "'")
+                    .replace(/&nbsp;/g, ' ')
+                    .replace(/&amp;/g, '&');
+                    
+                  let stripped = unescaped.replace(/<[^>]+>/g, '').trim();
                   
-                // 2. Sonra HTML etiketlerini tamamen temizle
-                let stripped = unescaped.replace(/<[^>]+>/g, '').trim();
-                
-                // 3. Eğer temizlenmiş metin boş değilse (örneğin sadece <p><br></p> değilse), bunu kullan ve döngüden çık
-                if (stripped.length > 0) {
-                  excerpt = stripped;
-                  break;
+                  if (stripped.length > 0) {
+                    excerpt = stripped;
+                    break;
+                  }
                 }
               }
             }
+            
+            if (excerpt.length > 120) {
+              excerpt = excerpt.substring(0, 117) + '...';
+            }
+            
+            latestChapter = {
+              title: chapData.title,
+              excerpt: excerpt,
+              order: chapData.order
+            };
           }
-          
-          if (excerpt.length > 120) {
-            excerpt = excerpt.substring(0, 117) + '...';
-          }
-          
-          latestChapter = {
-            title: chapData.title,
-            excerpt: excerpt,
-            order: chapData.order
-          };
+        } catch (err) {
+          console.error(`Bölüm çekilirken hata (Story: ${storyData.storyId}):`, err);
         }
-      } catch (err) {
-        console.error(`Bölüm çekilirken hata (Story: ${storyData.storyId}):`, err);
-      }
-      
-      stories.push({
-        ...storyData,
-        latestChapter
-      });
-    }
+        
+        return {
+          ...storyData,
+          latestChapter
+        };
+      })
+    );
     
     return stories;
   } catch (error) {
@@ -976,12 +997,15 @@ export const getRecommendedStories = async (preferredGenres?: string[], limitCou
 export const getAdvancedPersonalizedStories = async (userId?: string, preferredGenres?: string[], limitCount: number = 10): Promise<Story[]> => {
   try {
     let combinedGenres: string[] = [...(preferredGenres || [])];
+    let userReadStoryIds: Set<string> | null = null;
 
     if (userId) {
       // 1. Okuma geçmişinden tür çıkarımı
       const progressList = await getUserReadingProgress(userId);
       if (progressList.length > 0) {
         const storyIds = progressList.map(p => p.storyId);
+        userReadStoryIds = new Set(storyIds);
+
         // İlgili hikayeleri çekelim (ilk 10)
         const recentStories = await getStoriesByIds(storyIds.slice(0, 10));
         
@@ -1026,10 +1050,8 @@ export const getAdvancedPersonalizedStories = async (userId?: string, preferredG
     // 2. Filtreleme (Webtoonları ve kullanıcının zaten okuduklarını çıkar)
     stories = stories.filter(story => story.format !== 'webtoon');
 
-    if (userId) {
-      const progressList = await getUserReadingProgress(userId);
-      const readStoryIds = new Set(progressList.map(p => p.storyId));
-      stories = stories.filter(story => !readStoryIds.has(story.storyId));
+    if (userReadStoryIds) {
+      stories = stories.filter(story => !userReadStoryIds.has(story.storyId));
     }
 
     // 3. İstenen sayıya indir

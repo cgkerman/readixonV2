@@ -1,27 +1,43 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Typography, Button, LiveLiteratureCard } from '@readixon/ui';
+import { Typography, Button } from '@readixon/ui';
 import { collection, getDocs, limit, orderBy, query, where, onSnapshot } from 'firebase/firestore';
 import { db, getTopStories, getActiveAdminPolls, voteAdminPoll, AdminPoll, getActiveQuote, AdminQuote, useAuthStore, slugify } from '@readixon/core';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Loader2, TrendingUp, BookOpen, Newspaper, Quote as QuoteIcon, Vote, ChevronRight, Eye, Heart, Layers, Star } from 'lucide-react';
 import Link from 'next/link';
-import { createPortal } from 'react-dom';
 import { AgendaFooter } from './components/AgendaFooter';
 import { PlatformFeedback } from './components/PlatformFeedback';
 
-export default function AgendaPage() {
-  const [trendingTags, setTrendingTags] = useState<{id: string, count: number}[]>([]);
-  const [cultureNews, setCultureNews] = useState<any[]>([]);
-  const [popularBooks, setPopularBooks] = useState<any[]>([]);
-  const [adminPolls, setAdminPolls] = useState<AdminPoll[]>([]);
-  const [adminQuote, setAdminQuote] = useState<AdminQuote | null>(null);
-  const [votingState, setVotingState] = useState<{pollId: string, optionIndex: number} | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+const FALLBACK_CULTURE_NEWS = [
+  { id: '1', title: 'Yapay Zeka ve Sanat: Yeni Bir Dönem', content: 'Yapay zekanın sanat dünyasındaki yükselişi devam ediyor. Son sergilerde gördüğümüz AI eserleri...', imageUrl: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=800&auto=format&fit=crop' },
+  { id: '2', title: 'İstanbul Kitap Fuarı Başlıyor', content: 'TÜYAP kitap fuarı bu hafta sonu kapılarını kitapseverlere açıyor. Yüzlerce yayınevi ve yazar...', imageUrl: 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=800&auto=format&fit=crop' },
+  { id: '3', title: 'Yeni Bir Edebiyat Dergisi Yayın Hayatına Başlıyor', content: 'Genç yazarların ağırlıkta olduğu yeni bir dergi raflardaki yerini almaya hazırlanıyor...', imageUrl: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?q=80&w=800&auto=format&fit=crop' },
+  { id: '4', title: 'Klasik Eserlerin Dijital Restorasyonu Tamamlandı', content: 'Türkiye\'nin en önemli klasik edebiyat eserleri dijital ortama aktarılarak ücretsiz erişime açıldı.', imageUrl: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?q=80&w=800&auto=format&fit=crop' }
+];
 
+const FALLBACK_POPULAR_BOOKS = [
+  { id: '1', title: 'Yüzyıllık Yalnızlık', authorName: 'Gabriel García Márquez', stats: { views: 4500 } },
+  { id: '2', title: 'Saatleri Ayarlama Enstitüsü', authorName: 'Ahmet Hamdi Tanpınar', stats: { views: 3200 } },
+  { id: '3', title: 'Suç ve Ceza', authorName: 'Fyodor Dostoyevski', stats: { views: 2800 } },
+  { id: '4', title: '1984', authorName: 'George Orwell', stats: { views: 2500 } },
+  { id: '5', title: 'Kürk Mantolu Madonna', authorName: 'Sabahattin Ali', stats: { views: 2100 } },
+  { id: '6', title: 'Küçük Prens', authorName: 'Antoine de Saint-Exupéry', stats: { views: 1900 } },
+  { id: '7', title: 'Simyacı', authorName: 'Paulo Coelho', stats: { views: 1800 } },
+  { id: '8', title: 'Dönüşüm', authorName: 'Franz Kafka', stats: { views: 1700 } },
+  { id: '9', title: 'Şeker Portakalı', authorName: 'José Mauro de Vasconcelos', stats: { views: 1600 } },
+  { id: '10', title: 'Tutunamayanlar', authorName: 'Oğuz Atay', stats: { views: 1500 } }
+];
+
+export default function AgendaPage() {
+  const queryClient = useQueryClient();
+  const [trendingTags, setTrendingTags] = useState<{id: string, count: number}[]>([]);
+  const [votingState, setVotingState] = useState<{pollId: string, optionIndex: number} | null>(null);
   const { userProfile } = useAuthStore();
 
+  // 1. Gerçek Zamanlı Trend Etiketler
   useEffect(() => {
     const tagsQ = query(collection(db, 'tags'), orderBy('count', 'desc'), limit(10));
     const unsubscribeTags = onSnapshot(tagsQ, (snapshot) => {
@@ -41,56 +57,57 @@ export default function AgendaPage() {
       }
     });
 
-    const fetchData = async () => {
-      try {
-        const newsQ = query(collection(db, 'announcements'), where('category', '==', 'culture'), where('isActive', '==', true), orderBy('createdAt', 'desc'), limit(10));
-        const newsSnap = await getDocs(newsQ);
-        if (newsSnap.empty) {
-          setCultureNews([
-            { id: '1', title: 'Yapay Zeka ve Sanat: Yeni Bir Dönem', content: 'Yapay zekanın sanat dünyasındaki yükselişi devam ediyor. Son sergilerde gördüğümüz AI eserleri...', imageUrl: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=800&auto=format&fit=crop' },
-            { id: '2', title: 'İstanbul Kitap Fuarı Başlıyor', content: 'TÜYAP kitap fuarı bu hafta sonu kapılarını kitapseverlere açıyor. Yüzlerce yayınevi ve yazar...', imageUrl: 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=800&auto=format&fit=crop' },
-            { id: '3', title: 'Yeni Bir Edebiyat Dergisi Yayın Hayatına Başlıyor', content: 'Genç yazarların ağırlıkta olduğu yeni bir dergi raflardaki yerini almaya hazırlanıyor...', imageUrl: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?q=80&w=800&auto=format&fit=crop' },
-            { id: '4', title: 'Klasik Eserlerin Dijital Restorasyonu Tamamlandı', content: 'Türkiye\'nin en önemli klasik edebiyat eserleri dijital ortama aktarılarak ücretsiz erişime açıldı.', imageUrl: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?q=80&w=800&auto=format&fit=crop' }
-          ]);
-        } else {
-          setCultureNews(newsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-        }
-
-
-        const topStories = await getTopStories(10);
-        if (!topStories || topStories.length === 0) {
-          setPopularBooks([
-            { id: '1', title: 'Yüzyıllık Yalnızlık', authorName: 'Gabriel García Márquez', stats: { views: 4500 } },
-            { id: '2', title: 'Saatleri Ayarlama Enstitüsü', authorName: 'Ahmet Hamdi Tanpınar', stats: { views: 3200 } },
-            { id: '3', title: 'Suç ve Ceza', authorName: 'Fyodor Dostoyevski', stats: { views: 2800 } },
-            { id: '4', title: '1984', authorName: 'George Orwell', stats: { views: 2500 } },
-            { id: '5', title: 'Kürk Mantolu Madonna', authorName: 'Sabahattin Ali', stats: { views: 2100 } },
-            { id: '6', title: 'Küçük Prens', authorName: 'Antoine de Saint-Exupéry', stats: { views: 1900 } },
-            { id: '7', title: 'Simyacı', authorName: 'Paulo Coelho', stats: { views: 1800 } },
-            { id: '8', title: 'Dönüşüm', authorName: 'Franz Kafka', stats: { views: 1700 } },
-            { id: '9', title: 'Şeker Portakalı', authorName: 'José Mauro de Vasconcelos', stats: { views: 1600 } },
-            { id: '10', title: 'Tutunamayanlar', authorName: 'Oğuz Atay', stats: { views: 1500 } }
-          ]);
-        } else {
-          setPopularBooks(topStories);
-        }
-
-        const polls = await getActiveAdminPolls();
-        setAdminPolls(polls);
-
-        const quote = await getActiveQuote();
-        setAdminQuote(quote);
-
-      } catch (err) {
-        console.error("Agenda page data fetch error", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
     return () => unsubscribeTags();
   }, []);
+
+  // 2. Kültür & Sanat Haberleri (TanStack Query ile Paralel ve Önbellekli)
+  const { data: cultureNews = FALLBACK_CULTURE_NEWS, isLoading: newsLoading } = useQuery<any[]>({
+    queryKey: ['announcements', 'culture'],
+    queryFn: async () => {
+      try {
+        const newsQ = query(
+          collection(db, 'announcements'), 
+          where('category', '==', 'culture'), 
+          where('isActive', '==', true), 
+          limit(15)
+        );
+        const newsSnap = await getDocs(newsQ);
+        if (newsSnap.empty) return FALLBACK_CULTURE_NEWS;
+        const docs = newsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        docs.sort((a: any, b: any) => {
+          const tA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0);
+          const tB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0);
+          return tB - tA;
+        });
+        return docs.length > 0 ? docs : FALLBACK_CULTURE_NEWS;
+      } catch (err) {
+        console.error("Culture news fetch error:", err);
+        return FALLBACK_CULTURE_NEWS;
+      }
+    }
+  });
+
+  // 3. Popüler Eserler (/feed ile ortak önbellek 'stories/top' anahtarı)
+  const { data: popularBooks = FALLBACK_POPULAR_BOOKS, isLoading: booksLoading } = useQuery<any[]>({
+    queryKey: ['stories', 'top'],
+    queryFn: async () => {
+      const topStories = await getTopStories(10);
+      if (!topStories || topStories.length === 0) return FALLBACK_POPULAR_BOOKS;
+      return topStories;
+    }
+  });
+
+  // 4. Okur Anketleri
+  const { data: adminPolls = [], isLoading: pollsLoading } = useQuery({
+    queryKey: ['admin_polls', 'active'],
+    queryFn: () => getActiveAdminPolls(),
+  });
+
+  // 5. Günün Alıntısı
+  const { data: adminQuote, isLoading: quoteLoading } = useQuery({
+    queryKey: ['admin_quote', 'active'],
+    queryFn: () => getActiveQuote(),
+  });
 
   const handleVote = async (pollId: string, optionIndex: number) => {
     if (!userProfile?.uid) {
@@ -103,12 +120,22 @@ export default function AgendaPage() {
     setVotingState({ pollId, optionIndex });
     try {
       await voteAdminPoll(pollId, optionIndex, userProfile.uid);
-      const newPolls = [...adminPolls];
-      const newPoll = { ...newPolls[pollIndex] };
-      newPoll.options[optionIndex].votes += 1;
-      newPoll.votedUsers = [...(newPoll.votedUsers || []), userProfile.uid];
-      newPolls[pollIndex] = newPoll;
-      setAdminPolls(newPolls);
+      queryClient.setQueryData(['admin_polls', 'active'], (oldPolls: AdminPoll[] | undefined) => {
+        if (!oldPolls) return oldPolls;
+        return oldPolls.map(p => {
+          if (p.id !== pollId) return p;
+          const updatedOptions = [...p.options];
+          updatedOptions[optionIndex] = {
+            ...updatedOptions[optionIndex],
+            votes: updatedOptions[optionIndex].votes + 1
+          };
+          return {
+            ...p,
+            options: updatedOptions,
+            votedUsers: [...(p.votedUsers || []), userProfile.uid]
+          };
+        });
+      });
       toast.success('Oyunuz kaydedildi!');
     } catch (err: any) {
       toast.error(err.message || 'Oy verirken bir hata oluştu');
@@ -117,17 +144,9 @@ export default function AgendaPage() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Hero Section */}
+      {/* Hero Section (Anında Görünür) */}
       <div className="relative pt-12 pb-20 px-6 md:px-12 lg:px-24 overflow-hidden border-b border-border/50">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-purple-500/5 to-background z-0" />
         <div className="absolute top-0 right-0 w-96 h-96 bg-primary/20 rounded-full blur-[100px] -mr-20 -mt-20 z-0" />
@@ -145,7 +164,14 @@ export default function AgendaPage() {
           {/* Right Column: Widgets */}
           <div className="w-full md:w-2/5 shrink-0 flex flex-col gap-6">
             {/* Quote of the Day in Hero */}
-            {adminQuote && (
+            {quoteLoading ? (
+              <div className="bg-card/40 border border-white/10 rounded-[2rem] p-8 animate-pulse shadow-lg">
+                <div className="h-3 w-24 bg-primary/20 rounded mb-4" />
+                <div className="h-4 w-full bg-card/60 rounded mb-2" />
+                <div className="h-4 w-3/4 bg-card/60 rounded mb-4" />
+                <div className="h-3 w-20 bg-card/40 rounded ml-auto" />
+              </div>
+            ) : adminQuote ? (
               <div className="bg-card/60 backdrop-blur-xl border border-white/10 rounded-[2rem] p-8 shadow-2xl relative">
                 <Typography variant="caption" className="text-primary font-bold tracking-widest uppercase text-xs mb-4 block">Günün Alıntısı</Typography>
                 <p className="text-text italic font-serif text-lg leading-relaxed relative z-10">
@@ -155,14 +181,7 @@ export default function AgendaPage() {
                   — {adminQuote.author}
                 </Typography>
               </div>
-            )}
-            
-            {/* Canlı Edebiyat Widget - Şimdilik Pasif (İleride platform yoğunlaşınca açılacak)
-            <LiveLiteratureCard 
-              topStoryTitle={popularBooks[0]?.title} 
-              topStoryAuthor={popularBooks[0]?.authorName || popularBooks[0]?.authorUsername} 
-            />
-            */}
+            ) : null}
           </div>
         </div>
       </div>
@@ -192,6 +211,8 @@ export default function AgendaPage() {
                         src={cultureNews[0].imageUrl} 
                         alt={cultureNews[0].title} 
                         className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+                        loading="lazy"
+                        decoding="async"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-90 group-hover:opacity-100 transition-opacity" />
                     </>
@@ -243,6 +264,8 @@ export default function AgendaPage() {
                             src={news.imageUrl} 
                             alt={news.title} 
                             className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+                            loading="lazy"
+                            decoding="async"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent opacity-90 group-hover:opacity-100 transition-opacity" />
                         </>
@@ -302,6 +325,8 @@ export default function AgendaPage() {
                             src={book.coverImage || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=400&auto=format&fit=crop'} 
                             alt={book.title} 
                             className="w-full h-full object-cover rounded-r-xl rounded-l-sm" 
+                            loading="lazy"
+                            decoding="async"
                           />
                           {/* Spine shadow */}
                           <div className="absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-black/50 via-black/10 to-transparent mix-blend-multiply rounded-l-sm pointer-events-none" />

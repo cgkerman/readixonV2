@@ -24,16 +24,17 @@ const COLLECTION_NAME = 'site_popups';
  */
 export const getActiveSitePopup = async (): Promise<SitePopup | null> => {
   try {
+    // Sadece isActive filtreleyerek composite index zorunluluğunu kaldırıyoruz
     const q = query(
       collection(db, COLLECTION_NAME),
-      where('isActive', '==', true),
-      orderBy('createdAt', 'desc'),
-      limit(5)
+      where('isActive', '==', true)
     );
     const snapshot = await getDocs(q);
     if (snapshot.empty) return null;
 
+    const popups: SitePopup[] = [];
     const now = Date.now();
+
     for (const docSnap of snapshot.docs) {
       const data = { id: docSnap.id, ...docSnap.data() } as SitePopup;
       if (data.expireAt) {
@@ -42,10 +43,19 @@ export const getActiveSitePopup = async (): Promise<SitePopup | null> => {
           continue; // Süresi geçmiş
         }
       }
-      return data;
+      popups.push(data);
     }
 
-    return null;
+    if (popups.length === 0) return null;
+
+    // En güncel olanı istemci tarafında sırala
+    popups.sort((a, b) => {
+      const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt as any)?.seconds ? (a.createdAt as any).seconds * 1000 : 0;
+      const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt as any)?.seconds ? (b.createdAt as any).seconds * 1000 : 0;
+      return timeB - timeA;
+    });
+
+    return popups[0];
   } catch (error) {
     console.error("Aktif site pop-up çekilirken hata:", error);
     return null;

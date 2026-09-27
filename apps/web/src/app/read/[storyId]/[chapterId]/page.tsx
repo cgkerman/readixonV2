@@ -12,6 +12,7 @@ import { ArrowLeft, Settings, List, ChevronLeft, ChevronRight, CheckCircle, X, H
 import { toast } from 'sonner';
 import { ChapterEndActivity } from '@/components/ChapterEndActivity';
 import { ChapterReactions } from '@/components/ChapterReactions';
+import { ChapterMusicPlayer } from '@/components/ChapterMusicPlayer';
 
 export default function ReadPage() {
   const params = useParams();
@@ -443,6 +444,13 @@ export default function ReadPage() {
           </Typography>
         </div>
         <div className="flex items-center gap-2">
+          {chapter.audioTrack?.url && (
+            <ChapterMusicPlayer 
+              audioTrack={chapter.audioTrack} 
+              textColor={currentThemeStyle.text}
+              autoPlay={true}
+            />
+          )}
           <Button variant="ghost" onPress={() => setShowChapterList(true)} className="rounded-full p-2">
             <List size={24} color={currentThemeStyle.text} />
           </Button>
