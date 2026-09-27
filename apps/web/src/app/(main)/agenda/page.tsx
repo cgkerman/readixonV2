@@ -87,9 +87,9 @@ export default function AgendaPage() {
     }
   });
 
-  // 3. Popüler Eserler (/feed ile ortak önbellek 'stories/top' anahtarı)
+  // 3. Popüler Eserler
   const { data: popularBooks = FALLBACK_POPULAR_BOOKS, isLoading: booksLoading } = useQuery<any[]>({
-    queryKey: ['stories', 'top'],
+    queryKey: ['agenda', 'popular_stories'],
     queryFn: async () => {
       const topStories = await getTopStories(10);
       if (!topStories || topStories.length === 0) return FALLBACK_POPULAR_BOOKS;
