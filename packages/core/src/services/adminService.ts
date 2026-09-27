@@ -318,3 +318,9 @@ export async function deleteReportTarget(targetId: string, targetType: string): 
     await deleteDoc(targetRef);
   }
 }
+
+export async function updateUserRoleAdmin(userId: string, updates: { isAdmin?: boolean, isAuthor?: boolean, isEditor?: boolean, status?: 'free' | 'premium' | 'pro' }): Promise<void> {
+  const userRef = doc(db, 'users', userId);
+  await updateDoc(userRef, updates);
+}
+

@@ -3,7 +3,7 @@
 import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Typography, StoryCard, Button, HorizontalStoryCard } from '@readixon/ui';
-import { getRecentStoriesPaginated, getTopStoriesPaginated, getFeaturedAuthors, getAdvancedPersonalizedStories, getCompletedStories, getMostLikedStories, getRecentlyUpdatedStories, getActiveAnnouncements, getActiveHeroBanners, getUserReadingProgress, getStoriesByIds, getTrendingDiscussions, getWebtoonsPaginated, POPULAR_TAGS, generateStorySlug, toggleStoryLike, followUser, unfollowUser, useAuthStore, type Story, type User, type Announcement } from '@readixon/core';
+import { getRecentStoriesPaginated, getTopStoriesPaginated, getFeaturedAuthors, getAdvancedPersonalizedStories, getCompletedStories, getMostLikedStories, getRecentlyUpdatedStories, getActiveAnnouncements, getActiveHeroBanners, getUserReadingProgress, getStoriesByIds, getTrendingDiscussions, getWebtoonsPaginated, getEditorialReviews, POPULAR_TAGS, generateStorySlug, toggleStoryLike, followUser, unfollowUser, useAuthStore, type Story, type User, type Announcement } from '@readixon/core';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Flame, Sparkles, TrendingUp, Clock, ChevronRight, ChevronLeft, Play, Users, Heart, CheckCircle, BellRing, BookOpen, MessageCircle, RotateCcw, Gem, Award, GalleryVertical } from 'lucide-react';
 import { AuthorCard } from '@readixon/ui';
@@ -104,10 +104,21 @@ export default function FeedPage() {
     queryFn: () => getTrendingDiscussions(10),
   });
 
+  const { data: editorPicks = [], isLoading: editorPicksLoading } = useQuery({
+    queryKey: ['stories', 'editorPicks'],
+    queryFn: async () => {
+      const reviews = await getEditorialReviews(10);
+      if (!reviews || reviews.length === 0) return [];
+      const storyIds = reviews.map((r: any) => r.storyId);
+      const stories = await getStoriesByIds(storyIds);
+      return stories.filter(s => s.status !== 'draft');
+    }
+  });
+
   const recentStories = recentData?.pages.flatMap((p: any) => p.stories) || [];
   const topStories = topData?.pages.flatMap((p: any) => p.stories) || [];
 
-  const isLoading = recentLoading || topLoading || authorsLoading || recLoading || compLoading || likedLoading || historyLoading || discussionsLoading || heroBannersLoading || webtoonsLoading;
+  const isLoading = recentLoading || topLoading || authorsLoading || recLoading || compLoading || likedLoading || historyLoading || discussionsLoading || heroBannersLoading || webtoonsLoading || editorPicksLoading;
 
   // Öne Çıkan Slaytlar (Carousel Verisi)
   const slides = useMemo(() => {
@@ -206,7 +217,7 @@ export default function FeedPage() {
   }, [topStories, mostLikedStories, featuredAuthors, heroBanners, router]);
 
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
-  
+
   const [currentAnnouncementIndex, setCurrentAnnouncementIndex] = useState(0);
   const announcementsRef = useRef<HTMLDivElement>(null);
 
@@ -444,7 +455,38 @@ export default function FeedPage() {
         </div>
       )}
 
-      {/* ── 3. Yatay Kaydırmalı Listeler (Carousels) & Duyurular ── */}
+      {/* ── 3. Editör Değerlendirmeleri Banner ── */}
+      {!isLoading && (
+        <div className="px-6 md:px-16 mb-12">
+          <div className="bg-gradient-to-r from-primary/20 via-background to-card border border-primary/20 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm overflow-hidden relative">
+            <div className="absolute -right-20 -top-20 text-primary/10">
+              <BookOpen size={200} />
+            </div>
+
+            <div className="flex items-start md:items-center gap-6 relative z-10">
+              <div className="w-16 h-16 rounded-2xl bg-primary/20 text-primary flex items-center justify-center shrink-0 shadow-inner">
+                <Sparkles size={32} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">Gold Standart</span>
+                </div>
+                <Typography variant="h2" className="text-xl md:text-2xl font-bold mb-1">Editör Değerlendirmeleri</Typography>
+                <Typography variant="body" className="text-muted text-sm md:text-base max-w-xl">Platformdaki eserlerin profesyonel editörlerimiz tarafından yapılan detaylı ve bağımsız incelemelerini keşfedin.</Typography>
+              </div>
+            </div>
+
+            <Button
+              onPress={() => router.push('/reviews')}
+              className="w-full md:w-auto shrink-0 z-10"
+            >
+              İncelemeleri Gör <ChevronRight size={18} className="ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ── 4. Yatay Kaydırmalı Listeler (Carousels) & Duyurular ── */}
       {!isLoading && (
         <div className="flex flex-col gap-12 px-6 md:px-16">
 
@@ -456,7 +498,7 @@ export default function FeedPage() {
                 <Typography variant="h2" className="text-2xl font-bold">Platform Duyuruları</Typography>
                 {announcements.length > 1 && (
                   <div className="ml-auto flex gap-2">
-                    <button 
+                    <button
                       onClick={() => {
                         const next = currentAnnouncementIndex === 0 ? announcements.length - 1 : currentAnnouncementIndex - 1;
                         setCurrentAnnouncementIndex(next);
@@ -469,7 +511,7 @@ export default function FeedPage() {
                     >
                       <ChevronLeft size={20} />
                     </button>
-                    <button 
+                    <button
                       onClick={() => {
                         const next = (currentAnnouncementIndex + 1) % announcements.length;
                         setCurrentAnnouncementIndex(next);
@@ -509,9 +551,9 @@ export default function FeedPage() {
                       {/* Sağ Taraf: Metinler */}
                       <div className="flex-1 flex flex-col text-center md:text-left h-full justify-center">
                         <Typography variant="h3" className="font-black text-xl md:text-2xl mb-3">{announcement.title}</Typography>
-                        <div 
+                        <div
                           className="text-muted text-sm md:text-base mb-6 leading-relaxed whitespace-pre-wrap [&>p]:mb-2 [&>ul]:list-disc [&>ul]:ml-5 [&>ul]:mb-2 [&>ol]:list-decimal [&>ol]:ml-5 [&>ol]:mb-2 [&>strong]:font-bold [&>em]:italic [&_*]:!text-inherit [&_*]:!bg-transparent"
-                          dangerouslySetInnerHTML={{ __html: announcement.content }} 
+                          dangerouslySetInnerHTML={{ __html: announcement.content }}
                         />
                         {announcement.link && (
                           <Button
@@ -617,12 +659,21 @@ export default function FeedPage() {
             />
           )}
 
-          {/* Editörün Seçimi (Yakında) */}
-          <ComingSoonBlock
-            title="Editörün Seçimi"
-            subtitle="Editörlerimiz tarafından özenle seçilmiş ve mutlaka okumanız gereken başyapıtlar."
-            icon={<Award className="text-primary" size={24} />}
-          />
+          {/* Editörün Seçimi */}
+          {editorPicks.length > 0 && (
+            <CarouselRow
+              title="Editörün Seçimi"
+              subtitle="Editörlerimiz tarafından özenle seçilmiş ve mutlaka okumanız gereken başyapıtlar."
+              icon={<Award className="text-primary" size={24} />}
+              stories={editorPicks}
+              seeAllHref="/reviews"
+              onStoryClick={(story) => {
+                const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
+                router.push(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
+              }}
+              onLikePress={handleLikePress}
+            />
+          )}
 
           {/* Webtoons / Çizgilerin Gücü */}
           {webtoons.length > 0 && (
@@ -904,7 +955,7 @@ function HorizontalCarouselRow({ title, subtitle, icon, stories, seeAllHref, onS
       </div>
 
       {showLeftArrow && (
-        <button 
+        <button
           onClick={() => scroll('left')}
           className="hidden md:flex absolute left-[-24px] top-[55%] -translate-y-1/2 z-20 w-12 h-12 bg-card/90 backdrop-blur-md border border-border/50 rounded-full items-center justify-center text-primary shadow-xl hover:bg-primary/10 hover:scale-110 transition-all"
         >
@@ -912,7 +963,7 @@ function HorizontalCarouselRow({ title, subtitle, icon, stories, seeAllHref, onS
         </button>
       )}
       {showRightArrow && stories.length > 2 && (
-        <button 
+        <button
           onClick={() => scroll('right')}
           className="hidden md:flex absolute right-[-24px] top-[55%] -translate-y-1/2 z-20 w-12 h-12 bg-card/90 backdrop-blur-md border border-border/50 rounded-full items-center justify-center text-primary shadow-xl hover:bg-primary/10 hover:scale-110 transition-all"
         >

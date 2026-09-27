@@ -34,13 +34,21 @@ export default function AdminUsersPage() {
   };
 
   const getRoleBadge = (user: User) => {
+    const badges = [];
     if (user.isAdmin) {
-      return <span className="bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 rounded text-xs font-semibold uppercase tracking-wider">Admin</span>;
+      badges.push(<span key="admin" className="bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 rounded text-xs font-semibold uppercase tracking-wider">Admin</span>);
+    }
+    if (user.isEditor) {
+      badges.push(<span key="editor" className="bg-blue-500/10 text-blue-500 border border-blue-500/20 px-2 py-0.5 rounded text-xs font-semibold uppercase tracking-wider">Editör</span>);
     }
     if (user.isAuthor) {
-      return <span className="bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded text-xs font-semibold uppercase tracking-wider">Yazar</span>;
+      badges.push(<span key="author" className="bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded text-xs font-semibold uppercase tracking-wider">Yazar</span>);
     }
-    return <span className="bg-muted/10 text-muted border border-border/50 px-2 py-0.5 rounded text-xs font-semibold uppercase tracking-wider">Okur</span>;
+    
+    if (badges.length === 0) {
+      return <span className="bg-muted/10 text-muted border border-border/50 px-2 py-0.5 rounded text-xs font-semibold uppercase tracking-wider">Okur</span>;
+    }
+    return <div className="flex flex-wrap gap-1">{badges}</div>;
   };
 
   return (

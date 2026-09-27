@@ -235,3 +235,74 @@ export const sliceAndCompressWebtoonImage = (
     reader.onerror = () => resolve([file]);
   });
 };
+
+/**
+ * Client-side universal WebP converter & compressor.
+ * Takes any image (JPEG, PNG, WEBP, etc.), resizes proportionally to fit maxWidth/maxHeight,
+ * and converts to optimized WebP format for fast web delivery.
+ */
+export const compressToWebP = (
+  file: File, 
+  maxWidth = 1200, 
+  maxHeight = 1200, 
+  quality = 0.85
+): Promise<File> => {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return resolve(file);
+    }
+    if (!file.type.startsWith('image/')) {
+      return resolve(file);
+    }
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        // Proportional scale to fit bounds
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) {
+          return resolve(file);
+        }
+
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const newName = file.name.replace(/\.[^/.]+$/, "") + ".webp";
+            const newFile = new File([blob], newName, {
+              type: 'image/webp',
+              lastModified: Date.now(),
+            });
+            resolve(newFile);
+          } else {
+            resolve(file);
+          }
+        }, 'image/webp', quality);
+      };
+
+      img.onerror = () => resolve(file);
+    };
+
+    reader.onerror = () => resolve(file);
+  });
+};

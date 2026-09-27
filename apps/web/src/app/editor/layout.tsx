@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, LogOut, BellRing, HelpCircle, Quote, LayoutTemplate } from 'lucide-react';
+import { LayoutDashboard, LogOut, BellRing, HelpCircle, Quote, LayoutTemplate, BookOpen } from 'lucide-react';
 import { Typography, Button } from '@readixon/ui';
 import { useAuthStore, signOut } from '@readixon/core';
 
@@ -36,6 +36,7 @@ export default function EditorLayout({ children }: { children: React.ReactNode }
     { name: 'Kültür Sanat Haberleri', href: '/editor/news', icon: BellRing },
     { name: 'Anketler', href: '/editor/polls', icon: HelpCircle },
     { name: 'Alıntılar', href: '/editor/quote', icon: Quote },
+    { name: 'Kitap Değerlendirmeleri', href: '/editor/reviews', icon: BookOpen },
   ];
 
   if (!isInitialized || (!userProfile?.isEditor && !userProfile?.isAdmin)) {

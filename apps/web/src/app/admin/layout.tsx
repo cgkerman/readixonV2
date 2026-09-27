@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, BookOpen, Feather, LogOut, Settings, Hash, Flag, Trophy, Zap, BellRing, HelpCircle, Quote } from 'lucide-react';
+import { LayoutDashboard, Users, BookOpen, Feather, LogOut, Settings, Hash, Flag, Trophy, Zap, BellRing, HelpCircle, Quote, Megaphone } from 'lucide-react';
 import { Typography, Button } from '@readixon/ui';
 import { useAuthStore, signOut } from '@readixon/core';
 
@@ -41,6 +41,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: 'Şikayetler', href: '/admin/reports', icon: Flag },
     { name: 'Değerlendirmeler', href: '/admin/feedbacks', icon: HelpCircle },
     { name: 'Duyurular', href: '/admin/announcements', icon: BellRing },
+    { name: 'Pop-up / Banner', href: '/admin/popups', icon: Megaphone },
     { name: 'Ayarlar', href: '/admin/settings', icon: Settings },
   ];
 

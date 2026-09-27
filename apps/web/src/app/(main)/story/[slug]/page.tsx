@@ -22,13 +22,14 @@ import {
   trackInteraction,
   getReadixesByStoryId,
   Readix,
-  db
+  db,
+  getEditorialReviewByStoryId
 } from '@readixon/core';
-import type { Story, User, Chapter, Review, Character } from '@readixon/core';
+import type { Story, User, Chapter, Review, Character, EditorialReview } from '@readixon/core';
 import { 
   BookOpen, Heart, Eye, List, Play, BookmarkPlus, BookmarkCheck, 
   ArrowLeft, Loader2, Star, MessageSquare, Users, Award, PenTool, Hash,
-  Lock, Calendar, Bell, Info, X
+  Lock, Calendar, Bell, Info, X, Sparkles, ChevronRight
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from "sonner";
@@ -47,6 +48,7 @@ export default function StoryDetailPage() {
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [editorialReview, setEditorialReview] = useState<EditorialReview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
@@ -119,14 +121,18 @@ export default function StoryDetailPage() {
         // Görüntülenmeyi artır (Sadece bir kere)
         incrementStoryView(storyId);
 
-        // Yazar, bölümler ve incelemeleri paralel çek
-        const [fetchedAuthor, fetchedChapters, fetchedReviews, fetchedCharacters] = await Promise.all([
+        // Yazar, bölümler, incelemeler ve editoryal değerlendirmeyi paralel çek
+        const [fetchedAuthor, fetchedChapters, fetchedReviews, fetchedCharacters, fetchedEditorialReview] = await Promise.all([
           getUserProfile(fetchedStory.authorId),
           getPublishedChapters(storyId),
           getReviews(storyId),
           getCharacters(storyId).catch(err => {
             console.warn("Karakterler yüklenirken Firebase izin hatası:", err);
             return [];
+          }),
+          getEditorialReviewByStoryId(storyId).catch(err => {
+            console.warn("Editoryal inceleme çekilirken hata:", err);
+            return null;
           })
         ]);
         
@@ -134,6 +140,7 @@ export default function StoryDetailPage() {
         setChapters(fetchedChapters);
         setReviews(fetchedReviews);
         setCharacters(fetchedCharacters);
+        setEditorialReview(fetchedEditorialReview);
         setLoading(false); // <-- Performans: Ana içerik yüklendi, sayfayı göster
 
         // Benzer kitapları getir (Arka planda yüklenir)
@@ -393,6 +400,10 @@ export default function StoryDetailPage() {
   const isStoryAuthor = firebaseUser?.uid === story.authorId;
   const canViewCharacters = isPremiumOrAdmin || isStoryAuthor;
 
+  const editorialAverageScore = editorialReview?.scores 
+    ? (Object.values(editorialReview.scores).reduce((a, b) => a + b, 0) / Object.values(editorialReview.scores).length).toFixed(1)
+    : '9.0';
+
   return (
     <div className="flex flex-col w-full min-h-screen bg-background pb-20 overflow-x-hidden">
       
@@ -459,13 +470,20 @@ export default function StoryDetailPage() {
           <div className="flex-1 flex flex-col items-center lg:items-start text-center lg:text-left animate-fade-in-up">
             
             {/* Status & Puan Rozetleri */}
-            <div className="flex flex-wrap gap-2 mb-3 justify-center lg:justify-start">
+            <div className="flex flex-wrap gap-2 mb-3 justify-center lg:justify-start items-center">
               <span className="px-3 py-1 bg-background/80 backdrop-blur-md text-text text-xs font-bold rounded-full border border-border/50 shadow-sm">
                 {story.status === 'completed' ? 'Tamamlandı' : story.status === 'ongoing' ? 'Devam Ediyor' : 'Taslak'}
               </span>
               <span className="px-3 py-1 bg-background/80 backdrop-blur-md text-text text-xs font-bold rounded-full border border-border/50 shadow-sm flex items-center gap-1">
                 <Star size={12} className="text-amber-500" /> {story.stats?.rating?.toFixed(1) || '0.0'}
               </span>
+              {editorialReview && (
+                <Link href={`/reviews/${editorialReview.id}`} className="group inline-flex items-center">
+                  <span className="px-3 py-1 bg-amber-500/15 hover:bg-amber-500/25 text-amber-500 text-xs font-bold rounded-full border border-amber-500/30 shadow-sm flex items-center gap-1.5 transition-all">
+                    <Sparkles size={12} className="text-amber-500 animate-pulse" /> Editör Puanı: {editorialAverageScore}/10
+                  </span>
+                </Link>
+              )}
             </div>
 
             <Typography variant="h1" className="text-4xl md:text-5xl lg:text-6xl font-black text-text mb-2 leading-tight drop-shadow-lg">
@@ -572,6 +590,57 @@ export default function StoryDetailPage() {
           
           <div className="space-y-10">
               
+              {/* Editör Değerlendirmesi Kartı (Varsa) */}
+              {editorialReview && (
+                <Link 
+                  href={`/reviews/${editorialReview.id}`}
+                  className="block group"
+                >
+                  <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-950/25 via-card/80 to-card border border-amber-500/30 hover:border-amber-500/70 p-6 transition-all duration-300 shadow-xl shadow-black/40 hover:shadow-amber-500/10 hover:-translate-y-0.5">
+                    {/* Ambient Glow */}
+                    <div className="absolute -top-12 -right-12 w-36 h-36 bg-amber-500/15 rounded-full blur-2xl pointer-events-none group-hover:bg-amber-500/25 transition-all" />
+
+                    {/* Header Row */}
+                    <div className="flex items-center justify-between gap-3 mb-3 relative z-10">
+                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-500 text-[11px] font-black uppercase tracking-wider">
+                        <Sparkles size={12} className="animate-pulse" />
+                        Editör Değerlendirmesi
+                      </div>
+
+                      <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-amber-500 text-black text-xs font-black shadow-sm">
+                        <Star size={11} className="fill-black text-black" />
+                        {editorialAverageScore} / 10
+                      </div>
+                    </div>
+
+                    {/* Excerpt */}
+                    <p className="text-sm text-text/90 italic leading-relaxed mb-4 line-clamp-3 font-serif relative z-10">
+                      "{editorialReview.firstImpression || editorialReview.finalWord || editorialReview.about || 'Bu eser Readixon editoryal heyeti tarafından detaylı olarak incelenmiştir.'}"
+                    </p>
+
+                    {/* Footer Row */}
+                    <div className="flex items-center justify-between pt-3 border-t border-amber-500/15 text-xs relative z-10">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-[10px] font-bold text-amber-400 overflow-hidden shrink-0">
+                          {editorialReview.editorAvatar ? (
+                            <img src={editorialReview.editorAvatar} alt={editorialReview.editorName} className="w-full h-full object-cover" />
+                          ) : (
+                            editorialReview.editorName.charAt(0)
+                          )}
+                        </div>
+                        <span className="text-muted-foreground font-medium truncate max-w-[130px]">
+                          Editör: <strong className="text-text">{editorialReview.editorName}</strong>
+                        </span>
+                      </div>
+
+                      <span className="text-amber-500 font-bold flex items-center gap-1 group-hover:translate-x-1 transition-transform shrink-0">
+                        İncelemeyi Oku <ChevronRight size={14} />
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              )}
+
               {/* Kitap Fragmanı (Video) */}
               {story.trailerVideoUrl && (
                 <div className="bg-black/90 rounded-3xl overflow-hidden shadow-2xl shadow-black/50 border border-white/10 relative group animate-fade-in-up">

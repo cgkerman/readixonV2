@@ -268,5 +268,22 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow update, delete: if false; 
     }
+
+    // ==========================================
+    // 11. EDİTÖRYAL İNCELEMELER (EDITORIAL REVIEWS)
+    // ==========================================
+    match /editorialReviews/{reviewId} {
+      allow read: if true; 
+      allow create, update: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+
+    // ==========================================
+    // 12. AÇILIŞ POP-UP / KARŞILAMA BANNERLARI (SITE POPUPS)
+    // ==========================================
+    match /site_popups/{popupId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
   }
 }

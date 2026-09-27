@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { Typography, Button } from '@readixon/ui';
-import { getUserProfile, getAuthorStories, User, Story, useAuthStore } from '@readixon/core';
+import { getUserProfile, getAuthorStories, User, Story, useAuthStore, updateUserRoleAdmin } from '@readixon/core';
 import { ArrowLeft, User as UserIcon, Calendar, CheckCircle, ShieldAlert, PenTool, Users, Eye, Swords, BookOpen, Mail } from 'lucide-react';
+import { toast } from 'sonner';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
@@ -14,6 +15,17 @@ export default function AdminUserDetailPage() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const { firebaseUser } = useAuthStore();
+
+  const handleRoleUpdate = async (updates: { isAdmin?: boolean, isAuthor?: boolean, isEditor?: boolean, status?: 'free' | 'premium' | 'pro' }) => {
+    try {
+      await updateUserRoleAdmin(id, updates);
+      setUser(prev => prev ? { ...prev, ...updates } : null);
+      toast.success("Kullanıcı rolleri başarıyla güncellendi.");
+    } catch (error) {
+      console.error("Rol güncellenirken hata:", error);
+      toast.error("Rol güncellenirken bir hata oluştu.");
+    }
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -80,14 +92,22 @@ export default function AdminUserDetailPage() {
     );
   }
 
-  const getRoleBadge = (isAdmin?: boolean, isAuthor?: boolean) => {
+  const getRoleBadge = (isAdmin?: boolean, isAuthor?: boolean, isEditor?: boolean) => {
+    const badges = [];
     if (isAdmin) {
-      return <span className="flex items-center gap-1 bg-red-500/10 text-red-500 border border-red-500/20 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider"><ShieldAlert size={12} /> Admin</span>;
+      badges.push(<span key="admin" className="flex items-center gap-1 bg-red-500/10 text-red-500 border border-red-500/20 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider"><ShieldAlert size={12} /> Admin</span>);
+    }
+    if (isEditor) {
+      badges.push(<span key="editor" className="flex items-center gap-1 bg-blue-500/10 text-blue-500 border border-blue-500/20 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider"><CheckCircle size={12} /> Editör</span>);
     }
     if (isAuthor) {
-      return <span className="flex items-center gap-1 bg-primary/10 text-primary border border-primary/20 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider"><PenTool size={12} /> Yazar</span>;
+      badges.push(<span key="author" className="flex items-center gap-1 bg-primary/10 text-primary border border-primary/20 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider"><PenTool size={12} /> Yazar</span>);
     }
-    return <span className="bg-muted/10 text-muted border border-border/50 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider">Okur</span>;
+    
+    if (badges.length === 0) {
+      return <span className="bg-muted/10 text-muted border border-border/50 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider">Okur</span>;
+    }
+    return <div className="flex flex-wrap gap-2">{badges}</div>;
   };
 
   const formatDate = (timestamp?: any) => {
@@ -122,7 +142,7 @@ export default function AdminUserDetailPage() {
             <div className="flex-1 space-y-4">
               <div>
                 <div className="flex items-center gap-3 mb-2">
-                  {getRoleBadge(user.isAdmin, user.isAuthor)}
+                  {getRoleBadge(user.isAdmin, user.isAuthor, user.isEditor)}
                   <span className="text-sm text-muted flex items-center gap-1">
                     <Calendar size={14} /> Katılım: {formatDate(user.createdAt)}
                   </span>
@@ -272,6 +292,53 @@ export default function AdminUserDetailPage() {
                    <Typography variant="body" className="text-sm font-medium">{user.aiUsage.requestCount} istek atıldı</Typography>
                 </div>
               )}
+            </div>
+          </div>
+
+          <div className="bg-card/40 border border-border/50 rounded-xl p-6 shadow-sm">
+            <Typography variant="h3" className="font-bold mb-6">Rol & Yetki Yönetimi</Typography>
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-border/50">
+                 <div className="flex items-center gap-2">
+                   <ShieldAlert size={18} className="text-red-500" />
+                   <Typography variant="body" className="font-medium">Admin Yetkisi</Typography>
+                 </div>
+                 <button 
+                   onClick={() => handleRoleUpdate({ isAdmin: !user.isAdmin })}
+                   className={`px-3 py-1 text-xs font-semibold rounded-full border transition-colors ${user.isAdmin ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-muted/10 text-muted border-border/50 hover:bg-muted/20'}`}
+                 >
+                   {user.isAdmin ? 'Kaldır' : 'Ata'}
+                 </button>
+              </div>
+
+              <div className="flex items-center justify-between pb-3 border-b border-border/50">
+                 <div className="flex items-center gap-2">
+                   <CheckCircle size={18} className="text-blue-500" />
+                   <Typography variant="body" className="font-medium">Editör Yetkisi</Typography>
+                 </div>
+                 <button 
+                   onClick={() => handleRoleUpdate({ isEditor: !user.isEditor })}
+                   className={`px-3 py-1 text-xs font-semibold rounded-full border transition-colors ${user.isEditor ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' : 'bg-muted/10 text-muted border-border/50 hover:bg-muted/20'}`}
+                 >
+                   {user.isEditor ? 'Kaldır' : 'Ata'}
+                 </button>
+              </div>
+              
+              <div className="flex flex-col gap-2 pt-1">
+                 <Typography variant="caption" className="text-muted font-semibold uppercase tracking-wider text-[10px]">Abonelik Durumu</Typography>
+                 <div className="flex gap-2">
+                   {(['free', 'premium', 'pro'] as const).map((statusOption) => (
+                     <button 
+                       key={statusOption}
+                       onClick={() => handleRoleUpdate({ status: statusOption })}
+                       className={`flex-1 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors capitalize ${user.status === statusOption ? 'bg-primary text-background border-primary' : 'bg-card text-text border-border/50 hover:bg-muted/10'}`}
+                     >
+                       {statusOption}
+                     </button>
+                   ))}
+                 </div>
+              </div>
             </div>
           </div>
 

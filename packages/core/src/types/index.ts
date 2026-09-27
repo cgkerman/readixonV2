@@ -108,6 +108,46 @@ export interface Contributor {
   name: string;
 }
 
+export interface EditorialReview {
+  id: string;
+  storyId: string;
+  storyTitle?: string;
+  storyCover?: string;
+  authorName?: string;
+  authorAvatar?: string;
+  editorId: string;
+  editorName: string;
+  editorAvatar?: string;
+  
+  about: string; // Eser Hakkında
+  firstImpression: string; // Editörün İlk İzlenimi
+  storyAndStructure: string; // Hikâye ve Yapı
+  characters: string; // Karakterler
+  worldAndAtmosphere: string; // Dünya ve Atmosfer
+  languageAndStyle: string; // Dil ve Üslup
+  themes: string; // Temalar
+  strengths: string; // Öne Çıkan Güçlü Yönler
+  areasForImprovement: string; // Geliştirilebilecek Alanlar
+  readerExperience: string; // Okuyucu Deneyimi
+  finalWord: string; // Editörün Son Sözü
+  spoilerNotes?: string; // Spoilerli Editör Notları
+  
+  scores: {
+    storyStructure: number;
+    characters: number;
+    languageAndStyle: number;
+    pacing: number;
+    worldBuilding: number;
+    originality: number;
+    emotionalImpact: number;
+    technicalConsistency: number;
+  };
+  
+  authorNotifiedAt?: Timestamp;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
 export interface Story {
   storyId: string;
   authorId: string;
@@ -342,6 +382,25 @@ export interface HeroBanner {
   createdAt: Timestamp;
 }
 
+// ─────────────────────────────────────────────
+// 3.7.2 Site Pop-up / Karşılama Bannerları (/site_popups/{id})
+// Site açılışında kullanıcılara bir kez gösterilen duyuru veya görsel pop-uplar
+// ─────────────────────────────────────────────
+
+export interface SitePopup {
+  id: string;
+  title: string;
+  description?: string;
+  imageUrl?: string; // Optimize edilmiş WebP görseli
+  buttonText?: string; // Örn: "Hemen Keşfet", "Detayları Gör"
+  buttonLink?: string; // Örn: "/story/123", "/reviews", "https://..."
+  isActive: boolean;
+  priority?: number;
+  expireAt?: Timestamp;
+  createdAt: Timestamp;
+  updatedAt?: Timestamp;
+}
+
 
 // ─────────────────────────────────────────────
 // 3.8. Bildirimler (/users/{userId}/notifications/{notificationId})
@@ -363,7 +422,8 @@ export type NotificationType =
   | 'duel_accepted'
   | 'duel_rejected'
   | 'system_message'
-  | 'badge_earned';
+  | 'badge_earned'
+  | 'editorial_review';
 
 export interface AppNotification {
   id: string;

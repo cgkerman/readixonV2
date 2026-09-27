@@ -68,7 +68,9 @@ export type {
   ActivityAnswer,
   AdminPoll,
   AdminPollOption,
-  AdminQuote
+  AdminQuote,
+  EditorialReview,
+  SitePopup
 } from './types';
 
 // Auth servisi
@@ -131,6 +133,8 @@ export * from './services/plannerService';
 export * from './types/planner';
 export * from './services/curveballService';
 export * from './services/pointsService';
+export * from './services/editorialService';
+export * from './services/popupService';
 export * from './utils/imageUtils';
 export * from './utils/cropImageUtils';
 export * from './constants/tags';

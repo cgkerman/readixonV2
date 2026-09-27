@@ -737,8 +737,7 @@ export const searchStories = async (searchTerm: string = '', selectedTags: strin
     // Yalnızca yayındaki hikayeler
     let q = query(
       storiesRef,
-      where('status', 'in', ['ongoing', 'completed']),
-      orderBy('createdAt', 'desc')
+      where('status', 'in', ['ongoing', 'completed'])
     );
 
     // Etiket seçildiyse array-contains-any kullan

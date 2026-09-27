@@ -7,6 +7,7 @@ import { BookOpen, Compass, Search, User, LogOut, PenTool, Hash, Settings, Bell,
 import { Typography, Button } from '@readixon/ui';
 import { useAuthStore, signOut, becomeAuthor, sendVerificationEmail, subscribeToChats } from '@readixon/core';
 import { toast } from "sonner";
+import GlobalSitePopup from '@/components/GlobalSitePopup';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -586,6 +587,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           </div>
         </div>
       )}
+
+      {/* ── Kullanıcılar için Tek Seferlik Açılış Pop-up'ı ── */}
+      <GlobalSitePopup />
 
     </div>
   );

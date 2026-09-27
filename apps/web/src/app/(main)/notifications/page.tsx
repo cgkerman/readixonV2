@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from "sonner";
 import { useRouter } from 'next/navigation';
-import { Bell, Heart, MessageCircle, UserPlus, CheckCircle2, Circle, Loader2, BookOpen, Feather, XCircle, Award } from 'lucide-react';
+import { Bell, Heart, MessageCircle, UserPlus, CheckCircle2, Circle, Loader2, BookOpen, Feather, XCircle, Award, Sparkles } from 'lucide-react';
 import { Typography, Button } from '@readixon/ui';
 import { 
   useAuthStore, 
@@ -96,6 +96,13 @@ export default function NotificationsPage() {
           router.push(`/arena/${notif.entityId}`);
         }
         break;
+      case 'editorial_review':
+        if (notif.subEntityId) {
+          router.push(`/reviews/${notif.subEntityId}`);
+        } else {
+          router.push('/reviews');
+        }
+        break;
     }
   };
 
@@ -140,6 +147,8 @@ export default function NotificationsPage() {
         return <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center shrink-0"><Bell size={20} /></div>;
       case 'badge_earned':
         return <div className="w-10 h-10 rounded-full bg-yellow-500/20 text-yellow-500 flex items-center justify-center shrink-0"><Award size={20} /></div>;
+      case 'editorial_review':
+        return <div className="w-10 h-10 rounded-full bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0"><Sparkles size={20} /></div>;
       default:
         return <div className="w-10 h-10 rounded-full bg-muted/20 text-muted flex items-center justify-center shrink-0"><Bell size={20} /></div>;
     }
@@ -181,6 +190,8 @@ export default function NotificationsPage() {
         return <span>{notif.message || 'Sistemden yeni bir mesajınız var.'}</span>;
       case 'badge_earned':
         return <span>Tebrikler! <span className="font-semibold text-yellow-500">"{notif.entityTitle}"</span> rozetini kazandın.</span>;
+      case 'editorial_review':
+        return <>{actor}, {entity} adlı eseriniz için kapsamlı bir editör değerlendirmesi yayınladı!</>;
       default:
         console.warn('Bilinmeyen bildirim tipi:', notif.type, notif);
         return <span>Yeni bir bildiriminiz var.</span>;
