@@ -6,6 +6,7 @@ import { getStoryById, fetchChapters, getUserProfile, Story, Chapter, User } fro
 import { ArrowLeft, BookOpen, Clock, Heart, Eye, List, Hash, Download } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { ChapterViewerModal } from '@/components/ChapterViewerModal';
 
 export default function AdminStoryDetailPage() {
   const { id } = useParams() as { id: string };
@@ -13,6 +14,8 @@ export default function AdminStoryDetailPage() {
   const [author, setAuthor] = useState<User | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedChapterIndex, setSelectedChapterIndex] = useState<number | null>(null);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
 
   const handleDownload = async (url: string, filename: string) => {
     try {
@@ -223,15 +226,16 @@ export default function AdminStoryDetailPage() {
                   <thead>
                     <tr className="border-b border-border/50 bg-card/60 backdrop-blur-sm">
                       <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider w-[10%]">Sıra</th>
-                      <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider w-[50%]">Başlık</th>
-                      <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider w-[20%]">Durum</th>
-                      <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider w-[20%]">Yayın Tarihi</th>
+                      <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider w-[40%]">Başlık</th>
+                      <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider w-[18%]">Durum</th>
+                      <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider w-[18%]">Yayın Tarihi</th>
+                      <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider w-[14%] text-right">İşlem</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/50">
                     {chapters.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="px-6 py-10 text-center text-muted">Bölüm bulunamadı.</td>
+                        <td colSpan={5} className="px-6 py-10 text-center text-muted">Bölüm bulunamadı.</td>
                       </tr>
                     ) : (
                       chapters.map((chapter, index) => (
@@ -249,6 +253,20 @@ export default function AdminStoryDetailPage() {
                           </td>
                           <td className="px-6 py-4 text-sm text-muted">
                             {chapter.publishDate ? new Date((chapter.publishDate as any).seconds * 1000).toLocaleDateString('tr-TR') : '-'}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedChapterIndex(index);
+                                setIsViewerOpen(true);
+                              }}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-all"
+                              title="Bölüm İçeriğini Oku ve İncele"
+                            >
+                              <BookOpen size={13} />
+                              <span>İçeriği Oku</span>
+                            </button>
                           </td>
                         </tr>
                       ))
@@ -305,6 +323,27 @@ export default function AdminStoryDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Bölüm İçerik Görüntüleyici Modal */}
+      <ChapterViewerModal
+        isOpen={isViewerOpen}
+        onClose={() => setIsViewerOpen(false)}
+        chapter={selectedChapterIndex !== null ? chapters[selectedChapterIndex] : null}
+        storyTitle={story.title}
+        storyId={story.storyId}
+        onPrevChapter={() => {
+          if (selectedChapterIndex !== null && selectedChapterIndex > 0) {
+            setSelectedChapterIndex(selectedChapterIndex - 1);
+          }
+        }}
+        onNextChapter={() => {
+          if (selectedChapterIndex !== null && selectedChapterIndex < chapters.length - 1) {
+            setSelectedChapterIndex(selectedChapterIndex + 1);
+          }
+        }}
+        hasPrev={selectedChapterIndex !== null && selectedChapterIndex > 0}
+        hasNext={selectedChapterIndex !== null && selectedChapterIndex < chapters.length - 1}
+      />
     </div>
   );
 }
