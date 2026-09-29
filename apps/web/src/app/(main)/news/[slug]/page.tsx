@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { db } from '@readixon/core';
+import { db, sanitizeHtml } from '@readixon/core';
 import { doc, getDoc } from 'firebase/firestore';
 import { notFound } from 'next/navigation';
 import { Typography, Button } from '@readixon/ui';
@@ -69,8 +69,49 @@ export default async function NewsDetailPage({ params }: Props) {
 
   const news = { id: docSnap.id, ...docSnap.data() } as any;
 
+  const newsArticleJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "NewsArticle",
+    "headline": news.title,
+    ...(news.imageUrl ? { "image": [news.imageUrl] } : {}),
+    "datePublished": news.createdAt?.toDate ? news.createdAt.toDate().toISOString() : new Date().toISOString(),
+    "dateModified": news.updatedAt?.toDate ? news.updatedAt.toDate().toISOString() : (news.createdAt?.toDate ? news.createdAt.toDate().toISOString() : new Date().toISOString()),
+    "author": {
+      "@type": "Organization",
+      "name": "Readixon Editör",
+      "url": "https://readixon.com"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "Readixon",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://readixon.com/icon.png"
+      }
+    },
+    "description": news.content ? news.content.replace(/<[^>]+>/g, '').substring(0, 160) : 'Readixon haber ve duyuruları.'
+  };
+
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Ana Sayfa", "item": "https://readixon.com" },
+      { "@type": "ListItem", "position": 2, "name": "Gündem", "item": "https://readixon.com/agenda" },
+      { "@type": "ListItem", "position": 3, "name": news.title, "item": `https://readixon.com/news/${params.slug}` }
+    ]
+  };
+
   return (
     <main className="min-h-screen bg-background">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(newsArticleJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <NewsViewTracker id={news.id} />
       {/* Header Section */}
       <section className="pt-24 pb-8 max-w-4xl mx-auto px-6 md:px-12">
@@ -124,7 +165,7 @@ export default async function NewsDetailPage({ params }: Props) {
             [&>ol]:list-decimal [&>ol]:ml-6 [&>ol]:mb-6
             [&_img]:rounded-2xl [&_img]:my-8 [&_img]:max-w-full [&_img]:border [&_img]:border-white/10 [&_img]:shadow-xl
             [&_a]:text-primary [&_a]:hover:underline"
-          dangerouslySetInnerHTML={{ __html: news.content }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(news.content || '') }}
         />
         
         {news.link && (

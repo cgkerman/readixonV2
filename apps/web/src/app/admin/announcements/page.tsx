@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Typography, Button, Input } from '@readixon/ui';
-import { getAllAnnouncementsAdmin, createAnnouncement, updateAnnouncement, deleteAnnouncement, type Announcement, uploadFile, getCroppedImg } from '@readixon/core';
+import { getAllAnnouncementsAdmin, createAnnouncement, updateAnnouncement, deleteAnnouncement, type Announcement, uploadFile, getCroppedImg, sanitizeHtml } from '@readixon/core';
 import { Timestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { BellRing, Plus, Pencil, Trash2, CheckCircle, XCircle, Image as ImageIcon, Bold, Italic, List } from 'lucide-react';
@@ -256,7 +256,7 @@ export default function AdminAnnouncementsPage() {
                       )}
                       <div>
                         <Typography variant="h4" className="font-semibold text-sm line-clamp-1">{item.title}</Typography>
-                        <div className="text-xs text-muted line-clamp-1 [&>p]:inline [&>div]:inline [&>h1]:inline [&>h2]:inline [&>h3]:inline" dangerouslySetInnerHTML={{ __html: item.content }} />
+                        <div className="text-xs text-muted line-clamp-1 [&>p]:inline [&>div]:inline [&>h1]:inline [&>h2]:inline [&>h3]:inline" dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.content || '') }} />
                       </div>
                     </td>
                     <td className="py-4 text-sm text-muted">

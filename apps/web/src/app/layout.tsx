@@ -23,9 +23,6 @@ export const metadata: Metadata = {
   authors: [{ name: 'Readixon Ekibi', url: 'https://readixon.com' }],
   creator: 'Readixon',
   publisher: 'Readixon',
-  alternates: {
-    canonical: '/',
-  },
   openGraph: {
     title: "Readixon - Sınırları Aşan Hikayeler",
     description: "Readixon, okurları ve yazarları tek bir ekosistemde buluşturan yeni nesil içerik ve topluluk platformudur.",
@@ -60,9 +57,13 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
-  verification: {
-    google: "google-site-verification-code-here", // Change this when Google Search Console is set up
-  }
+  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+    ? {
+        verification: {
+          google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+        },
+      }
+    : {}),
 };
 
 const jsonLd = {

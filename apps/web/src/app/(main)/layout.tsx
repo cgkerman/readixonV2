@@ -275,13 +275,17 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               {/* Profile Dropdown (Hover) */}
               <div className="relative group/profile">
                 <Link href="/profile" className="flex items-center gap-2 cursor-pointer p-1 pr-3 rounded-full hover:bg-muted/10 transition-colors border border-transparent hover:border-border/50">
-                  <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden border border-border/50 shrink-0">
-                    {userProfile?.avatarUrl ? (
-                      <img src={userProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-base font-bold text-primary uppercase">
-                        {userProfile?.displayName?.charAt(0) || 'U'}
-                      </span>
+                  <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden border border-border/50 shrink-0 relative">
+                    <span className="text-base font-bold text-primary uppercase select-none">
+                      {userProfile?.displayName?.charAt(0) || 'U'}
+                    </span>
+                    {userProfile?.avatarUrl && (
+                      <img 
+                        src={userProfile.avatarUrl} 
+                        alt="Avatar" 
+                        className="absolute inset-0 w-full h-full object-cover" 
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
                     )}
                   </div>
                   <span className="font-semibold text-sm truncate max-w-[100px]">
@@ -409,13 +413,17 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           })}
           {/* Profil Linki (En sağda) */}
           <Link href="/profile" className="flex flex-col items-center justify-center w-14 h-full">
-            <div className="w-6 h-6 rounded-full bg-primary/20 border border-primary/50 flex items-center justify-center overflow-hidden">
-              {userProfile?.avatarUrl ? (
-                <img src={userProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-[10px] font-bold text-primary uppercase">
-                  {userProfile?.displayName?.charAt(0) || 'U'}
-                </span>
+            <div className="w-6 h-6 rounded-full bg-primary/20 border border-primary/50 flex items-center justify-center overflow-hidden relative">
+              <span className="text-[10px] font-bold text-primary uppercase select-none">
+                {userProfile?.displayName?.charAt(0) || 'U'}
+              </span>
+              {userProfile?.avatarUrl && (
+                <img 
+                  src={userProfile.avatarUrl} 
+                  alt="Avatar" 
+                  className="absolute inset-0 w-full h-full object-cover" 
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
               )}
             </div>
             {pathname === '/profile' && <div className="w-1 h-1 rounded-full bg-primary mt-1" />}
@@ -492,13 +500,17 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2 pb-safe">
               {firebaseUser ? (
                 <Link href="/profile" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20 mb-4 shrink-0">
-                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden border border-transparent">
-                    {userProfile?.avatarUrl ? (
-                      <img src={userProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-xl font-bold text-primary uppercase">
-                        {userProfile?.displayName?.charAt(0) || 'U'}
-                      </span>
+                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden border border-transparent relative">
+                    <span className="text-xl font-bold text-primary uppercase select-none">
+                      {userProfile?.displayName?.charAt(0) || 'U'}
+                    </span>
+                    {userProfile?.avatarUrl && (
+                      <img 
+                        src={userProfile.avatarUrl} 
+                        alt="Avatar" 
+                        className="absolute inset-0 w-full h-full object-cover" 
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
                     )}
                   </div>
                   <div className="flex-1 overflow-hidden">

@@ -4,10 +4,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import type { ContentBlock } from '@readixon/core/src/types';
 import { Typography } from './Typography';
 import { MessageSquare, Bookmark, Share2 } from 'lucide-react';
+import { sanitizeHtml } from '@readixon/core';
 
 export interface ContentRendererProps {
   blocks: ContentBlock[];
   fontSize?: number;
+  fontFamily?: 'sans' | 'serif' | 'mono';
   textColor?: string;
   onParagraphCommentClick?: (paragraphIndex: number, text: string) => void;
   paragraphCommentCounts?: Record<number, number>;
@@ -19,6 +21,7 @@ export interface ContentRendererProps {
 export const ContentRenderer: React.FC<ContentRendererProps> = ({ 
   blocks, 
   fontSize = 16, 
+  fontFamily = 'sans',
   textColor, 
   onParagraphCommentClick, 
   paragraphCommentCounts = {},
@@ -97,8 +100,10 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
     }
   };
 
+  const fontClass = fontFamily === 'serif' ? 'font-serif' : fontFamily === 'mono' ? 'font-mono' : 'font-sans';
+
   return (
-    <div className={`readixon-content flex flex-col relative ${isWebtoon ? 'gap-0' : 'gap-6'}`} ref={containerRef}>
+    <div className={`readixon-content flex flex-col relative ${isWebtoon ? 'gap-0' : 'gap-6'} ${fontClass}`} ref={containerRef}>
       <style dangerouslySetInnerHTML={{ __html: `
         .readixon-content p, 
         .readixon-content span {
@@ -138,10 +143,15 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
       {blocks.map((block, blockIndex) => {
         switch (block.type) {
           case 'paragraph': {
-            const htmlContent = (block.text || '\u00A0')
+            const rawHtml = (block.text || '\u00A0')
               .replace(/\n/g, '<br/>')
               .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
               .replace(/\*(.*?)\*/g, '<i>$1</i>');
+
+            const htmlContent = sanitizeHtml(rawHtml, {
+              ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'span', 'u', 's', 'sub', 'sup', 'mark'],
+              ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style'],
+            });
 
             // Paragraf içindeki <p> etiketlerini bul
             // Eğer <p> etiketleri varsa her birini ayrı bir yorum yapılabilir satır olarak ayır

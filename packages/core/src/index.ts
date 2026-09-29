@@ -141,6 +141,7 @@ export * from './utils/cropImageUtils';
 export * from './utils/audioUtils';
 export * from './constants/tags';
 export * from './utils/slug';
+export * from './utils/sanitize';
 
 // Auth Store & Hooks
 export { useAuthStore } from './store/useAuthStore';

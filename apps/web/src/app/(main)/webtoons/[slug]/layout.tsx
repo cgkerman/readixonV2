@@ -5,18 +5,18 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const storyId = extractStoryIdFromSlug(params.slug);
   
   if (!storyId) {
-    return { title: 'Hikaye Bulunamadı' };
+    return { title: 'Webtoon Bulunamadı' };
   }
 
   try {
     const story = await getStoryById(storyId);
     if (!story) {
-      return { title: 'Hikaye Bulunamadı' };
+      return { title: 'Webtoon Bulunamadı' };
     }
 
-    const title = story.title;
-    const description = story.summary || `${story.title} hikayesini Readixon'da ücretsiz okuyun. Bölümler, karakterler ve okur yorumları.`;
-    const canonicalUrl = `https://readixon.com/story/${params.slug}`;
+    const title = `${story.title} - Webtoon Oku`;
+    const description = story.summary || `${story.title} renkli webtoon serisini Readixon'da yüksek kalitede, dikey kaydırma konforuyla okuyun.`;
+    const canonicalUrl = `https://readixon.com/webtoons/${params.slug}`;
 
     return {
       title,
@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
         canonical: canonicalUrl,
       },
       openGraph: {
-        title: `${story.title} | Readixon`,
+        title: `${story.title} - Webtoon Oku | Readixon`,
         description,
         url: canonicalUrl,
         images: story.coverImage ? [{ url: story.coverImage, alt: story.title }] : [],
@@ -33,17 +33,17 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       },
       twitter: {
         card: 'summary_large_image',
-        title: `${story.title} | Readixon`,
+        title: `${story.title} - Webtoon Oku | Readixon`,
         description,
         images: story.coverImage ? [story.coverImage] : [],
       },
     };
   } catch (error) {
-    return { title: 'Hikaye Detay' };
+    return { title: 'Webtoon' };
   }
 }
 
-export default async function StoryLayout({
+export default async function WebtoonLayout({
   children,
   params,
 }: {
@@ -61,23 +61,23 @@ export default async function StoryLayout({
         author = await getUserProfile(story.authorId);
       }
     } catch (e) {
-      console.error("StoryLayout error fetching details:", e);
+      console.error("WebtoonLayout error fetching details:", e);
     }
   }
 
-  // 1. Book Schema (Google Rich Snippet)
-  const bookJsonLd = story ? {
+  // 1. Comic / Book Schema (Google Rich Snippet)
+  const comicJsonLd = story ? {
     "@context": "https://schema.org",
     "@type": "Book",
     "name": story.title,
-    "description": story.summary || `${story.title} hikayesini Readixon'da okuyun.`,
-    "url": `https://readixon.com/story/${params.slug}`,
+    "description": story.summary || `${story.title} renkli webtoon serisini Readixon'da okuyun.`,
+    "url": `https://readixon.com/webtoons/${params.slug}`,
     ...(story.coverImage ? { "image": story.coverImage } : {}),
     "inLanguage": "tr-TR",
     ...(author ? {
       "author": {
         "@type": "Person",
-        "name": author.displayName || author.username || 'Yazar',
+        "name": author.displayName || author.username || 'Yazar / Çizer',
         "url": `https://readixon.com/profile/@${author.username || ''}`,
       }
     } : {}),
@@ -90,7 +90,7 @@ export default async function StoryLayout({
         "url": "https://readixon.com/icon.png"
       }
     },
-    ...(story.tags && story.tags.length > 0 ? { "genre": story.tags } : {}),
+    "genre": ["Webtoon", ...(story.tags || [])],
     ...(story.stats?.rating && story.stats.rating > 0 ? {
       "aggregateRating": {
         "@type": "AggregateRating",
@@ -117,24 +117,24 @@ export default async function StoryLayout({
       {
         "@type": "ListItem",
         "position": 2,
-        "name": "Keşfet",
-        "item": "https://readixon.com/feed"
+        "name": "Webtoonlar",
+        "item": "https://readixon.com/webtoons"
       },
       ...(story ? [{
         "@type": "ListItem",
         "position": 3,
         "name": story.title,
-        "item": `https://readixon.com/story/${params.slug}`
+        "item": `https://readixon.com/webtoons/${params.slug}`
       }] : [])
     ]
   };
 
   return (
     <>
-      {bookJsonLd && (
+      {comicJsonLd && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(bookJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(comicJsonLd) }}
         />
       )}
       <script

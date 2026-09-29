@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { Typography, Button } from '@readixon/ui';
 import { X, Phone, Mail, MapPin, BarChart2, MoreHorizontal, TrendingUp } from 'lucide-react';
 import { collection, getDocs, limit, orderBy, query, where, onSnapshot } from 'firebase/firestore';
-import { db, getTopStories, getActiveAdminPoll, voteAdminPoll, AdminPoll, getActiveQuote, AdminQuote, useAuthStore } from '@readixon/core';
+import { db, getTopStories, getActiveAdminPoll, voteAdminPoll, AdminPoll, getActiveQuote, AdminQuote, useAuthStore, sanitizeHtml } from '@readixon/core';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
@@ -191,7 +191,7 @@ export function ReadixSidebar() {
             {cultureNews.map((news) => (
               <div key={news.id} className="group cursor-pointer" onClick={() => setSelectedAnnouncement(news)}>
                 <Typography variant="body" className="font-semibold text-text group-hover:text-primary transition-colors text-sm">{news.title}</Typography>
-                <div className="text-muted mt-1 text-xs line-clamp-2 [&>p]:inline [&>h1]:inline [&>h2]:inline [&>h3]:inline [&>div]:inline [&_*]:!text-inherit [&_*]:!bg-transparent" dangerouslySetInnerHTML={{ __html: news.content }} />
+                <div className="text-muted mt-1 text-xs line-clamp-2 [&>p]:inline [&>h1]:inline [&>h2]:inline [&>h3]:inline [&>div]:inline [&_*]:!text-inherit [&_*]:!bg-transparent" dangerouslySetInnerHTML={{ __html: sanitizeHtml(news.content || '') }} />
               </div>
             ))}
           </div>
@@ -344,7 +344,7 @@ export function ReadixSidebar() {
               <div className={`p-6 w-full ${selectedAnnouncement.imageUrl ? 'md:w-1/2' : ''} flex flex-col overflow-visible md:overflow-y-auto`}>
                 <div 
                   className="text-sm text-text/80 whitespace-pre-wrap leading-relaxed [&>p]:mb-4 [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:mb-4 [&>h2]:text-xl [&>h2]:font-bold [&>h2]:mb-3 [&>ul]:list-disc [&>ul]:ml-4 [&>ul]:mb-4 [&_*]:!text-inherit [&_*]:!bg-transparent"
-                  dangerouslySetInnerHTML={{ __html: selectedAnnouncement.content }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedAnnouncement.content || '') }}
                 />
               </div>
             </div>

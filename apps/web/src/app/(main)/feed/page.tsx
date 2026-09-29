@@ -4,7 +4,7 @@ import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Typography, StoryCard, Button, HorizontalStoryCard } from '@readixon/ui';
-import { getRecentStoriesPaginated, getTopStoriesPaginated, getFeaturedAuthors, getAdvancedPersonalizedStories, getCompletedStories, getMostLikedStories, getRecentlyUpdatedStories, getActiveAnnouncements, getActiveHeroBanners, getUserReadingProgress, getStoriesByIds, getTrendingDiscussions, getWebtoonsPaginated, getEditorialReviews, POPULAR_TAGS, generateStorySlug, toggleStoryLike, followUser, unfollowUser, useAuthStore, type Story, type User, type Announcement } from '@readixon/core';
+import { getRecentStoriesPaginated, getTopStoriesPaginated, getFeaturedAuthors, getAdvancedPersonalizedStories, getCompletedStories, getMostLikedStories, getRecentlyUpdatedStories, getActiveAnnouncements, getActiveHeroBanners, getUserReadingProgress, getStoriesByIds, getTrendingDiscussions, getWebtoonsPaginated, getEditorialReviews, POPULAR_TAGS, generateStorySlug, toggleStoryLike, followUser, unfollowUser, useAuthStore, sanitizeHtml, type Story, type User, type Announcement } from '@readixon/core';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Flame, Sparkles, TrendingUp, Clock, ChevronRight, ChevronLeft, ChevronDown, Play, Users, Heart, CheckCircle, BellRing, BookOpen, MessageCircle, RotateCcw, Gem, Award, GalleryVertical,
@@ -829,7 +829,7 @@ export default function FeedPage() {
                         <Typography variant="h3" className="font-black text-xl md:text-2xl mb-3">{announcement.title}</Typography>
                         <div
                           className="text-muted text-sm md:text-base mb-6 leading-relaxed whitespace-pre-wrap [&>p]:mb-2 [&>ul]:list-disc [&>ul]:ml-5 [&>ul]:mb-2 [&>ol]:list-decimal [&>ol]:ml-5 [&>ol]:mb-2 [&>strong]:font-bold [&>em]:italic [&_*]:!text-inherit [&_*]:!bg-transparent"
-                          dangerouslySetInnerHTML={{ __html: announcement.content }}
+                          dangerouslySetInnerHTML={{ __html: sanitizeHtml(announcement.content || '') }}
                         />
                         {announcement.link && (
                           <Button

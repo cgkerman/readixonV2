@@ -4,8 +4,10 @@ import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
 export interface ReaderState {
   theme: 'light' | 'dark' | 'sepia';
   fontSize: number;
+  fontFamily: 'sans' | 'serif' | 'mono';
   setTheme: (theme: 'light' | 'dark' | 'sepia') => void;
   setFontSize: (size: number) => void;
+  setFontFamily: (fontFamily: 'sans' | 'serif' | 'mono') => void;
 }
 
 // Cross-platform storage engine
@@ -48,8 +50,10 @@ export const useReaderStore = create<ReaderState>()(
     (set) => ({
       theme: 'light',
       fontSize: 16,
+      fontFamily: 'sans',
       setTheme: (theme) => set({ theme }),
       setFontSize: (fontSize) => set({ fontSize }),
+      setFontFamily: (fontFamily) => set({ fontFamily }),
     }),
     {
       name: 'readixon-reader-storage',

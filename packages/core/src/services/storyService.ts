@@ -751,21 +751,31 @@ export const getSavedStories = async (userId: string): Promise<string[]> => {
  * Hikayeleri etiketlere (tags) göre Firestore'dan çeker ve gerekirse başlığa göre yerel (client-side) filtreler.
  * Algolia gibi bir tam-metin arama motoru entegre edilene kadar MVP arama çözümü olarak kullanılır.
  */
-export const searchStories = async (searchTerm: string = '', selectedTags: string[] = []): Promise<Story[]> => {
+export const searchStories = async (
+  searchTerm: string = '', 
+  selectedTags: string[] = [],
+  maxLimit: number = 60
+): Promise<Story[]> => {
   try {
     const storiesRef = collection(db, 'stories');
     
-    // Yalnızca yayındaki hikayeler
+    // Yalnızca yayındaki hikayeler (Sınırsız taramayı önlemek için üst limit ekli)
     let q = query(
       storiesRef,
-      where('status', 'in', ['ongoing', 'completed'])
+      where('status', 'in', ['ongoing', 'completed']),
+      limit(maxLimit)
     );
 
     // Etiket seçildiyse array-contains-any kullan
     if (selectedTags.length > 0) {
       // Firebase array-contains-any en fazla 10 eleman destekler
       const tagsToSearch = selectedTags.slice(0, 10);
-      q = query(q, where('tags', 'array-contains-any', tagsToSearch));
+      q = query(
+        storiesRef,
+        where('status', 'in', ['ongoing', 'completed']),
+        where('tags', 'array-contains-any', tagsToSearch),
+        limit(maxLimit)
+      );
     }
 
     const querySnapshot = await getDocs(q);

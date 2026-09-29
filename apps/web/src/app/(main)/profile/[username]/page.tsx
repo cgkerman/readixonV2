@@ -38,6 +38,9 @@ import {
 import type { User, Story, Readix } from '@readixon/core';
 import { toast } from "sonner";
 
+// Profil kapak görseli aktiflik kontrolü (Geçici olarak pasife alındı)
+const ENABLE_PROFILE_COVER = false;
+
 export default function ProfilePage() {
   const router = useRouter();
   const params = useParams();
@@ -536,21 +539,23 @@ export default function ProfilePage() {
   return (
     <div className="flex-1 pb-20">
       {/* Kapak Görseli ve Profil Bilgileri */}
-      <div className="relative">
-        <div className="w-full aspect-[3/1] relative overflow-hidden bg-gradient-to-r from-primary/20 via-purple-500/10 to-primary/5">
-          {profileUser.coverUrl && (
-            <img src={profileUser.coverUrl} alt="Cover" className="absolute inset-0 w-full h-full object-cover" />
-          )}
-          {/* Seamless gradient overlay to blend cover with background and ensure text/avatar readability */}
-          <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-black/20"></div>
-          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-background to-transparent"></div>
-        </div>
+      <div className={`relative ${!ENABLE_PROFILE_COVER ? 'bg-gradient-to-b from-primary/[0.04] via-transparent to-transparent' : ''}`}>
+        {ENABLE_PROFILE_COVER && (
+          <div className="w-full aspect-[3/1] relative overflow-hidden bg-gradient-to-r from-primary/20 via-purple-500/10 to-primary/5">
+            {profileUser.coverUrl && (
+              <img src={profileUser.coverUrl} alt="Cover" className="absolute inset-0 w-full h-full object-cover" />
+            )}
+            {/* Seamless gradient overlay to blend cover with background and ensure text/avatar readability */}
+            <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-black/20"></div>
+            <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-background to-transparent"></div>
+          </div>
+        )}
 
-        <div className="max-w-6xl mx-auto px-6 lg:px-10 relative">
-          <div className="flex flex-col md:flex-row items-center md:items-end gap-6 -mt-12 md:-mt-16 mb-10">
+        <div className={`max-w-6xl mx-auto px-6 lg:px-10 relative ${ENABLE_PROFILE_COVER ? '' : 'pt-8 md:pt-12'}`}>
+          <div className={`flex flex-col md:flex-row items-center md:items-end gap-6 ${ENABLE_PROFILE_COVER ? '-mt-12 md:-mt-16' : ''} mb-10`}>
             {/* Avatar */}
             <div className="relative flex-shrink-0 z-20">
-              <div className="w-[144px] h-[144px] md:w-[184px] md:h-[184px] rounded-full border-[6px] border-background bg-background overflow-hidden shadow-2xl flex items-center justify-center">
+              <div className={`${ENABLE_PROFILE_COVER ? 'w-[144px] h-[144px] md:w-[184px] md:h-[184px] border-[6px]' : 'w-[128px] h-[128px] md:w-[156px] md:h-[156px] border-4 ring-1 ring-border/20'} rounded-full border-background bg-background overflow-hidden shadow-2xl flex items-center justify-center`}>
                 {profileUser.avatarUrl ? (
                   <img src={profileUser.avatarUrl} alt={profileUser.displayName} className="w-full h-full object-cover bg-background" />
                 ) : (
@@ -1250,39 +1255,73 @@ export default function ProfilePage() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              <div className="relative mb-8">
-                {/* Cover Upload */}
-                <div className="h-28 w-full bg-muted rounded-2xl overflow-hidden relative group">
-                  {coverPreview ? (
-                    <img src={coverPreview} alt="Cover Preview" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-r from-primary/20 via-purple-500/10 to-primary/5"></div>
-                  )}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-                    <label className="cursor-pointer text-white text-xs font-semibold px-3 py-1.5 bg-primary/80 rounded-full">
-                      Kapak Değiştir
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          if (e.target.files && e.target.files[0]) {
-                            const file = e.target.files[0];
-                            setCropImageSrc(URL.createObjectURL(file));
-                            setCropType('cover');
-                            setIsCropping(true);
-                            setZoom(1);
-                            setCrop({ x: 0, y: 0 });
-                          }
-                        }}
-                      />
-                    </label>
+              {ENABLE_PROFILE_COVER ? (
+                <div className="relative mb-8">
+                  {/* Cover Upload */}
+                  <div className="h-28 w-full bg-muted rounded-2xl overflow-hidden relative group">
+                    {coverPreview ? (
+                      <img src={coverPreview} alt="Cover Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-r from-primary/20 via-purple-500/10 to-primary/5"></div>
+                    )}
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
+                      <label className="cursor-pointer text-white text-xs font-semibold px-3 py-1.5 bg-primary/80 rounded-full">
+                        Kapak Değiştir
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              const file = e.target.files[0];
+                              setCropImageSrc(URL.createObjectURL(file));
+                              setCropType('cover');
+                              setIsCropping(true);
+                              setZoom(1);
+                              setCrop({ x: 0, y: 0 });
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Avatar Upload */}
+                  <div className="absolute -bottom-8 left-1/2 -translate-x-1/2">
+                    <div className="relative w-20 h-20 rounded-full border-4 border-card bg-muted overflow-hidden flex items-center justify-center group shadow-lg">
+                      {avatarPreview ? (
+                        <img src={avatarPreview} alt="Preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-3xl font-bold text-primary uppercase">
+                          {(editForm.displayName || profileUser.displayName || 'U').charAt(0)}
+                        </span>
+                      )}
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
+                        <label className="cursor-pointer text-white text-[10px] font-semibold px-2 py-1 bg-primary/80 rounded-full">
+                          Değiştir
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              if (e.target.files && e.target.files[0]) {
+                                const file = e.target.files[0];
+                                setCropImageSrc(URL.createObjectURL(file));
+                                setCropType('avatar');
+                                setIsCropping(true);
+                                setZoom(1);
+                                setCrop({ x: 0, y: 0 });
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 </div>
-
-                {/* Avatar Upload */}
-                <div className="absolute -bottom-8 left-1/2 -translate-x-1/2">
-                  <div className="relative w-20 h-20 rounded-full border-4 border-card bg-muted overflow-hidden flex items-center justify-center group shadow-lg">
+              ) : (
+                <div className="flex flex-col items-center justify-center mb-6">
+                  <div className="relative w-24 h-24 rounded-full border-4 border-card bg-muted overflow-hidden flex items-center justify-center group shadow-lg">
                     {avatarPreview ? (
                       <img src={avatarPreview} alt="Preview" className="w-full h-full object-cover" />
                     ) : (
@@ -1291,7 +1330,7 @@ export default function ProfilePage() {
                       </span>
                     )}
                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-                      <label className="cursor-pointer text-white text-[10px] font-semibold px-2 py-1 bg-primary/80 rounded-full">
+                      <label className="cursor-pointer text-white text-xs font-semibold px-3 py-1 bg-primary/80 rounded-full">
                         Değiştir
                         <input
                           type="file"
@@ -1311,8 +1350,9 @@ export default function ProfilePage() {
                       </label>
                     </div>
                   </div>
+                  <span className="text-xs text-muted mt-2">Profil Fotoğrafı</span>
                 </div>
-              </div>
+              )}
 
               <div>
                 <Typography variant="caption" className="text-muted mb-1 block">Görünen İsim</Typography>

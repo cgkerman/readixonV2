@@ -17,6 +17,7 @@
   "devDependencies": {
     "@readixon/config": "workspace:*",
     "@readixon/core": "workspace:*",
+    "@types/dompurify": "^3.2.0",
     "@types/react": "^18.3.31",
     "nativewind": "^4.0.1",
     "typescript": "^5.4.0"
@@ -29,6 +30,7 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "dompurify": "^3.4.16",
     "html-to-image": "^1.11.13",
     "lucide-react": "^1.23.0",
     "lucide-react-native": "^1.23.0",

@@ -1,29 +1,41 @@
-import { MetadataRoute } from 'next'
+import { MetadataRoute } from 'next';
 
 export default function robots(): MetadataRoute.Robots {
+  const baseUrl = 'https://readixon.com';
+
+  const disallowList = [
+    '/admin',
+    '/admin/*',
+    '/editor',
+    '/editor/*',
+    '/studio',
+    '/studio/*',
+    '/library',
+    '/library/*',
+    '/messages',
+    '/messages/*',
+    '/settings',
+    '/settings/*',
+    '/notifications',
+    '/notifications/*',
+    '/payment',
+    '/payment/*',
+    '/api/*',
+  ];
+
   return {
     rules: [
       {
         userAgent: '*',
         allow: '/',
-        disallow: [
-          '/studio/', 
-          '/messages/', 
-          '/settings/',
-          '/api/',
-        ],
+        disallow: disallowList,
       },
       {
         userAgent: 'Googlebot',
         allow: '/',
-        disallow: [
-          '/studio/', 
-          '/messages/', 
-          '/settings/',
-          '/api/',
-        ],
-      }
+        disallow: disallowList,
+      },
     ],
-    sitemap: 'https://readixon.com/sitemap.xml',
-  }
+    sitemap: `${baseUrl}/sitemap.xml`,
+  };
 }

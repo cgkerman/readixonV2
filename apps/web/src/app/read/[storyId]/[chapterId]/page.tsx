@@ -8,7 +8,7 @@ import type { Chapter, Comment, Story, User } from '@readixon/core';
 import { useReaderStore } from '@readixon/core/src/store/useReaderStore';
 import { useAuthStore } from '@readixon/core/src/store/useAuthStore';
 import { ContentRenderer, ReadingSettingsPanel, Button, Typography } from '@readixon/ui';
-import { ArrowLeft, Settings, List, ChevronLeft, ChevronRight, CheckCircle, X, Heart, MessageSquare, Eye, Reply } from 'lucide-react';
+import { ArrowLeft, Settings, List, ChevronLeft, ChevronRight, CheckCircle, X, Heart, MessageSquare, Eye, Reply, Clock, Sparkles, Star, Award, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { ChapterEndActivity } from '@/components/ChapterEndActivity';
 import { ChapterReactions } from '@/components/ChapterReactions';
@@ -29,6 +29,8 @@ export default function ReadPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [showChapterList, setShowChapterList] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [isNavbarVisible, setIsNavbarVisible] = useState(true);
+  const lastScrollY = useRef(0);
 
   // Etkileşim State'leri
   const [isLiked, setIsLiked] = useState(false);
@@ -37,7 +39,7 @@ export default function ReadPage() {
   const [chapterComments, setChapterComments] = useState<Comment[]>([]);
   const [paragraphComments, setParagraphComments] = useState<Record<number, Comment[]>>({});
   const [paragraphCommentCounts, setParagraphCommentCounts] = useState<Record<number, number>>({});
-  
+
   const [commentText, setCommentText] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
 
@@ -51,7 +53,35 @@ export default function ReadPage() {
   const [replyingToComment, setReplyingToComment] = useState<Comment | null>(null);
   const [replyingToParagraphComment, setReplyingToParagraphComment] = useState<Comment | null>(null);
 
-  const { theme, fontSize, setTheme, setFontSize } = useReaderStore();
+  const { theme, fontSize, fontFamily, setTheme, setFontSize, setFontFamily } = useReaderStore();
+
+  // Kelime sayısı ve tahmini okuma süresi hesaplama (~200 kelime/dk)
+  const wordCount = React.useMemo(() => {
+    if (!chapter?.contentBlocks) return 0;
+    return chapter.contentBlocks.reduce((acc, block) => {
+      if (block.type === 'paragraph' && block.text) {
+        const clean = block.text.replace(/<[^>]*>/g, ' ').trim();
+        if (!clean) return acc;
+        return acc + clean.split(/\s+/).filter(Boolean).length;
+      }
+      return acc;
+    }, 0);
+  }, [chapter]);
+
+  const readingTimeMinutes = React.useMemo(() => {
+    return Math.max(1, Math.ceil(wordCount / 200));
+  }, [wordCount]);
+
+  // Bölüm geçişi (doğrudan ve sayfa başı sıfırlama ile)
+  const handleNavigateChapter = (targetChapterId: string) => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    router.push(`/read/${storyId}/${targetChapterId}`);
+  };
+
+  // Bölüm değiştiğinde sayfa başına dön
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [chapterId]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -74,18 +104,18 @@ export default function ReadPage() {
           }
         }
       }
-      
+
       // View sayısını 1 artır (Arka planda çalışsın, beklemeye gerek yok)
       incrementChapterView(storyId, chapterId);
-      
+
       if (firebaseUser) {
         const liked = await checkChapterLiked(storyId, chapterId, firebaseUser.uid);
         setIsLiked(liked);
       }
-      
+
       setChapters(chaps);
       setChapter(chap);
-      
+
       if (storyData) {
         if (!storyData.authorName) {
           try {
@@ -100,51 +130,55 @@ export default function ReadPage() {
         }
         setStory(storyData as Story);
       }
-      
+
       // Yorumları ayır
       const chapComments = fetchedComments.filter(c => c.type === 'chapter' || !c.type);
       const parComments = fetchedComments.filter(c => c.type === 'paragraph' && c.paragraphIndex >= 0);
-      
+
       setChapterComments(chapComments);
       setComments(chapComments); // Geriye dönük uyumluluk için, tartışma kısmında chapter comments görünür
-      
+
       const counts: Record<number, number> = {};
       const groupedPar: Record<number, Comment[]> = {};
-      
+
       parComments.forEach(c => {
         counts[c.paragraphIndex] = (counts[c.paragraphIndex] || 0) + 1;
         if (!groupedPar[c.paragraphIndex]) groupedPar[c.paragraphIndex] = [];
         groupedPar[c.paragraphIndex].push(c);
       });
-      
+
       setParagraphCommentCounts(counts);
       setParagraphComments(groupedPar);
-      
+
       setLoading(false);
     };
     if (storyId && chapterId && isInitialized) {
-      if (!firebaseUser) {
-        router.replace('/login');
-        return;
-      }
       loadData();
     }
   }, [storyId, chapterId, firebaseUser, isInitialized, router]);
 
+  // Sayfa başlığını tarayıcı sekmesinde dinamik olarak güncelle
+  useEffect(() => {
+    if (chapter?.title && story?.title) {
+      document.title = `${chapter.title} - ${story.title} | Readixon`;
+    }
+  }, [chapter?.title, story?.title]);
+
   const handleToggleLike = async () => {
     if (!firebaseUser) {
+      toast.info("Beğenmek için giriş yapmalısınız.");
       router.push('/login');
       return;
     }
     if (isLikeLoading || !chapter) return;
-    
+
     setIsLikeLoading(true);
     try {
       const nowLiked = await toggleChapterLike(storyId, chapterId, firebaseUser.uid);
       setIsLiked(nowLiked);
-      
+
       const likeDelta = nowLiked ? 1 : -1;
-      
+
       setChapter({
         ...chapter,
         stats: {
@@ -154,11 +188,11 @@ export default function ReadPage() {
           commentCount: chapter.stats?.commentCount || 0
         }
       });
-      
+
       if (nowLiked) {
         trackInteraction(firebaseUser.uid, 'like_given').catch(console.error);
       }
-      
+
       // Update story lists cache so feed/explore pages reflect total story likes
       const updateStoryLikes = (oldData: any) => {
         if (!oldData) return oldData;
@@ -167,14 +201,14 @@ export default function ReadPage() {
             ...oldData,
             pages: oldData.pages.map((page: any) => ({
               ...page,
-              stories: page.stories ? page.stories.map((s: any) => 
+              stories: page.stories ? page.stories.map((s: any) =>
                 s.storyId === storyId ? { ...s, stats: { ...s.stats, likes: (s.stats?.likes || 0) + likeDelta } } : s
               ) : []
             }))
           };
         }
         if (Array.isArray(oldData)) {
-          return oldData.map((s: any) => 
+          return oldData.map((s: any) =>
             s.storyId === storyId ? { ...s, stats: { ...s.stats, likes: (s.stats?.likes || 0) + likeDelta } } : s
           );
         }
@@ -183,7 +217,7 @@ export default function ReadPage() {
 
       queryClient.setQueryData(['stories', 'recent'], updateStoryLikes);
       queryClient.setQueryData(['stories', 'top'], updateStoryLikes);
-      
+
     } catch (err) {
       console.error("Beğeni işlemi başarısız:", err);
     } finally {
@@ -223,25 +257,25 @@ export default function ReadPage() {
     setSubmittingParagraphComment(true);
     try {
       const newComment = await addChapterComment(
-        storyId, 
-        chapterId, 
-        firebaseUser.uid, 
-        paragraphCommentText, 
-        'paragraph', 
+        storyId,
+        chapterId,
+        firebaseUser.uid,
+        paragraphCommentText,
+        'paragraph',
         selectedParagraphIndex,
         replyingToParagraphComment?.commentId
       );
-      
+
       setParagraphComments(prev => ({
         ...prev,
         [selectedParagraphIndex]: [newComment, ...(prev[selectedParagraphIndex] || [])]
       }));
-      
+
       setParagraphCommentCounts(prev => ({
         ...prev,
         [selectedParagraphIndex]: (prev[selectedParagraphIndex] || 0) + 1
       }));
-      
+
       setParagraphCommentText('');
       setReplyingToParagraphComment(null);
       trackInteraction(firebaseUser.uid, 'comment_given').catch(console.error);
@@ -257,7 +291,7 @@ export default function ReadPage() {
       router.push('/login');
       return;
     }
-    
+
     // Optimistic Update
     if (isParagraph) {
       setParagraphComments(prev => {
@@ -313,7 +347,7 @@ export default function ReadPage() {
     if (displayText.length > 100) {
       displayText = '...' + displayText.substring(displayText.length - 100);
     }
-    
+
     setSelectedParagraphIndex(index);
     setSelectedParagraphText(displayText);
   };
@@ -325,16 +359,24 @@ export default function ReadPage() {
       const winHeight = window.innerHeight;
       const scrollPercent = scrollTop / (docHeight - winHeight);
       setScrollProgress(Math.min(100, Math.max(0, Math.round(scrollPercent * 100))));
+
+      // Zen / Odak Modu: Aşağı kaydırınca üst bar yumuşakça gizlenir, yukarı kaydırınca belirir
+      if (scrollTop > lastScrollY.current + 8 && scrollTop > 90) {
+        setIsNavbarVisible(false);
+      } else if (scrollTop < lastScrollY.current - 8 || scrollTop <= 90) {
+        setIsNavbarVisible(true);
+      }
+      lastScrollY.current = scrollTop;
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   // Sync reading progress to Firestore
   useEffect(() => {
     if (!firebaseUser || loading || !chapter) return;
-    
+
     const timeoutId = setTimeout(() => {
       const isCompleted = scrollProgress > 95;
       syncReadingProgress(
@@ -361,7 +403,14 @@ export default function ReadPage() {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <Typography variant="h3">Bölüm bulunamadı.</Typography>
-        <Button variant="primary" onPress={() => router.replace(`/read/${storyId}`)} className="mt-4">Geri Dön</Button>
+        <Button variant="primary" onPress={() => {
+          if (story) {
+            const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
+            router.replace(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
+          } else {
+            router.replace('/feed');
+          }
+        }} className="mt-4">Geri Dön</Button>
       </div>
     );
   }
@@ -393,12 +442,12 @@ export default function ReadPage() {
         {comment.authorAvatarUrl ? (
           <img src={comment.authorAvatarUrl} alt={comment.authorName || 'User'} className="w-full h-full object-cover" />
         ) : (
-          (comment.authorName ? comment.authorName.substring(0,2) : comment.userId.substring(0,2)).toUpperCase()
+          (comment.authorName ? comment.authorName.substring(0, 2) : comment.userId.substring(0, 2)).toUpperCase()
         )}
       </div>
       <div className="flex-1">
         <div className="flex items-center gap-2 mb-1">
-          <span className="font-bold" style={{ color: currentThemeStyle.text }}>{comment.authorName || `Kullanıcı ${comment.userId.substring(0,6)}`}</span>
+          <span className="font-bold" style={{ color: currentThemeStyle.text }}>{comment.authorName || `Kullanıcı ${comment.userId.substring(0, 6)}`}</span>
           <span className="text-sm opacity-50" style={{ color: currentThemeStyle.text }}>
             {new Date(comment.createdAt?.seconds * 1000 || Date.now()).toLocaleDateString('tr-TR')}
           </span>
@@ -421,65 +470,110 @@ export default function ReadPage() {
   );
 
   return (
-    <div 
+    <div
       className="min-h-screen transition-colors duration-300"
       style={{ backgroundColor: currentThemeStyle.bg, color: currentThemeStyle.text }}
     >
       {/* Top Navbar */}
-      <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b border-border/10 bg-opacity-90 backdrop-blur"
-           style={{ backgroundColor: `${currentThemeStyle.bg}E6` }}>
-        <div className="flex items-center gap-4">
+      <div
+        className={`sticky top-0 z-20 flex items-center justify-between p-3 sm:p-4 border-b border-border/10 bg-opacity-95 backdrop-blur gap-3 transition-transform duration-300 ${isNavbarVisible ? 'translate-y-0' : '-translate-y-full'
+          }`}
+        style={{ backgroundColor: `${currentThemeStyle.bg}F2` }}
+      >
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
           <Button variant="ghost" onPress={() => {
             if (story) {
               const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
-              router.replace(story.format === 'webtoon' ? `/webtoons/${slug}` : `/read/${storyId}`);
+              router.replace(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
             } else {
               router.back();
             }
-          }} className="rounded-full p-2">
-            <ArrowLeft size={24} color={currentThemeStyle.text} />
+          }} className="rounded-full p-2 shrink-0">
+            <ArrowLeft size={22} color={currentThemeStyle.text} />
           </Button>
-          <Typography variant="h3" style={{ color: currentThemeStyle.text }}>
-            {chapter.title}
-          </Typography>
+          <div className="min-w-0 flex-1">
+            <Typography
+              variant="h3"
+              className="text-sm sm:text-base md:text-lg font-bold truncate leading-tight"
+              style={{ color: currentThemeStyle.text }}
+              title={chapter.title}
+            >
+              {chapter.title}
+            </Typography>
+            {story?.title && (
+              <span className="text-[11px] sm:text-xs opacity-60 truncate block leading-tight mt-0.5" style={{ color: currentThemeStyle.text }}>
+                {story.title}
+              </span>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {chapter.audioTrack?.url && (
-            <ChapterMusicPlayer 
-              audioTrack={chapter.audioTrack} 
+            <ChapterMusicPlayer
+              audioTrack={chapter.audioTrack}
               textColor={currentThemeStyle.text}
               autoPlay={true}
             />
           )}
           <Button variant="ghost" onPress={() => setShowChapterList(true)} className="rounded-full p-2">
-            <List size={24} color={currentThemeStyle.text} />
+            <List size={22} color={currentThemeStyle.text} className="sm:w-6 sm:h-6" />
           </Button>
           {story?.format !== 'webtoon' && (
-            <Button 
-              variant="ghost" 
-              onPress={() => setShowSettings(!showSettings)} 
+            <Button
+              variant="ghost"
+              onPress={() => setShowSettings(!showSettings)}
               className="rounded-full p-2"
             >
-              <Settings size={24} color={currentThemeStyle.text} />
+              <Settings size={22} color={currentThemeStyle.text} className="sm:w-6 sm:h-6" />
             </Button>
           )}
         </div>
       </div>
 
       {/* Progress Bar */}
-      <div className="fixed top-[73px] left-0 w-full h-1 bg-border/20 z-10">
-        <div 
-          className="h-full bg-primary transition-all duration-300"
+      <div
+        className={`fixed left-0 w-full h-1 bg-border/20 z-30 transition-all duration-300 ${isNavbarVisible ? 'top-[57px] sm:top-[65px]' : 'top-0'
+          }`}
+      >
+        <div
+          className="h-full bg-primary transition-all duration-150"
           style={{ width: `${scrollProgress}%` }}
         />
       </div>
 
       {/* Main Content */}
-      <main className={`${story?.format === 'webtoon' ? 'max-w-3xl w-full px-0' : 'max-w-2xl px-6 py-12'} mx-auto`}>
-        <ContentRenderer 
-          blocks={chapter.contentBlocks} 
+      <main className={`${story?.format === 'webtoon' ? 'max-w-3xl w-full px-0' : 'max-w-2xl px-6 py-10 sm:py-14'} mx-auto`}>
+        {/* Bölüm Başlığı & Okuma Süresi Rozeti (Webtoon olmayan romanlar için) */}
+        {story?.format !== 'webtoon' && (
+          <div className="mb-8 pb-6 border-b border-border/15">
+            <div className="flex items-center gap-2 text-xs font-medium opacity-60 mb-2.5 flex-wrap" style={{ color: currentThemeStyle.text }}>
+              {story?.title && (
+                <>
+                  <span className="font-semibold">{story.title}</span>
+                  <span>•</span>
+                </>
+              )}
+              <span className="flex items-center gap-1 font-semibold text-primary">
+                <Clock size={13} /> ~{readingTimeMinutes} dk okuma
+              </span>
+              <span>•</span>
+              <span>{wordCount.toLocaleString()} kelime</span>
+            </div>
+            <Typography
+              variant="h2"
+              className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight leading-tight"
+              style={{ color: currentThemeStyle.text }}
+            >
+              {chapter.title}
+            </Typography>
+          </div>
+        )}
+
+        <ContentRenderer
+          blocks={chapter.contentBlocks}
           isWebtoon={story?.format === 'webtoon'}
-          fontSize={fontSize} 
+          fontSize={fontSize}
+          fontFamily={fontFamily}
           textColor={currentThemeStyle.text}
           onParagraphCommentClick={openParagraphComments}
           paragraphCommentCounts={paragraphCommentCounts}
@@ -515,23 +609,23 @@ export default function ReadPage() {
 
         {/* Bölüm Sonu Aktivitesi */}
         {chapter.endActivity && (
-          <ChapterEndActivity 
-            activity={chapter.endActivity} 
-            storyId={storyId} 
-            chapterId={chapterId} 
-            authorId={story?.authorId || ''} 
-            userId={firebaseUser?.uid} 
+          <ChapterEndActivity
+            activity={chapter.endActivity}
+            storyId={storyId}
+            chapterId={chapterId}
+            authorId={story?.authorId || ''}
+            userId={firebaseUser?.uid}
             textColor={currentThemeStyle.text}
           />
         )}
-        
+
         {/* Maskot Tepkileri */}
-        <ChapterReactions 
-          storyId={storyId} 
-          chapterId={chapterId} 
-          initialCounts={chapter.reactionCounts || {}} 
+        <ChapterReactions
+          storyId={storyId}
+          chapterId={chapterId}
+          initialCounts={chapter.reactionCounts || {}}
         />
-        
+
         {/* Bölüm Beğeni ve Tartışma Alanı */}
         <div className="mt-12 pt-8 border-t border-border/20">
           <div className="flex flex-col items-center justify-center mb-16 space-y-4">
@@ -546,7 +640,7 @@ export default function ReadPage() {
               </div>
             </div>
             <Typography variant="h3" style={{ color: currentThemeStyle.text }}>Bu bölümü nasıl buldunuz?</Typography>
-            <button 
+            <button
               onClick={handleToggleLike}
               disabled={isLikeLoading}
               className={`flex items-center gap-2 border px-6 py-3 rounded-full text-lg shadow-lg transition-colors disabled:opacity-50
@@ -554,35 +648,92 @@ export default function ReadPage() {
               `}
               style={{ color: isLiked ? '#ef4444' : currentThemeStyle.text }}
             >
-              <Heart size={24} className={`transition-colors ${isLiked ? 'fill-current' : ''}`} /> 
+              <Heart size={24} className={`transition-colors ${isLiked ? 'fill-current' : ''}`} />
               <span className="font-bold">{chapter.stats?.likes || 0} Beğeni</span>
             </button>
           </div>
 
           {/* Navigation Buttons */}
-          <div className="flex justify-between items-center my-12 pt-8 border-t border-border/20">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 my-12 pt-8 border-t border-border/20">
             {prevChapter ? (
-              <Button 
-                variant="outline" 
-                onPress={() => router.push(`/read/${storyId}/${prevChapter.chapterId}`)}
-                className="flex-1 mr-2 flex flex-row justify-center items-center gap-2"
+              <Button
+                variant="outline"
+                onPress={() => handleNavigateChapter(prevChapter.chapterId)}
+                className="w-full sm:flex-1 flex flex-row justify-center items-center gap-2 py-3"
               >
-                <ChevronLeft size={20} />
+                <ChevronLeft size={18} />
                 Önceki Bölüm
               </Button>
-            ) : <div className="flex-1 mr-2" />}
-            
+            ) : <div className="hidden sm:block flex-1" />}
+
             {nextChapter ? (
-              <Button 
-                variant="primary" 
-                onPress={() => router.push(`/read/${storyId}/${nextChapter.chapterId}`)}
-                className="flex-1 ml-2 flex flex-row justify-center items-center gap-2"
+              <Button
+                variant="primary"
+                onPress={() => handleNavigateChapter(nextChapter.chapterId)}
+                className="w-full sm:flex-1 flex flex-row justify-center items-center gap-2 py-3 shadow-lg shadow-primary/25"
               >
                 Sonraki Bölüm
-                <ChevronRight size={20} />
+                <ChevronRight size={18} />
               </Button>
-            ) : <div className="flex-1 ml-2" />}
+            ) : (
+              <Button
+                variant="primary"
+                onPress={() => {
+                  if (story) {
+                    const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
+                    router.push(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
+                  } else {
+                    router.push('/feed');
+                  }
+                }}
+                className="w-full sm:flex-1 flex flex-row justify-center items-center gap-2 py-3 bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/30"
+              >
+                <Award size={18} />
+                Kitabı Tamamladın! Değerlendir
+              </Button>
+            )}
           </div>
+
+          {/* Son Bölüm Sonu Tebrik ve Yönlendirme Kartı */}
+          {!nextChapter && (
+            <div className="mb-12 p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-primary/15 via-card/50 to-card border border-primary/30 text-center relative overflow-hidden shadow-xl animate-fade-in">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-primary/20 text-primary flex items-center justify-center mx-auto mb-4 border border-primary/30 shadow-[0_0_20px_rgba(99,102,241,0.25)]">
+                <Sparkles size={28} className="text-primary" />
+              </div>
+              <h3 className="text-xl sm:text-2xl font-bold mb-2" style={{ color: currentThemeStyle.text }}>
+                Tebrikler, Bu Kitabı Bitirdiniz!
+              </h3>
+              <p className="text-sm opacity-70 max-w-md mx-auto mb-6" style={{ color: currentThemeStyle.text }}>
+                Tüm bölümleri tamamladınız. Yazarımıza destek olmak için kitabın ana sayfasından bir inceleme yazabilir veya puan verebilirsiniz.
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <Button
+                  variant="primary"
+                  onPress={() => {
+                    if (story) {
+                      const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
+                      router.push(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}#reviews`);
+                    }
+                  }}
+                  className="px-6 py-2.5 shadow-lg shadow-primary/30 flex items-center gap-2"
+                >
+                  <Star size={16} className="fill-current" /> Kitabı Değerlendir
+                </Button>
+                <Button
+                  variant="outline"
+                  onPress={() => {
+                    if (story) {
+                      const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
+                      router.push(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
+                    }
+                  }}
+                  className="px-6 py-2.5"
+                >
+                  Kitap Detayına Dön
+                </Button>
+              </div>
+            </div>
+          )}
 
           <div className="mb-12">
             <Typography variant="h3" className="mb-6 flex items-center gap-2" style={{ color: currentThemeStyle.text }}>
@@ -596,7 +747,7 @@ export default function ReadPage() {
                   <button onClick={() => setReplyingToComment(null)} className="hover:underline">İptal</button>
                 </div>
               )}
-              <textarea 
+              <textarea
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 placeholder={replyingToComment ? "Yanıtınızı yazın..." : "Bölüm hakkındaki düşüncelerini paylaş..."}
@@ -635,11 +786,13 @@ export default function ReadPage() {
       {showSettings && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowSettings(false)}>
           <div className="w-full max-w-sm" onClick={e => e.stopPropagation()}>
-            <ReadingSettingsPanel 
+            <ReadingSettingsPanel
               theme={theme}
               fontSize={fontSize}
+              fontFamily={fontFamily}
               onThemeChange={setTheme}
               onFontSizeChange={setFontSize}
+              onFontFamilyChange={setFontFamily}
             />
           </div>
         </div>
@@ -648,7 +801,7 @@ export default function ReadPage() {
       {/* Chapter List Modal/Sidebar */}
       {showChapterList && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm" onClick={() => setShowChapterList(false)}>
-          <div 
+          <div
             className="w-full max-w-xs h-full bg-card overflow-y-auto flex flex-col shadow-2xl animate-in slide-in-from-right"
             onClick={e => e.stopPropagation()}
             style={{ backgroundColor: currentThemeStyle.bg, color: currentThemeStyle.text }}
@@ -663,20 +816,20 @@ export default function ReadPage() {
               {chapters.map((chap) => {
                 const isActive = chap.chapterId === chapterId;
                 return (
-                  <div 
+                  <div
                     key={chap.chapterId}
                     onClick={() => {
                       setShowChapterList(false);
-                      router.push(`/read/${storyId}/${chap.chapterId}`);
+                      handleNavigateChapter(chap.chapterId);
                     }}
-                    className={`p-4 border-b border-border/5 cursor-pointer hover:bg-black/5 transition-colors flex justify-between items-center ${isActive ? 'bg-primary/10' : ''}`}
+                    className={`p-4 border-b border-border/5 cursor-pointer hover:bg-black/5 transition-colors flex justify-between items-center gap-3 ${isActive ? 'bg-primary/10' : ''}`}
                   >
-                    <div>
-                      <Typography variant="body" className={isActive ? 'font-bold text-primary' : ''} style={{ color: isActive ? '' : currentThemeStyle.text }}>
+                    <div className="min-w-0 flex-1">
+                      <Typography variant="body" className={`break-words text-sm sm:text-base ${isActive ? 'font-bold text-primary' : ''}`} style={{ color: isActive ? '' : currentThemeStyle.text }}>
                         {chap.title}
                       </Typography>
                     </div>
-                    {isActive && <CheckCircle size={16} className="text-primary" />}
+                    {isActive && <CheckCircle size={16} className="text-primary shrink-0" />}
                   </div>
                 );
               })}
@@ -688,7 +841,7 @@ export default function ReadPage() {
       {/* Paragraph Comments Side Panel (Drawer) */}
       {selectedParagraphIndex !== null && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm" onClick={() => setSelectedParagraphIndex(null)}>
-          <div 
+          <div
             className="w-full max-w-md h-full bg-card overflow-y-auto flex flex-col shadow-2xl animate-in slide-in-from-right"
             onClick={e => e.stopPropagation()}
             style={{ backgroundColor: currentThemeStyle.bg, color: currentThemeStyle.text }}
@@ -728,7 +881,7 @@ export default function ReadPage() {
                 ));
               })()}
             </div>
-            
+
             <div className="p-4 border-t border-border/10 bg-background">
               {replyingToParagraphComment && (
                 <div className="flex items-center justify-between text-xs opacity-70 px-2 mb-2" style={{ color: currentThemeStyle.text }}>
@@ -736,7 +889,7 @@ export default function ReadPage() {
                   <button onClick={() => setReplyingToParagraphComment(null)} className="hover:underline">İptal</button>
                 </div>
               )}
-              <textarea 
+              <textarea
                 value={paragraphCommentText}
                 onChange={(e) => setParagraphCommentText(e.target.value)}
                 placeholder={replyingToParagraphComment ? "Yanıtınızı yazın..." : "Düşüncelerini paylaş..."}
@@ -744,9 +897,9 @@ export default function ReadPage() {
                 style={{ color: currentThemeStyle.text }}
               />
               <div className="flex justify-end mt-2">
-                <Button 
-                  variant="primary" 
-                  onPress={handleParagraphCommentSubmit} 
+                <Button
+                  variant="primary"
+                  onPress={handleParagraphCommentSubmit}
                   disabled={submittingParagraphComment || !paragraphCommentText.trim()}
                   className="py-1.5 px-4 text-sm"
                 >

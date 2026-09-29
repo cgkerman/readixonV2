@@ -23,13 +23,14 @@ import {
   getReadixesByStoryId,
   Readix,
   db,
-  getEditorialReviewByStoryId
+  getEditorialReviewByStoryId,
+  getReadingProgress
 } from '@readixon/core';
-import type { Story, User, Chapter, Review, Character, EditorialReview } from '@readixon/core';
+import type { Story, User, Chapter, Review, Character, EditorialReview, ReadingProgress } from '@readixon/core';
 import { 
   BookOpen, Heart, Eye, List, Play, BookmarkPlus, BookmarkCheck, 
   ArrowLeft, Loader2, Star, MessageSquare, Users, Award, PenTool, Hash,
-  Lock, Calendar, Bell, Info, X, Sparkles, ChevronRight
+  Lock, Calendar, Bell, Info, X, Sparkles, ChevronRight, CheckCircle, Bookmark, Check
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from "sonner";
@@ -57,6 +58,7 @@ export default function StoryDetailPage() {
   
   const [isLiked, setIsLiked] = useState(false);
   const [isLikeLoading, setIsLikeLoading] = useState(false);
+  const [readingProgress, setReadingProgress] = useState<ReadingProgress | null>(null);
 
   const [showCharacterBookInfo, setShowCharacterBookInfo] = useState(false);
   const [visibleChaptersCount, setVisibleChaptersCount] = useState(20);
@@ -205,6 +207,13 @@ export default function StoryDetailPage() {
         
         const liked = await checkStoryLiked(storyId, firebaseUser.uid);
         setIsLiked(liked);
+
+        try {
+          const progress = await getReadingProgress(firebaseUser.uid, storyId);
+          setReadingProgress(progress);
+        } catch (e) {
+          console.error("Okuma ilerlemesi alınamadı:", e);
+        }
       }
     };
     checkUserStates();
@@ -391,7 +400,7 @@ export default function StoryDetailPage() {
         </div>
         <Typography variant="h2" className="text-text mb-2">Eyvah!</Typography>
         <Typography variant="body" className="text-muted mb-6">{error}</Typography>
-        <Button variant="outline" onPress={() => router.back()}>Geri Dön</Button>
+        <Button variant="outline" onPress={() => router.push('/feed')}>Geri Dön</Button>
       </div>
     );
   }
@@ -436,8 +445,9 @@ export default function StoryDetailPage() {
         {/* Back Button */}
         <div className="absolute top-4 md:top-8 left-4 md:left-8 z-50 flex pointer-events-none">
           <button 
-            onClick={() => router.back()}
+            onClick={() => router.push('/feed')}
             className="pointer-events-auto p-2.5 md:p-3 rounded-full bg-black/30 hover:bg-black/50 backdrop-blur-md border border-white/20 text-white transition-all shadow-lg"
+            title="Akışa Dön"
           >
             <ArrowLeft size={24} />
           </button>
@@ -550,11 +560,32 @@ export default function StoryDetailPage() {
             <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 mt-2 w-full max-w-sm mx-auto lg:mx-0 lg:max-w-none">
               <Button 
                 variant="primary" 
-                onPress={() => chapters.length > 0 && router.push(`/read/${storyId}/${chapters[0].chapterId}`)} 
+                onPress={() => {
+                  const targetChapterId = (() => {
+                    if (!readingProgress) return chapters[0]?.chapterId;
+                    if (readingProgress.currentChapterId && !readingProgress.completedChapters?.includes(readingProgress.currentChapterId)) {
+                      return readingProgress.currentChapterId;
+                    }
+                    const nextUnread = chapters.find(c => !readingProgress.completedChapters?.includes(c.chapterId));
+                    return nextUnread?.chapterId || readingProgress.currentChapterId || chapters[0]?.chapterId;
+                  })();
+
+                  if (targetChapterId) {
+                    router.push(`/read/${storyId}/${targetChapterId}`);
+                  }
+                }} 
                 className="w-full md:w-auto shadow-lg shadow-primary/20 text-base md:px-8 py-3"
                 disabled={chapters.length === 0}
               >
-                <BookOpen size={20} className="mr-2" /> {chapters.length === 0 ? 'Bölüm Yok' : 'İlk Bölümü Oku'}
+                {readingProgress?.currentChapterId || (readingProgress?.completedChapters && readingProgress.completedChapters.length > 0) ? (
+                  <>
+                    <Bookmark size={20} className="mr-2 fill-current" /> Kaldığın Yerden Devam Et
+                  </>
+                ) : (
+                  <>
+                    <BookOpen size={20} className="mr-2" /> {chapters.length === 0 ? 'Bölüm Yok' : 'İlk Bölümü Oku'}
+                  </>
+                )}
               </Button>
               
               <Button 
@@ -805,15 +836,17 @@ export default function StoryDetailPage() {
         {/* ================================== */}
         <div className="xl:col-span-2 flex flex-col gap-10">
           <div className="w-full">
-            <div className="bg-card/30 border border-white/5 rounded-3xl p-6 md:p-8">
-              <div className="flex items-center justify-between mb-8">
-                <Typography variant="h2" className="text-2xl font-bold">İçindekiler</Typography>
-                <span className="text-muted bg-text/5 px-4 py-1.5 rounded-full text-sm font-medium border border-text/10">
-                  {chapters.length} Bölüm
-                </span>
+            <div className="bg-card/40 backdrop-blur-xl border border-border/40 rounded-3xl p-4 sm:p-6 md:p-8 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.15)]">
+              <div className="flex items-center justify-between mb-6 sm:mb-8">
+                <div className="flex items-center gap-2.5 sm:gap-3">
+                  <Typography variant="h2" className="text-xl sm:text-2xl font-bold tracking-tight">İçindekiler</Typography>
+                  <span className="px-3 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-primary/10 text-primary border border-primary/20 backdrop-blur-md">
+                    {chapters.length} Bölüm
+                  </span>
+                </div>
               </div>
               
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {chapters.length > 0 ? (
                   <>
                     {chapters.slice(0, visibleChaptersCount).map((chapter, index) => {
@@ -826,69 +859,135 @@ export default function StoryDetailPage() {
                         }
                       }
 
+                      // Okundu ve Şu An Okunuyor asla aynı anda görünmez:
+                      // Bir bölüm tamamlanmışsa öncelik Okundu'dur.
+                      // Sadece tamamlanmamışsa ve aktif bölümse "Şu An Okunuyor" gösterilir.
+                      const isCompleted = Boolean(readingProgress?.completedChapters?.includes(chapter.chapterId));
+                      const isCurrent = !isCompleted && readingProgress?.currentChapterId === chapter.chapterId;
+
                       return (
                         <div
                           key={chapter.chapterId}
-                          className={`flex flex-col md:flex-row md:items-center justify-between p-4 md:p-5 border rounded-xl transition-all group relative overflow-hidden ${
+                          className={`p-3.5 sm:p-4 md:p-5 rounded-2xl transition-all duration-300 group relative overflow-hidden flex items-start gap-3 sm:gap-4.5 ${
                             isScheduled 
-                              ? 'bg-background/50 border-border/10 opacity-80 cursor-default' 
-                              : 'bg-card border-border/20 hover:border-primary/50 hover:shadow-md cursor-pointer'
+                              ? 'bg-background/40 border border-border/10 opacity-70 cursor-default' 
+                              : isCurrent
+                              ? 'bg-primary/[0.06] border border-primary/45 shadow-[0_0_20px_rgba(99,102,241,0.12)] cursor-pointer'
+                              : isCompleted
+                              ? 'bg-card/40 border border-primary/20 hover:border-primary/45 hover:bg-card/70 cursor-pointer shadow-sm'
+                              : 'bg-card/40 border border-border/30 hover:border-primary/40 hover:bg-card/80 hover:shadow-lg hover:shadow-primary/5 cursor-pointer'
                           }`}
                           onClick={() => {
-                            if (!isScheduled) router.push(`/read/${storyId}?chapterId=${chapter.chapterId}`);
+                            if (!isScheduled) router.push(`/read/${storyId}/${chapter.chapterId}`);
                           }}
                         >
-                          <div className="flex items-center gap-4 mb-3 md:mb-0 flex-1">
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-inner text-lg font-black ${
-                              isScheduled 
-                                ? 'bg-muted/10 text-muted' 
-                                : 'bg-primary/10 text-primary'
-                            }`}>
-                              {isScheduled ? <Lock size={18} /> : index + 1}
-                            </div>
-                            
-                            <div className="flex-1 min-w-0 pr-2">
-                              <Typography variant="body" className={`font-bold text-base md:text-lg line-clamp-2 md:line-clamp-1 ${
-                                isScheduled ? 'text-text/70' : 'group-hover:text-primary transition-colors'
-                              }`}>
-                                {chapter.title}
-                              </Typography>
-                            </div>
+                          {/* Login11 Style Active Indicator bar on left edge */}
+                          {isCurrent && (
+                            <div className="absolute left-0 top-0 bottom-0 w-1 sm:w-1.5 bg-primary rounded-l-2xl shadow-[0_0_14px_var(--color-primary,#6366f1)]" />
+                          )}
+
+                          {/* Sol Sayı / Durum Kutusu */}
+                          <div className={`w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center shrink-0 font-extrabold text-xs sm:text-sm md:text-base transition-all duration-300 self-start mt-0.5 ${
+                            isScheduled 
+                              ? 'bg-muted/10 text-muted border border-border/20' 
+                              : isCurrent
+                              ? 'bg-primary text-white border border-primary shadow-[0_0_16px_rgba(99,102,241,0.4)] ring-2 ring-primary/20'
+                              : isCompleted
+                              ? 'bg-primary/10 text-primary border border-primary/25 shadow-sm'
+                              : 'bg-muted/15 text-muted-foreground border border-border/20 group-hover:border-primary/30 group-hover:text-primary group-hover:bg-primary/10'
+                          }`}>
+                            {isScheduled ? (
+                              <Lock size={15} className="sm:w-[17px] sm:h-[17px]" />
+                            ) : isCurrent ? (
+                              <Bookmark size={16} className="text-white fill-current sm:w-[18px] sm:h-[18px]" />
+                            ) : isCompleted ? (
+                              <Check size={16} className="text-primary sm:w-[18px] sm:h-[18px]" strokeWidth={2.5} />
+                            ) : (
+                              index + 1
+                            )}
                           </div>
 
-                          {!isScheduled ? (
-                            <div className="flex items-center justify-between md:justify-end gap-4 md:gap-6 text-xs md:text-sm text-muted md:border-none border-t border-border/10 pt-3 md:pt-0 shrink-0">
-                              <span className="flex items-center gap-1.5"><Calendar size={14} className="md:w-4 md:h-4"/> {chapter.publishDate ? (chapter.publishDate as any)?.seconds ? new Date((chapter.publishDate as any).seconds * 1000).toLocaleDateString('tr-TR') : new Date(chapter.publishDate as any).toLocaleDateString('tr-TR') : Date.now()}</span>
-                              <div className="flex items-center gap-3 md:gap-5">
-                                <span className="flex items-center gap-1.5"><Eye size={14} className="md:w-4 md:h-4"/> {(chapter.stats?.views || 0).toLocaleString()}</span>
-                                <span className="flex items-center gap-1.5"><Heart size={14} className="md:w-4 md:h-4"/> {(chapter.stats?.likes || 0).toLocaleString()}</span>
-                                <span className="flex items-center gap-1.5"><MessageSquare size={14} className="md:w-4 md:h-4"/> {(chapter.stats?.commentCount || 0).toLocaleString()}</span>
+                          {/* İçerik Alanı: Bölüm Başlığı (Tam Genişlik) + Alt Bilgi Çizgisi (İstatistikler ve Durum Rozeti) */}
+                          <div className="flex-1 min-w-0 flex flex-col gap-1.5 sm:gap-2">
+                            {/* 1. Satır: Bölüm Başlığı (Mobilde de tablette de hiçbir şey tarafından sıkıştırılmaz) */}
+                            <div className="flex items-start justify-between gap-2">
+                              <Typography 
+                                variant="body" 
+                                className={`font-bold text-sm sm:text-base md:text-lg text-foreground break-words leading-snug transition-colors flex-1 ${
+                                  isScheduled ? 'text-text/70' : isCurrent ? 'text-primary' : 'group-hover:text-primary'
+                                }`}
+                              >
+                                {chapter.title}
+                              </Typography>
+
+                              {!isScheduled && (
+                                <ChevronRight size={18} className="text-muted/30 group-hover:text-primary group-hover:translate-x-1 transition-all hidden sm:block shrink-0 mt-0.5" />
+                              )}
+                            </div>
+
+                            {/* 2. Satır: İstatistikler ve Rozet (En sonda ve esnek) */}
+                            <div className="flex items-center justify-between gap-x-3 gap-y-1.5 flex-wrap pt-0.5">
+                              {!isScheduled ? (
+                                <div className="flex items-center gap-2.5 sm:gap-3.5 text-[11px] sm:text-xs text-muted/70 flex-wrap">
+                                  {chapter.publishDate && (
+                                    <span className="flex items-center gap-1 shrink-0">
+                                      <Calendar size={12} className="opacity-70 sm:w-3.5 sm:h-3.5" />
+                                      {(chapter.publishDate as any)?.seconds
+                                        ? new Date((chapter.publishDate as any).seconds * 1000).toLocaleDateString('tr-TR')
+                                        : new Date(chapter.publishDate as any).toLocaleDateString('tr-TR')}
+                                    </span>
+                                  )}
+                                  <span className="flex items-center gap-1 shrink-0">
+                                    <Eye size={12} className="opacity-70 sm:w-3.5 sm:h-3.5" />
+                                    {(chapter.stats?.views || 0).toLocaleString()}
+                                  </span>
+                                  <span className="flex items-center gap-1 shrink-0">
+                                    <Heart size={12} className="opacity-70 sm:w-3.5 sm:h-3.5" />
+                                    {(chapter.stats?.likes || 0).toLocaleString()}
+                                  </span>
+                                  <span className="flex items-center gap-1 shrink-0">
+                                    <MessageSquare size={12} className="opacity-70 sm:w-3.5 sm:h-3.5" />
+                                    {(chapter.stats?.commentCount || 0).toLocaleString()}
+                                  </span>
+                                </div>
+                              ) : (
+                                publishDateObj && (
+                                  <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-blue-400/80">
+                                    <Calendar size={12} className="sm:w-3.5 sm:h-3.5" />
+                                    <span>Planlandı: {publishDateObj.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</span>
+                                  </div>
+                                )
+                              )}
+
+                              {/* Sağ / En Son Alan: Durum Rozeti */}
+                              <div className="flex items-center gap-2 shrink-0 ml-auto">
+                                {isCurrent && (
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-primary/15 text-primary border border-primary/30 shadow-[0_0_12px_rgba(99,102,241,0.2)] backdrop-blur-sm whitespace-nowrap">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                                    Şu An Okunuyor
+                                  </span>
+                                )}
+                                {isCompleted && (
+                                  <span className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-primary/10 text-primary border border-primary/25 shadow-sm backdrop-blur-sm whitespace-nowrap">
+                                    <Check size={11} className="text-primary sm:w-3 sm:h-3" strokeWidth={2.5} />
+                                    Okundu
+                                  </span>
+                                )}
+                                {isScheduled && (
+                                  <Button 
+                                    variant="outline" 
+                                    className="text-[10px] sm:text-xs py-0.5 sm:py-1 h-6 sm:h-7 px-2.5 rounded-full border-blue-500/30 text-blue-400 hover:bg-blue-500/10 flex items-center justify-center gap-1 whitespace-nowrap"
+                                    onPress={(e) => {
+                                      e.stopPropagation();
+                                      handleToggleReminder(chapter.chapterId);
+                                    }}
+                                  >
+                                    <Bell size={11} /> Bildirimleri Aç
+                                  </Button>
+                                )}
                               </div>
                             </div>
-                          ) : (
-                            publishDateObj && (
-                              <div className="flex flex-col md:items-end justify-between md:justify-end gap-2 md:gap-1 text-xs md:text-sm text-muted md:border-none border-t border-border/10 pt-3 md:pt-0 shrink-0">
-                                <span className="text-blue-400/80 font-medium flex items-center gap-1.5 md:self-end">
-                                  <Calendar size={14} /> Planlı: {publishDateObj.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                                <Button 
-                                  variant="outline" 
-                                  className="w-full md:w-auto text-[10px] md:text-xs py-1 h-7 md:h-8 rounded-full border-blue-500/30 text-blue-400 hover:bg-blue-500/10 flex items-center justify-center gap-1.5"
-                                  onPress={(e) => {
-                                    e.stopPropagation();
-                                    handleToggleReminder(chapter.chapterId);
-                                  }}
-                                >
-                                  <Bell size={12} /> Bildirimleri Aç
-                                </Button>
-                              </div>
-                            )
-                          )}
-                          
-                          {/* Hover indicator overlay */}
-                          {!isScheduled && (
-                            <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl pointer-events-none" />
-                          )}
+                          </div>
                         </div>
                       );
                     })}

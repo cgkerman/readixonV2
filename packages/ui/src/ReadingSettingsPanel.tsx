@@ -3,20 +3,25 @@ import { Typography } from './Typography';
 import { Button } from './Button';
 
 export type ThemeType = 'light' | 'dark' | 'sepia';
+export type FontFamilyType = 'sans' | 'serif' | 'mono';
 
 export interface ReadingSettingsPanelProps {
   theme: ThemeType;
   fontSize: number;
+  fontFamily?: FontFamilyType;
   onThemeChange: (theme: ThemeType) => void;
   onFontSizeChange: (size: number) => void;
+  onFontFamilyChange?: (font: FontFamilyType) => void;
   className?: string;
 }
 
 export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({
   theme,
   fontSize,
+  fontFamily = 'sans',
   onThemeChange,
   onFontSizeChange,
+  onFontFamilyChange,
   className = ''
 }) => {
   return (
@@ -44,6 +49,52 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({
           </Button>
         </div>
       </div>
+
+      {/* Yazı Tipi Ailesi */}
+      {onFontFamilyChange && (
+        <div className="flex flex-col gap-3">
+          <Typography variant="body" className="font-semibold">
+            Yazı Tipi
+          </Typography>
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={() => onFontFamilyChange('sans')}
+              className={`p-2.5 rounded-xl border-2 transition-all flex flex-col items-center gap-1 ${
+                fontFamily === 'sans' ? 'border-primary bg-primary/10 shadow-sm' : 'border-transparent bg-muted/20 hover:bg-muted/30'
+              }`}
+            >
+              <span className="font-sans font-bold text-base">Ag</span>
+              <Typography variant="caption" className="text-[11px] font-medium opacity-80">
+                Modern (Sans)
+              </Typography>
+            </button>
+
+            <button
+              onClick={() => onFontFamilyChange('serif')}
+              className={`p-2.5 rounded-xl border-2 transition-all flex flex-col items-center gap-1 ${
+                fontFamily === 'serif' ? 'border-primary bg-primary/10 shadow-sm' : 'border-transparent bg-muted/20 hover:bg-muted/30'
+              }`}
+            >
+              <span className="font-serif font-bold text-base">Ag</span>
+              <Typography variant="caption" className="text-[11px] font-medium opacity-80">
+                Kitap (Serif)
+              </Typography>
+            </button>
+
+            <button
+              onClick={() => onFontFamilyChange('mono')}
+              className={`p-2.5 rounded-xl border-2 transition-all flex flex-col items-center gap-1 ${
+                fontFamily === 'mono' ? 'border-primary bg-primary/10 shadow-sm' : 'border-transparent bg-muted/20 hover:bg-muted/30'
+              }`}
+            >
+              <span className="font-mono font-bold text-base">Ag</span>
+              <Typography variant="caption" className="text-[11px] font-medium opacity-80">
+                Daktilo (Mono)
+              </Typography>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Tema Ayarı */}
       <div className="flex flex-col gap-3">
