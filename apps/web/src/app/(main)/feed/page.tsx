@@ -637,13 +637,14 @@ export default function FeedPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Link
-              href="/explore"
-              className="text-xs md:text-sm font-semibold text-primary hover:underline flex items-center gap-1 transition-all mr-1"
+            <button
+              type="button"
+              onClick={() => setIsCategoriesExpanded(!isCategoriesExpanded)}
+              className="text-xs md:text-sm font-semibold text-primary hover:underline flex items-center gap-1 transition-all mr-1 cursor-pointer"
             >
-              <span>Tümünü Gör</span>
-              <ChevronRight size={15} />
-            </Link>
+              <span>{isCategoriesExpanded ? 'Daha Az Göster' : 'Tümünü Gör'}</span>
+              <ChevronRight size={15} className={`transition-transform duration-200 ${isCategoriesExpanded ? 'rotate-90' : ''}`} />
+            </button>
           </div>
         </div>
 
