@@ -10,90 +10,70 @@ import { Loader2, TrendingUp, BookOpen, Newspaper, Quote as QuoteIcon, Vote, Che
 import Link from 'next/link';
 import { AgendaFooter } from './components/AgendaFooter';
 import { PlatformFeedback } from './components/PlatformFeedback';
-
-const FALLBACK_CULTURE_NEWS = [
-  { id: '1', title: 'Yapay Zeka ve Sanat: Yeni Bir Dönem', content: 'Yapay zekanın sanat dünyasındaki yükselişi devam ediyor. Son sergilerde gördüğümüz AI eserleri...', imageUrl: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=800&auto=format&fit=crop' },
-  { id: '2', title: 'İstanbul Kitap Fuarı Başlıyor', content: 'TÜYAP kitap fuarı bu hafta sonu kapılarını kitapseverlere açıyor. Yüzlerce yayınevi ve yazar...', imageUrl: 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=800&auto=format&fit=crop' },
-  { id: '3', title: 'Yeni Bir Edebiyat Dergisi Yayın Hayatına Başlıyor', content: 'Genç yazarların ağırlıkta olduğu yeni bir dergi raflardaki yerini almaya hazırlanıyor...', imageUrl: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?q=80&w=800&auto=format&fit=crop' },
-  { id: '4', title: 'Klasik Eserlerin Dijital Restorasyonu Tamamlandı', content: 'Türkiye\'nin en önemli klasik edebiyat eserleri dijital ortama aktarılarak ücretsiz erişime açıldı.', imageUrl: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?q=80&w=800&auto=format&fit=crop' }
-];
-
-const FALLBACK_POPULAR_BOOKS = [
-  { id: '1', title: 'Yüzyıllık Yalnızlık', authorName: 'Gabriel García Márquez', stats: { views: 4500 } },
-  { id: '2', title: 'Saatleri Ayarlama Enstitüsü', authorName: 'Ahmet Hamdi Tanpınar', stats: { views: 3200 } },
-  { id: '3', title: 'Suç ve Ceza', authorName: 'Fyodor Dostoyevski', stats: { views: 2800 } },
-  { id: '4', title: '1984', authorName: 'George Orwell', stats: { views: 2500 } },
-  { id: '5', title: 'Kürk Mantolu Madonna', authorName: 'Sabahattin Ali', stats: { views: 2100 } },
-  { id: '6', title: 'Küçük Prens', authorName: 'Antoine de Saint-Exupéry', stats: { views: 1900 } },
-  { id: '7', title: 'Simyacı', authorName: 'Paulo Coelho', stats: { views: 1800 } },
-  { id: '8', title: 'Dönüşüm', authorName: 'Franz Kafka', stats: { views: 1700 } },
-  { id: '9', title: 'Şeker Portakalı', authorName: 'José Mauro de Vasconcelos', stats: { views: 1600 } },
-  { id: '10', title: 'Tutunamayanlar', authorName: 'Oğuz Atay', stats: { views: 1500 } }
-];
+import { ExcellentStoriesSection } from './components/ExcellentStoriesSection';
 
 export default function AgendaPage() {
   const queryClient = useQueryClient();
-  const [trendingTags, setTrendingTags] = useState<{id: string, count: number}[]>([]);
-  const [votingState, setVotingState] = useState<{pollId: string, optionIndex: number} | null>(null);
+  const [trendingTags, setTrendingTags] = useState<{ id: string, count: number }[]>([]);
+  const [votingState, setVotingState] = useState<{ pollId: string, optionIndex: number } | null>(null);
   const { userProfile } = useAuthStore();
 
-  // 1. Gerçek Zamanlı Trend Etiketler
+  // 1. Gerçek Zamanlı Trend Etiketler (Yalnızca veritabanındaki gerçek etiketler)
   useEffect(() => {
     const tagsQ = query(collection(db, 'tags'), orderBy('count', 'desc'), limit(10));
     const unsubscribeTags = onSnapshot(tagsQ, (snapshot) => {
       if (snapshot.empty) {
-        setTrendingTags([
-          { id: 'Edebiyat', count: 1245 },
-          { id: 'Şiir', count: 892 },
-          { id: 'Deneme', count: 534 },
-          { id: 'Roman', count: 412 },
-          { id: 'KitapÖnerisi', count: 328 },
-          { id: 'Sanat', count: 210 },
-          { id: 'Felsefe', count: 180 },
-          { id: 'Tarih', count: 150 },
-        ]);
+        setTrendingTags([]);
       } else {
         setTrendingTags(snapshot.docs.map(d => ({ id: d.id, count: d.data().count })));
       }
+    }, (error) => {
+      console.error("Trend etiketler çekilirken hata:", error);
+      setTrendingTags([]);
     });
 
     return () => unsubscribeTags();
   }, []);
 
-  // 2. Kültür & Sanat Haberleri (TanStack Query ile Paralel ve Önbellekli)
-  const { data: cultureNews = FALLBACK_CULTURE_NEWS, isLoading: newsLoading } = useQuery<any[]>({
+  // 2. Kültür & Sanat Haberleri (TanStack Query - Sadece gerçek duyuru/haberler)
+  const { data: cultureNews = [], isLoading: newsLoading } = useQuery<any[]>({
     queryKey: ['announcements', 'culture'],
     queryFn: async () => {
       try {
         const newsQ = query(
-          collection(db, 'announcements'), 
-          where('category', '==', 'culture'), 
-          where('isActive', '==', true), 
+          collection(db, 'announcements'),
+          where('category', '==', 'culture'),
+          where('isActive', '==', true),
           limit(15)
         );
         const newsSnap = await getDocs(newsQ);
-        if (newsSnap.empty) return FALLBACK_CULTURE_NEWS;
+        if (newsSnap.empty) return [];
         const docs = newsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         docs.sort((a: any, b: any) => {
           const tA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0);
           const tB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0);
           return tB - tA;
         });
-        return docs.length > 0 ? docs : FALLBACK_CULTURE_NEWS;
+        return docs;
       } catch (err) {
         console.error("Culture news fetch error:", err);
-        return FALLBACK_CULTURE_NEWS;
+        return [];
       }
     }
   });
 
-  // 3. Popüler Eserler
-  const { data: popularBooks = FALLBACK_POPULAR_BOOKS, isLoading: booksLoading } = useQuery<any[]>({
+  // 3. Popüler Eserler (Sadece platformdaki gerçek eserler)
+  const { data: popularBooks = [], isLoading: booksLoading } = useQuery<any[]>({
     queryKey: ['agenda', 'popular_stories'],
     queryFn: async () => {
-      const topStories = await getTopStories(10);
-      if (!topStories || topStories.length === 0) return FALLBACK_POPULAR_BOOKS;
-      return topStories;
+      try {
+        const topStories = await getTopStories(10);
+        if (!topStories || topStories.length === 0) return [];
+        return topStories;
+      } catch (err) {
+        console.error("Popular books fetch error:", err);
+        return [];
+      }
     }
   });
 
@@ -150,7 +130,7 @@ export default function AgendaPage() {
       <div className="relative pt-12 pb-20 px-6 md:px-12 lg:px-24 overflow-hidden border-b border-border/50">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-purple-500/5 to-background z-0" />
         <div className="absolute top-0 right-0 w-96 h-96 bg-primary/20 rounded-full blur-[100px] -mr-20 -mt-20 z-0" />
-        
+
         <div className="relative z-10 max-w-6xl mx-auto flex flex-col md:flex-row gap-10 items-center">
           <div className="flex-1">
             <Typography variant="h1" className="text-4xl md:text-5xl font-extrabold text-text mb-4 tracking-tight">
@@ -160,7 +140,7 @@ export default function AgendaPage() {
               Edebiyat dünyasındaki son gelişmeleri, günün öne çıkan sözünü, trend etiketleri ve okur anketlerini buradan takip edin.
             </Typography>
           </div>
-          
+
           {/* Right Column: Widgets */}
           <div className="w-full md:w-2/5 shrink-0 flex flex-col gap-6">
             {/* Quote of the Day in Hero */}
@@ -187,7 +167,7 @@ export default function AgendaPage() {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 md:px-12 lg:px-24 py-12 flex flex-col gap-16">
-        
+
         {/* Culture News Section */}
         {cultureNews.length > 0 && (
           <section>
@@ -197,20 +177,20 @@ export default function AgendaPage() {
               </div>
               <Typography variant="h3" className="font-bold text-text">Kültür & Sanat Gündemi</Typography>
             </div>
-            
+
             <div className="flex flex-col gap-6">
               {/* İlk Haber (Hero - En Büyük) */}
               {cultureNews.length > 0 && (
-                <Link 
+                <Link
                   href={`/news/${slugify(cultureNews[0].title)}-${cultureNews[0].id}`}
                   className="group cursor-pointer rounded-[2rem] overflow-hidden relative transition-all shadow-sm hover:shadow-xl w-full aspect-video md:aspect-[21/9]"
                 >
                   {cultureNews[0].imageUrl ? (
                     <>
-                      <img 
-                        src={cultureNews[0].imageUrl} 
-                        alt={cultureNews[0].title} 
-                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+                      <img
+                        src={cultureNews[0].imageUrl}
+                        alt={cultureNews[0].title}
+                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                         loading="lazy"
                         decoding="async"
                       />
@@ -219,20 +199,20 @@ export default function AgendaPage() {
                   ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-primary to-purple-600" />
                   )}
-                  
+
                   <div className="absolute inset-0 p-8 md:p-12 flex flex-col justify-end">
                     <div className="mb-4">
                       <span className="bg-primary text-white text-xs md:text-sm font-bold px-4 py-2 rounded-xl shadow-sm">
                         Günün Öne Çıkanı
                       </span>
                     </div>
-                    <Typography 
-                      variant="h2" 
+                    <Typography
+                      variant="h2"
                       className="font-extrabold text-white mb-4 group-hover:text-primary/90 transition-colors line-clamp-2 md:line-clamp-3 text-3xl md:text-5xl leading-tight"
                     >
                       {cultureNews[0].title}
                     </Typography>
-                    
+
                     <div className="flex items-center gap-4 text-white/80 text-sm md:text-base font-medium">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0">
@@ -253,17 +233,17 @@ export default function AgendaPage() {
               {cultureNews.length > 1 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {cultureNews.slice(1).map((news) => (
-                    <Link 
+                    <Link
                       href={`/news/${slugify(news.title)}-${news.id}`}
-                      key={news.id} 
+                      key={news.id}
                       className="group cursor-pointer rounded-3xl overflow-hidden relative transition-all shadow-sm hover:shadow-xl aspect-video w-full"
                     >
                       {news.imageUrl ? (
                         <>
-                          <img 
-                            src={news.imageUrl} 
-                            alt={news.title} 
-                            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+                          <img
+                            src={news.imageUrl}
+                            alt={news.title}
+                            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                             loading="lazy"
                             decoding="async"
                           />
@@ -272,15 +252,15 @@ export default function AgendaPage() {
                       ) : (
                         <div className="absolute inset-0 bg-gradient-to-br from-primary/80 to-purple-600/80" />
                       )}
-                      
+
                       <div className="absolute inset-0 p-6 flex flex-col justify-end">
-                        <Typography 
-                          variant="h4" 
+                        <Typography
+                          variant="h4"
                           className="font-bold text-white mb-3 group-hover:text-primary/90 transition-colors line-clamp-2 text-xl leading-snug"
                         >
                           {news.title}
                         </Typography>
-                        
+
                         <div className="flex items-center justify-between w-full">
                           <div className="flex items-center gap-2 text-white/70 text-xs font-medium">
                             <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center shrink-0">
@@ -302,6 +282,9 @@ export default function AgendaPage() {
           </section>
         )}
 
+        {/* Üstün Nitelikli Eserler (Editör Değerlendirmeleri 8.0+) */}
+        <ExcellentStoriesSection />
+
         {/* Popular Books Section */}
         {popularBooks.length > 0 && (
           <section className="w-full overflow-hidden">
@@ -311,28 +294,34 @@ export default function AgendaPage() {
               </div>
               <Typography variant="h3" className="font-bold text-text">Popüler Eserler</Typography>
             </div>
-            
+
             <div className="relative overflow-hidden pb-6 -mx-6 md:-mx-12 lg:-mx-24 before:absolute before:left-0 before:top-0 before:bottom-0 before:w-20 before:bg-gradient-to-r before:from-background before:to-transparent before:z-10 before:pointer-events-none after:absolute after:right-0 after:top-0 after:bottom-0 after:w-20 after:bg-gradient-to-l after:from-background after:to-transparent after:z-10 after:pointer-events-none">
               <div className="flex w-max animate-marquee hover:[animation-play-state:paused]">
                 {[1, 2].map((setIndex) => (
                   <div key={setIndex} className="flex gap-6 pr-6">
                     {popularBooks.map((book: any, idx) => (
                       <Link href={`/story/${book.storyId || book.id}`} key={`${setIndex}-${book.storyId || book.id || idx}`} className="shrink-0 w-80 md:w-[26rem] group bg-card/30 hover:bg-card/80 border border-border/50 hover:border-primary/30 rounded-[2rem] p-5 transition-all duration-300 flex items-stretch gap-6 shadow-sm hover:shadow-xl">
-                        
+
                         {/* 3D Book Mockup */}
                         <div className="relative shrink-0 w-28 md:w-32 h-40 md:h-48 rounded-r-xl rounded-l-sm shadow-2xl transition-all duration-500 group-hover:-translate-y-2 group-hover:rotate-2 group-hover:shadow-primary/30 self-center">
-                          <img 
-                            src={book.coverImage || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=400&auto=format&fit=crop'} 
-                            alt={book.title} 
-                            className="w-full h-full object-cover rounded-r-xl rounded-l-sm" 
-                            loading="lazy"
-                            decoding="async"
-                          />
+                          {book.coverImage ? (
+                            <img
+                              src={book.coverImage}
+                              alt={book.title}
+                              className="w-full h-full object-cover rounded-r-xl rounded-l-sm"
+                              loading="lazy"
+                              decoding="async"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-primary/10 rounded-r-xl rounded-l-sm flex items-center justify-center text-primary">
+                              <BookOpen size={28} />
+                            </div>
+                          )}
                           {/* Spine shadow */}
                           <div className="absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-black/50 via-black/10 to-transparent mix-blend-multiply rounded-l-sm pointer-events-none" />
                           {/* Edge highlights */}
                           <div className="absolute inset-0 rounded-r-xl rounded-l-sm shadow-[inset_1px_1px_2px_rgba(255,255,255,0.3),inset_-2px_0_5px_rgba(0,0,0,0.3)] pointer-events-none" />
-                          
+
                           {/* Rank Badge */}
                           <div className="absolute -top-3 -left-3 w-10 h-10 rounded-full bg-primary text-background flex items-center justify-center font-black text-lg border-4 border-background shadow-lg z-20 group-hover:scale-110 transition-transform">
                             {idx + 1}
@@ -344,11 +333,11 @@ export default function AgendaPage() {
                           <Typography variant="body" className="font-extrabold text-lg md:text-xl text-text group-hover:text-primary transition-colors line-clamp-2 leading-tight mb-1">
                             {book.title}
                           </Typography>
-                          
+
                           <Typography variant="caption" className="text-muted/80 font-medium line-clamp-1 mb-4">
                             {book.authorName}
                           </Typography>
-                          
+
                           {/* Stats Grid */}
                           <div className="grid grid-cols-2 gap-y-3 gap-x-2 mt-auto">
                             <div className="flex items-center gap-1.5 text-xs font-semibold text-muted">
@@ -387,14 +376,14 @@ export default function AgendaPage() {
               </div>
               <Typography variant="h3" className="font-bold text-text">Türkiye'de Trend</Typography>
             </div>
-            
+
             <div className="relative overflow-hidden pb-6 -mx-6 md:-mx-12 lg:-mx-24 before:absolute before:left-0 before:top-0 before:bottom-0 before:w-20 before:bg-gradient-to-r before:from-background before:to-transparent before:z-10 before:pointer-events-none after:absolute after:right-0 after:top-0 after:bottom-0 after:w-20 after:bg-gradient-to-l after:from-background after:to-transparent after:z-10 after:pointer-events-none">
               <div className="flex w-max animate-marquee hover:[animation-play-state:paused]">
                 {[1, 2].map((setIndex) => (
                   <div key={setIndex} className="flex gap-6 pr-6">
                     {trendingTags.map((tag, idx) => (
-                      <Link 
-                        key={`${setIndex}-${tag.id}`} 
+                      <Link
+                        key={`${setIndex}-${tag.id}`}
                         href={`/readix?hashtag=${tag.id}`}
                         className="shrink-0 w-80 group flex items-center gap-5 p-5 rounded-3xl bg-card/40 border border-border/50 hover:bg-muted/5 transition-colors shadow-sm hover:shadow-md"
                       >
@@ -435,14 +424,14 @@ export default function AgendaPage() {
               </div>
               <Typography variant="h3" className="font-bold text-text">Okur Anketleri</Typography>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {adminPolls.map((poll) => (
                 <div key={poll.id} className="w-full bg-card/40 backdrop-blur-sm border border-border rounded-2xl p-6 relative overflow-hidden group flex flex-col shadow-sm hover:shadow-md transition-all">
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-purple-500 opacity-50 group-hover:opacity-100 transition-opacity" />
-                  
+
                   <Typography variant="body" className="font-semibold text-lg mb-5 leading-tight flex-1">{poll.question}</Typography>
-                  
+
                   <div className="flex flex-col gap-3">
                     {(() => {
                       const hasVoted = userProfile?.uid && poll.votedUsers?.includes(userProfile.uid);
@@ -453,8 +442,8 @@ export default function AgendaPage() {
                           const percent = totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0;
                           return (
                             <div key={idx} className="relative overflow-hidden rounded-xl border border-border bg-black/20 p-3.5 text-sm">
-                              <div 
-                                className="absolute left-0 top-0 bottom-0 bg-primary/20 transition-all duration-1000" 
+                              <div
+                                className="absolute left-0 top-0 bottom-0 bg-primary/20 transition-all duration-1000"
                                 style={{ width: `${percent}%` }}
                               />
                               <div className="relative z-10 flex justify-between items-center gap-3">
@@ -469,7 +458,7 @@ export default function AgendaPage() {
                         const isVotingAny = votingState !== null;
 
                         return (
-                          <button 
+                          <button
                             key={idx}
                             onClick={() => handleVote(poll.id, idx)}
                             disabled={isVotingAny}
@@ -495,10 +484,11 @@ export default function AgendaPage() {
         <PlatformFeedback />
 
       </div>
-      
+
       <AgendaFooter />
 
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @keyframes marquee {
           0% { transform: translateX(0%); }
           100% { transform: translateX(-50%); }

@@ -46,7 +46,7 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <Card variant="glass" className="p-8 animate-fade-in relative">
+    <Card variant="glass" className="p-8 animate-fade-in relative w-full max-w-md shadow-2xl rounded-2xl border border-border/80">
       <Link href="/login" className="absolute top-8 left-8 text-muted hover:text-primary transition-colors">
         <ArrowLeft size={20} />
       </Link>

@@ -1,16 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Typography, Button } from "@readixon/ui";
 import { motion } from "framer-motion";
 import { useAuthStore } from "@readixon/core";
 import { Sparkles, Users, BookOpen, TrendingUp, MessageCircle, Feather, Compass } from "lucide-react";
 
 export default function Home() {
+  const router = useRouter();
   const { firebaseUser, isInitialized, userProfile } = useAuthStore();
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+  // Giriş yapmış kullanıcıları gereksiz karşılama sayfası göstermeden doğrudan feed'e yönlendir
+  useEffect(() => {
+    if (isInitialized && firebaseUser) {
+      router.replace('/feed');
+    }
+  }, [firebaseUser, isInitialized, router]);
 
   const handleMouseMove = (e: React.MouseEvent) => {
     // Sadece desktop/tablet'te mouse hareketi olduğu için içerde hesaplama yapalım
@@ -20,7 +29,7 @@ export default function Home() {
     setMousePos({ x, y });
   };
 
-  if (!isInitialized) {
+  if (!isInitialized || (isInitialized && firebaseUser)) {
     return (
       <div className="flex min-h-screen bg-background items-center justify-center">
         <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
