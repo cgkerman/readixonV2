@@ -46,7 +46,7 @@ export const StoryCard: React.FC<StoryCardProps> = ({
     return (
       <div 
         onClick={onPress}
-        className={`group flex flex-col h-full cursor-pointer relative overflow-hidden rounded-xl shadow-md border border-border/20 hover:border-primary/50 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${className} aspect-[2/3]`}
+        className={`group flex flex-col w-full max-w-full cursor-pointer relative overflow-hidden rounded-xl shadow-md border border-border/20 hover:border-primary/50 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${className} aspect-[2/3]`}
       >
         <img 
           src={coverImage || ''} 
@@ -118,7 +118,7 @@ export const StoryCard: React.FC<StoryCardProps> = ({
   return (
     <div 
       onClick={onPress}
-      className={`group flex flex-col h-full cursor-pointer ${className}`}
+      className={`group flex flex-col w-full max-w-full h-full cursor-pointer ${className}`}
     >
       {/* Kapak Resmi Alanı */}
       <div className={`relative w-full ${isWebtoon ? 'aspect-[9/16] shadow-md border-primary/20' : 'aspect-[2/3] shadow-sm'} rounded-xl bg-muted/20 overflow-hidden hover:shadow-lg transition-all duration-300 border border-border/40`}>

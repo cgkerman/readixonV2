@@ -1,0 +1,260 @@
+/* ==========================================================================
+   Readixon About Page - Login11 Inspired 3D Parallax & Premium Aesthetics
+   Tailored for Readixon Theme System (Light & Dark Mode)
+   ========================================================================== */
+
+/* ─────────────────────────────────────────────────────────────
+   3D Tilt & Perspective Containers
+   ───────────────────────────────────────────────────────────── */
+.about-perspective {
+  perspective: 1400px;
+  transform-style: preserve-3d;
+}
+
+.about-card-3d {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+  transform-style: preserve-3d;
+}
+
+.about-card-3d:hover {
+  box-shadow: 
+    0 20px 40px -15px rgba(99, 102, 241, 0.25),
+    0 0 0 1px rgba(99, 102, 241, 0.3);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Glassmorphic Surfaces & Ambient Highlights
+   ───────────────────────────────────────────────────────────── */
+.about-glass-panel {
+  background: color-mix(in srgb, var(--color-card) 75%, transparent);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+}
+
+.about-glass-elevated {
+  background: color-mix(in srgb, var(--color-card) 88%, transparent);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid color-mix(in srgb, var(--color-border) 90%, transparent);
+  box-shadow: 
+    0 15px 35px -10px rgba(0, 0, 0, 0.12),
+    0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.about-glow-border {
+  position: relative;
+}
+
+.about-glow-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--color-primary), transparent 60%, var(--color-primary));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+}
+
+.about-glow-border:hover::before {
+  opacity: 1;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Login11-Style Interactive Lab
+   ───────────────────────────────────────────────────────────── */
+.about-lab-container {
+  position: relative;
+  display: flex;
+  min-height: 580px;
+  border-radius: 28px;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  box-shadow:
+    0 10px 40px -15px rgba(0, 0, 0, 0.1),
+    0 30px 80px -25px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+
+/* Left Vertical Navigation Menu (Like Login11) */
+.about-lab-nav {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 250px;
+  padding: 24px 16px;
+  border-right: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  background: color-mix(in srgb, var(--color-background) 60%, var(--color-card));
+  flex-shrink: 0;
+}
+
+.about-lab-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 100%;
+  text-align: left;
+}
+
+.about-lab-nav-item:hover:not(.active) {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-primary) 6%, transparent);
+}
+
+.about-lab-nav-item.active {
+  color: #ffffff;
+  background: var(--color-primary);
+  font-weight: 600;
+  box-shadow: 0 4px 18px rgba(99, 102, 241, 0.35);
+}
+
+.about-lab-nav-item.active svg {
+  color: #ffffff;
+}
+
+/* Center Hero Visual (Like Login11 Hero) */
+.about-lab-hero {
+  position: relative;
+  flex: 0 0 280px;
+  margin: -16px 0;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow:
+    0 20px 40px -10px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+  z-index: 10;
+}
+
+.about-lab-hero-bg {
+  position: absolute;
+  inset: 0;
+  background-image: url("/images/auth-hero.jpg");
+  background-position: center;
+  background-size: cover;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.about-lab-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(15, 23, 42, 0.35) 0%,
+    rgba(15, 23, 42, 0.75) 50%,
+    rgba(15, 23, 42, 0.96) 100%
+  );
+  z-index: 1;
+}
+
+/* Right Interactive Playground Area */
+.about-lab-preview {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 32px 36px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow-y: auto;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Soundwave Bars for Chapter Audio Player Feature
+   ───────────────────────────────────────────────────────────── */
+.sound-bar {
+  width: 3.5px;
+  border-radius: 9999px;
+  background: var(--color-primary);
+  animation: soundBarBounce 1.4s ease-in-out infinite alternate;
+}
+
+.sound-bar:nth-child(1) { animation-delay: 0.1s; height: 10px; }
+.sound-bar:nth-child(2) { animation-delay: 0.3s; height: 18px; }
+.sound-bar:nth-child(3) { animation-delay: 0.15s; height: 24px; }
+.sound-bar:nth-child(4) { animation-delay: 0.4s; height: 14px; }
+.sound-bar:nth-child(5) { animation-delay: 0.25s; height: 22px; }
+.sound-bar:nth-child(6) { animation-delay: 0.05s; height: 12px; }
+
+@keyframes soundBarBounce {
+  0% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1.1); }
+  100% { transform: scaleY(0.4); }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Floating Orbs & Parallax Lights
+   ───────────────────────────────────────────────────────────── */
+@keyframes floatGentle {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-12px) rotate(1.5deg);
+  }
+}
+
+.about-floating-element {
+  animation: floatGentle 6s ease-in-out infinite;
+}
+
+.about-floating-delayed {
+  animation: floatGentle 7.5s ease-in-out infinite 1.5s;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Responsive Design for Mobile & Tablets
+   ───────────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .about-lab-container {
+    flex-direction: column;
+    min-height: auto;
+  }
+
+  .about-lab-nav {
+    width: 100%;
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 16px;
+    gap: 8px;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .about-lab-nav-item {
+    width: auto;
+    white-space: nowrap;
+    padding: 10px 16px;
+    flex-shrink: 0;
+  }
+
+  .about-lab-hero {
+    display: none;
+  }
+
+  .about-lab-preview {
+    padding: 24px 20px;
+  }
+}
+
+@media (max-width: 640px) {
+  .about-lab-nav-item {
+    font-size: 12px;
+    padding: 8px 12px;
+    gap: 8px;
+  }
+}

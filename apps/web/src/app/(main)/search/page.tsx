@@ -12,7 +12,7 @@ import {
 import { Typography, Button, StoryCard, AuthorCard } from '@readixon/ui';
 import {
   searchStories, searchUsers, POPULAR_TAGS, generateStorySlug,
-  followUser, unfollowUser, useAuthStore, type Story, type User
+  followUser, unfollowUser, toggleStoryLike, useAuthStore, type Story, type User
 } from '@readixon/core';
 import { toast } from "sonner";
 
@@ -72,8 +72,26 @@ function SearchContent() {
   const [hasSearched, setHasSearched] = useState(false);
   const [searchType, setSearchType] = useState<'stories' | 'users'>('stories');
   const [isCategoriesExpanded, setIsCategoriesExpanded] = useState(false);
+  const { firebaseUser, userProfile, followingIds, toggleFollowingId } = useAuthStore();
 
-  const { firebaseUser, followingIds, toggleFollowingId } = useAuthStore();
+  const handleLikePress = async (e: React.MouseEvent, storyId: string) => {
+    e.stopPropagation();
+    if (!firebaseUser) {
+      router.push('/login');
+      return;
+    }
+    try {
+      const nowLiked = await toggleStoryLike(storyId, firebaseUser.uid);
+      const likeDelta = nowLiked ? 1 : -1;
+      setResults(prev => prev.map(s =>
+        s.storyId === storyId
+          ? { ...s, stats: { ...s.stats, likes: Math.max(0, (s.stats?.likes || 0) + likeDelta) } }
+          : s
+      ));
+    } catch (error) {
+      console.error("Beğeni hatası:", error);
+    }
+  };
 
   // URL parametresi değiştiğinde etiketi senkronize et
   useEffect(() => {
@@ -265,23 +283,29 @@ function SearchContent() {
             </button>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(140px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3.5 sm:gap-4 md:gap-5">
             {results.map((story) => (
-              <StoryCard
-                key={story.storyId}
-                title={story.title}
-                authorName={story.authorName || `Yazar: ${story.authorId.substring(0, 6)}`}
-                authorUsername={story.authorUsername}
-                coverImage={story.coverImage}
-                views={story.stats?.views || 0}
-                likes={story.stats?.likes || 0}
-                tags={story.tags || []}
-                isWebtoon={story.format === 'webtoon'}
-                onPress={() => {
-                  const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
-                  router.push(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
-                }}
-              />
+              <div key={story.storyId} className="w-full min-w-0 max-w-full transition-transform duration-300 hover:-translate-y-1.5">
+                <StoryCard
+                  title={story.title}
+                  authorName={story.authorName || `Yazar: ${story.authorId.substring(0, 6)}`}
+                  authorUsername={story.authorUsername}
+                  authorAvatarUrl={story.authorAvatarUrl}
+                  coverImage={story.coverImage}
+                  views={story.stats?.views || 0}
+                  likes={story.stats?.likes || 0}
+                  tags={story.tags || []}
+                  isLiked={!!userProfile?.likedStoryIds?.includes(story.storyId)}
+                  isWebtoon={story.format === 'webtoon'}
+                  status={story.status}
+                  chapterCount={story.stats?.chapterCount}
+                  onPress={() => {
+                    const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
+                    router.push(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
+                  }}
+                  onLikePress={(e) => handleLikePress(e, story.storyId)}
+                />
+              </div>
             ))}
           </div>
         </div>
@@ -303,7 +327,7 @@ function SearchContent() {
           </button>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(170px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4 md:gap-5">
           {userResults.map((author) => (
             <div key={author.uid} className="w-full transition-transform duration-300 hover:-translate-y-1">
               <AuthorCard
