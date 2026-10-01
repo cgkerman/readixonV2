@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { AuthorCard } from '@readixon/ui';
 import { toast } from "sonner";
+import { AppDownloadBanner } from '@/components/AppDownloadBanner';
 
 // Tür ikonları eşleştirmesi (Tüm kategoriler için özel ikonlar)
 const TAG_ICONS: Record<string, React.ElementType> = {
@@ -1069,6 +1070,9 @@ export default function FeedPage() {
               onLikePress={handleLikePress}
             />
           )}
+
+          {/* 7. Readixon Mobil Uygulama İndirme Bölümü */}
+          <AppDownloadBanner />
 
         </div>
     </div>

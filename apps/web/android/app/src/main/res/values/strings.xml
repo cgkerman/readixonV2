@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Readixon</string>
+    <string name="title_activity_main">Readixon</string>
+    <string name="package_name">com.readixon.app</string>
+    <string name="custom_url_scheme">com.readixon.app</string>
+</resources>
