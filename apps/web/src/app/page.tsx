@@ -8,6 +8,7 @@ import { Typography, Button } from "@readixon/ui";
 import { motion } from "framer-motion";
 import { useAuthStore } from "@readixon/core";
 import { Sparkles, Users, BookOpen, TrendingUp, MessageCircle, Feather, Compass } from "lucide-react";
+import { MobileAppOnboarding } from "@/components/MobileAppOnboarding";
 
 export default function Home() {
   const router = useRouter();
@@ -38,10 +39,15 @@ export default function Home() {
   }
 
   return (
-    <div
-      className="flex min-h-screen w-full bg-background flex-col md:flex-row overflow-hidden"
-      onMouseMove={handleMouseMove}
-    >
+    <>
+      {/* ── Mobil / Uygulama Özel Karşılama Ekranı ── */}
+      <MobileAppOnboarding />
+
+      {/* ── Masaüstü Web Karşılama Ekranı ── */}
+      <div
+        className="hidden md:flex min-h-screen w-full bg-background flex-col md:flex-row overflow-hidden"
+        onMouseMove={handleMouseMove}
+      >
       {/* Sol Taraf - İçerik ve Aksiyon */}
       <motion.div 
         initial={{ opacity: 0, x: -20 }}
@@ -291,8 +297,8 @@ export default function Home() {
             </motion.div>
           </motion.div>
         </div>
-
       </div>
     </div>
-  );
+  </>
+);
 }

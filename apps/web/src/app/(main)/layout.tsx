@@ -8,6 +8,9 @@ import { Typography, Button } from '@readixon/ui';
 import { useAuthStore, signOut, becomeAuthor, sendVerificationEmail, subscribeToChats } from '@readixon/core';
 import { toast } from "sonner";
 import GlobalSitePopup from '@/components/GlobalSitePopup';
+import { MobileAppHeader } from '@/components/navigation/MobileAppHeader';
+import { MobileAppBottomNav } from '@/components/navigation/MobileAppBottomNav';
+import { MobileAppDrawer } from '@/components/navigation/MobileAppDrawer';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -365,71 +368,19 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       <main className="flex-1 flex flex-col overflow-y-auto relative">
         <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none -z-10" />
 
-        {/* ── Mobile Top Header ── */}
-        <div className="xl:hidden sticky top-0 z-40 flex items-center justify-between p-4 bg-background/80 backdrop-blur-md border-b border-border/50 shrink-0">
-          <Typography variant="h3" className="font-bold text-primary tracking-tighter">readixon</Typography>
-          <div className="flex items-center gap-5">
-            <Link href="/messages" className="relative">
-              <MessageCircle size={24} className={pathname.startsWith('/messages') ? 'text-primary' : 'text-muted'} />
-              {unreadMessageCount > 0 && (
-                <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full absolute -top-1 -right-1 border-2 border-background">
-                  {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
-                </span>
-              )}
-            </Link>
-            <Link href="/notifications" className="relative">
-              <Bell size={24} className={pathname === '/notifications' ? 'text-primary' : 'text-muted'} />
-              {unreadNotificationCount > 0 && (
-                <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full absolute -top-1 -right-1 border-2 border-background">
-                  {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
-                </span>
-              )}
-            </Link>
-            <button onClick={() => setIsMobileMenuOpen(true)} className="text-muted hover:text-text transition-colors">
-              <Menu size={28} />
-            </button>
-          </div>
+        {/* ── Modern Mobile App Header ── */}
+        <div className="xl:hidden">
+          <MobileAppHeader
+            unreadMessageCount={unreadMessageCount}
+            onOpenMenu={() => setIsMobileMenuOpen(true)}
+          />
         </div>
 
         {children}
       </main>
 
-      {/* ── Bottom Nav (Mobile) ── */}
-      {!(pathname.startsWith('/messages/') && pathname.split('/').length > 2) && (
-        <div className="xl:hidden fixed bottom-0 left-0 right-0 h-16 bg-card/90 backdrop-blur-xl border-t border-border/50 flex items-center justify-around px-2 z-50 pb-safe">
-          {topNavItems.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link key={item.href} href={item.href} className="flex flex-col items-center justify-center w-12 sm:w-16 h-full relative">
-                <item.icon size={22} className={isActive ? 'text-primary' : 'text-muted'} />
-                {item.badge ? (
-                  <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full absolute top-2 right-2 border-2 border-background translate-x-1 -translate-y-1">
-                    {item.badge > 99 ? '99+' : item.badge}
-                  </span>
-                ) : null}
-                {isActive && <div className="w-1 h-1 rounded-full bg-primary mt-1 absolute bottom-1" />}
-              </Link>
-            );
-          })}
-          {/* Profil Linki (En sağda) */}
-          <Link href="/profile" className="flex flex-col items-center justify-center w-14 h-full">
-            <div className="w-6 h-6 rounded-full bg-primary/20 border border-primary/50 flex items-center justify-center overflow-hidden relative">
-              <span className="text-[10px] font-bold text-primary uppercase select-none">
-                {userProfile?.displayName?.charAt(0) || 'U'}
-              </span>
-              {userProfile?.avatarUrl && (
-                <img 
-                  src={userProfile.avatarUrl} 
-                  alt="Avatar" 
-                  className="absolute inset-0 w-full h-full object-cover" 
-                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                />
-              )}
-            </div>
-            {pathname === '/profile' && <div className="w-1 h-1 rounded-full bg-primary mt-1" />}
-          </Link>
-        </div>
-      )}
+      {/* ── Modern Mobile App Bottom Floating Dock ── */}
+      <MobileAppBottomNav />
 
       {/* ── Email Verification Modal ── */}
       {isVerifyModalOpen && (
@@ -486,119 +437,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         </div>
       )}
 
-      {/* ── Mobile Slide-out Drawer ── */}
-      {isMobileMenuOpen && (
-        <div className="xl:hidden fixed inset-0 z-[100] flex justify-end">
-          <div className="absolute inset-0 bg-background/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsMobileMenuOpen(false)} />
-          <div className="relative w-[80%] max-w-sm h-[100dvh] bg-card shadow-2xl flex flex-col border-l border-border/50 animate-in slide-in-from-right duration-300">
-            <div className="flex items-center justify-between p-4 border-b border-border/50 shrink-0">
-              <Typography variant="h3" className="font-bold text-primary tracking-tighter">readixon</Typography>
-              <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-muted/10 rounded-full text-muted hover:text-text transition-colors">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2 pb-safe">
-              {firebaseUser ? (
-                <Link href="/profile" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20 mb-4 shrink-0">
-                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden border border-transparent relative">
-                    <span className="text-xl font-bold text-primary uppercase select-none">
-                      {userProfile?.displayName?.charAt(0) || 'U'}
-                    </span>
-                    {userProfile?.avatarUrl && (
-                      <img 
-                        src={userProfile.avatarUrl} 
-                        alt="Avatar" 
-                        className="absolute inset-0 w-full h-full object-cover" 
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                      />
-                    )}
-                  </div>
-                  <div className="flex-1 overflow-hidden">
-                    <Typography variant="body" className="font-bold truncate text-text">
-                      {userProfile?.displayName || 'Yükleniyor...'}
-                    </Typography>
-                    <Typography variant="caption" className="text-muted truncate block mt-0.5">
-                      {userProfile?.username ? `@${userProfile.username}` : `@${userProfile?.uid?.substring(0, 6)}`}
-                    </Typography>
-                    <div className="flex items-center gap-1 mt-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                      <Typography variant="caption" className="text-amber-500 font-bold text-[11px]">
-                        {userProfile?.rxPoints || 0} RX
-                      </Typography>
-                    </div>
-                  </div>
-                </Link>
-              ) : (
-                <div className="flex flex-col items-center gap-3 p-4 rounded-xl bg-card border border-border/50 mb-4 shrink-0">
-                  <div className="w-12 h-12 rounded-full bg-muted/10 flex items-center justify-center overflow-hidden border border-border/50">
-                    <User size={24} className="text-muted" />
-                  </div>
-                  <div className="text-center mb-1">
-                    <Typography variant="body" className="font-bold text-text">Misafir Kullanıcı</Typography>
-                    <Typography variant="caption" className="text-muted block mt-0.5 text-xs">Platformun tüm özelliklerini kullanmak için giriş yapın.</Typography>
-                  </div>
-                  <Link href="/login" onClick={() => setIsMobileMenuOpen(false)} className="w-full block">
-                    <Button variant="primary" className="w-full h-10">Giriş Yap</Button>
-                  </Link>
-                </div>
-              )}
-
-              {bottomNavItems.filter(item => ['/library', '/about', '/settings'].includes(item.href)).map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className={`flex items-center gap-4 px-4 py-4 rounded-xl transition-colors shrink-0 ${pathname === item.href ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-muted/10 hover:text-text'
-                    }`}
-                >
-                  <item.icon size={22} />
-                  <Typography variant="body" className="font-medium text-lg flex-1">{item.name}</Typography>
-                </Link>
-              ))}
-
-              <div className="mt-8 mb-4 shrink-0">
-                <div className="h-px w-full bg-border/50 mb-4" />
-                {userProfile?.status !== 'pro' && (
-                  <Link href="/premium" onClick={() => setIsMobileMenuOpen(false)}>
-                    <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 text-primary shadow-sm hover:bg-primary/20 transition-all mb-4 group">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Crown size={20} className="text-primary group-hover:scale-110 transition-transform" />
-                        <Typography variant="body" className="font-bold text-base">
-                          {userProfile?.status === 'premium' ? 'Pro\'ya Yükselt' : 'Premium Ol'}
-                        </Typography>
-                      </div>
-                      <Typography variant="caption" className="text-primary/70 text-sm">
-                        {userProfile?.status === 'premium' ? 'Sınırsız yaratıcılığa adım at' : 'Okuma deneyimini zirveye taşı'}
-                      </Typography>
-                    </div>
-                  </Link>
-                )}
-                {userProfile?.isAuthor ? (
-                  <Link href="/studio" onClick={() => setIsMobileMenuOpen(false)}>
-                    <Button variant="outline" className="w-full justify-start border-primary/20 text-primary hover:bg-primary/10 py-6">
-                      <PenTool size={20} className="mr-3" /> <span className="text-lg">Studio'ya Git</span>
-                    </Button>
-                  </Link>
-                ) : (
-                  <Button variant="outline" className="w-full justify-start border-primary/20 text-primary hover:bg-primary/10 py-6" onPress={() => { setIsMobileMenuOpen(false); handleBecomeAuthor(); }}>
-                    <PenTool size={20} className="mr-3" /> <span className="text-lg">Yazar Ol</span>
-                  </Button>
-                )}
-                {userProfile?.isAdmin && (
-                  <Link href="/admin" onClick={() => setIsMobileMenuOpen(false)}>
-                    <Button variant="outline" className="w-full justify-start border-primary/20 text-primary hover:bg-primary/10 py-6 mb-2">
-                      <ShieldAlert size={20} className="mr-3" /> <span className="text-lg">Yönetim Paneli</span>
-                    </Button>
-                  </Link>
-                )}
-              </div>
-              <Button variant="ghost" className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-950/30 py-6 shrink-0" onPress={() => { setIsMobileMenuOpen(false); handleSignOut(); }}>
-                <LogOut size={20} className="mr-3" /> <span className="text-lg">Çıkış Yap</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── Modern Mobile App Interactive Drawer ── */}
+      <MobileAppDrawer
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        onBecomeAuthor={handleBecomeAuthor}
+      />
 
       {/* ── Kullanıcılar için Tek Seferlik Açılış Pop-up'ı ── */}
       <GlobalSitePopup />
