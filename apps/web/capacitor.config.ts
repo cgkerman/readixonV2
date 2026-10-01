@@ -5,10 +5,17 @@ const config: CapacitorConfig = {
   appName: 'Readixon',
   webDir: 'public', // Next.js SSR / live URL için public klasörü veya out
   server: {
-    // Canlı web sitenizin adresi (Capacitor Next.js SSR sayfalarınızı ve API'larınızı doğrudan buradan çeker)
-    // Yerel testlerde 'http://10.0.2.2:3000' (Android emulator) veya LAN IP'nizi kullanabilirsiniz.
-    url: process.env.CAPACITOR_SERVER_URL || 'https://readixon.com',
+    url: 'https://readixon.com',
     cleartext: true,
+    androidScheme: 'https',
+    allowNavigation: [
+      'readixon.com',
+      '*.readixon.com',
+      'www.readixon.com',
+      '*.firebaseapp.com',
+      '*.googleapis.com',
+      'accounts.google.com'
+    ]
   },
   android: {
     allowMixedContent: true,
