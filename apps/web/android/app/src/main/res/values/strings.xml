@@ -4,4 +4,5 @@
     <string name="title_activity_main">Readixon</string>
     <string name="package_name">com.readixon.app</string>
     <string name="custom_url_scheme">com.readixon.app</string>
+    <string name="server_client_id">812011581796-qrc8cjbt5ob0rg89vask9tto9ptjdvlv.apps.googleusercontent.com</string>
 </resources>

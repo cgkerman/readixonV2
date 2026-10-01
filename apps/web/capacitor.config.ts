@@ -22,7 +22,11 @@ const config: CapacitorConfig = {
     backgroundColor: '#0a0a0c',
   },
   plugins: {
-    // Gelecekte eklenecek push notification veya splash screen ayarları buraya gelecektir
+    GoogleAuth: {
+      scopes: ['profile', 'email'],
+      serverClientId: '812011581796-qrc8cjbt5ob0rg89vask9tto9ptjdvlv.apps.googleusercontent.com',
+      forceCodeForRefreshToken: true,
+    }
   }
 };
 

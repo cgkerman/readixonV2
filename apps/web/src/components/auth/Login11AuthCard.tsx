@@ -23,6 +23,7 @@ import {
   signInWithEmail,
   signUpWithEmail,
   signInWithGoogleWeb,
+  signInWithGoogleCredential,
   getAuthErrorMessage,
   useAuthStore,
   getUserByUsername,
@@ -201,7 +202,39 @@ export default function Login11AuthCard({ initialView = 'signin' }: Login11AuthC
     isAuthenticatingRef.current = true;
 
     try {
-      const { user, isNewUser } = await signInWithGoogleWeb();
+      let user: any;
+      let isNewUser = false;
+
+      // Native Capacitor uygulamasında ise:
+      const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform();
+
+      if (isNative) {
+        const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
+        try {
+          await GoogleAuth.initialize({
+            clientId: '812011581796-qrc8cjbt5ob0rg89vask9tto9ptjdvlv.apps.googleusercontent.com',
+            scopes: ['profile', 'email'],
+            grantOfflineAccess: true,
+          });
+        } catch {
+          // Initialize might have already run
+        }
+
+        const googleUser = await GoogleAuth.signIn();
+        const idToken = googleUser.authentication?.idToken;
+        if (!idToken) {
+          throw new Error('Google kimlik doğrulaması tamamlanamadı.');
+        }
+
+        const result = await signInWithGoogleCredential(idToken, true);
+        user = result.user;
+        isNewUser = result.isNewUser;
+      } else {
+        // Normal web tarayıcısında popup ile devam et:
+        const result = await signInWithGoogleWeb();
+        user = result.user;
+        isNewUser = result.isNewUser;
+      }
 
       const fallbackName = user.displayName || 'Okur';
       setWelcomeState({ name: fallbackName, isNew: isNewUser });
@@ -221,7 +254,7 @@ export default function Login11AuthCard({ initialView = 'signin' }: Login11AuthC
       }, 3000);
     } catch (err: any) {
       isAuthenticatingRef.current = false;
-      const msg = getAuthErrorMessage(err.code || '');
+      const msg = err.code ? getAuthErrorMessage(err.code) : (err.message || 'Google ile giriş başarısız oldu.');
       setLoginError(msg);
       setRegError(msg);
       setLoginLoading(false);
