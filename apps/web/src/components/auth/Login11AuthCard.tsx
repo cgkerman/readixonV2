@@ -209,19 +209,17 @@ export default function Login11AuthCard({ initialView = 'signin' }: Login11AuthC
       const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform();
 
       if (isNative) {
-        const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
+        const { GoogleSignIn } = await import('@capawesome/capacitor-google-sign-in');
         try {
-          await GoogleAuth.initialize({
+          await GoogleSignIn.initialize({
             clientId: '812011581796-qrc8cjbt5ob0rg89vask9tto9ptjdvlv.apps.googleusercontent.com',
-            scopes: ['profile', 'email'],
-            grantOfflineAccess: true,
           });
         } catch {
           // Initialize might have already run
         }
 
-        const googleUser = await GoogleAuth.signIn();
-        const idToken = googleUser.authentication?.idToken;
+        const res = await GoogleSignIn.signIn();
+        const idToken = res.idToken;
         if (!idToken) {
           throw new Error('Google kimlik doğrulaması tamamlanamadı.');
         }
