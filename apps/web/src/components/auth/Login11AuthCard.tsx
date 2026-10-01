@@ -259,7 +259,27 @@ export default function Login11AuthCard({ initialView = 'signin' }: Login11AuthC
     } catch (err: any) {
       console.error('[Auth] Google Auth Error:', err);
       isAuthenticatingRef.current = false;
-      const msg = err.code ? getAuthErrorMessage(err.code) : (err.message || 'Google ile giriş başarısız oldu.');
+
+      let msg = '';
+      const code = String(err?.code || '');
+      const rawMsg = String(err?.message || '');
+
+      if (code === 'SIGN_IN_CANCELED') {
+        if (rawMsg && !rawMsg.toLowerCase().includes('cancel')) {
+          msg = `Yetkilendirme hatası: ${rawMsg}`;
+        } else {
+          msg = 'Google girişi iptal edildi.';
+        }
+      } else if (code.startsWith('auth/')) {
+        msg = getAuthErrorMessage(code);
+      } else if (rawMsg) {
+        msg = rawMsg;
+      } else if (code) {
+        msg = `Hata kodu: ${code}`;
+      } else {
+        msg = 'Google ile giriş başarısız oldu. Lütfen tekrar deneyin.';
+      }
+
       setLoginError(msg);
       setRegError(msg);
       setLoginLoading(false);
