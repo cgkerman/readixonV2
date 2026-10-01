@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Readixon',
   webDir: 'public', // Next.js SSR / live URL için public klasörü veya out
   server: {
-    url: 'https://readixon.com',
+    url: 'https://www.readixon.com',
     cleartext: true,
     androidScheme: 'https',
     allowNavigation: [

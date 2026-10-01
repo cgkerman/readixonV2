@@ -29,6 +29,7 @@ import {
   getUserByUsername,
   getUserProfile
 } from '@readixon/core';
+import { Capacitor } from '@capacitor/core';
 import './Login11AuthCard.css';
 
 interface Login11AuthCardProps {
@@ -205,8 +206,13 @@ export default function Login11AuthCard({ initialView = 'signin' }: Login11AuthC
       let user: any;
       let isNewUser = false;
 
-      // Native Capacitor uygulamasında ise:
-      const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform();
+      // Native Capacitor uygulamasında ise (Capacitor veya Android/iOS bridge aktif):
+      const isNative = typeof window !== 'undefined' && (
+        Capacitor.isNativePlatform() ||
+        Boolean((window as any).androidBridge) ||
+        Boolean((window as any).webkit?.messageHandlers?.bridge) ||
+        Boolean((window as any).Capacitor?.isNativePlatform?.())
+      );
 
       if (isNative) {
         const { GoogleSignIn } = await import('@capawesome/capacitor-google-sign-in');
@@ -214,14 +220,14 @@ export default function Login11AuthCard({ initialView = 'signin' }: Login11AuthC
           await GoogleSignIn.initialize({
             clientId: '812011581796-qrc8cjbt5ob0rg89vask9tto9ptjdvlv.apps.googleusercontent.com',
           });
-        } catch {
-          // Initialize might have already run
+        } catch (initErr) {
+          console.warn('[Auth] GoogleSignIn initialize:', initErr);
         }
 
         const res = await GoogleSignIn.signIn();
         const idToken = res.idToken;
         if (!idToken) {
-          throw new Error('Google kimlik doğrulaması tamamlanamadı.');
+          throw new Error('Google kimlik doğrulaması tamamlanamadı (ID Token bulunamadı).');
         }
 
         const result = await signInWithGoogleCredential(idToken, true);
@@ -251,6 +257,7 @@ export default function Login11AuthCard({ initialView = 'signin' }: Login11AuthC
         router.push('/feed');
       }, 3000);
     } catch (err: any) {
+      console.error('[Auth] Google Auth Error:', err);
       isAuthenticatingRef.current = false;
       const msg = err.code ? getAuthErrorMessage(err.code) : (err.message || 'Google ile giriş başarısız oldu.');
       setLoginError(msg);
