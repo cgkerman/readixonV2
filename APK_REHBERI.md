@@ -60,4 +60,14 @@ Bu rehber, Capacitor ile hazırladığımız Android projesinden doğrudan telef
 ---
 
 ### 🔄 Web Sitenizde Değişiklik Yaptığınızda Ne Olur?
-`capacitor.config.ts` dosyamız canlı domaininizi (`https://readixon.com`) çekecek şekilde yapılandırılmıştır. Dolayısıyla web sitenize eklediğiniz yeni bölümler, webtoonlar veya tasarımlar **uygulamayı tekrar derlemeye gerek kalmadan** tüm kullanıcılarda anında güncellenir!
+`capacitor.config.ts` dosyamız canlı domaininizi (`https://www.readixon.com`) çekecek şekilde yapılandırılmıştır. Dolayısıyla web sitenize eklediğiniz yeni bölümler, webtoonlar veya tasarımlar **uygulamayı tekrar derlemeye gerek kalmadan** tüm kullanıcılarda anında güncellenir!
+
+---
+
+### 🔐 Google ile Giriş & Parmak İzi Bilgileri
+Uygulama yerel Google Kimlik Doğrulama (`@capawesome/capacitor-google-sign-in`) kullanır.
+- **Paket Adı:** `com.readixon.app`
+- **Web Client ID:** `812011581796-qrc8cjbt5ob0rg89vask9tto9ptjdvlv.apps.googleusercontent.com`
+- **Debug SHA-1:** `FA:D2:E9:F4:7C:22:29:B5:57:E0:41:4D:ED:FD:2B:E6:FF:AB:7B:52`
+- **Debug SHA-256:** `C1:2D:0B:1D:0E:26:60:36:15:B8:B7:04:82:BE:92:FF:07:FC:4D:E0:96:45:6D:8A:9C:E8:6A:43:87:AD:BB:71`
+- **MainActivity Kaydı:** `MainActivity.java` içinde `registerPlugin(GoogleSignInPlugin.class)` kayıtlıdır.

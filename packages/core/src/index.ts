@@ -114,7 +114,7 @@ export {
 
 // Store (Zustand)
 export { useReaderStore, setReaderStorageEngine } from './store/useReaderStore';
-export type { ReaderState } from './store/useReaderStore';
+export type { ReaderState, ReaderTheme, ReaderFontFamily, ReaderLineHeight, ReaderTextAlign, ReaderPaddingX } from './store/useReaderStore';
 
 // Story Servisi
 
@@ -145,7 +145,7 @@ export * from './utils/sanitize';
 
 // Auth Store & Hooks
 export { useAuthStore } from './store/useAuthStore';
-export { useThemeStore } from './store/useThemeStore';
+export { useThemeStore, isDarkTheme } from './store/useThemeStore';
 export type { Theme } from './store/useThemeStore';
 export { useAuthListener } from './hooks/useAuthListener';
 export { useUserProfile } from './hooks/useUserProfile';

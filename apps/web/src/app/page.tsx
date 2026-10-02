@@ -5,15 +5,25 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Typography, Button } from "@readixon/ui";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "@readixon/core";
 import { Sparkles, Users, BookOpen, TrendingUp, MessageCircle, Feather, Compass } from "lucide-react";
 import { MobileAppOnboarding } from "@/components/MobileAppOnboarding";
+import { BrandSplashScreen } from "@/components/BrandSplashScreen";
 
 export default function Home() {
   const router = useRouter();
   const { firebaseUser, isInitialized, userProfile } = useAuthStore();
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [minSplashElapsed, setMinSplashElapsed] = useState(false);
+
+  // Mobil ve masaüstü açılışta önce marka logosunu zarifçe göstermek için altın oran splash süresi (1.2s)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMinSplashElapsed(true);
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Giriş yapmış kullanıcıları gereksiz karşılama sayfası göstermeden doğrudan feed'e yönlendir
   useEffect(() => {
@@ -30,11 +40,14 @@ export default function Home() {
     setMousePos({ x, y });
   };
 
-  if (!isInitialized || (isInitialized && firebaseUser)) {
+  const isReady = isInitialized && minSplashElapsed;
+
+  // Başlangıçta veya yönlendirme esnasında loading bar yerine zarif logo splash ekranı
+  if (!isReady || (isInitialized && firebaseUser)) {
     return (
-      <div className="flex min-h-screen bg-background items-center justify-center">
-        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
+      <AnimatePresence mode="wait">
+        <BrandSplashScreen />
+      </AnimatePresence>
     );
   }
 
@@ -45,7 +58,8 @@ export default function Home() {
 
       {/* ── Masaüstü Web Karşılama Ekranı ── */}
       <div
-        className="hidden md:flex min-h-screen w-full bg-background flex-col md:flex-row overflow-hidden"
+        data-theme="light"
+        className="light hidden md:flex min-h-screen w-full bg-background flex-col md:flex-row overflow-hidden"
         onMouseMove={handleMouseMove}
       >
       {/* Sol Taraf - İçerik ve Aksiyon */}
@@ -183,7 +197,7 @@ export default function Home() {
       </motion.div>
 
       {/* Sağ Taraf - Görsel Alan */}
-      <div className="hidden md:flex w-full md:w-1/2 shrink-0 relative items-center justify-center bg-gradient-to-br from-purple-50/50 to-indigo-50/50 dark:from-purple-950/20 dark:to-indigo-950/20 overflow-hidden">
+      <div className="hidden md:flex w-full md:w-1/2 shrink-0 relative items-center justify-center bg-gradient-to-br from-purple-50/50 to-indigo-50/50 overflow-hidden">
 
         {/* Orta Kısım Geçiş Efekti (Keskinliği Yumuşatmak İçin) */}
         <motion.div 
@@ -203,7 +217,7 @@ export default function Home() {
 
         {/* Yorum / Etkileşim İkonu */}
         <div
-          className="absolute top-[20%] left-[20%] text-primary/20 dark:text-primary/30 transition-transform duration-75 pointer-events-none"
+          className="absolute top-[20%] left-[20%] text-primary/20 transition-transform duration-75 pointer-events-none"
           style={{ transform: `translate(${mousePos.x * 20}px, ${mousePos.y * 20}px) rotate(-12deg)` }}
         >
           <MessageCircle size={80} strokeWidth={1} />
@@ -211,7 +225,7 @@ export default function Home() {
 
         {/* Yazarlık İkonu */}
         <div
-          className="absolute bottom-[25%] right-[15%] text-purple-500/20 dark:text-purple-500/30 transition-transform duration-75 pointer-events-none"
+          className="absolute bottom-[25%] right-[15%] text-purple-500/20 transition-transform duration-75 pointer-events-none"
           style={{ transform: `translate(${mousePos.x * -15}px, ${mousePos.y * -15}px) rotate(15deg)` }}
         >
           <Feather size={100} strokeWidth={1} />
@@ -219,7 +233,7 @@ export default function Home() {
 
         {/* Minik Readix (Mikro Blog) Kartı Temsili */}
         <div
-          className="absolute top-[45%] left-[10%] w-48 p-4 rounded-2xl bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 backdrop-blur-md shadow-xl transition-transform duration-75 pointer-events-none"
+          className="absolute top-[45%] left-[10%] w-48 p-4 rounded-2xl bg-white/40 border border-white/60 backdrop-blur-md shadow-xl transition-transform duration-75 pointer-events-none"
           style={{ transform: `translate(${mousePos.x * 15}px, ${mousePos.y * -25}px) rotate(-5deg)` }}
         >
           <div className="flex gap-3 items-center mb-3">
@@ -230,15 +244,15 @@ export default function Home() {
             </div>
           </div>
           <div className="space-y-1.5">
-            <div className="h-2 w-full bg-slate-300/50 dark:bg-slate-700/50 rounded-full" />
-            <div className="h-2 w-5/6 bg-slate-300/50 dark:bg-slate-700/50 rounded-full" />
-            <div className="h-2 w-4/6 bg-slate-300/50 dark:bg-slate-700/50 rounded-full" />
+            <div className="h-2 w-full bg-slate-300/50 rounded-full" />
+            <div className="h-2 w-5/6 bg-slate-300/50 rounded-full" />
+            <div className="h-2 w-4/6 bg-slate-300/50 rounded-full" />
           </div>
         </div>
 
         {/* Başka Bir Ufak Kart */}
         <div
-          className="absolute top-[15%] right-[25%] w-32 p-3 rounded-2xl bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 backdrop-blur-md shadow-lg transition-transform duration-75 pointer-events-none"
+          className="absolute top-[15%] right-[25%] w-32 p-3 rounded-2xl bg-white/40 border border-white/60 backdrop-blur-md shadow-lg transition-transform duration-75 pointer-events-none"
           style={{ transform: `translate(${mousePos.x * -10}px, ${mousePos.y * 15}px) rotate(8deg)` }}
         >
           <div className="space-y-1.5">

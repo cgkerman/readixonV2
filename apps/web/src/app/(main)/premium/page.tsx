@@ -6,7 +6,7 @@ import PricingSection from './PricingSection';
 import RxPointsSection from './RxPointsSection';
 
 export const metadata: Metadata = {
-  title: 'Premium - Readixon',
+  title: 'Premium - Ayrıcalıklar & RX Puanları',
   description: 'Readixon Premium ile hikaye deneyiminizi en üst seviyeye taşıyın. Sınırsız özellikler ve ayrıcalıklar sizi bekliyor.',
 };
 

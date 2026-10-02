@@ -39,3 +39,9 @@ Thumbs.db
 .vscode
 *.swp
 *.swo
+
+# Android / Gradle / Kotlin
+.gradle/
+.kotlin/
+*.apk
+*.aab

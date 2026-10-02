@@ -3,13 +3,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { ContentBlock } from '@readixon/core/src/types';
 import { Typography } from './Typography';
-import { MessageSquare, Bookmark, Share2 } from 'lucide-react';
+import { MessageSquare, Bookmark, Share2, Sparkles, X } from 'lucide-react';
 import { sanitizeHtml } from '@readixon/core';
 
 export interface ContentRendererProps {
   blocks: ContentBlock[];
   fontSize?: number;
   fontFamily?: 'sans' | 'serif' | 'mono';
+  lineHeight?: 'tight' | 'normal' | 'relaxed';
+  textAlign?: 'left' | 'justify';
   textColor?: string;
   onParagraphCommentClick?: (paragraphIndex: number, text: string) => void;
   paragraphCommentCounts?: Record<number, number>;
@@ -22,6 +24,8 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
   blocks, 
   fontSize = 16, 
   fontFamily = 'sans',
+  lineHeight = 'normal',
+  textAlign = 'left',
   textColor, 
   onParagraphCommentClick, 
   paragraphCommentCounts = {},
@@ -101,6 +105,8 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
   };
 
   const fontClass = fontFamily === 'serif' ? 'font-serif' : fontFamily === 'mono' ? 'font-mono' : 'font-sans';
+  const computedLineHeight = lineHeight === 'tight' ? 1.45 : lineHeight === 'relaxed' ? 2.05 : 1.75;
+  const textAlignClass = textAlign === 'justify' ? 'text-justify [text-align-last:left] [hyphens:auto]' : 'text-left';
 
   return (
     <div className={`readixon-content flex flex-col relative ${isWebtoon ? 'gap-0' : 'gap-6'} ${fontClass}`} ref={containerRef}>
@@ -112,9 +118,10 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
         }
       ` }} />
       
+      {/* ── Masaüstü Yüzen Alıntı Menüsü ── */}
       {selection && (onQuoteSave || onQuoteShare) && (
         <div 
-          className="absolute z-50 flex items-center bg-card shadow-lg border border-border/50 rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-2"
+          className="absolute z-50 hidden sm:flex items-center bg-card shadow-xl border border-border rounded-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 select-none"
           style={{
             top: `${selection.top - (containerRef.current?.getBoundingClientRect().top || 0) - window.scrollY}px`,
             left: `${selection.left - (containerRef.current?.getBoundingClientRect().left || 0) - window.scrollX}px`,
@@ -124,19 +131,63 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
           {onQuoteSave && (
             <button 
               onClick={handleSave}
-              className="px-4 py-2 text-sm font-medium hover:bg-muted/10 transition-colors flex items-center gap-2 border-r border-border/50"
+              className="px-4 py-2 text-xs font-semibold hover:bg-muted/15 transition-colors flex items-center gap-1.5 border-r border-border text-foreground"
             >
-              <Bookmark size={16} className="text-primary" /> Kaydet
+              <Bookmark size={14} className="text-primary" /> Kaydet
             </button>
           )}
           {onQuoteShare && (
             <button 
               onClick={handleShare}
-              className="px-4 py-2 text-sm font-medium hover:bg-muted/10 transition-colors flex items-center gap-2"
+              className="px-4 py-2 text-xs font-semibold hover:bg-muted/15 transition-colors flex items-center gap-1.5 text-primary"
             >
-              <Share2 size={16} className="text-primary" /> Paylaş
+              <Share2 size={14} /> Paylaş
             </button>
           )}
+        </div>
+      )}
+
+      {/* ── Mobilde Altta Sabit Alıntı Kartı (Parmakla seçimi engellemez, ekran altına zarifçe yerleşir) ── */}
+      {selection && (onQuoteSave || onQuoteShare) && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-card/95 backdrop-blur-md border-t border-border shadow-2xl flex flex-col gap-2.5 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] animate-in slide-in-from-bottom duration-200 sm:hidden">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-bold text-primary flex items-center gap-1.5">
+              <Sparkles size={14} /> Seçilen Alıntı
+            </span>
+            <button
+              onClick={() => {
+                setSelection(null);
+                window.getSelection()?.removeAllRanges();
+              }}
+              className="w-6 h-6 rounded-full bg-muted/20 flex items-center justify-center text-muted hover:text-foreground"
+              aria-label="Kapat"
+            >
+              <X size={13} />
+            </button>
+          </div>
+          <p className="text-xs text-foreground/80 line-clamp-2 italic border-l-2 border-primary/50 pl-2 leading-relaxed">
+            &ldquo;{selection.text}&rdquo;
+          </p>
+          <div className="grid grid-cols-2 gap-2 pt-0.5">
+            {onQuoteSave && (
+              <button
+                onClick={handleSave}
+                className="py-2.5 px-3 rounded-xl bg-muted/20 hover:bg-muted/30 text-foreground font-semibold text-xs flex items-center justify-center gap-1.5 border border-border active:scale-95 transition-all shadow-sm"
+              >
+                <Bookmark size={14} className="text-primary" />
+                <span>Kütüphaneye Kaydet</span>
+              </button>
+            )}
+            {onQuoteShare && (
+              <button
+                onClick={handleShare}
+                className="py-2.5 px-3 rounded-xl bg-primary text-black font-bold text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
+              >
+                <Share2 size={14} />
+                <span>Readix'te Paylaş</span>
+              </button>
+            )}
+          </div>
         </div>
       )}
       
@@ -167,26 +218,32 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                     const commentCount = paragraphCommentCounts[currentIndex] || 0;
                     
                     return (
-                      <div key={currentIndex} className="relative group">
+                      <div key={currentIndex} className="relative group pr-9 sm:pr-0">
                         <Typography 
                           variant="body" 
+                          className={textAlignClass}
                           style={{ 
                             fontSize: `${fontSize}px`, 
-                            lineHeight: 1.6, 
+                            lineHeight: computedLineHeight, 
                             color: textColor
                           }}
                           dangerouslySetInnerHTML={{ __html: innerHtml }}
                         />
                         
                         {onParagraphCommentClick && (
-                          <div className="absolute top-0 -right-10 h-full flex items-start pt-1">
+                          <div className="absolute top-0 right-0 sm:-right-9 flex items-center">
                             <button 
+                              type="button"
                               onClick={() => onParagraphCommentClick(currentIndex, rawText)}
-                              className="p-1.5 rounded-full hover:bg-muted/50 text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 opacity-50 hover:opacity-100"
-                              title="Satır arası yorum yap"
+                              className={`transition-all flex items-center justify-center active:scale-90 ${
+                                commentCount > 0
+                                  ? 'h-7 px-2.5 rounded-full bg-primary/20 hover:bg-primary/30 text-primary border border-primary/40 shadow-sm gap-1.5 opacity-100'
+                                  : 'w-7 h-7 rounded-full bg-muted/25 hover:bg-primary/20 text-muted-foreground/80 hover:text-primary border border-border/50 opacity-45 sm:opacity-0 group-hover:opacity-100'
+                              }`}
+                              title="Satır arası yorum"
                             >
-                              <MessageSquare size={16} />
-                              {commentCount > 0 && <span className="text-[10px] font-semibold">{commentCount}</span>}
+                              <MessageSquare size={16} className={commentCount > 0 ? "fill-primary/30" : ""} />
+                              {commentCount > 0 && <span className="text-xs font-extrabold leading-none">{commentCount}</span>}
                             </button>
                           </div>
                         )}
@@ -201,26 +258,32 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
             const currentIndex = globalParagraphIndex++;
             const commentCount = paragraphCommentCounts[currentIndex] || 0;
             return (
-              <div key={blockIndex} className="relative group">
+              <div key={blockIndex} className="relative group pr-9 sm:pr-0">
                 <Typography 
                   variant="body" 
+                  className={textAlignClass}
                   style={{ 
                     fontSize: `${fontSize}px`, 
-                    lineHeight: 1.6, 
+                    lineHeight: computedLineHeight, 
                     color: textColor
                   }}
                   dangerouslySetInnerHTML={{ __html: htmlContent }}
                 />
                 
                 {onParagraphCommentClick && (
-                  <div className="absolute top-0 -right-10 h-full flex items-start pt-1">
+                  <div className="absolute top-0 right-0 sm:-right-9 flex items-center">
                     <button 
+                      type="button"
                       onClick={() => onParagraphCommentClick(currentIndex, block.text || '')}
-                      className="p-1.5 rounded-full hover:bg-muted/50 text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 opacity-50 hover:opacity-100"
-                      title="Satır arası yorum yap"
+                      className={`transition-all flex items-center justify-center active:scale-90 ${
+                        commentCount > 0
+                          ? 'h-7 px-2.5 rounded-full bg-primary/20 hover:bg-primary/30 text-primary border border-primary/40 shadow-sm gap-1.5 opacity-100'
+                          : 'w-7 h-7 rounded-full bg-muted/25 hover:bg-primary/20 text-muted-foreground/80 hover:text-primary border border-border/50 opacity-45 sm:opacity-0 group-hover:opacity-100'
+                      }`}
+                      title="Satır arası yorum"
                     >
-                      <MessageSquare size={16} />
-                      {commentCount > 0 && <span className="text-[10px] font-semibold">{commentCount}</span>}
+                      <MessageSquare size={16} className={commentCount > 0 ? "fill-primary/30" : ""} />
+                      {commentCount > 0 && <span className="text-xs font-extrabold leading-none">{commentCount}</span>}
                     </button>
                   </div>
                 )}

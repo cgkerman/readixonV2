@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Compass, BookOpen, Swords, User, GalleryVertical } from 'lucide-react';
+import { Compass, BookOpen, Hash, User, GalleryVertical } from 'lucide-react';
 import { useAuthStore } from '@readixon/core';
 
 export function MobileAppBottomNav() {
@@ -28,16 +28,16 @@ export function MobileAppBottomNav() {
       isActive: pathname.startsWith('/webtoons'),
     },
     {
+      label: 'Readix',
+      href: '/readix',
+      icon: Hash,
+      isActive: pathname.startsWith('/readix'),
+    },
+    {
       label: 'Kitaplık',
       href: '/library',
       icon: BookOpen,
       isActive: pathname === '/library',
-    },
-    {
-      label: 'Arena',
-      href: '/arena',
-      icon: Swords,
-      isActive: pathname.startsWith('/arena'),
     },
   ];
 

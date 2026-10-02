@@ -46,7 +46,7 @@ export { ContentRenderer } from './ContentRenderer';
 export type { ContentRendererProps } from './ContentRenderer';
 
 export { ReadingSettingsPanel } from './ReadingSettingsPanel';
-export type { ReadingSettingsPanelProps, ThemeType } from './ReadingSettingsPanel';
+export type { ReadingSettingsPanelProps, ThemeType, FontFamilyType, LineHeightType, TextAlignType, PaddingXType } from './ReadingSettingsPanel';
 
 export { BlockEditor } from './BlockEditor';
 export type { BlockEditorProps } from './BlockEditor';

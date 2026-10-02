@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Gündem | Readixon',
+  title: 'Edebi Gündem & Trendler',
   description: 'Günün sözü, popüler kitaplar, trend etiketler ve kültür sanat haberlerini takip edin.',
 };
 

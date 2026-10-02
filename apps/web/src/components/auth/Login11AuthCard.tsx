@@ -17,7 +17,8 @@ import {
   Loader2,
   Sparkles,
   BookOpen,
-  CheckCircle2
+  CheckCircle2,
+  Compass
 } from 'lucide-react';
 import {
   signInWithEmail,
@@ -514,6 +515,16 @@ export default function Login11AuthCard({ initialView = 'signin' }: Login11AuthC
                 </svg>
                 <span>Google ile Devam Et</span>
               </button>
+
+              <div className="text-center pt-2">
+                <Link
+                  href="/feed"
+                  className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-primary transition-colors py-1.5 px-3 rounded-lg hover:bg-muted/10 font-medium"
+                >
+                  <Compass size={14} className="text-primary" />
+                  <span>Giriş yapmadan misafir olarak devam et</span>
+                </Link>
+              </div>
             </form>
 
             {/* FORM B: KAYIT OL */}
@@ -693,6 +704,16 @@ export default function Login11AuthCard({ initialView = 'signin' }: Login11AuthC
                 </svg>
                 <span>Google ile Hızlı Kayıt</span>
               </button>
+
+              <div className="text-center pt-2">
+                <Link
+                  href="/feed"
+                  className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-primary transition-colors py-1.5 px-3 rounded-lg hover:bg-muted/10 font-medium"
+                >
+                  <Compass size={14} className="text-primary" />
+                  <span>Kayıt olmadan misafir olarak devam et</span>
+                </Link>
+              </div>
             </form>
 
           </div>

@@ -2,8 +2,8 @@ import { Metadata } from 'next';
 import { BackButton } from '@/components/BackButton';
 
 export const metadata: Metadata = {
-  title: 'Topluluk Kuralları | Readixon',
-  description: 'Readixon Topluluk Kuralları ve İçerik Yönergeleri',
+  title: 'Topluluk Kuralları & İçerik İlkeleri',
+  description: 'Readixon Topluluk Kuralları, Saygı Çerçevesi ve Güvenli Edebiyat Yönergeleri.',
 };
 
 export default function GuidelinesPage() {

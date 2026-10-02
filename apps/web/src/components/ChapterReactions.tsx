@@ -124,7 +124,7 @@ export const ChapterReactions = ({ storyId, chapterId, initialCounts = {} }: Cha
   };
 
   return (
-    <div className="w-full flex flex-col items-center justify-center my-10 px-4">
+    <div className="w-full flex flex-col items-center justify-center my-10 px-4 overflow-hidden relative">
       <div className="flex flex-col items-center gap-2 mb-6" style={{ color: 'inherit' }}>
         <Typography variant="h4" className="font-bold" style={{ color: 'inherit' }}>Bölüme Tepki Ver</Typography>
         <Typography variant="caption" className="" style={{ color: 'inherit', opacity: 0.7 }}>En fazla 5 duygu seçebilirsiniz.</Typography>

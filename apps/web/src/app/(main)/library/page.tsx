@@ -117,7 +117,7 @@ export default function LibraryPage() {
 
   if (!firebaseUser) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 py-12 text-center pb-32">
         <div className="w-24 h-24 rounded-full bg-muted/10 flex items-center justify-center mb-6">
           <BookOpen size={48} className="text-muted/50" />
         </div>
@@ -185,25 +185,25 @@ export default function LibraryPage() {
 
     if (activeTab === 'quotes') {
       return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mt-6 sm:mt-8">
           {savedQuotes.map(quote => (
-            <div key={quote.id} className="bg-card border border-border/50 rounded-2xl p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow group relative">
+            <div key={quote.id} className="bg-card border border-border/50 rounded-2xl p-5 sm:p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow group relative">
               <div>
-                <Quote size={24} className="text-primary/40 mb-4" />
-                <Typography variant="body" className="text-text font-serif italic text-lg leading-relaxed mb-6">
-                  "{quote.text}"
+                <Quote size={22} className="text-primary/40 mb-3" />
+                <Typography variant="body" className="text-text font-serif italic text-base sm:text-lg leading-relaxed mb-5">
+                  &ldquo;{quote.text}&rdquo;
                 </Typography>
               </div>
               
-              <div className="flex items-center justify-between border-t border-border/30 pt-4 mt-auto">
+              <div className="flex items-center justify-between border-t border-border/30 pt-3.5 mt-auto">
                 <div 
-                  className="cursor-pointer group/title"
+                  className="cursor-pointer group/title min-w-0 flex-1 pr-2"
                   onClick={() => router.push(`/read/${quote.storyId}/${quote.chapterId}`)}
                 >
-                  <Typography variant="h4" className="text-sm font-bold group-hover/title:text-primary transition-colors line-clamp-1">
+                  <Typography variant="h4" className="text-xs sm:text-sm font-bold group-hover/title:text-primary transition-colors truncate">
                     {quote.storyTitle}
                   </Typography>
-                  <Typography variant="body" className="text-xs text-muted mt-0.5">
+                  <Typography variant="body" className="text-[11px] sm:text-xs text-muted mt-0.5 truncate">
                     {quote.authorName} {quote.authorUsername && `@${quote.authorUsername}`}
                   </Typography>
                 </div>
@@ -223,7 +223,7 @@ export default function LibraryPage() {
                     }
                   }
                 }}
-                className="absolute top-4 right-4 p-2 text-muted-foreground hover:text-red-500 bg-background/50 backdrop-blur opacity-0 group-hover:opacity-100 transition-all rounded-full"
+                className="absolute top-3.5 right-3.5 p-2 text-muted-foreground hover:text-red-500 bg-background/70 backdrop-blur opacity-80 sm:opacity-0 sm:group-hover:opacity-100 transition-all rounded-full"
                 title="Sil"
               >
                 <Trash2 size={16} />
@@ -288,13 +288,13 @@ export default function LibraryPage() {
     }
 
     return (
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-4 md:gap-6 mt-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 sm:gap-5 md:gap-6 mt-6 sm:mt-8">
         {items.map((item) => {
           const story = item as Story;
           const progress = 'progress' in story ? (story as any).progress : undefined;
           
           return (
-            <div key={story.storyId} className="relative group transition-transform duration-300 hover:-translate-y-2">
+            <div key={story.storyId} className="relative group transition-transform duration-300 hover:-translate-y-1.5 active:scale-[0.98]">
               <StoryCard
                 title={story.title}
                 authorName={story.authorName || `Yazar: ${story.authorId.substring(0, 6)}`}
@@ -321,72 +321,75 @@ export default function LibraryPage() {
   };
 
   return (
-    <div className="flex-1 p-6 lg:p-10 max-w-7xl mx-auto w-full">
-      <div className="mb-8">
-        <Typography variant="h1" className="font-bold tracking-tight mb-2 text-text">Kütüphanem</Typography>
-        <Typography variant="body" className="text-muted">Okuduklarınız ve okumak istedikleriniz.</Typography>
+    <div className="flex-1 px-4 sm:px-6 lg:p-10 max-w-7xl mx-auto w-full max-w-full overflow-x-hidden pb-32 sm:pb-36 lg:pb-16">
+      <div className="mb-6 sm:mb-8">
+        <Typography variant="h1" className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-1.5 text-text">Kütüphanem</Typography>
+        <Typography variant="body" className="text-xs sm:text-sm text-muted">Okuduklarınız ve okumak istedikleriniz.</Typography>
       </div>
 
-      <div className="flex items-center gap-6 border-b border-border/50 pb-px">
-        <button
-          onClick={() => setActiveTab('reading')}
-          className={`flex items-center gap-2 py-4 border-b-2 transition-all ${
-            activeTab === 'reading' 
-              ? 'border-primary text-primary font-semibold' 
-              : 'border-transparent text-muted hover:text-text'
-          }`}
-        >
-          <BookOpen size={18} />
-          Okuduklarım
-        </button>
-        <button
-          onClick={() => setActiveTab('saved')}
-          className={`flex items-center gap-2 py-4 border-b-2 transition-all ${
-            activeTab === 'saved' 
-              ? 'border-primary text-primary font-semibold' 
-              : 'border-transparent text-muted hover:text-text'
-          }`}
-        >
-          <Bookmark size={18} />
-          Kaydedilenler
-        </button>
-        <button
-          onClick={() => setActiveTab('quotes')}
-          className={`flex items-center gap-2 py-4 border-b-2 transition-all ${
-            activeTab === 'quotes' 
-              ? 'border-primary text-primary font-semibold' 
-              : 'border-transparent text-muted hover:text-text'
-          }`}
-        >
-          <Quote size={18} />
-          Alıntılar
-        </button>
-        <button
-          onClick={() => setActiveTab('readixes')}
-          className={`flex items-center gap-2 py-4 border-b-2 transition-all ${
-            activeTab === 'readixes' 
-              ? 'border-primary text-primary font-semibold' 
-              : 'border-transparent text-muted hover:text-text'
-          }`}
-        >
-          <MessageCircle size={18} />
-          Gönderiler
-        </button>
+      {/* ── Sekmeler (Mobilde Sayfa Taşmasını Önleyen Yatay Kaydırmalı Tab Bar) ── */}
+      <div className="border-b border-border/50 max-w-full overflow-hidden">
+        <div className="flex items-center gap-1.5 sm:gap-6 overflow-x-auto scrollbar-hide py-1 -mx-4 px-4 sm:mx-0 sm:px-0">
+          <button
+            onClick={() => setActiveTab('reading')}
+            className={`flex items-center gap-2 py-3 sm:py-4 px-3 sm:px-1 border-b-2 font-semibold text-xs sm:text-base shrink-0 transition-all ${
+              activeTab === 'reading' 
+                ? 'border-primary text-primary shadow-[0_1px_0_0_currentColor]' 
+                : 'border-transparent text-muted hover:text-text opacity-70 hover:opacity-100'
+            }`}
+          >
+            <BookOpen size={17} className="shrink-0" />
+            <span>Okuduklarım</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('saved')}
+            className={`flex items-center gap-2 py-3 sm:py-4 px-3 sm:px-1 border-b-2 font-semibold text-xs sm:text-base shrink-0 transition-all ${
+              activeTab === 'saved' 
+                ? 'border-primary text-primary shadow-[0_1px_0_0_currentColor]' 
+                : 'border-transparent text-muted hover:text-text opacity-70 hover:opacity-100'
+            }`}
+          >
+            <Bookmark size={17} className="shrink-0" />
+            <span>Kaydedilenler</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('quotes')}
+            className={`flex items-center gap-2 py-3 sm:py-4 px-3 sm:px-1 border-b-2 font-semibold text-xs sm:text-base shrink-0 transition-all ${
+              activeTab === 'quotes' 
+                ? 'border-primary text-primary shadow-[0_1px_0_0_currentColor]' 
+                : 'border-transparent text-muted hover:text-text opacity-70 hover:opacity-100'
+            }`}
+          >
+            <Quote size={17} className="shrink-0" />
+            <span>Alıntılar</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('readixes')}
+            className={`flex items-center gap-2 py-3 sm:py-4 px-3 sm:px-1 border-b-2 font-semibold text-xs sm:text-base shrink-0 transition-all ${
+              activeTab === 'readixes' 
+                ? 'border-primary text-primary shadow-[0_1px_0_0_currentColor]' 
+                : 'border-transparent text-muted hover:text-text opacity-70 hover:opacity-100'
+            }`}
+          >
+            <MessageCircle size={17} className="shrink-0" />
+            <span>Gönderiler</span>
+          </button>
+        </div>
       </div>
 
       {(activeTab === 'reading' || activeTab === 'saved') && (
-        <div className="flex items-center gap-2 mt-6">
+        <div className="flex items-center gap-2 mt-4 sm:mt-6 overflow-x-auto scrollbar-hide py-1 max-w-full">
           <Button 
             variant={activeTab === 'reading' ? (readingSubTab === 'novels' ? 'primary' : 'outline') : (savedSubTab === 'novels' ? 'primary' : 'outline')}
             onPress={() => activeTab === 'reading' ? setReadingSubTab('novels') : setSavedSubTab('novels')}
-            className="rounded-full text-sm py-1.5 px-4"
+            className="rounded-full text-xs sm:text-sm py-1.5 px-4 shrink-0 shadow-sm"
           >
             Hikayeler
           </Button>
           <Button 
             variant={activeTab === 'reading' ? (readingSubTab === 'webtoons' ? 'primary' : 'outline') : (savedSubTab === 'webtoons' ? 'primary' : 'outline')}
             onPress={() => activeTab === 'reading' ? setReadingSubTab('webtoons') : setSavedSubTab('webtoons')}
-            className="rounded-full text-sm py-1.5 px-4"
+            className="rounded-full text-xs sm:text-sm py-1.5 px-4 shrink-0 shadow-sm"
           >
             Çizgi Romanlar
           </Button>

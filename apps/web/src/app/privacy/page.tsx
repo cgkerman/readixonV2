@@ -2,8 +2,8 @@ import { Metadata } from 'next';
 import { BackButton } from '@/components/BackButton';
 
 export const metadata: Metadata = {
-  title: 'Gizlilik Politikası ve KVKK Aydınlatma Metni | Readixon',
-  description: 'Readixon Gizlilik Politikası ve KVKK Aydınlatma Metni',
+  title: 'Gizlilik Politikası & KVKK',
+  description: 'Readixon Gizlilik Politikası, KVKK Aydınlatma Metni ve Veri Güvenliği Standartları.',
 };
 
 export default function PrivacyPolicyPage() {

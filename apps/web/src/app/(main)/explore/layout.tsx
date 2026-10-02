@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Hikayeleri Keşfet | Readixon',
+  title: 'Hikayeleri Keşfet - Türler & Kategoriler',
   description: 'Farklı türlerde binlerce orijinal kurguyu türüne veya etiketlerine göre filtreleyerek bulun.',
   keywords: ['hikaye keşfet', 'roman oku', 'kitap kategorileri', 'türüne göre kitaplar', 'orijinal kurgular'],
   openGraph: {

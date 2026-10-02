@@ -3,120 +3,155 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import { Sparkles, Compass, LogIn, ArrowRight, ShieldCheck, Flame, BookOpen } from 'lucide-react';
-import { Typography, Button } from '@readixon/ui';
+import { motion } from 'framer-motion';
+import { BookOpen, MessageCircle, Sparkles, Compass, ArrowRight, LogIn, UserPlus } from 'lucide-react';
 
 export function MobileAppOnboarding() {
-  const router = useRouter();
-
   return (
-    <div className="md:hidden flex flex-col justify-between min-h-[100dvh] w-full bg-[#0a0a0c] text-white p-6 relative overflow-hidden select-none">
-      {/* Arka Plan Glow Efektleri */}
-      <div className="absolute -top-20 -left-20 w-80 h-80 bg-primary/20 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-amber-500/15 rounded-full blur-[100px] pointer-events-none" />
+    <div
+      data-theme="light"
+      className="light md:hidden flex flex-col justify-between min-h-[100dvh] w-full bg-background text-foreground px-6 pt-[calc(1.5rem+env(safe-area-inset-top,0px))] pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] relative overflow-hidden select-none"
+    >
+      {/* Login 11 Stili Minimal Üst Ambient Işık */}
+      <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-80 h-80 bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
 
-      {/* 1. ÜST: Logo ve Karşılama */}
-      <div className="pt-8 flex flex-col items-center text-center space-y-4 relative z-10">
-        <div className="relative group">
-          <div className="absolute -inset-1 rounded-3xl bg-gradient-to-tr from-primary to-amber-400 opacity-60 blur-lg group-hover:opacity-100 transition duration-500" />
-          <div className="relative w-20 h-20 rounded-2xl bg-zinc-950 border border-white/10 flex items-center justify-center p-3 shadow-2xl">
-            <Image
-              src="/icon.png"
-              alt="Readixon"
-              width={64}
-              height={64}
-              className="object-contain"
-              priority
-            />
-          </div>
+      {/* 1. ÜST: Marka & Karşılama (Login 11 Minimalizmi) */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+        className="pt-2 flex flex-col items-center text-center space-y-3 relative z-10"
+      >
+        {/* Minimal Logo Kartı */}
+        <div className="w-20 h-20 rounded-2xl bg-card border border-border/80 shadow-[0_6px_24px_rgba(0,0,0,0.06)] flex items-center justify-center overflow-hidden">
+          <Image
+            src="/brand-logo.png"
+            alt="Readixon"
+            width={84}
+            height={84}
+            className="object-contain scale-[1.65]"
+            priority
+          />
         </div>
 
+        {/* Rozet */}
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[11px] font-semibold tracking-wide">
+          <span>Sınırları Aşan Hikayeler</span>
+        </div>
+
+        {/* Başlık & Açıklama */}
         <div className="space-y-1">
-          <span className="text-xs uppercase tracking-widest font-bold text-primary font-mono">
-            MOBİL UYGULAMA
-          </span>
-          <h1 className="text-3xl font-extrabold tracking-tight text-white leading-tight">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground font-sans">
             readixon
           </h1>
+          <p className="text-xs text-muted max-w-[280px] leading-relaxed mx-auto">
+            Okurları ve yazarları buluşturan yeni nesil dijital edebiyat topluluğu.
+          </p>
         </div>
+      </motion.div>
 
-        <p className="text-sm text-zinc-400 max-w-[280px] leading-relaxed">
-          Sınırları aşan hikayeler, webtoonlar ve yazarlık evreni artık cebinizde.
-        </p>
-      </div>
-
-      {/* 2. ORTA: Mini Özellik Kartları */}
-      <div className="py-6 space-y-2.5 relative z-10">
-        <div className="flex items-center gap-3 p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-            <BookOpen size={20} />
+      {/* 2. ORTA: Login 11 Stili Birleşik Sade Özellik Kartı */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+        className="py-4 relative z-10 w-full max-w-sm mx-auto"
+      >
+        <div className="rounded-2xl bg-card/80 border border-border/70 p-4 shadow-sm space-y-3.5 backdrop-blur-xl">
+          {/* Özellik 1 */}
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <BookOpen size={16} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-xs font-semibold text-foreground">Özgün Eserler & Webtoon</h3>
+              <p className="text-[11px] text-muted truncate">Yüzlerce yerli roman ve görsel hikaye arşivi</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-xs font-bold text-white">Akıcı Okuma Keyfi</h3>
-            <p className="text-[11px] text-zinc-400">Webtoon ve romanlar tek tıkla elinin altında.</p>
+
+          <div className="h-px bg-border/40" />
+
+          {/* Özellik 2 */}
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <MessageCircle size={16} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-xs font-semibold text-foreground">Satır Arası Etkileşim</h3>
+              <p className="text-[11px] text-muted truncate">Cümleleri vurgula, satır satır düşüncelerini paylaş</p>
+            </div>
+          </div>
+
+          <div className="h-px bg-border/40" />
+
+          {/* Özellik 3 */}
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <Sparkles size={16} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-xs font-semibold text-foreground">Yazar Stüdyosu & Readix</h3>
+              <p className="text-[11px] text-muted truncate">Kendi hikayeni yayınla, okurlarınla doğrudan bağ kur</p>
+            </div>
           </div>
         </div>
+      </motion.div>
 
-        <div className="flex items-center gap-3 p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center flex-shrink-0">
-            <Flame size={20} />
-          </div>
-          <div>
-            <h3 className="text-xs font-bold text-white">Haftalık Düellolar & Arena</h3>
-            <p className="text-[11px] text-zinc-400">Yazarlar yarışıyor, okurlar karar veriyor.</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md">
-          <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center flex-shrink-0">
-            <Sparkles size={20} />
-          </div>
-          <div>
-            <h3 className="text-xs font-bold text-white">Özgür Yaratıcılık</h3>
-            <p className="text-[11px] text-zinc-400">Yazar Stüdyosu ile hemen kendi eserini üret.</p>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. ALT: Aksiyon Butonları */}
-      <div className="pb-6 space-y-3 relative z-10">
+      {/* 3. ALT: Aksiyon Butonları (Login 11 Tarzı Minimal Segment) */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, delay: 0.18, ease: [0.16, 1, 0.3, 1] }}
+        className="space-y-3 relative z-10 w-full max-w-sm mx-auto"
+      >
+        {/* Ana Aksiyon: Misafir Olarak Keşfet */}
         <Link href="/feed" className="block w-full">
           <button
             type="button"
-            className="w-full h-13 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-primary to-amber-500 hover:from-primary/90 hover:to-amber-500/90 text-black font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/25 active:scale-[0.98] transition-all"
+            className="w-full h-12 px-6 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm flex items-center justify-center gap-2 shadow-sm active:scale-[0.99] transition-all"
           >
-            <Compass size={18} />
-            <span>Keşfetmeye Başla</span>
-            <ArrowRight size={16} />
+            <Compass size={17} />
+            <span>Misafir Olarak Keşfet</span>
+            <ArrowRight size={15} />
           </button>
         </Link>
 
-        <div className="grid grid-cols-2 gap-2.5">
-          <Link href="/login" className="block w-full">
+        {/* Giriş & Kayıt Segmenti */}
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-card border border-border/70 shadow-xs">
+          <Link href="/login" className="flex-1">
             <button
               type="button"
-              className="w-full py-3 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 text-white font-semibold text-xs flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all"
+              className="w-full py-2.5 rounded-lg text-xs font-medium text-foreground hover:bg-muted/10 transition-colors flex items-center justify-center gap-1.5 active:scale-[0.98]"
             >
               <LogIn size={14} className="text-primary" />
               <span>Giriş Yap</span>
             </button>
           </Link>
 
-          <Link href="/register" className="block w-full">
+          <div className="w-px h-4 bg-border/60" />
+
+          <Link href="/register" className="flex-1">
             <button
               type="button"
-              className="w-full py-3 px-4 rounded-xl bg-zinc-900/60 hover:bg-zinc-800/80 border border-zinc-800 text-zinc-300 font-semibold text-xs flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all"
+              className="w-full py-2.5 rounded-lg text-xs font-medium text-muted hover:text-foreground transition-colors flex items-center justify-center gap-1.5 active:scale-[0.98]"
             >
-              <span>Hesap Oluştur</span>
+              <UserPlus size={14} />
+              <span>Kayıt Ol</span>
             </button>
           </Link>
         </div>
 
-        <p className="text-[11px] text-center text-zinc-500 pt-1">
-          Giriş yapmadan da tüm içerikleri keşfedebilirsiniz.
-        </p>
-      </div>
+        {/* Misafir Vurgusu & Açıklaması */}
+        <div className="text-center pt-0.5">
+          <Link
+            href="/feed"
+            className="text-[12px] font-medium text-muted hover:text-primary transition-colors inline-flex items-center gap-1"
+          >
+            <span>Hesap oluşturmadan da tüm içerikleri okuyabilirsiniz</span>
+            <span className="text-primary font-bold">→</span>
+          </Link>
+        </div>
+      </motion.div>
     </div>
   );
 }

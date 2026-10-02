@@ -2,8 +2,8 @@ import { Metadata } from 'next';
 import { BackButton } from '@/components/BackButton';
 
 export const metadata: Metadata = {
-  title: 'Kullanım Şartları | Readixon',
-  description: 'Readixon Kullanım Şartları ve Kullanıcı Sözleşmesi',
+  title: 'Kullanım Şartları & Sözleşme',
+  description: 'Readixon Kullanım Şartları, Kullanıcı Sözleşmesi ve Yasal Haklar.',
 };
 
 export default function TermsOfServicePage() {

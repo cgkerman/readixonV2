@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Readix Akışı | Readixon',
+  title: 'Readix Akışı - Canlı Edebiyat Ağı',
   description: 'Okurların kısa düşüncelerini, alıntılarını ve kitap sohbetlerini paylaştığı canlı sosyal ağ. Fikirlerinizi özgürce paylaşın!',
   keywords: ['kitap sohbeti', 'okur ağı', 'kitap alıntıları', 'kısa düşünceler', 'readix', 'readixon sosyal'],
   openGraph: {

@@ -1,13 +1,25 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
 
+export type ReaderTheme = 'light' | 'dark' | 'sepia' | 'oled';
+export type ReaderFontFamily = 'sans' | 'serif' | 'mono';
+export type ReaderLineHeight = 'tight' | 'normal' | 'relaxed';
+export type ReaderTextAlign = 'left' | 'justify';
+export type ReaderPaddingX = 'compact' | 'normal' | 'wide';
+
 export interface ReaderState {
-  theme: 'light' | 'dark' | 'sepia';
+  theme: ReaderTheme;
   fontSize: number;
-  fontFamily: 'sans' | 'serif' | 'mono';
-  setTheme: (theme: 'light' | 'dark' | 'sepia') => void;
+  fontFamily: ReaderFontFamily;
+  lineHeight: ReaderLineHeight;
+  textAlign: ReaderTextAlign;
+  paddingX: ReaderPaddingX;
+  setTheme: (theme: ReaderTheme) => void;
   setFontSize: (size: number) => void;
-  setFontFamily: (fontFamily: 'sans' | 'serif' | 'mono') => void;
+  setFontFamily: (fontFamily: ReaderFontFamily) => void;
+  setLineHeight: (lineHeight: ReaderLineHeight) => void;
+  setTextAlign: (textAlign: ReaderTextAlign) => void;
+  setPaddingX: (paddingX: ReaderPaddingX) => void;
 }
 
 // Cross-platform storage engine
@@ -48,12 +60,18 @@ const universalStorage: StateStorage = {
 export const useReaderStore = create<ReaderState>()(
   persist(
     (set) => ({
-      theme: 'light',
-      fontSize: 16,
+      theme: 'dark',
+      fontSize: 17,
       fontFamily: 'sans',
+      lineHeight: 'normal',
+      textAlign: 'left',
+      paddingX: 'normal',
       setTheme: (theme) => set({ theme }),
       setFontSize: (fontSize) => set({ fontSize }),
       setFontFamily: (fontFamily) => set({ fontFamily }),
+      setLineHeight: (lineHeight) => set({ lineHeight }),
+      setTextAlign: (textAlign) => set({ textAlign }),
+      setPaddingX: (paddingX) => set({ paddingX }),
     }),
     {
       name: 'readixon-reader-storage',

@@ -2,8 +2,8 @@ import { Metadata } from 'next';
 import { BackButton } from '@/components/BackButton';
 
 export const metadata: Metadata = {
-  title: 'Telif Hakkı Politikası | Readixon',
-  description: 'Readixon Telif Hakkı Politikası ve İçerik Bildirimleri',
+  title: 'Telif Hakkı Politikası & DMCA',
+  description: 'Readixon Telif Hakkı Politikası, Fikri Mülkiyet Hakları ve DMCA İhlal Bildirim Süreçleri.',
 };
 
 export default function CopyrightPolicyPage() {

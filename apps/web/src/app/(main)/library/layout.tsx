@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Kütüphanem | Readixon',
+  title: 'Kütüphanem - Okuma Listeleri & Favoriler',
   description: 'Şu an okuduğunuz kitaplar, kaydettiğiniz listeler ve favori yazar koleksiyonlarınız. Kütüphanenizi hemen keşfedin.',
   keywords: ['okuma listesi', 'favori kitaplar', 'dijital kütüphane', 'kaydedilen hikayeler'],
   openGraph: {

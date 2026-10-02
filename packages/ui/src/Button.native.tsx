@@ -23,6 +23,7 @@ export const Button: React.FC<ButtonProps> = ({
   const variantContainerClasses = {
     primary: 'bg-primary shadow-lg',
     secondary: 'bg-card border border-border',
+    outline: 'bg-transparent border border-border',
     ghost: 'bg-transparent',
     glass: 'bg-[#18181B] opacity-90 border border-white/10', // Simplified glass for native
   };
@@ -36,6 +37,7 @@ export const Button: React.FC<ButtonProps> = ({
   const variantTextClasses = {
     primary: 'text-white font-semibold',
     secondary: 'text-text font-semibold',
+    outline: 'text-text font-semibold',
     ghost: 'text-text font-semibold',
     glass: 'text-text font-semibold',
   };

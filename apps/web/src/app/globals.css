@@ -2,14 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Varsayılan Ana Tema (Tema 7: Yazar Moru) */
-:root {
+/* Standart Açık Tema (Açık Tema / Light Mode) */
+:root,
+[data-theme="light"] {
   --color-background: #FAFAFA;
   --color-card: #FFFFFF;
   --color-text: #1E293B;
   --color-primary: #6366F1;
   --color-muted: #64748B;
   --color-border: #E2E8F0;
+}
+
+/* Standart Koyu Tema (Dark Mode) */
+[data-theme="dark"],
+.dark {
+  --color-background: #090A0F;
+  --color-card: #12141C;
+  --color-text: #F1F5F9;
+  --color-primary: #6366F1;
+  --color-muted: #94A3B8;
+  --color-border: #1E2230;
 }
 
 /* Tema 1: Siber Gece (Neon Cyan) */
@@ -94,11 +106,13 @@ body {
   }
   
   /* Kaydırma çubuğunu gizleme sınıfı */
-  .scrollbar-hide {
+  .scrollbar-hide,
+  .scrollbar-none {
     -ms-overflow-style: none; /* IE and Edge */
     scrollbar-width: none; /* Firefox */
   }
-  .scrollbar-hide::-webkit-scrollbar {
+  .scrollbar-hide::-webkit-scrollbar,
+  .scrollbar-none::-webkit-scrollbar {
     display: none; /* Chrome, Safari and Opera */
   }
 
@@ -115,5 +129,22 @@ body {
   50% {
     height: 14px;
   }
+}
+
+@keyframes readerMarquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(calc(-50% - 1rem));
+  }
+}
+
+.animate-reader-marquee {
+  animation: readerMarquee 14s linear infinite;
+}
+
+.animate-reader-marquee:hover {
+  animation-play-state: paused;
 }
 

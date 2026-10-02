@@ -3,9 +3,9 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { BookOpen, Compass, Search, User, LogOut, PenTool, Hash, Settings, Bell, MessageCircle, Menu, X, LifeBuoy, Feather, ShieldAlert, Crown, Info, TrendingUp } from 'lucide-react';
+import { BookOpen, Compass, Search, User, LogOut, PenTool, Hash, Settings, Bell, MessageCircle, Menu, X, LifeBuoy, Feather, ShieldAlert, Crown, Info, TrendingUp, Sun, Moon } from 'lucide-react';
 import { Typography, Button } from '@readixon/ui';
-import { useAuthStore, signOut, becomeAuthor, sendVerificationEmail, subscribeToChats } from '@readixon/core';
+import { useAuthStore, signOut, becomeAuthor, sendVerificationEmail, subscribeToChats, useThemeStore, isDarkTheme } from '@readixon/core';
 import { toast } from "sonner";
 import GlobalSitePopup from '@/components/GlobalSitePopup';
 import { MobileAppHeader } from '@/components/navigation/MobileAppHeader';
@@ -16,6 +16,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const router = useRouter();
   const { firebaseUser, userProfile, setUserProfile, unreadNotificationCount } = useAuthStore();
+  const { theme, toggleTheme } = useThemeStore();
+  const isDark = isDarkTheme(theme);
   const [unreadMessageCount, setUnreadMessageCount] = React.useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
@@ -266,7 +268,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 )}
               </Link>
 
-              <Link href="/notifications" className="relative p-2 text-muted hover:text-text hover:bg-muted/10 rounded-full transition-colors mr-2">
+              <Link href="/notifications" className="relative p-2 text-muted hover:text-text hover:bg-muted/10 rounded-full transition-colors mr-1">
                 <Bell size={22} className={pathname === '/notifications' ? 'text-primary' : ''} />
                 {unreadNotificationCount > 0 && (
                   <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full absolute top-1 right-1 border-2 border-background">
@@ -274,6 +276,21 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   </span>
                 )}
               </Link>
+
+              {/* Tema Değiştirici (Masaüstü) */}
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="w-9 h-9 rounded-xl bg-card hover:bg-muted/10 border border-border/70 flex items-center justify-center text-muted hover:text-foreground active:scale-90 transition-all shadow-sm mr-2"
+                title={isDark ? 'Açık Temaya Geç' : 'Koyu Temaya Geç'}
+                aria-label="Temayı Değiştir"
+              >
+                {isDark ? (
+                  <Sun size={19} className="text-amber-400 hover:rotate-45 transition-transform duration-200" />
+                ) : (
+                  <Moon size={19} className="text-foreground hover:-rotate-12 transition-transform duration-200" />
+                )}
+              </button>
 
               {/* Profile Dropdown (Hover) */}
               <div className="relative group/profile">
@@ -352,6 +369,20 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             </>
           ) : (
             <div className="flex items-center gap-3">
+              {/* Tema Değiştirici (Masaüstü Misafir) */}
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="w-9 h-9 rounded-xl bg-card hover:bg-muted/10 border border-border/70 flex items-center justify-center text-muted hover:text-foreground active:scale-90 transition-all shadow-sm mr-1"
+                title={isDark ? 'Açık Temaya Geç' : 'Koyu Temaya Geç'}
+                aria-label="Temayı Değiştir"
+              >
+                {isDark ? (
+                  <Sun size={19} className="text-amber-400 hover:rotate-45 transition-transform duration-200" />
+                ) : (
+                  <Moon size={19} className="text-foreground hover:-rotate-12 transition-transform duration-200" />
+                )}
+              </button>
               <Link href="/login">
                 <Button variant="ghost" className="h-9 px-4 rounded-xl">Giriş Yap</Button>
               </Link>

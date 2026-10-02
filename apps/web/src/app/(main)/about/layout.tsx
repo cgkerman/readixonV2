@@ -2,7 +2,7 @@ import React from 'react';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Hakkımızda | Readixon - Yeni Nesil Edebiyat ve Hikaye Ekosistemi',
+  title: 'Hakkımızda - Yeni Nesil Edebiyat Ekosistemi',
   description: 'Readixon: Okuma deneyimini ambiyans müzikleri, RPG karakter sistemleri, Edebi Arena düelloları ve yapay zeka destekli stüdyoyla dönüştüren yeni nesil edebiyat platformu.',
   keywords: [
     'readixon nedir',
