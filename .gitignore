@@ -44,4 +44,5 @@ Thumbs.db
 .gradle/
 .kotlin/
 *.apk
+!apps/web/public/downloads/*.apk
 *.aab
