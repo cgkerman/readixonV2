@@ -6,7 +6,6 @@ import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, Bell, X, ChevronRight } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
-import { LocalNotifications } from '@capacitor/local-notifications';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { collection, query, where, orderBy, limit, onSnapshot, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db, useAuthStore } from '@readixon/core';
@@ -32,7 +31,7 @@ export function MobileInAppNotificationManager() {
   const seenIdsRef = useRef<Set<string>>(new Set());
   const dismissTimerRef = useRef<NodeJS.Timeout>();
 
-  // 1. Android / Capacitor FCM Push & Local Bildirim İzinleri ve Token Kaydı
+  // 1. Android / Capacitor FCM Push Bildirim İzinleri ve Token Kaydı
   useEffect(() => {
     if (!firebaseUser?.uid) return;
     const uid = firebaseUser.uid;
@@ -40,7 +39,7 @@ export function MobileInAppNotificationManager() {
     if (Capacitor.isNativePlatform()) {
       (async () => {
         try {
-          // Android 8+ için yüksek öncelikli bildirim kanalları (Heads-up banner ve ses için)
+          // Android 8+ için yüksek öncelikli bildirim kanalı (Arka plandayken ses ve açılır banner için)
           try {
             await PushNotifications.createChannel({
               id: 'readixon_alerts',
@@ -55,22 +54,7 @@ export function MobileInAppNotificationManager() {
             console.warn('[FCM] Push kanalı oluşturma uyarısı:', chanErr);
           }
 
-          try {
-            await LocalNotifications.createChannel({
-              id: 'readixon_alerts',
-              name: 'Readixon Bildirimleri',
-              description: 'Gelen mesajlar ve etkileşim bildirimleri',
-              importance: 5,
-              visibility: 1,
-              vibration: true,
-              sound: 'default',
-            });
-          } catch (chanErr) {
-            console.warn('[LocalNotif] Kanal oluşturma uyarısı:', chanErr);
-          }
-
           // Önceki dinleyicileri temizle ve YENİ DİNLENİCİLERİ register()'dan ÖNCE ekle!
-          // (Android native katmanda token hazır olduğunda event hemen tetiklenir)
           await PushNotifications.removeAllListeners();
 
           PushNotifications.addListener('registration', async (token) => {
@@ -112,12 +96,16 @@ export function MobileInAppNotificationManager() {
             console.error('[FCM] Kayıt hatası:', err);
           });
 
-          // Uygulama ön plandayken gelen Push bildirimi (arka plandayken Android OS doğrudan gösterir)
+          // Uygulama ön plandayken gelen Push bildirimi (aynı bildirim Firestore listener'dan gelmediyse göster)
           PushNotifications.addListener('pushNotificationReceived', (notification) => {
             console.log('[FCM] Ön planda bildirim yakalandı:', notification);
+            const notifKey = notification.id || `push_${notification.data?.notificationId || Date.now()}`;
+            if (seenIdsRef.current.has(notifKey)) return;
+            seenIdsRef.current.add(notifKey);
+
             const route = notification.data?.route || '/notifications';
             triggerAlert({
-              id: notification.id || `push_${Date.now()}`,
+              id: notifKey,
               title: notification.title || 'Readixon',
               body: notification.body || '',
               type: notification.data?.type === 'message' ? 'message' : 'notification',
@@ -125,17 +113,10 @@ export function MobileInAppNotificationManager() {
             });
           });
 
-          // Bildirime tıklandığında ilgili sayfaya git
+          // Kilit ekranı veya durum çubuğundaki bildirime tıklandığında ilgili sayfaya git
           PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
             console.log('[FCM] Bildirime tıklandı:', action);
             const route = action.notification.data?.route;
-            if (route) {
-              router.push(route);
-            }
-          });
-
-          LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
-            const route = action.notification.extra?.route;
             if (route) {
               router.push(route);
             }
@@ -162,34 +143,13 @@ export function MobileInAppNotificationManager() {
     }
   }, [firebaseUser, router]);
 
-  // 2. Bildirimi hem cihaz sistemine hem de uygulama içi banner'a gönderen fonksiyon
+  // 2. Uygulama açıkken sadece şık ekran üstü Floating Banner + Ses + Titreşim (WhatsApp / Instagram tarzı)
   const triggerAlert = useCallback(async (alert: ActiveInAppAlert) => {
     // Ses ve Titreşim çal
     playNotificationSound(alert.type);
     triggerNotificationHaptic(alert.type);
 
-    // Eğer Android / Native cihazdaysa sistem bildirim çubuğuna da anlık gönder (alarm istemeden)
-    if (Capacitor.isNativePlatform()) {
-      try {
-        const notifId = Math.floor(Math.random() * 1000000);
-        await LocalNotifications.schedule({
-          notifications: [
-            {
-              id: notifId,
-              title: alert.title,
-              body: alert.body,
-              extra: { route: alert.route },
-              channelId: 'readixon_alerts',
-              sound: 'default',
-            },
-          ],
-        });
-      } catch (err) {
-        console.error('Native bildirim zamanlanamadı:', err);
-      }
-    }
-
-    // Uygulama içi Floating Banner'ı göster
+    // Uygulama içi Floating Banner'ı göster (durum çubuğuna spam atmaz)
     setActiveAlert(alert);
 
     // 4.5 saniye sonra otomatik kapat
