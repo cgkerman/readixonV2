@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { X, Sparkles, Lock, Globe, Loader2 } from 'lucide-react';
-import { Button } from '@readixon/ui';
 import { createReadingList, updateReadingList } from '@readixon/core';
 import type { ReadingList } from '@readixon/core';
 import { toast } from 'sonner';
@@ -200,10 +199,10 @@ export const CreateReadingListModal: React.FC<CreateReadingListModalProps> = ({
             >
               İptal
             </button>
-            <Button
-              variant="primary"
+            <button
+              type="submit"
               disabled={loading || !title.trim()}
-              className="px-6 py-2.5 shadow-lg shadow-primary/25"
+              className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-bold text-sm shadow-lg shadow-primary/25 hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none"
             >
               {loading ? (
                 <div className="flex items-center gap-2">
@@ -215,7 +214,7 @@ export const CreateReadingListModal: React.FC<CreateReadingListModalProps> = ({
               ) : (
                 'Liste Oluştur'
               )}
-            </Button>
+            </button>
           </div>
         </form>
       </div>

@@ -74,7 +74,12 @@ export const createReadingList = async (
   };
 
   await setDoc(listRef, newList);
-  return { ...newList, id: listId };
+  return {
+    ...newList,
+    id: listId,
+    createdAt: { seconds: Math.floor(Date.now() / 1000) } as any,
+    updatedAt: { seconds: Math.floor(Date.now() / 1000) } as any,
+  };
 };
 
 /**
