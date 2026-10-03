@@ -653,9 +653,9 @@ export default function ReadPage() {
         ['--color-border' as any]: currentThemeStyle.border,
       }}
     >
-      {/* ── 1. Üst Bar (Top Navbar - Çentik & Safe Area Uyumlu, Ergonomik Butonlar) ── */}
-      <div
-        className={`sticky top-0 z-20 flex items-center justify-between px-3.5 sm:px-5 pt-[calc(0.85rem+env(safe-area-inset-top,0px))] pb-3.5 border-b backdrop-blur-md gap-3 transition-transform duration-300 ${
+      {/* ── 1. Üst Bar (Top Navbar - Sabit, Çentik & Safe Area Uyumlu, Ergonomik Butonlar) ── */}
+      <header
+        className={`fixed top-0 left-0 right-0 z-40 border-b backdrop-blur-md transition-transform duration-300 ease-in-out ${
           isNavbarVisible ? 'translate-y-0' : '-translate-y-full'
         }`}
         style={{
@@ -663,69 +663,79 @@ export default function ReadPage() {
           borderColor: currentThemeStyle.border
         }}
       >
-        <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1 overflow-hidden">
-          <button
-            type="button"
-            onClick={() => {
-              if (story) {
-                const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
-                router.replace(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
-              } else {
-                router.back();
-              }
-            }}
-            className="w-11 h-11 rounded-2xl bg-muted/15 hover:bg-muted/25 active:scale-90 flex items-center justify-center shrink-0 transition-all border border-border/40 shadow-sm"
-            style={{ color: currentThemeStyle.text }}
-            aria-label="Geri"
-          >
-            <ArrowLeft size={24} />
-          </button>
-
-          {/* Kayan Bölüm Başlığı (Marquee) */}
-          <ChapterTitleMarquee
-            title={chapter.title}
-            storyTitle={story?.title}
-            textColor={currentThemeStyle.text}
-          />
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          {chapter.audioTrack?.url && (
-            <ChapterMusicPlayer
-              audioTrack={chapter.audioTrack}
-              textColor={currentThemeStyle.text}
-              autoPlay={true}
-            />
-          )}
-          <button
-            type="button"
-            onClick={() => setShowChapterList(true)}
-            className="w-11 h-11 rounded-2xl bg-muted/15 hover:bg-muted/25 active:scale-90 flex items-center justify-center transition-all border border-border/40 shadow-sm"
-            style={{ color: currentThemeStyle.text }}
-            title="Bölümler Listesi"
-            aria-label="Bölümler"
-          >
-            <List size={23} />
-          </button>
-          {story?.format !== 'webtoon' && (
+        <div className="flex items-center justify-between px-3.5 sm:px-5 pt-[calc(0.85rem+env(safe-area-inset-top,0px))] pb-3.5 gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1 overflow-hidden">
             <button
               type="button"
-              onClick={() => setShowSettings(!showSettings)}
+              onClick={() => {
+                if (story) {
+                  const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
+                  router.replace(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
+                } else {
+                  router.back();
+                }
+              }}
+              className="w-11 h-11 rounded-2xl bg-muted/15 hover:bg-muted/25 active:scale-90 flex items-center justify-center shrink-0 transition-all border border-border/40 shadow-sm"
+              style={{ color: currentThemeStyle.text }}
+              aria-label="Geri"
+            >
+              <ArrowLeft size={24} />
+            </button>
+
+            {/* Kayan Bölüm Başlığı (Marquee) */}
+            <ChapterTitleMarquee
+              title={chapter.title}
+              storyTitle={story?.title}
+              textColor={currentThemeStyle.text}
+            />
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {chapter.audioTrack?.url && (
+              <ChapterMusicPlayer
+                audioTrack={chapter.audioTrack}
+                textColor={currentThemeStyle.text}
+                autoPlay={true}
+              />
+            )}
+            <button
+              type="button"
+              onClick={() => setShowChapterList(true)}
               className="w-11 h-11 rounded-2xl bg-muted/15 hover:bg-muted/25 active:scale-90 flex items-center justify-center transition-all border border-border/40 shadow-sm"
               style={{ color: currentThemeStyle.text }}
-              title="Okuma Tercihleri"
-              aria-label="Ayarlar"
+              title="Bölümler Listesi"
+              aria-label="Bölümler"
             >
-              <Settings size={23} />
+              <List size={23} />
             </button>
-          )}
+            {story?.format !== 'webtoon' && (
+              <button
+                type="button"
+                onClick={() => setShowSettings(!showSettings)}
+                className="w-11 h-11 rounded-2xl bg-muted/15 hover:bg-muted/25 active:scale-90 flex items-center justify-center transition-all border border-border/40 shadow-sm"
+                style={{ color: currentThemeStyle.text }}
+                title="Okuma Tercihleri"
+                aria-label="Ayarlar"
+              >
+                <Settings size={23} />
+              </button>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* ── Okuma İlerleme Çizgisi ── */}
+        {/* ── Okuma İlerleme Çizgisi (Navbar açıkken navbarın tam altında) ── */}
+        <div className="absolute bottom-0 left-0 w-full h-[3px] bg-border/20 pointer-events-none">
+          <div
+            className="h-full bg-primary transition-all duration-150"
+            style={{ width: `${scrollProgress}%` }}
+          />
+        </div>
+      </header>
+
+      {/* ── Okuma İlerleme Çizgisi (Navbar gizliyken ekranın en tepesinde ince çizgi) ── */}
       <div
-        className={`fixed left-0 w-full h-1 bg-border/20 z-30 transition-all duration-300 ${
-          isNavbarVisible ? 'top-[calc(4rem+env(safe-area-inset-top,0px))]' : 'top-0'
+        className={`fixed top-0 left-0 right-0 h-[3px] bg-border/20 z-30 pointer-events-none transition-opacity duration-200 ${
+          isNavbarVisible ? 'opacity-0' : 'opacity-100'
         }`}
       >
         <div
@@ -739,11 +749,11 @@ export default function ReadPage() {
         onClick={handleReaderTap}
         className={`${
           story?.format === 'webtoon'
-            ? 'max-w-3xl w-full px-0'
+            ? 'max-w-3xl w-full px-0 pt-[calc(4.5rem+env(safe-area-inset-top,0px))]'
             : `max-w-2xl ${
                 paddingX === 'compact' ? 'px-3 sm:px-4' : paddingX === 'wide' ? 'px-6 sm:px-10' : 'px-4 sm:px-6'
-              } py-10 sm:py-14`
-        } mx-auto overflow-x-hidden pb-32 cursor-pointer`}
+              } pt-[calc(6rem+env(safe-area-inset-top,0px))] sm:pt-[calc(6.5rem+env(safe-area-inset-top,0px))] pb-32`
+        } mx-auto overflow-x-hidden cursor-pointer`}
       >
         {/* Bölüm Başlığı & Okuma Süresi Rozeti (Webtoon olmayan romanlar için) */}
         {story?.format !== 'webtoon' && (
