@@ -48,6 +48,10 @@ service cloud.firestore {
         allow read, write: if isOwner(userId);
       }
 
+      // Kullanıcının beğendiği/kaydettiği okuma listeleri
+      match /likedLists/{listId} {
+        allow read, write: if isOwner(userId);
+      }
  
       // Kullanıcı SADECE kendi profilini güncelleyebilir
       allow write: if request.auth != null && request.auth.uid == userId;
@@ -285,5 +289,26 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAuthenticated();
     }
+
+    // ==========================================
+    // 13. OKUMA LİSTELERİ (READING LISTS / SPOTIFY ÇALMA LİSTELERİ)
+    // ==========================================
+    match /readingLists/{listId} {
+      // Herkese açık listeleri herkes okuyabilir, gizli listeleri sadece sahibi okuyabilir
+      allow read: if resource == null || resource.data.isPublic == true || isOwner(resource.data.userId);
+      // Sadece giriş yapmış kullanıcılar kendi adına liste oluşturabilir
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // Liste içeriğini sahibi güncelleyebilir veya giriş yapmış kullanıcılar beğeni sayısını artırabilir
+      allow update: if isAuthenticated();
+      // Yalnızca liste sahibi silebilir
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+
+      // Okuma listesi beğeni alt-koleksiyonu
+      match /likes/{likeUserId} {
+        allow read: if true;
+        allow write: if isAuthenticated() && request.auth.uid == likeUserId;
+      }
+    }
   }
 }
+
