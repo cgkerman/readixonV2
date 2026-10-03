@@ -51,7 +51,6 @@ export async function sendPushNotification({ userId, title, body, data = {}, rou
       notification: {
         title,
         body,
-        imageUrl: 'https://www.readixon.com/brand-logo.png',
       },
       data: safeData,
       android: {
@@ -60,7 +59,6 @@ export async function sendPushNotification({ userId, title, body, data = {}, rou
           channelId: 'readixon_alerts',
           icon: 'ic_notification',
           color: '#4880FF',
-          imageUrl: 'https://www.readixon.com/brand-logo.png',
           sound: 'default',
           priority: 'high',
           visibility: 'public',

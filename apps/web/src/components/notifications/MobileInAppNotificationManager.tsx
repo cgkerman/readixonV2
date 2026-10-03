@@ -29,6 +29,7 @@ export function MobileInAppNotificationManager() {
 
   const mountedAtRef = useRef<number>(Date.now());
   const seenIdsRef = useRef<Set<string>>(new Set());
+  const lastAlertTimeRef = useRef<Map<string, number>>(new Map());
   const dismissTimerRef = useRef<NodeJS.Timeout>();
 
   // 1. Android / Capacitor FCM Push Bildirim İzinleri ve Token Kaydı
@@ -39,7 +40,7 @@ export function MobileInAppNotificationManager() {
     if (Capacitor.isNativePlatform()) {
       (async () => {
         try {
-          // Android 8+ için yüksek öncelikli bildirim kanalı (Arka plandayken ses ve açılır banner için)
+          // Android 8+ için yüksek öncelikli bildirim kanalı (Arka plandayken ses ve durum çubuğu için)
           try {
             await PushNotifications.createChannel({
               id: 'readixon_alerts',
@@ -96,12 +97,32 @@ export function MobileInAppNotificationManager() {
             console.error('[FCM] Kayıt hatası:', err);
           });
 
-          // Uygulama ön plandayken gelen Push bildirimi (aynı bildirim Firestore listener'dan gelmediyse göster)
+          // Uygulama ön plandayken gelen Push bildirimi
+          // (Firestore canlı dinleyicisi zaten 0ms'de gösterdiyse mükerrer gösterme!)
           PushNotifications.addListener('pushNotificationReceived', (notification) => {
             console.log('[FCM] Ön planda bildirim yakalandı:', notification);
-            const notifKey = notification.id || `push_${notification.data?.notificationId || Date.now()}`;
+            const chatId = notification.data?.chatId;
+            if (chatId) {
+              const lastTime = lastAlertTimeRef.current.get(chatId) || 0;
+              if (Date.now() - lastTime < 4000) {
+                return; // Firestore zaten gösterdi
+              }
+            }
+
+            const notifId = notification.data?.notificationId;
+            if (notifId) {
+              const lastTime = lastAlertTimeRef.current.get(notifId) || 0;
+              if (Date.now() - lastTime < 4000) {
+                return; // Firestore zaten gösterdi
+              }
+            }
+
+            const notifKey = notification.id || `push_${notifId || chatId || Date.now()}`;
             if (seenIdsRef.current.has(notifKey)) return;
             seenIdsRef.current.add(notifKey);
+
+            if (chatId) lastAlertTimeRef.current.set(chatId, Date.now());
+            if (notifId) lastAlertTimeRef.current.set(notifId, Date.now());
 
             const route = notification.data?.route || '/notifications';
             triggerAlert({
@@ -192,7 +213,13 @@ export function MobileInAppNotificationManager() {
           const senderId = chat.participants.find((p) => p !== uid);
           if (!senderId) return;
 
-          const msgKey = `msg_${chat.id}_${msgTime}`;
+          // MÜKERRER BİLDİRİM ENGELLEYİCİ:
+          // Aynı sohbet için 3 saniye içinde birden fazla snapshot (local vs serverTimestamp) gelirse engelle
+          const lastTime = lastAlertTimeRef.current.get(chat.id) || 0;
+          if (Date.now() - lastTime < 3500) return;
+          lastAlertTimeRef.current.set(chat.id, Date.now());
+
+          const msgKey = `msg_${chat.id}_${chat.lastMessage}`;
           if (seenIdsRef.current.has(msgKey)) return;
           seenIdsRef.current.add(msgKey);
 
@@ -246,6 +273,10 @@ export function MobileInAppNotificationManager() {
             seenIdsRef.current.add(notif.id);
             return;
           }
+
+          const lastTime = lastAlertTimeRef.current.get(notif.id) || 0;
+          if (Date.now() - lastTime < 3500) return;
+          lastAlertTimeRef.current.set(notif.id, Date.now());
 
           if (seenIdsRef.current.has(notif.id)) return;
           seenIdsRef.current.add(notif.id);
