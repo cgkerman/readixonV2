@@ -133,44 +133,22 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
       const displayStories = stories.slice(0, 5);
 
       const [logoImg, mascotImg, mainCoverImg, ...storyCoverImgs] = await Promise.all([
-        loadImage('/brand-logo.png'),
+        loadImage('/white-Readixon.png'),
         loadImage('/cekirix.png'),
         loadImage(coverToLoad),
         ...displayStories.map((s) => loadImage(s.coverImage || (s as any).coverUrl || '')),
       ]);
 
-      // 3. Üst Logo Kapsülü (Readixon Branding)
-      const capsuleWidth = 320;
-      const capsuleHeight = 64;
-      const capsuleX = (1080 - capsuleWidth) / 2;
-      const capsuleY = 95;
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.roundRect(capsuleX, capsuleY, capsuleWidth, capsuleHeight, 32);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      // Logo Görseli (Eğer yüklendiyse çiz)
+      // 3. Üst Logo (Sadece white-Readixon.png)
       if (logoImg) {
-        ctx.drawImage(logoImg, capsuleX + 18, capsuleY + 12, 40, 40);
+        const logoW = 380;
+        const logoH = Math.round(
+          logoW * ((logoImg.naturalHeight || 1592) / (logoImg.naturalWidth || 6118))
+        );
+        const logoX = (1080 - logoW) / 2;
+        const logoY = 90;
+        ctx.drawImage(logoImg, logoX, logoY, logoW, logoH);
       }
-
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 26px sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText('READIXON', capsuleX + (logoImg ? 72 : 36), capsuleY + 41);
-
-      ctx.restore();
-
-      // "OKUMA LİSTESİ" Alt Rozeti
-      ctx.fillStyle = '#a5b4fc';
-      ctx.font = 'bold 18px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('Ö Z E L   O K U M A   L İ S T E S İ', 540, 195);
 
       // 4. Liste Kapağı (Kare 420x420, Yuvarlatılmış Köşeler & Derin Gölge)
       const coverSize = 420;
@@ -480,10 +458,11 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
           ref={storyCardRef}
           className="relative rounded-2xl overflow-hidden bg-gradient-to-b from-indigo-950/40 via-card to-background border border-indigo-500/25 p-4 sm:p-5 mb-5 shadow-inner"
         >
-          {/* Sağ Üst Çekirix Maskot Rozeti */}
-          <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-background/80 border border-primary/30 backdrop-blur-sm shadow-sm">
-            <img src="/cekirix.png" alt="Çekirix" className="w-5 h-5 object-contain" />
-            <span className="text-[10px] font-bold text-primary">Readixon</span>
+          {/* Sağ Üst Readixon & Çekirix Rozeti */}
+          <div className="absolute top-3 right-3 flex items-center gap-2 px-2.5 py-1 rounded-full bg-background/80 border border-primary/30 backdrop-blur-sm shadow-sm">
+            <img src="/white-Readixon.png" alt="Readixon" className="h-3.5 w-auto object-contain" />
+            <span className="w-1 h-1 rounded-full bg-primary/40" />
+            <img src="/cekirix.png" alt="Çekirix" className="w-4 h-4 object-contain" />
           </div>
 
           <div className="flex items-center gap-4">
