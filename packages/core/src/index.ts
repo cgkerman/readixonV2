@@ -71,7 +71,8 @@ export type {
   AdminQuote,
   EditorialReview,
   SitePopup,
-  ChapterAudioTrack
+  ChapterAudioTrack,
+  ReadingList,
 } from './types';
 
 // Auth servisi
@@ -136,6 +137,7 @@ export * from './services/curveballService';
 export * from './services/pointsService';
 export * from './services/editorialService';
 export * from './services/popupService';
+export * from './services/readingListService';
 export * from './utils/imageUtils';
 export * from './utils/cropImageUtils';
 export * from './utils/audioUtils';

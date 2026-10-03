@@ -30,10 +30,12 @@ import type { Story, User, Chapter, Review, Character, EditorialReview, ReadingP
 import { 
   BookOpen, Heart, Eye, List, Play, BookmarkPlus, BookmarkCheck, 
   ArrowLeft, Loader2, Star, MessageSquare, Users, Award, PenTool, Hash,
-  Lock, Calendar, Bell, Info, X, Sparkles, ChevronRight, CheckCircle, Bookmark, Check
+  Lock, Calendar, Bell, Info, X, Sparkles, ChevronRight, CheckCircle, Bookmark, Check,
+  ListPlus
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from "sonner";
+import { AddToReadingListModal } from '@/components/reading-list/AddToReadingListModal';
 
 export default function StoryDetailPage() {
   const params = useParams();
@@ -81,6 +83,7 @@ export default function StoryDetailPage() {
   const [reviewRating, setReviewRating] = useState<number>(10);
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reminders, setReminders] = useState<string[]>([]);
+  const [isAddToReadingListOpen, setIsAddToReadingListOpen] = useState(false);
 
   useEffect(() => {
     // Load reminders from local storage
@@ -605,6 +608,22 @@ export default function StoryDetailPage() {
                   isSaved ? <BookmarkCheck size={18} className="text-primary" /> : <BookmarkPlus size={18} />
                 )}
                 <span className="ml-2 font-medium whitespace-nowrap text-sm">{isSaved ? 'Kütüphanede' : 'Kütüphaneye Ekle'}</span>
+              </button>
+
+              <button 
+                onClick={() => {
+                  if (!firebaseUser) {
+                    toast.info('Okuma listelerine eklemek için giriş yapmalısınız.');
+                    router.push('/login');
+                    return;
+                  }
+                  setIsAddToReadingListOpen(true);
+                }}
+                className="w-full md:w-auto h-[52px] bg-background/80 border border-border/50 hover:bg-muted text-text shadow-sm backdrop-blur-md rounded-xl flex items-center justify-center px-4 md:px-5 transition-colors"
+                title="Okuma Listesine Ekle"
+              >
+                <ListPlus size={18} className="text-primary" />
+                <span className="ml-2 font-medium whitespace-nowrap text-sm">Listeye Ekle</span>
               </button>
             </div>
           </div>
@@ -1207,6 +1226,17 @@ export default function StoryDetailPage() {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Okuma Listesine Ekle Modalı */}
+      {firebaseUser && (
+        <AddToReadingListModal
+          isOpen={isAddToReadingListOpen}
+          onClose={() => setIsAddToReadingListOpen(false)}
+          userId={firebaseUser.uid}
+          storyId={storyId}
+          storyTitle={story?.title}
+        />
       )}
     </div>
   );

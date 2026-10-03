@@ -821,3 +821,25 @@ export interface PlatformFeedbackType {
   userId: string;
   createdAt: Timestamp;
 }
+
+// ─────────────────────────────────────────────────────────────────
+// Reading Lists (Spotify-style Curated Playlists)
+// ─────────────────────────────────────────────────────────────────
+
+export interface ReadingList {
+  id: string;
+  userId: string;
+  userName?: string;
+  userUsername?: string;
+  userAvatar?: string;
+  title: string;
+  description?: string;
+  storyIds: string[];
+  coverUrl?: string;
+  isPublic: boolean;
+  likesCount: number;
+  viewsCount?: number;
+  createdAt: any;
+  updatedAt: any;
+}
+

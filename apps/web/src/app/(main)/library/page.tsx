@@ -2,22 +2,44 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { BookOpen, Bookmark, Loader2, Compass, Quote, Trash2, MessageCircle } from 'lucide-react';
+import { BookOpen, Bookmark, Loader2, Compass, Quote, Trash2, MessageCircle, ListMusic, Plus } from 'lucide-react';
 import { Typography, Button, StoryCard, ReadixCard } from '@readixon/ui';
-import { useAuthStore, getUserReadingProgress, getSavedStories, getStoriesByIds, generateStorySlug, getUserProfile, getUserQuotes, deleteSavedQuote, getBookmarkedReadixes, toggleReadixBookmark, toggleReadixLike } from '@readixon/core';
+import { 
+  useAuthStore, 
+  getUserReadingProgress, 
+  getSavedStories, 
+  getStoriesByIds, 
+  generateStorySlug, 
+  getUserProfile, 
+  getUserQuotes, 
+  deleteSavedQuote, 
+  getBookmarkedReadixes, 
+  toggleReadixBookmark, 
+  toggleReadixLike,
+  getUserReadingLists,
+  getUserLikedReadingLists,
+  ReadingList,
+} from '@readixon/core';
 import type { Story, SavedQuote, Readix, User } from '@readixon/core';
+import { ReadingListCard } from '@/components/reading-list/ReadingListCard';
+import { CreateReadingListModal } from '@/components/reading-list/CreateReadingListModal';
 import { toast } from 'sonner';
 
 export default function LibraryPage() {
-  const [activeTab, setActiveTab] = useState<'reading' | 'saved' | 'quotes' | 'readixes'>('reading');
+  const [activeTab, setActiveTab] = useState<'reading' | 'saved' | 'lists' | 'quotes' | 'readixes'>('reading');
   const [readingSubTab, setReadingSubTab] = useState<'novels' | 'webtoons'>('novels');
   const [savedSubTab, setSavedSubTab] = useState<'novels' | 'webtoons'>('novels');
+  const [listsSubTab, setListsSubTab] = useState<'myLists' | 'likedLists'>('myLists');
   const [loading, setLoading] = useState(true);
   const [readingStories, setReadingStories] = useState<(Story & { progress?: number })[]>([]);
   const [savedStories, setSavedStories] = useState<Story[]>([]);
   const [savedQuotes, setSavedQuotes] = useState<SavedQuote[]>([]);
   const [savedReadixes, setSavedReadixes] = useState<Readix[]>([]);
   const [readixAuthors, setReadixAuthors] = useState<Record<string, User>>({});
+  const [userLists, setUserLists] = useState<ReadingList[]>([]);
+  const [likedLists, setLikedLists] = useState<ReadingList[]>([]);
+  const [listCovers, setListCovers] = useState<Record<string, string[]>>({});
+  const [isCreateListOpen, setIsCreateListOpen] = useState(false);
   
   const { firebaseUser } = useAuthStore();
   const router = useRouter();
@@ -85,6 +107,36 @@ export default function LibraryPage() {
           } else {
             setSavedStories([]);
           }
+        } else if (activeTab === 'lists') {
+          const [myLists, liked] = await Promise.all([
+            getUserReadingLists(firebaseUser.uid),
+            getUserLikedReadingLists(firebaseUser.uid),
+          ]);
+          setUserLists(myLists);
+          setLikedLists(liked);
+
+          const allLists = [...myLists, ...liked];
+          const allStoryIds = Array.from(new Set(allLists.flatMap(l => (l.storyIds || []).slice(0, 4))));
+          if (allStoryIds.length > 0) {
+            try {
+              const fetchedStories = await getStoriesByIds(allStoryIds);
+              const coverMap: Record<string, string> = {};
+              fetchedStories.forEach(s => {
+                const cover = s.coverImage || (s as any).coverUrl;
+                if (cover) coverMap[s.storyId] = cover;
+              });
+              const listCoversMap: Record<string, string[]> = {};
+              allLists.forEach(l => {
+                listCoversMap[l.id] = (l.storyIds || [])
+                  .slice(0, 4)
+                  .map(id => coverMap[id])
+                  .filter(Boolean);
+              });
+              setListCovers(listCoversMap);
+            } catch (coverErr) {
+              console.error('Liste kapakları alınamadı:', coverErr);
+            }
+          }
         } else if (activeTab === 'quotes') {
           const quotes = await getUserQuotes(firebaseUser.uid);
           setSavedQuotes(quotes);
@@ -137,6 +189,82 @@ export default function LibraryPage() {
       return (
         <div className="flex-1 flex items-center justify-center p-12 mt-12">
           <Loader2 className="animate-spin text-primary" size={32} />
+        </div>
+      );
+    }
+
+    if (activeTab === 'lists') {
+      const displayedLists = listsSubTab === 'myLists' ? userLists : likedLists;
+
+      return (
+        <div className="mt-6">
+          {/* Üst Çubuk: Alt Sekmeler ve "+ Yeni Liste" Butonu */}
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6 pb-4 border-b border-border/20">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setListsSubTab('myLists')}
+                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                  listsSubTab === 'myLists'
+                    ? 'bg-primary text-primary-foreground shadow-md shadow-primary/25'
+                    : 'bg-muted/10 hover:bg-muted/20 text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Oluşturduklarım ({userLists.length})
+              </button>
+              <button
+                onClick={() => setListsSubTab('likedLists')}
+                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                  listsSubTab === 'likedLists'
+                    ? 'bg-primary text-primary-foreground shadow-md shadow-primary/25'
+                    : 'bg-muted/10 hover:bg-muted/20 text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Beğendiklerim ({likedLists.length})
+              </button>
+            </div>
+
+            <button
+              onClick={() => setIsCreateListOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/15 hover:bg-primary text-primary hover:text-primary-foreground font-bold text-xs sm:text-sm transition-colors border border-primary/25 shadow-sm"
+            >
+              <Plus size={16} /> Yeni Liste Oluştur
+            </button>
+          </div>
+
+          {displayedLists.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center py-20 text-center">
+              <div className="w-20 h-20 rounded-3xl bg-primary/10 text-primary flex items-center justify-center mb-4 border border-primary/20">
+                <ListMusic size={36} />
+              </div>
+              <Typography variant="h3" className="mb-2 text-text font-bold">
+                {listsSubTab === 'myLists' ? 'Henüz Bir Okuma Listeniz Yok' : 'Henüz Beğendiğiniz Bir Liste Yok'}
+              </Typography>
+              <Typography variant="body" className="text-muted max-w-md mx-auto mb-6 text-xs sm:text-sm">
+                {listsSubTab === 'myLists'
+                  ? 'Hikayeleri Spotify çalma listeleri gibi bir araya getirin, özel kapaklarla derleyin ve herkesle paylaşın!'
+                  : 'Beğendiğiniz veya takip ettiğiniz herkese açık listeler burada görünecektir.'}
+              </Typography>
+              {listsSubTab === 'myLists' && (
+                <button
+                  onClick={() => setIsCreateListOpen(true)}
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-bold text-xs sm:text-sm shadow-lg shadow-primary/25"
+                >
+                  <Plus size={16} /> İlk Listeni Oluştur
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+              {displayedLists.map(list => (
+                <ReadingListCard
+                  key={list.id}
+                  list={list}
+                  covers={listCovers[list.id]}
+                  isOwner={list.userId === firebaseUser?.uid}
+                />
+              ))}
+            </div>
+          )}
         </div>
       );
     }
@@ -353,6 +481,17 @@ export default function LibraryPage() {
             <span>Kaydedilenler</span>
           </button>
           <button
+            onClick={() => setActiveTab('lists')}
+            className={`flex items-center gap-2 py-3 sm:py-4 px-3 sm:px-1 border-b-2 font-semibold text-xs sm:text-base shrink-0 transition-all ${
+              activeTab === 'lists' 
+                ? 'border-primary text-primary shadow-[0_1px_0_0_currentColor]' 
+                : 'border-transparent text-muted hover:text-text opacity-70 hover:opacity-100'
+            }`}
+          >
+            <ListMusic size={17} className="shrink-0" />
+            <span>Listelerim</span>
+          </button>
+          <button
             onClick={() => setActiveTab('quotes')}
             className={`flex items-center gap-2 py-3 sm:py-4 px-3 sm:px-1 border-b-2 font-semibold text-xs sm:text-base shrink-0 transition-all ${
               activeTab === 'quotes' 
@@ -397,6 +536,18 @@ export default function LibraryPage() {
       )}
 
       {renderContent()}
+
+      {/* Yeni Liste Oluşturma Modalı */}
+      {firebaseUser && (
+        <CreateReadingListModal
+          isOpen={isCreateListOpen}
+          onClose={() => setIsCreateListOpen(false)}
+          userId={firebaseUser.uid}
+          onSuccess={(created) => {
+            setUserLists(prev => [created, ...prev]);
+          }}
+        />
+      )}
     </div>
   );
 }
