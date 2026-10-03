@@ -62,6 +62,11 @@ export function triggerNotificationHaptic(type: 'message' | 'notification' = 'no
   if (typeof window === 'undefined' || typeof navigator === 'undefined') return;
 
   try {
+    // Tarayıcı / WebView kuralı: Kullanıcı ekrana dokunmadan titreşimi çağırma (Chromium intervention engelini önler)
+    if ((navigator as any).userActivation && !(navigator as any).userActivation.hasBeenActive) {
+      return;
+    }
+
     if ('vibrate' in navigator && typeof navigator.vibrate === 'function') {
       if (type === 'message') {
         // Çift kısa titreşim (mesaj için)
