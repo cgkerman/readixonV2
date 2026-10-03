@@ -20,10 +20,12 @@ import {
   Star,
   X,
   ListMusic,
+  Plus,
 } from 'lucide-react';
 import {
   getReadingListById,
   deleteReadingList,
+  addStoryToReadingList,
   removeStoryFromReadingList,
   toggleLikeReadingList,
   checkIfReadingListLiked,
@@ -33,6 +35,7 @@ import {
   ReadingList,
   getUserProfile,
 } from '@readixon/core';
+import { StorySearchModal } from '@readixon/ui';
 import { ReadingListCoverCollage } from '@/components/reading-list/ReadingListCoverCollage';
 import { ShareReadingListModal } from '@/components/reading-list/ShareReadingListModal';
 import { CreateReadingListModal } from '@/components/reading-list/CreateReadingListModal';
@@ -51,6 +54,7 @@ export default function ReadingListDetailPage() {
   const [likeCount, setLikeCount] = useState(0);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isAddBookModalOpen, setIsAddBookModalOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
@@ -123,6 +127,25 @@ export default function ReadingListDetailPage() {
       setIsLiked(previousLiked);
       setLikeCount(previousCount);
       toast.error('Beğeni işlemi başarısız oldu.');
+    }
+  };
+
+  // Listeye yeni hikaye ekleme
+  const handleAddStory = async (selectedStory: Story) => {
+    if (!list || !isOwner) return;
+    if (list.storyIds?.includes(selectedStory.storyId)) {
+      toast.info(`"${selectedStory.title}" zaten bu listede ekli.`);
+      return;
+    }
+
+    try {
+      await addStoryToReadingList(list.id, selectedStory.storyId);
+      setStories(prev => [...prev, selectedStory]);
+      setList(prev => (prev ? { ...prev, storyIds: [...(prev.storyIds || []), selectedStory.storyId] } : null));
+      toast.success(`"${selectedStory.title}" listeye eklendi!`);
+      setIsAddBookModalOpen(false);
+    } catch (err) {
+      toast.error('Kitap eklenemedi.');
     }
   };
 
@@ -340,6 +363,16 @@ export default function ReadingListDetailPage() {
           >
             <Share2 size={19} />
           </button>
+
+          {/* Sahip İçin: Kitap Ekle */}
+          {isOwner && (
+            <button
+              onClick={() => setIsAddBookModalOpen(true)}
+              className="h-12 px-5 rounded-full bg-primary/15 hover:bg-primary text-primary hover:text-primary-foreground font-bold text-xs sm:text-sm flex items-center gap-2 border border-primary/30 transition-all shadow-sm"
+            >
+              <Plus size={16} /> Kitap Ekle
+            </button>
+          )}
         </div>
 
         {/* Sahip İçin Eylemler: Düzenle & Sil */}
@@ -376,12 +409,22 @@ export default function ReadingListDetailPage() {
               Hikaye detay sayfalarındaki &quot;Listeye Ekle&quot; butonuna basarak bu listeye hikayeler
               ekleyebilirsiniz.
             </p>
-            <Link
-              href="/explore"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground font-bold text-xs shadow-md shadow-primary/25"
-            >
-              Hikayeleri Keşfet
-            </Link>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              {isOwner && (
+                <button
+                  onClick={() => setIsAddBookModalOpen(true)}
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-bold text-xs sm:text-sm shadow-lg shadow-primary/25 hover:bg-primary/90 transition-all"
+                >
+                  <Plus size={16} /> Kitap Ara ve Ekle
+                </button>
+              )}
+              <Link
+                href="/explore"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-border/40 hover:bg-card text-foreground font-bold text-xs transition-colors"
+              >
+                Hikayeleri Keşfet
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="space-y-2">
@@ -501,6 +544,15 @@ export default function ReadingListDetailPage() {
           userId={firebaseUser.uid}
           editingList={list}
           onSuccess={updated => setList(prev => (prev ? { ...prev, ...updated } : null))}
+        />
+      )}
+
+      {/* Kitap Arama ve Listeye Ekleme Modalı */}
+      {isOwner && (
+        <StorySearchModal
+          isOpen={isAddBookModalOpen}
+          onClose={() => setIsAddBookModalOpen(false)}
+          onSelect={handleAddStory}
         />
       )}
     </div>
