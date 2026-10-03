@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, Sparkles, Lock, Globe, Loader2 } from 'lucide-react';
-import { createReadingList, updateReadingList } from '@readixon/core';
+import React, { useState, useRef, useEffect } from 'react';
+import { X, Sparkles, Lock, Globe, Loader2, Image as ImageIcon, UploadCloud, Trash2 } from 'lucide-react';
+import { createReadingList, updateReadingList, compressImage, uploadFile } from '@readixon/core';
 import type { ReadingList } from '@readixon/core';
 import { toast } from 'sonner';
 
@@ -14,6 +14,8 @@ interface CreateReadingListModalProps {
   editingList?: ReadingList | null;
   onSuccess?: (createdOrUpdatedList: ReadingList) => void;
 }
+
+const DEFAULT_COVER_PATH = '/images/default-reading-list.jpg';
 
 export const CreateReadingListModal: React.FC<CreateReadingListModalProps> = ({
   isOpen,
@@ -27,21 +29,61 @@ export const CreateReadingListModal: React.FC<CreateReadingListModalProps> = ({
   const [description, setDescription] = useState(editingList?.description || '');
   const [isPublic, setIsPublic] = useState(editingList ? editingList.isPublic : true);
   const [loading, setLoading] = useState(false);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(editingList?.coverUrl || null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Düzenleme modunda props değişirse senkronize et
-  React.useEffect(() => {
+  useEffect(() => {
     if (editingList) {
       setTitle(editingList.title);
       setDescription(editingList.description || '');
       setIsPublic(editingList.isPublic);
+      setCoverPreview(editingList.coverUrl || null);
+      setCoverFile(null);
     } else {
       setTitle('');
       setDescription('');
       setIsPublic(true);
+      setCoverPreview(null);
+      setCoverFile(null);
     }
   }, [editingList, isOpen]);
 
   if (!isOpen) return null;
+
+  const handleFileSelect = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Lütfen geçerli bir görsel dosyası seçin (JPEG, PNG, WebP).');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Görsel boyutu en fazla 10 MB olabilir.');
+      return;
+    }
+
+    setCoverFile(file);
+    const objectUrl = URL.createObjectURL(file);
+    setCoverPreview(objectUrl);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFileSelect(file);
+    }
+  };
+
+  const handleRemoveCover = () => {
+    setCoverFile(null);
+    setCoverPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,11 +94,27 @@ export const CreateReadingListModal: React.FC<CreateReadingListModalProps> = ({
 
     setLoading(true);
     try {
+      let finalCoverUrl = coverPreview || DEFAULT_COVER_PATH;
+
+      // Kullanıcı yeni bir görsel yüklediyse optimize et ve Firebase Storage'a yükle
+      if (coverFile) {
+        try {
+          const compressed = await compressImage(coverFile, 800, 800, 0.85);
+          const uploadPath = `readingLists/${userId}/cover_${Date.now()}.jpg`;
+          finalCoverUrl = await uploadFile(compressed, uploadPath);
+        } catch (uploadErr: any) {
+          console.error('Kapak resmi yükleme hatası:', uploadErr);
+          toast.error('Görsel yüklenemedi, varsayılan kapak kullanılacak.');
+          finalCoverUrl = DEFAULT_COVER_PATH;
+        }
+      }
+
       if (editingList) {
         await updateReadingList(editingList.id, userId, {
           title: title.trim(),
           description: description.trim(),
           isPublic,
+          coverUrl: finalCoverUrl,
         });
         toast.success('Okuma listesi güncellendi.');
         if (onSuccess) {
@@ -65,6 +123,7 @@ export const CreateReadingListModal: React.FC<CreateReadingListModalProps> = ({
             title: title.trim(),
             description: description.trim(),
             isPublic,
+            coverUrl: finalCoverUrl,
           });
         }
       } else {
@@ -72,6 +131,7 @@ export const CreateReadingListModal: React.FC<CreateReadingListModalProps> = ({
           title: title.trim(),
           description: description.trim(),
           isPublic,
+          coverUrl: finalCoverUrl,
           storyIds: initialStoryId ? [initialStoryId] : [],
         });
         toast.success('Yeni okuma listesi oluşturuldu!');
@@ -90,7 +150,7 @@ export const CreateReadingListModal: React.FC<CreateReadingListModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-md rounded-3xl bg-card border border-border/40 shadow-2xl overflow-hidden p-6 sm:p-7">
+      <div className="relative w-full max-w-lg rounded-3xl bg-card border border-border/40 shadow-2xl overflow-hidden p-6 sm:p-7 max-h-[92vh] overflow-y-auto">
         {/* Kapat Butonu */}
         <button
           onClick={onClose}
@@ -117,6 +177,63 @@ export const CreateReadingListModal: React.FC<CreateReadingListModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Liste Kapağı Alanı (Özel Kapak Yükleme & Optimizasyon) */}
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+              Liste Kapağı <span className="normal-case font-normal text-[11px] text-muted-foreground/70">(İsteğe bağlı)</span>
+            </label>
+
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleInputChange}
+              className="hidden"
+            />
+
+            <div className="flex items-center gap-4">
+              {/* Kapak Önizleme */}
+              <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden border border-border/50 bg-background/80 shrink-0 shadow-md group">
+                <img
+                  src={coverPreview || DEFAULT_COVER_PATH}
+                  alt="Liste Kapağı"
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+
+                {coverPreview && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveCover}
+                    title="Kapağı Kaldır (Varsayılana Dön)"
+                    className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-black/70 hover:bg-red-500/90 text-white flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                )}
+              </div>
+
+              {/* Yükleme Butonu & Bilgilendirme */}
+              <div className="flex-1 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary text-xs font-semibold transition-all hover:border-primary"
+                >
+                  <UploadCloud size={16} />
+                  <span>{coverPreview ? 'Görseli Değiştir' : 'Özel Kapak Yükle'}</span>
+                </button>
+
+                <p className="text-[11px] text-muted-foreground/75 leading-relaxed">
+                  {coverPreview ? (
+                    <span className="text-emerald-500 font-medium">✓ Özel kapak seçildi (yüklenirken otomatik optimize edilir).</span>
+                  ) : (
+                    <span>Görsel seçmezseniz Readixon'ın estetik varsayılan kapağı kullanılır.</span>
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Başlık Alanı */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
