@@ -65,7 +65,7 @@ export const createReadingList = async (
     title: data.title.trim(),
     description: data.description?.trim() || '',
     storyIds: data.storyIds || [],
-    coverUrl: data.coverUrl || '',
+    coverUrl: data.coverUrl || '/images/default-reading-list.jpg',
     isPublic: data.isPublic !== undefined ? data.isPublic : true,
     likesCount: 0,
     viewsCount: 0,

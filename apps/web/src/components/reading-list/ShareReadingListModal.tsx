@@ -1,16 +1,16 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { X, Copy, Check, Share2, Download, MessageCircle, Send, Sparkles, Loader2 } from 'lucide-react';
+import { X, Copy, Check, Share2, Download, MessageCircle, Send, Sparkles, Loader2, BookOpen } from 'lucide-react';
 import { ReadingListCoverCollage } from './ReadingListCoverCollage';
+import type { ReadingList, Story } from '@readixon/core';
+import { toast } from 'sonner';
 
 const XTwitterIcon = ({ size = 15 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
   </svg>
 );
-import type { ReadingList, Story } from '@readixon/core';
-import { toast } from 'sonner';
 
 interface ShareReadingListModalProps {
   isOpen: boolean;
@@ -79,41 +79,41 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
 
       // 1. Arka plan degrade (Sleek Dark Modern Aesthetic)
       const bgGradient = ctx.createLinearGradient(0, 0, 1080, 1920);
-      bgGradient.addColorStop(0, '#0d0d12');
-      bgGradient.addColorStop(0.3, '#141420');
-      bgGradient.addColorStop(0.7, '#181226');
-      bgGradient.addColorStop(1, '#08080c');
+      bgGradient.addColorStop(0, '#0a0a0f');
+      bgGradient.addColorStop(0.25, '#12121d');
+      bgGradient.addColorStop(0.65, '#171126');
+      bgGradient.addColorStop(1, '#07070b');
       ctx.fillStyle = bgGradient;
       ctx.fillRect(0, 0, 1080, 1920);
 
       // 2. Ambient Işıma Efekti (Arka Plan Işıltısı)
-      const glowGradient = ctx.createRadialGradient(540, 750, 100, 540, 750, 600);
-      glowGradient.addColorStop(0, 'rgba(99, 102, 241, 0.28)');
-      glowGradient.addColorStop(0.5, 'rgba(168, 85, 247, 0.12)');
+      const glowGradient = ctx.createRadialGradient(540, 600, 50, 540, 600, 550);
+      glowGradient.addColorStop(0, 'rgba(99, 102, 241, 0.35)');
+      glowGradient.addColorStop(0.6, 'rgba(168, 85, 247, 0.12)');
       glowGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.fillStyle = glowGradient;
-      ctx.fillRect(0, 200, 1080, 1200);
+      ctx.fillRect(0, 100, 1080, 1000);
 
-      // 3. Üst Logo & Başlık
-      ctx.fillStyle = '#6366f1';
-      ctx.font = 'bold 36px sans-serif';
+      // 3. Üst Başlık & Logo
+      ctx.fillStyle = '#818cf8';
+      ctx.font = 'bold 34px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('R E A D I X O N', 540, 220);
+      ctx.fillText('R E A D I X O N', 540, 160);
 
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-      ctx.font = '600 24px sans-serif';
-      ctx.fillText('OKUMA LİSTESİ', 540, 265);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.fillText('OKUMA LİSTESİ', 540, 200);
 
-      // 4. Albüm Kapağı Alanı (Kare 600x600, Yuvarlatılmış Köşeler & Gölge)
-      const coverSize = 600;
+      // 4. Albüm Kapağı Alanı (Kare 420x420, Yuvarlatılmış Köşeler & Gölge)
+      const coverSize = 420;
       const coverX = (1080 - coverSize) / 2;
-      const coverY = 380;
-      const radius = 40;
+      const coverY = 240;
+      const radius = 36;
 
       ctx.save();
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
-      ctx.shadowBlur = 50;
-      ctx.shadowOffsetY = 25;
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+      ctx.shadowBlur = 40;
+      ctx.shadowOffsetY = 20;
 
       // Yuvarlatılmış dikdörtgen kırpma maskesi
       ctx.beginPath();
@@ -122,48 +122,46 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
       ctx.fill();
       ctx.clip();
 
-      // Kapak resimlerini yükle ve 2x2 veya tek resim olarak çiz
-      const loadedImages: HTMLImageElement[] = [];
-      const imagePromises = covers.slice(0, 4).map(
-        url =>
-          new Promise<HTMLImageElement>(resolve => {
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.onload = () => resolve(img);
-            img.onerror = () => resolve(img);
-            img.src = url;
-          })
-      );
+      // Kapak görselini yükle (Varsayılan veya ilk kitap kapağı)
+      let coverImg: HTMLImageElement | null = null;
+      try {
+        const coverToLoad = (list.coverUrl && list.coverUrl !== '/images/default-reading-list.jpg')
+          ? list.coverUrl
+          : (covers.length > 0 ? covers[0] : '/images/default-reading-list.jpg');
 
-      const resolvedImages = await Promise.all(imagePromises);
-      const validImages = resolvedImages.filter(img => img.width > 0);
+        coverImg = await new Promise<HTMLImageElement | null>((resolve) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => resolve(img);
+          img.onerror = () => {
+            const fallback = new Image();
+            fallback.onload = () => resolve(fallback);
+            fallback.onerror = () => resolve(null);
+            fallback.src = '/images/default-reading-list.jpg';
+          };
+          img.src = coverToLoad;
+        });
+      } catch (e) {
+        console.error('Kapak resmi yüklenemedi:', e);
+      }
 
-      if (validImages.length >= 4) {
-        // 2x2 Çiz
-        const half = coverSize / 2;
-        ctx.drawImage(validImages[0], coverX, coverY, half, half);
-        ctx.drawImage(validImages[1], coverX + half, coverY, half, half);
-        ctx.drawImage(validImages[2], coverX, coverY + half, half, half);
-        ctx.drawImage(validImages[3], coverX + half, coverY + half, half, half);
-      } else if (validImages.length > 0) {
-        // İlk resmi tam çiz
-        ctx.drawImage(validImages[0], coverX, coverY, coverSize, coverSize);
+      if (coverImg && coverImg.width > 0) {
+        ctx.drawImage(coverImg, coverX, coverY, coverSize, coverSize);
       } else {
-        // Placeholder
-        ctx.fillStyle = '#2d2d3a';
+        ctx.fillStyle = '#232332';
         ctx.fillRect(coverX, coverY, coverSize, coverSize);
       }
       ctx.restore();
 
-      // 5. Liste Başlığı (Otomatik satır kaydırma ile)
+      // 5. Liste Başlığı
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 56px sans-serif';
+      ctx.font = 'bold 46px sans-serif';
       ctx.textAlign = 'center';
       
       const words = list.title.split(' ');
       let line = '';
-      let textY = 1100;
-      const maxLineWidth = 850;
+      let textY = 720;
+      const maxLineWidth = 880;
 
       for (let n = 0; n < words.length; n++) {
         const testLine = line + words[n] + ' ';
@@ -171,7 +169,7 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
         if (metrics.width > maxLineWidth && n > 0) {
           ctx.fillText(line.trim(), 540, textY);
           line = words[n] + ' ';
-          textY += 70;
+          textY += 56;
         } else {
           line = testLine;
         }
@@ -179,36 +177,124 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
       ctx.fillText(line.trim(), 540, textY);
 
       // 6. Küratör Bilgisi
-      textY += 65;
+      textY += 46;
       ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-      ctx.font = '500 32px sans-serif';
+      ctx.font = '500 24px sans-serif';
       ctx.fillText(`Küratör: ${list.userName || 'Readixon Okuru'}`, 540, textY);
 
-      // 7. İstatistik Hapı
-      textY += 60;
-      ctx.fillStyle = 'rgba(99, 102, 241, 0.2)';
-      const pillWidth = 320;
-      const pillHeight = 56;
-      ctx.beginPath();
-      ctx.roundRect(540 - pillWidth / 2, textY - 38, pillWidth, pillHeight, 28);
-      ctx.fill();
+      // 7. LİSTEDE YER ALAN KİTAPLAR KUTUSU (Tracklist Box)
+      const boxY = Math.max(textY + 45, 870);
+      const boxX = 90;
+      const boxWidth = 900;
+      const boxHeight = 730;
+      const boxRadius = 32;
 
-      ctx.strokeStyle = 'rgba(99, 102, 241, 0.5)';
+      ctx.save();
+      // Kutu Arka Planı (Glassmorphism)
+      ctx.beginPath();
+      ctx.roundRect(boxX, boxY, boxWidth, boxHeight, boxRadius);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(99, 102, 241, 0.25)';
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      ctx.fillStyle = '#818cf8';
-      ctx.font = 'bold 26px sans-serif';
-      ctx.fillText(`${list.storyIds?.length || 0} Hikaye • Readixon`, 540, textY);
+      // Kutu Başlığı
+      ctx.fillStyle = '#a5b4fc';
+      ctx.font = 'bold 22px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('LİSTEDE YER ALAN KİTAPLAR', boxX + 45, boxY + 55);
+
+      // İnce ayırıcı çizgi
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(boxX + 45, boxY + 80);
+      ctx.lineTo(boxX + boxWidth - 45, boxY + 80);
+      ctx.stroke();
+
+      if (stories.length === 0) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+        ctx.font = 'italic 26px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Bu okuma listesi henüz yeni oluşturuldu.', 540, boxY + 240);
+      } else {
+        // En fazla 5 kitap listele
+        const displayStories = stories.slice(0, 5);
+        let rowY = boxY + 145;
+
+        displayStories.forEach((story, idx) => {
+          // Sıra Numarası Çemberi (#1, #2...)
+          ctx.beginPath();
+          ctx.arc(boxX + 65, rowY - 8, 22, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(99, 102, 241, 0.25)';
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(99, 102, 241, 0.5)';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          ctx.fillStyle = '#c7d2fe';
+          ctx.font = 'bold 20px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(`${idx + 1}`, boxX + 65, rowY);
+
+          // Kitap Başlığı
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 28px sans-serif';
+          ctx.textAlign = 'left';
+          
+          let titleText = story.title;
+          if (ctx.measureText(titleText).width > 480) {
+            while (ctx.measureText(titleText + '...').width > 480 && titleText.length > 0) {
+              titleText = titleText.slice(0, -1);
+            }
+            titleText += '...';
+          }
+          ctx.fillText(titleText, boxX + 105, rowY - 12);
+
+          // Yazar Adı
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+          ctx.font = '500 20px sans-serif';
+          ctx.fillText(story.authorName || 'Bilinmeyen Yazar', boxX + 105, rowY + 18);
+
+          // Sağ Taraf Rozeti (Format / Bölüm)
+          ctx.fillStyle = '#818cf8';
+          ctx.font = 'bold 19px sans-serif';
+          ctx.textAlign = 'right';
+          const infoText = story.format === 'webtoon' ? '🎨 Webtoon' : `${story.stats?.chapterCount || 0} Bölüm`;
+          ctx.fillText(infoText, boxX + boxWidth - 50, rowY);
+
+          // Satır arası ayırıcı çizgi (sonuncu hariç)
+          if (idx < displayStories.length - 1) {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.beginPath();
+            ctx.moveTo(boxX + 45, rowY + 42);
+            ctx.lineTo(boxX + boxWidth - 45, rowY + 42);
+            ctx.stroke();
+          }
+
+          rowY += 105;
+        });
+
+        // 5'ten fazla kitap varsa not düş
+        if (stories.length > 5) {
+          ctx.fillStyle = 'rgba(165, 180, 252, 0.85)';
+          ctx.font = 'italic 20px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(`+ ${stories.length - 5} diğer kitap daha bu listede...`, 540, boxY + boxHeight - 25);
+        }
+      }
+      ctx.restore();
 
       // 8. Alt Alan Çağrısı (Call to action)
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 36px sans-serif';
-      ctx.fillText('readixon.com\'da hemen oku', 540, 1720);
+      ctx.font = 'bold 32px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('readixon.com\'da hemen oku', 540, 1750);
 
       ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-      ctx.font = '400 24px sans-serif';
-      ctx.fillText('Kitap, Webtoon ve Hikaye Platformu', 540, 1765);
+      ctx.font = '400 22px sans-serif';
+      ctx.fillText('Kitap, Webtoon ve Çevrimiçi Edebiyat Platformu', 540, 1795);
 
       // 9. İndirme Tetikleme
       const dataUrl = canvas.toDataURL('image/png');
@@ -227,7 +313,7 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-lg rounded-3xl bg-card border border-border/40 shadow-2xl overflow-hidden p-6 sm:p-7">
+      <div className="relative w-full max-w-lg rounded-3xl bg-card border border-border/40 shadow-2xl overflow-hidden p-6 sm:p-7 max-h-[92vh] overflow-y-auto">
         {/* Kapat Butonu */}
         <button
           onClick={onClose}
@@ -237,7 +323,7 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
         </button>
 
         {/* Başlık */}
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-5">
           <div className="w-10 h-10 rounded-2xl bg-primary/15 text-primary flex items-center justify-center border border-primary/20 shadow-sm">
             <Share2 size={20} />
           </div>
@@ -252,24 +338,57 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
         {/* Spotify / Instagram Story Önizleme Kartı (Mini Canlı Önizleme) */}
         <div
           ref={storyCardRef}
-          className="relative rounded-2xl overflow-hidden bg-gradient-to-b from-indigo-950/40 via-card to-background border border-indigo-500/20 p-5 mb-5 flex items-center gap-4 shadow-inner"
+          className="relative rounded-2xl overflow-hidden bg-gradient-to-b from-indigo-950/40 via-card to-background border border-indigo-500/20 p-4 sm:p-5 mb-5 shadow-inner"
         >
-          <ReadingListCoverCollage
-            covers={covers}
-            customCoverUrl={list.coverUrl}
-            size="md"
-            className="shrink-0 shadow-lg"
-          />
+          <div className="flex items-center gap-4">
+            <ReadingListCoverCollage
+              covers={covers}
+              customCoverUrl={list.coverUrl}
+              size="md"
+              className="shrink-0 shadow-lg"
+            />
 
-          <div className="min-w-0 flex-1">
-            <span className="text-[10px] font-bold text-primary uppercase tracking-wider block mb-1">
-              Readixon Çalma Listesi
-            </span>
-            <h3 className="font-bold text-base text-foreground truncate">{list.title}</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {list.userName} • {list.storyIds?.length || 0} Hikaye
-            </p>
+            <div className="min-w-0 flex-1">
+              <span className="text-[10px] font-bold text-primary uppercase tracking-wider block mb-1">
+                Readixon Çalma Listesi
+              </span>
+              <h3 className="font-bold text-base text-foreground truncate">{list.title}</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {list.userName || 'Readixon Okuru'} • {list.storyIds?.length || 0} Hikaye
+              </p>
+            </div>
           </div>
+
+          {/* Listelenen Kitaplar (Spotify Parça Listesi Gibi) */}
+          {stories.length > 0 ? (
+            <div className="mt-3.5 pt-3 border-t border-border/20 space-y-1.5">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 mb-1">
+                Listede Yer Alan Kitaplar
+              </div>
+              {stories.slice(0, 4).map((story, idx) => (
+                <div key={story.storyId} className="flex items-center justify-between gap-2 text-xs py-1">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <span className="w-4 h-4 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center shrink-0">
+                      {idx + 1}
+                    </span>
+                    <span className="font-semibold text-foreground truncate">{story.title}</span>
+                  </div>
+                  <span className="text-[11px] text-muted-foreground truncate shrink-0 max-w-[120px]">
+                    {story.authorName || 'Yazar'}
+                  </span>
+                </div>
+              ))}
+              {stories.length > 4 && (
+                <p className="text-[10px] text-primary/80 italic pt-1">
+                  + {stories.length - 4} diğer kitap daha bu listede
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="mt-3 pt-3 border-t border-border/20 text-center text-xs text-muted-foreground">
+              Henüz bu listeye kitap eklenmemiş.
+            </div>
+          )}
         </div>
 
         {/* 1. Aksiyon: Instagram Story Kartı İndir (Spotify Estetiği) */}

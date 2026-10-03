@@ -114,14 +114,16 @@ export const ReadingListCoverCollage: React.FC<ReadingListCoverCollageProps> = (
     );
   }
 
-  // 4. Hiç kapak yoksa: Şık degrade arkaplan ve ikon
+  // 4. Hiç kapak yoksa: Readixon'ın şık varsayılan albüm kapağını göster
   return (
     <div
-      className={`relative overflow-hidden shadow-2xl bg-gradient-to-br from-primary/30 via-card to-card border border-border/30 flex flex-col items-center justify-center text-primary/70 ${sizeClasses[size]} ${className}`}
+      className={`relative overflow-hidden shadow-2xl bg-card border border-border/20 ${sizeClasses[size]} ${className}`}
     >
-      <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20 backdrop-blur-md">
-        <ListMusic className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
-      </div>
+      <img
+        src="/images/default-reading-list.jpg"
+        alt="Okuma Listesi Kapağı"
+        className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+      />
     </div>
   );
 };
