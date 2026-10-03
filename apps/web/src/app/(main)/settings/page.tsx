@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Typography, Button } from '@readixon/ui';
-import { useThemeStore, Theme, useAuthStore, deleteUserAccount } from '@readixon/core';
-import { Settings, LogOut, AlertTriangle, Monitor, UserX, CheckCircle2, Lock } from 'lucide-react';
+import { useThemeStore, Theme, useAuthStore, deleteUserAccount, defaultCustomColors, CustomColors, isColorDark } from '@readixon/core';
+import { Settings, LogOut, AlertTriangle, Monitor, UserX, CheckCircle2, Lock, Sun, Moon } from 'lucide-react';
 import { toast } from "sonner";
 
 const themes: { id: Theme; name: string; colors: string[] }[] = [
@@ -19,7 +19,7 @@ const themes: { id: Theme; name: string; colors: string[] }[] = [
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { theme, setTheme } = useThemeStore();
+  const { theme, setTheme, customColors } = useThemeStore();
   const { userProfile, firebaseUser, isInitialized } = useAuthStore();
   
   React.useEffect(() => {
@@ -35,17 +35,24 @@ export default function SettingsPage() {
 
   // Custom Theme Modal State
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
-  const [customColorsInput, setCustomColorsInput] = useState({
-    background: '#1A1A24',
-    card: '#242430',
-    text: '#E0E0E0',
-    primary: '#FF4500',
-    muted: '#A0A0A0',
-    border: 'rgba(255, 255, 255, 0.1)',
-  });
+  const [customColorsInput, setCustomColorsInput] = useState<CustomColors>(
+    customColors || defaultCustomColors
+  );
+
+  React.useEffect(() => {
+    if (customColors) {
+      setCustomColorsInput(customColors);
+    }
+  }, [customColors]);
 
   const handleSaveCustomTheme = () => {
-    useThemeStore.getState().setCustomColors(customColorsInput);
+    const isDarkBg = isColorDark(customColorsInput.background);
+    const finalColors: CustomColors = {
+      ...customColorsInput,
+      border: customColorsInput.border || (isDarkBg ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'),
+      muted: customColorsInput.muted || (isDarkBg ? '#94A3B8' : '#64748B'),
+    };
+    useThemeStore.getState().setCustomColors(finalColors);
     setTheme('custom');
     setIsCustomModalOpen(false);
   };
@@ -96,9 +103,70 @@ export default function SettingsPage() {
             <Monitor className="text-primary" size={24} />
             <Typography variant="h3" className="font-bold">Görünüm ve Tema</Typography>
           </div>
-          
-          <div className="relative">
-            <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 transition-all duration-300 ${!hasThemeAccess ? 'opacity-30 pointer-events-none blur-[3px]' : ''}`}>
+
+          {/* Standart Mod (Açık / Koyu - Herkese Açık) */}
+          <div className="mb-8">
+            <Typography variant="body" className="font-semibold text-text mb-3 block">
+              Standart Mod
+            </Typography>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div
+                onClick={() => setTheme('light')}
+                className={`relative cursor-pointer border-2 rounded-2xl p-4 transition-all duration-200 flex items-center gap-3.5 ${
+                  theme === 'light' ? 'border-primary bg-primary/5 text-primary shadow-sm' : 'border-border hover:border-primary/50 text-text'
+                }`}
+              >
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${theme === 'light' ? 'bg-primary/10 text-primary' : 'bg-muted/10 text-muted'}`}>
+                  <Sun size={20} />
+                </div>
+                <div>
+                  <Typography variant="body" className="font-bold">Açık Tema (Varsayılan)</Typography>
+                  <Typography variant="caption" className="text-muted block text-xs">Aydınlık ve ferah görünüm</Typography>
+                </div>
+                {theme === 'light' && (
+                  <div className="absolute top-4 right-4 text-primary">
+                    <CheckCircle2 size={22} className="fill-primary/20" />
+                  </div>
+                )}
+              </div>
+
+              <div
+                onClick={() => setTheme('dark')}
+                className={`relative cursor-pointer border-2 rounded-2xl p-4 transition-all duration-200 flex items-center gap-3.5 ${
+                  theme === 'dark' ? 'border-primary bg-primary/5 text-primary shadow-sm' : 'border-border hover:border-primary/50 text-text'
+                }`}
+              >
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${theme === 'dark' ? 'bg-primary/10 text-primary' : 'bg-muted/10 text-muted'}`}>
+                  <Moon size={20} />
+                </div>
+                <div>
+                  <Typography variant="body" className="font-bold">Koyu Tema</Typography>
+                  <Typography variant="caption" className="text-muted block text-xs">Göz yormayan koyu görünüm</Typography>
+                </div>
+                {theme === 'dark' && (
+                  <div className="absolute top-4 right-4 text-primary">
+                    <CheckCircle2 size={22} className="fill-primary/20" />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Özel Renk Paletleri (Premium) */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <Typography variant="body" className="font-semibold text-text">
+                Özel Renk Paletleri
+              </Typography>
+              {!hasThemeAccess && (
+                <span className="text-xs font-bold text-amber-500 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+                  Premium
+                </span>
+              )}
+            </div>
+
+            <div className="relative">
+              <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 transition-all duration-300 ${!hasThemeAccess ? 'opacity-30 pointer-events-none blur-[3px]' : ''}`}>
               {themes.map((t) => (
               <div 
                 key={t.id} 
@@ -165,7 +233,8 @@ export default function SettingsPage() {
               </div>
             )}
           </div>
-        </section>
+        </div>
+      </section>
 
         {/* Tehlikeli Bölge */}
         <section className="bg-red-950/10 border border-red-900/30 rounded-3xl p-6 shadow-sm">
@@ -234,6 +303,7 @@ export default function SettingsPage() {
             </div>
 
             <div className="mt-8 flex gap-3">
+              <Button variant="secondary" className="px-4" onPress={() => setCustomColorsInput(defaultCustomColors)}>Sıfırla</Button>
               <Button variant="secondary" className="flex-1" onPress={() => setIsCustomModalOpen(false)}>İptal</Button>
               <Button variant="primary" className="flex-1" onPress={handleSaveCustomTheme}>Uygula</Button>
             </div>

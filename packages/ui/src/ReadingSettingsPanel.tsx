@@ -76,12 +76,12 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({
       muted: '#71717a'
     }
   }[theme] || {
-    bg: '#18181b',
-    text: '#f4f4f5',
-    card: '#27272a',
-    subBg: 'rgba(255,255,255,0.06)',
-    border: 'rgba(255,255,255,0.1)',
-    muted: '#a1a1aa'
+    bg: '#ffffff',
+    text: '#0f172a',
+    card: '#f8fafc',
+    subBg: 'rgba(0,0,0,0.05)',
+    border: 'rgba(0,0,0,0.1)',
+    muted: '#64748b'
   };
 
   return (

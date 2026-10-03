@@ -60,7 +60,7 @@ const universalStorage: StateStorage = {
 export const useReaderStore = create<ReaderState>()(
   persist(
     (set) => ({
-      theme: 'dark',
+      theme: 'light',
       fontSize: 17,
       fontFamily: 'sans',
       lineHeight: 'normal',
@@ -75,6 +75,18 @@ export const useReaderStore = create<ReaderState>()(
     }),
     {
       name: 'readixon-reader-storage',
+      version: 1,
+      migrate: (persistedState: any, version: number) => {
+        if (version === 0 || !version) {
+          if (persistedState?.theme === 'dark') {
+            return {
+              ...persistedState,
+              theme: 'light',
+            };
+          }
+        }
+        return persistedState as ReaderState;
+      },
       storage: createJSONStorage(() => universalStorage),
     }
   )

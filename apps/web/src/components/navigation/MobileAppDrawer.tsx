@@ -73,8 +73,8 @@ function DrawerLink({ href, label, icon: Icon, active = false, onClose, customCl
 export function MobileAppDrawer({ isOpen, onClose, onBecomeAuthor }: MobileAppDrawerProps) {
   const pathname = usePathname();
   const { firebaseUser, userProfile } = useAuthStore();
-  const { theme, setTheme } = useThemeStore();
-  const isDark = isDarkTheme(theme);
+  const { theme, setTheme, customColors } = useThemeStore();
+  const isDark = isDarkTheme(theme, customColors);
 
   // Telefonun fiziksel geri tuşuna basıldığında çekmeceyi kapat
   useBackButton(() => {

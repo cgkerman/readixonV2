@@ -16,8 +16,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const router = useRouter();
   const { firebaseUser, userProfile, setUserProfile, unreadNotificationCount } = useAuthStore();
-  const { theme, toggleTheme } = useThemeStore();
-  const isDark = isDarkTheme(theme);
+  const { theme, toggleTheme, customColors } = useThemeStore();
+  const isDark = isDarkTheme(theme, customColors);
   const [unreadMessageCount, setUnreadMessageCount] = React.useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 

@@ -145,8 +145,8 @@ export * from './utils/sanitize';
 
 // Auth Store & Hooks
 export { useAuthStore } from './store/useAuthStore';
-export { useThemeStore, isDarkTheme } from './store/useThemeStore';
-export type { Theme } from './store/useThemeStore';
+export { useThemeStore, isDarkTheme, defaultCustomColors, isColorDark } from './store/useThemeStore';
+export type { Theme, CustomColors } from './store/useThemeStore';
 export { useAuthListener } from './hooks/useAuthListener';
 export { useUserProfile } from './hooks/useUserProfile';
 

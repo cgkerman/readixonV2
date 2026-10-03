@@ -44,7 +44,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     }
 
     document.documentElement.setAttribute('data-theme', theme);
-    const isDark = isDarkTheme(theme);
+    const isDark = isDarkTheme(theme, customColors);
     if (isDark) {
       document.documentElement.classList.add('dark');
     } else {
@@ -87,7 +87,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       {children}
       <UsernameSetupModal />
       <Toaster 
-        theme={isDarkTheme(theme) ? "dark" : "light"} 
+        theme={isDarkTheme(theme, customColors) ? "dark" : "light"} 
         position="bottom-right" 
         toastOptions={{
           className: 'bg-card border-border text-text',

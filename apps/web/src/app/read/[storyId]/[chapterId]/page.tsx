@@ -300,7 +300,7 @@ export default function ReadPage() {
 
   // Okuma sayfasındayken genel site temasından tamamen izole ol: Sadece seçili okuyucu temasını yansıt
   useEffect(() => {
-    const config = readerThemeStyles[theme] || readerThemeStyles.dark;
+    const config = readerThemeStyles[theme] || readerThemeStyles.light;
     const prevDataTheme = document.documentElement.getAttribute('data-theme');
     const wasDark = document.documentElement.classList.contains('dark');
 
