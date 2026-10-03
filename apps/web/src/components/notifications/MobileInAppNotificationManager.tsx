@@ -34,45 +34,77 @@ export function MobileInAppNotificationManager() {
 
   // 1. Android / Capacitor FCM Push & Local Bildirim İzinleri ve Token Kaydı
   useEffect(() => {
-    if (!firebaseUser) return;
+    if (!firebaseUser?.uid) return;
+    const uid = firebaseUser.uid;
 
     if (Capacitor.isNativePlatform()) {
       (async () => {
         try {
-          // Android 8+ için yüksek öncelikli bildirim kanalı (Heads-up banner ve ses için)
-          await LocalNotifications.createChannel({
-            id: 'readixon_alerts',
-            name: 'Readixon Bildirimleri',
-            description: 'Gelen mesajlar ve etkileşim bildirimleri',
-            importance: 5, // High importance
-            visibility: 1, // Public
-            vibration: true,
-            sound: 'default',
-          });
-
-          // FCM Push Notifications İzinlerini Kontrol Et ve İste
-          let pushPerm = await PushNotifications.checkPermissions();
-          if (pushPerm.receive !== 'granted') {
-            pushPerm = await PushNotifications.requestPermissions();
+          // Android 8+ için yüksek öncelikli bildirim kanalları (Heads-up banner ve ses için)
+          try {
+            await PushNotifications.createChannel({
+              id: 'readixon_alerts',
+              name: 'Readixon Bildirimleri',
+              description: 'Gelen mesajlar ve etkileşim bildirimleri',
+              importance: 5, // High importance (heads-up notification)
+              visibility: 1, // Public
+              vibration: true,
+              sound: 'default',
+            });
+          } catch (chanErr) {
+            console.warn('[FCM] Push kanalı oluşturma uyarısı:', chanErr);
           }
 
-          if (pushPerm.receive === 'granted') {
-            await PushNotifications.register();
+          try {
+            await LocalNotifications.createChannel({
+              id: 'readixon_alerts',
+              name: 'Readixon Bildirimleri',
+              description: 'Gelen mesajlar ve etkileşim bildirimleri',
+              importance: 5,
+              visibility: 1,
+              vibration: true,
+              sound: 'default',
+            });
+          } catch (chanErr) {
+            console.warn('[LocalNotif] Kanal oluşturma uyarısı:', chanErr);
           }
 
-          // Cihazın FCM Token'ı alındığında Firestore'daki kullanıcı profiline kaydet
+          // Önceki dinleyicileri temizle ve YENİ DİNLENİCİLERİ register()'dan ÖNCE ekle!
+          // (Android native katmanda token hazır olduğunda event hemen tetiklenir)
+          await PushNotifications.removeAllListeners();
+
           PushNotifications.addListener('registration', async (token) => {
-            console.log('[FCM] Push token alındı:', token.value);
-            if (firebaseUser?.uid && token.value) {
-              try {
-                const userDocRef = doc(db, 'users', firebaseUser.uid);
-                await updateDoc(userDocRef, {
-                  fcmTokens: arrayUnion(token.value),
-                });
-                console.log('[FCM] Token Firestore profiline başarıyla eklendi.');
-              } catch (tokenErr) {
-                console.warn('[FCM] Token profille eşleştirilemedi:', tokenErr);
-              }
+            console.log('[FCM] Push token başarıyla alındı:', token.value);
+            if (!token?.value || !uid) return;
+
+            const baseUrl = typeof window !== 'undefined' && window.location.origin.includes('http') && !window.location.origin.includes('localhost')
+              ? window.location.origin
+              : 'https://www.readixon.com';
+
+            // 1. Sunucu API üzerinden kaydet (Admin SDK tam yetkili)
+            try {
+              await fetch(`${baseUrl}/api/notifications/register-token`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  userId: uid,
+                  token: token.value,
+                }),
+              });
+              console.log('[FCM] Token sunucu API ile başarıyla kaydedildi.');
+            } catch (apiErr) {
+              console.warn('[FCM] Sunucu API kayıt hatası:', apiErr);
+            }
+
+            // 2. Yedek olarak doğrudan istemci Firestore'a da yaz
+            try {
+              const userDocRef = doc(db, 'users', uid);
+              await updateDoc(userDocRef, {
+                fcmTokens: arrayUnion(token.value),
+              });
+              console.log('[FCM] Token Firestore profiline doğrudan eklendi.');
+            } catch (tokenErr) {
+              console.warn('[FCM] Token doğrudan Firestore kayıt uyarısı:', tokenErr);
             }
           });
 
@@ -80,7 +112,7 @@ export function MobileInAppNotificationManager() {
             console.error('[FCM] Kayıt hatası:', err);
           });
 
-          // Uygulama ön plandayken gelen Push bildirimi (arka plandayken Android OS kendisi gösterir)
+          // Uygulama ön plandayken gelen Push bildirimi (arka plandayken Android OS doğrudan gösterir)
           PushNotifications.addListener('pushNotificationReceived', (notification) => {
             console.log('[FCM] Ön planda bildirim yakalandı:', notification);
             const route = notification.data?.route || '/notifications';
@@ -93,7 +125,7 @@ export function MobileInAppNotificationManager() {
             });
           });
 
-          // Kilit ekranındaki veya durum çubuğundaki bildirime tıklandığında ilgili sayfaya yönlendir
+          // Bildirime tıklandığında ilgili sayfaya git
           PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
             console.log('[FCM] Bildirime tıklandı:', action);
             const route = action.notification.data?.route;
@@ -102,15 +134,25 @@ export function MobileInAppNotificationManager() {
             }
           });
 
-          // Yerel bildirime tıklandığında ilgili sayfaya git
           LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
             const route = action.notification.extra?.route;
             if (route) {
               router.push(route);
             }
           });
+
+          // Dinleyiciler eklendikten SONRA izinleri kontrol et ve kaydol
+          let pushPerm = await PushNotifications.checkPermissions();
+          if (pushPerm.receive !== 'granted') {
+            pushPerm = await PushNotifications.requestPermissions();
+          }
+
+          if (pushPerm.receive === 'granted') {
+            await PushNotifications.register();
+            console.log('[FCM] PushNotifications.register() çağrıldı.');
+          }
         } catch (err) {
-          console.warn('[FCM] Bildirim başlatılamadı:', err);
+          console.warn('[FCM] Bildirim sistemi başlatılamadı:', err);
         }
       })();
     } else if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -126,7 +168,7 @@ export function MobileInAppNotificationManager() {
     playNotificationSound(alert.type);
     triggerNotificationHaptic(alert.type);
 
-    // Eğer Android / Native cihazdaysa sistem bildirim çubuğuna da gönder
+    // Eğer Android / Native cihazdaysa sistem bildirim çubuğuna da anlık gönder (alarm istemeden)
     if (Capacitor.isNativePlatform()) {
       try {
         const notifId = Math.floor(Math.random() * 1000000);
@@ -136,7 +178,6 @@ export function MobileInAppNotificationManager() {
               id: notifId,
               title: alert.title,
               body: alert.body,
-              schedule: { at: new Date(Date.now() + 100) },
               extra: { route: alert.route },
               channelId: 'readixon_alerts',
               sound: 'default',

@@ -177,7 +177,11 @@ export async function sendMessage(chatId: string, senderId: string, text: string
   const pushBody = text || (imageUrl ? '📷 Fotoğraf gönderdi' : audioUrl ? '🎙️ Sesli mesaj gönderdi' : 'Yeni bir mesaj');
 
   if (typeof window !== 'undefined') {
-    fetch('/api/notifications/push', {
+    const baseUrl = window.location.origin.includes('http') && !window.location.origin.includes('localhost')
+      ? window.location.origin
+      : 'https://www.readixon.com';
+
+    fetch(`${baseUrl}/api/notifications/push`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -190,7 +194,7 @@ export async function sendMessage(chatId: string, senderId: string, text: string
           chatId,
         },
       }),
-    }).catch(() => {});
+    }).catch((err) => console.warn('[FCM] Mesaj bildirimi gönderilemedi:', err));
   }
 }
 

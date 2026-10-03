@@ -91,7 +91,11 @@ export async function createNotification(
           bodyText = `${actor} sana bir bildirim gönderdi.`;
       }
 
-      fetch('/api/notifications/push', {
+      const baseUrl = window.location.origin.includes('http') && !window.location.origin.includes('localhost')
+        ? window.location.origin
+        : 'https://www.readixon.com';
+
+      fetch(`${baseUrl}/api/notifications/push`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -104,7 +108,7 @@ export async function createNotification(
             notificationId: newNotifRef.id,
           },
         }),
-      }).catch(() => {});
+      }).catch((err) => console.warn('[FCM] Etkileşim bildirimi gönderilemedi:', err));
     }
 
     return newNotifRef.id;

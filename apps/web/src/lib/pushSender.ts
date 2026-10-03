@@ -32,16 +32,27 @@ export async function sendPushNotification({ userId, title, body, data = {}, rou
 
     const messaging = getAdminMessaging();
 
+    const safeData: Record<string, string> = {
+      title,
+      body,
+      route: route || '/notifications',
+    };
+
+    if (data) {
+      for (const [key, val] of Object.entries(data)) {
+        if (val !== undefined && val !== null) {
+          safeData[key] = String(val);
+        }
+      }
+    }
+
     const response = await messaging.sendEachForMulticast({
       tokens: fcmTokens,
       notification: {
         title,
         body,
       },
-      data: {
-        ...data,
-        route: route || '/notifications',
-      },
+      data: safeData,
       android: {
         priority: 'high',
         notification: {
@@ -49,6 +60,8 @@ export async function sendPushNotification({ userId, title, body, data = {}, rou
           sound: 'default',
           priority: 'high',
           visibility: 'public',
+          defaultSound: true,
+          defaultVibrateTimings: true,
         },
       },
     });
