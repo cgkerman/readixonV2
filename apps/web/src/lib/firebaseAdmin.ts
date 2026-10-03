@@ -1,6 +1,7 @@
 import { getApps, initializeApp, cert, getApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
+import { getMessaging } from 'firebase-admin/messaging';
 
 let app: any = null;
 
@@ -29,6 +30,7 @@ function getFirebaseAdminApp() {
 
 export const getAdminDb = () => getFirestore(getFirebaseAdminApp());
 export const getAdminAuth = () => getAuth(getFirebaseAdminApp());
+export const getAdminMessaging = () => getMessaging(getFirebaseAdminApp());
 
 // Backward compatibility for routes that don't need to be lazy immediately, but this might crash if top-level. 
 // We will change the email route to use getters.

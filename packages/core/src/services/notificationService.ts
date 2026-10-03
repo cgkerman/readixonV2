@@ -39,6 +39,74 @@ export async function createNotification(
     };
 
     await setDoc(newNotifRef, notification);
+
+    // FCM Push Bildirimi tetikle (telefon kapalı/kilitli olsa dahi anında iletilir)
+    if (typeof window !== 'undefined') {
+      const actor = data.actorName || data.actorUsername || 'Readixon';
+      let bodyText = 'Yeni bir bildirim aldınız.';
+      let route = '/notifications';
+
+      switch (data.type) {
+        case 'follow':
+          bodyText = `${actor} seni takip etmeye başladı.`;
+          route = data.actorUsername ? `/profile/${data.actorUsername}` : '/notifications';
+          break;
+        case 'story_like':
+          bodyText = data.entityTitle ? `${actor} "${data.entityTitle}" hikayeni beğendi.` : `${actor} hikayeni beğendi.`;
+          route = data.entityId ? `/read/${data.entityId}` : '/notifications';
+          break;
+        case 'chapter_like':
+          bodyText = data.subEntityTitle ? `${actor} "${data.subEntityTitle}" bölümünü beğendi.` : `${actor} bir bölümünü beğendi.`;
+          route = data.entityId && data.subEntityId ? `/read/${data.entityId}/${data.subEntityId}` : '/notifications';
+          break;
+        case 'story_comment':
+          bodyText = data.entityTitle ? `${actor} "${data.entityTitle}" hikayene yorum yaptı.` : `${actor} hikayene yorum yaptı.`;
+          route = data.entityId ? `/read/${data.entityId}` : '/notifications';
+          break;
+        case 'paragraph_comment':
+          bodyText = `${actor} bir cümlene yorum bıraktı.`;
+          route = data.entityId && data.subEntityId ? `/read/${data.entityId}/${data.subEntityId}` : '/notifications';
+          break;
+        case 'readix_like':
+          bodyText = `${actor} Readix gönderini beğendi.`;
+          route = '/readix';
+          break;
+        case 'readix_comment':
+          bodyText = `${actor} Readix gönderine yorum yaptı.`;
+          route = '/readix';
+          break;
+        case 'readix_mention':
+          bodyText = `${actor} bir Readix gönderisinde senden bahsetti.`;
+          route = '/readix';
+          break;
+        case 'new_chapter':
+          bodyText = data.subEntityTitle ? `${actor} yeni bir bölüm yayınladı: "${data.subEntityTitle}"` : `${actor} yeni bir bölüm yayınladı.`;
+          route = data.entityId && data.subEntityId ? `/read/${data.entityId}/${data.subEntityId}` : '/notifications';
+          break;
+        case 'duel_challenge':
+          bodyText = `${actor} seni bir edebi düelloya davet etti!`;
+          route = data.entityId ? `/arena/duel/${data.entityId}` : '/arena';
+          break;
+        default:
+          bodyText = `${actor} sana bir bildirim gönderdi.`;
+      }
+
+      fetch('/api/notifications/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: data.userId,
+          title: 'Readixon',
+          body: bodyText,
+          route,
+          data: {
+            type: data.type,
+            notificationId: newNotifRef.id,
+          },
+        }),
+      }).catch(() => {});
+    }
+
     return newNotifRef.id;
   } catch (error) {
     console.error("Bildirim oluşturulurken hata:", error);

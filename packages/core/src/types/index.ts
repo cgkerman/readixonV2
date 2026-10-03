@@ -82,6 +82,7 @@ export interface User {
   likedStoryIds?: string[]; // Kullanıcının beğendiği hikaye ID'leri
   likedReadixIds?: string[]; // Kullanıcının beğendiği readix (gönderi) ID'leri
   bookmarkedReadixIds?: string[]; // Kullanıcının kaydettiği readix ID'leri
+  fcmTokens?: string[]; // Cihaz FCM Push bildirim token'ları
 }
 
 /** Yeni kullanÄ±cÄ± oluÅŸturulurken kullanÄ±lan kÄ±smi tip */

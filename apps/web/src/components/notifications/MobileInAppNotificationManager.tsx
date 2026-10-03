@@ -7,7 +7,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, Bell, X, ChevronRight } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
-import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { PushNotifications } from '@capacitor/push-notifications';
+import { collection, query, where, orderBy, limit, onSnapshot, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db, useAuthStore } from '@readixon/core';
 import type { Chat, AppNotification } from '@readixon/core';
 import { playNotificationSound, triggerNotificationHaptic } from '@/utils/notificationEffects';
@@ -31,31 +32,77 @@ export function MobileInAppNotificationManager() {
   const seenIdsRef = useRef<Set<string>>(new Set());
   const dismissTimerRef = useRef<NodeJS.Timeout>();
 
-  // 1. Android / Capacitor Bildirim İzinleri ve Bildirim Kanalı Tanımlama
+  // 1. Android / Capacitor FCM Push & Local Bildirim İzinleri ve Token Kaydı
   useEffect(() => {
     if (!firebaseUser) return;
 
     if (Capacitor.isNativePlatform()) {
       (async () => {
         try {
-          // İzinleri kontrol et ve iste
-          const perm = await LocalNotifications.checkPermissions();
-          if (perm.display !== 'granted') {
-            await LocalNotifications.requestPermissions();
-          }
-
-          // Android 8+ için yüksek öncelikli bildirim kanalı (Heads-up banner ve titreşim için)
+          // Android 8+ için yüksek öncelikli bildirim kanalı (Heads-up banner ve ses için)
           await LocalNotifications.createChannel({
             id: 'readixon_alerts',
             name: 'Readixon Bildirimleri',
             description: 'Gelen mesajlar ve etkileşim bildirimleri',
-            importance: 5, // High importance -> ekran üstünde açılır
+            importance: 5, // High importance
             visibility: 1, // Public
             vibration: true,
             sound: 'default',
           });
 
-          // Android bildirimine tıklandığında ilgili sayfaya git
+          // FCM Push Notifications İzinlerini Kontrol Et ve İste
+          let pushPerm = await PushNotifications.checkPermissions();
+          if (pushPerm.receive !== 'granted') {
+            pushPerm = await PushNotifications.requestPermissions();
+          }
+
+          if (pushPerm.receive === 'granted') {
+            await PushNotifications.register();
+          }
+
+          // Cihazın FCM Token'ı alındığında Firestore'daki kullanıcı profiline kaydet
+          PushNotifications.addListener('registration', async (token) => {
+            console.log('[FCM] Push token alındı:', token.value);
+            if (firebaseUser?.uid && token.value) {
+              try {
+                const userDocRef = doc(db, 'users', firebaseUser.uid);
+                await updateDoc(userDocRef, {
+                  fcmTokens: arrayUnion(token.value),
+                });
+                console.log('[FCM] Token Firestore profiline başarıyla eklendi.');
+              } catch (tokenErr) {
+                console.warn('[FCM] Token profille eşleştirilemedi:', tokenErr);
+              }
+            }
+          });
+
+          PushNotifications.addListener('registrationError', (err) => {
+            console.error('[FCM] Kayıt hatası:', err);
+          });
+
+          // Uygulama ön plandayken gelen Push bildirimi (arka plandayken Android OS kendisi gösterir)
+          PushNotifications.addListener('pushNotificationReceived', (notification) => {
+            console.log('[FCM] Ön planda bildirim yakalandı:', notification);
+            const route = notification.data?.route || '/notifications';
+            triggerAlert({
+              id: notification.id || `push_${Date.now()}`,
+              title: notification.title || 'Readixon',
+              body: notification.body || '',
+              type: notification.data?.type === 'message' ? 'message' : 'notification',
+              route,
+            });
+          });
+
+          // Kilit ekranındaki veya durum çubuğundaki bildirime tıklandığında ilgili sayfaya yönlendir
+          PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+            console.log('[FCM] Bildirime tıklandı:', action);
+            const route = action.notification.data?.route;
+            if (route) {
+              router.push(route);
+            }
+          });
+
+          // Yerel bildirime tıklandığında ilgili sayfaya git
           LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
             const route = action.notification.extra?.route;
             if (route) {
@@ -63,7 +110,7 @@ export function MobileInAppNotificationManager() {
             }
           });
         } catch (err) {
-          console.warn('LocalNotifications başlatılamadı:', err);
+          console.warn('[FCM] Bildirim başlatılamadı:', err);
         }
       })();
     } else if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -92,13 +139,12 @@ export function MobileInAppNotificationManager() {
               schedule: { at: new Date(Date.now() + 100) },
               extra: { route: alert.route },
               channelId: 'readixon_alerts',
-              smallIcon: 'ic_launcher',
               sound: 'default',
             },
           ],
         });
       } catch (err) {
-        console.warn('Native bildirim zamanlanamadı:', err);
+        console.error('Native bildirim zamanlanamadı:', err);
       }
     }
 
@@ -135,8 +181,8 @@ export function MobileInAppNotificationManager() {
             ? chat.lastMessageAt.toMillis()
             : chat.lastMessageAt.seconds * 1000;
 
-          // Sadece bileşen açıldıktan sonra gelen yeni mesajları bildir
-          if (msgTime < mountedAtRef.current) return;
+          // Sadece bileşen açıldıktan sonra gelen yeni mesajları bildir (15sn saat farkı toleransı)
+          if (msgTime < mountedAtRef.current - 15000) return;
 
           const unreadForMe = chat.unreadCounts?.[uid] || 0;
           if (unreadForMe <= 0) return;
@@ -194,8 +240,8 @@ export function MobileInAppNotificationManager() {
             ? notif.createdAt.toMillis()
             : notif.createdAt.seconds * 1000;
 
-          // Sadece bileşen açıldıktan sonraki bildirimler
-          if (notifTime < mountedAtRef.current) {
+          // Sadece bileşen açıldıktan sonraki bildirimler (15sn saat farkı toleransı)
+          if (notifTime < mountedAtRef.current - 15000) {
             seenIdsRef.current.add(notif.id);
             return;
           }

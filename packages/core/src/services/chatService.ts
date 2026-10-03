@@ -170,6 +170,28 @@ export async function sendMessage(chatId: string, senderId: string, text: string
     lastMessageAt: serverTimestamp(),
     [`unreadCounts.${receiverId}`]: increment(1)
   });
+
+  // 3. Alıcının telefonuna FCM Push Bildirimi gönder (arka planda çalışır)
+  const senderDetails = chatData.participantDetails?.[senderId];
+  const senderName = senderDetails?.displayName || senderDetails?.username || 'Yeni Mesaj';
+  const pushBody = text || (imageUrl ? '📷 Fotoğraf gönderdi' : audioUrl ? '🎙️ Sesli mesaj gönderdi' : 'Yeni bir mesaj');
+
+  if (typeof window !== 'undefined') {
+    fetch('/api/notifications/push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: receiverId,
+        title: senderName,
+        body: pushBody,
+        route: `/messages/${chatId}`,
+        data: {
+          type: 'message',
+          chatId,
+        },
+      }),
+    }).catch(() => {});
+  }
 }
 
 /**
