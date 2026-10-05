@@ -1,3 +1,4 @@
+
 import { MetadataRoute } from 'next';
 import { collection, getDocs, query, where, limit } from 'firebase/firestore';
 import { db, generateStorySlug, slugify, POPULAR_TAGS } from '@readixon/core';
@@ -247,7 +248,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   try {
     // 5. Editoryal İncelemeler
-    const reviewsRef = collection(db, 'editorial_reviews');
+    const reviewsRef = collection(db, 'editorialReviews');
     const reviewsQuery = query(reviewsRef, limit(200));
     const reviewsSnap = await getDocs(reviewsQuery);
 
