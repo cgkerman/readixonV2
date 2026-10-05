@@ -175,37 +175,43 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
       }
     }
 
-    // 2. Sunucu Tabanlı İndirme (/api/download - Content-Disposition: attachment)
-    // HTML form post işlemi tarayıcıyı sayfadan ayrılmadan doğrudan yerel dosya indirme servisine bağlar
+    // 2. Sunucu Tabanlı İndirme Bileti Oluştur (/api/download?format=json)
+    // Mobil uygulamada (Capacitor) '_system' hedefi telefonun varsayılan tarayıcısını (Chrome) açar.
+    // Chrome sunucudan gelen Content-Disposition: attachment başlığıyla görseli doğrudan cihazın İndirilenler klasörüne kaydeder.
     try {
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = '/api/download';
-      form.style.display = 'none';
+      const formData = new FormData();
+      formData.append('image', item.dataUrl);
+      formData.append('fileName', item.fileName);
+      formData.append('format', 'json');
 
-      const imgInput = document.createElement('input');
-      imgInput.type = 'hidden';
-      imgInput.name = 'image';
-      imgInput.value = item.dataUrl;
-      form.appendChild(imgInput);
+      const res = await fetch('/api/download?format=json', {
+        method: 'POST',
+        body: formData,
+      });
 
-      const nameInput = document.createElement('input');
-      nameInput.type = 'hidden';
-      nameInput.name = 'fileName';
-      nameInput.value = item.fileName;
-      form.appendChild(nameInput);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.downloadUrl) {
+          if (Capacitor.isNativePlatform() || /Android|iPhone|iPad/i.test(navigator.userAgent)) {
+            window.open(data.downloadUrl, '_system');
+          } else {
+            const a = document.createElement('a');
+            a.href = data.downloadUrl;
+            a.download = item.fileName;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+              if (document.body.contains(a)) document.body.removeChild(a);
+            }, 500);
+          }
 
-      document.body.appendChild(form);
-      form.submit();
-      setTimeout(() => {
-        if (document.body.contains(form)) document.body.removeChild(form);
-      }, 2000);
-
-      toast.success('Story kartı indirme işlemi başlatıldı! Bildirim panelinizi kontrol edebilirsiniz.');
-      setIsDownloading(false);
-      return;
-    } catch (formErr) {
-      console.warn('Form indirme hatası:', formErr);
+          toast.success('Story kartı indiriliyor! Bildirim panelinizi kontrol edebilirsiniz.');
+          setIsDownloading(false);
+          return;
+        }
+      }
+    } catch (apiErr) {
+      console.warn('API indirme bileti hatası:', apiErr);
     }
 
     // 3. Web Share API Fallback (Eğer tarayıcı dosya paylaşımını destekliyorsa)
