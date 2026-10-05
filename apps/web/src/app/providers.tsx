@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import UsernameSetupModal from "../components/UsernameSetupModal";
 import { MobileAppBackHandler } from "../components/navigation/MobileAppBackHandler";
 import { MobileInAppNotificationManager } from "../components/notifications/MobileInAppNotificationManager";
+import { AppUpdateChecker } from "../components/app/AppUpdateChecker";
 import { Toaster } from "sonner";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
@@ -84,6 +85,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <MobileAppBackHandler />
       <MobileInAppNotificationManager />
+      <AppUpdateChecker />
       {children}
       <UsernameSetupModal />
       <Toaster 

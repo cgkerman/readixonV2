@@ -109,7 +109,7 @@ export function AppDownloadBanner() {
             {/* Sürüm Etiketi */}
             <div className="hidden lg:block text-center">
               <span className="text-[10px] text-muted font-mono bg-background/80 px-2 py-0.5 rounded-full border border-border/50">
-                v1.0
+                v1.1
               </span>
             </div>
           </div>
