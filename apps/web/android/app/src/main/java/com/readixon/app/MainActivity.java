@@ -12,6 +12,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(AppPlugin.class);
         registerPlugin(PushNotificationsPlugin.class);
         registerPlugin(GoogleSignInPlugin.class);
+        registerPlugin(NativeImageSaverPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

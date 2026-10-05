@@ -17,6 +17,13 @@ import {
 import { ReadingListCoverCollage } from './ReadingListCoverCollage';
 import type { ReadingList, Story } from '@readixon/core';
 import { toast } from 'sonner';
+import { Capacitor, registerPlugin } from '@capacitor/core';
+
+interface NativeImageSaverPlugin {
+  saveImage(options: { base64: string; fileName: string }): Promise<{ success: boolean; fileName?: string }>;
+}
+
+const NativeImageSaver = registerPlugin<NativeImageSaverPlugin>('NativeImageSaver');
 
 const XTwitterIcon = ({ size = 15, className = '' }: { size?: number; className?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -96,7 +103,7 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
     fileName: string;
     dataUrl: string;
   } | null>(null);
-  const [isImageCopied, setIsImageCopied] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const storyCardRef = useRef<HTMLDivElement>(null);
 
   // ESC tuşu ile kapatma
@@ -124,7 +131,7 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
     try {
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
-      toast.success('Bağlantı panoya kopyalandı!');
+      toast.success('Liste bağlantısı panoya kopyalandı!');
       setTimeout(() => setCopied(false), 2500);
     } catch (err) {
       toast.error('Bağlantı kopyalanamadı.');
@@ -147,52 +154,67 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
     }
   };
 
-  const handleDirectDownload = (imageItem?: { url: string; file: File; fileName: string; dataUrl: string } | null) => {
+  const handleDirectDownload = async (imageItem?: { url: string; file: File; fileName: string; dataUrl: string } | null) => {
     const item = imageItem || previewStoryImage;
     if (!item) return;
 
+    setIsDownloading(true);
+
+    // 1. Android Native Capacitor Shell (Cihazın Galerisine doğrudan kaydet)
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await NativeImageSaver.saveImage({
+          base64: item.dataUrl,
+          fileName: item.fileName,
+        });
+        toast.success('Story kartı telefonunuzun Galerisine kaydedildi!');
+        setIsDownloading(false);
+        return;
+      } catch (nativeErr: any) {
+        console.warn('NativeImageSaver hatası, tarayıcı yöntemi deneniyor:', nativeErr);
+      }
+    }
+
+    // 2. Mobil Tarayıcılar (Web Share API - Files desteği varsa doğrudan sistem paylaşımı)
+    if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare && navigator.canShare({ files: [item.file] })) {
+      try {
+        await navigator.share({
+          files: [item.file],
+          title: `${list.title} | Readixon`,
+          text: `"${list.title}" okuma listesi story kartı`,
+        });
+        toast.success('Story kartı paylaşıldı!');
+        setIsDownloading(false);
+        return;
+      } catch (shareErr: any) {
+        if (shareErr.name === 'AbortError') {
+          setIsDownloading(false);
+          return;
+        }
+        console.warn('Web Share başarısız:', shareErr);
+      }
+    }
+
+    // 3. Masaüstü / Standart Tarayıcı İndirme
     try {
-      // 1. Data URL (Base64) öncelikli olarak görünmez bir link oluşturup tıkla (Mobil webview'lerde Blob URL'e göre çok daha kararlı)
-      const downloadTarget = item.dataUrl || item.url;
       const link = document.createElement('a');
-      link.href = downloadTarget;
+      link.href = item.dataUrl || item.url;
       link.download = item.fileName;
       link.setAttribute('download', item.fileName);
-      link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
       setTimeout(() => {
-        if (document.body.contains(link)) {
-          document.body.removeChild(link);
-        }
+        if (document.body.contains(link)) document.body.removeChild(link);
       }, 300);
-
-      toast.success('Story kartı indirme işlemi başlatıldı!');
+      toast.success('Story kartı indirildi!');
     } catch (err) {
-      console.error('Doğrudan indirme hatası:', err);
-      // Fallback: Yeni sekmede veya pencerede aç
+      console.error('İndirme hatası:', err);
       if (item.dataUrl || item.url) {
         window.open(item.dataUrl || item.url, '_blank');
       }
       toast.info('Görsel açıldı. Üzerine basılı tutarak galerinize kaydedebilirsiniz.');
-    }
-  };
-
-  const handleCopyStoryImageToClipboard = async () => {
-    if (!previewStoryImage) return;
-    try {
-      if (typeof window !== 'undefined' && 'ClipboardItem' in window && navigator.clipboard?.write) {
-        const item = new ClipboardItem({ 'image/png': previewStoryImage.file });
-        await navigator.clipboard.write([item]);
-        setIsImageCopied(true);
-        toast.success('Story kartı panoya kopyalandı! Instagram hikayesine yapıştırabilirsiniz.');
-        setTimeout(() => setIsImageCopied(false), 2500);
-      } else {
-        toast.error('Cihazınız panoya görsel kopyalamayı desteklemiyor.');
-      }
-    } catch (clipErr) {
-      console.warn('Görsel panoya kopyalanamadı:', clipErr);
-      toast.error('Görsel panoya kopyalanamadı.');
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -556,7 +578,18 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
         }
       }
 
-      if (!isMobileDevice) {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          await NativeImageSaver.saveImage({
+            base64: dataUrl,
+            fileName: fileName,
+          });
+          toast.success('Story kartı telefonunuzun Galerisine kaydedildi!');
+        } catch (nativeErr) {
+          console.warn('Otomatik native kaydetme hatası:', nativeErr);
+        }
+        setPreviewStoryImage({ url: blobUrl, file, fileName, dataUrl });
+      } else if (!isMobileDevice) {
         // Masaüstü tarayıcılarda doğrudan indirme
         const link = document.createElement('a');
         link.download = fileName;
@@ -566,19 +599,7 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
         document.body.removeChild(link);
         toast.success('Instagram Story kartı başarıyla indirildi!');
       } else {
-        // Mobil / APK WebView: Hem indirmeyi tetiklemeyi dene hem de kullanıcıya kart önizleme & kaydetme penceresini aç
-        try {
-          const link = document.createElement('a');
-          link.download = fileName;
-          link.href = dataUrl;
-          document.body.appendChild(link);
-          link.click();
-          setTimeout(() => {
-            if (document.body.contains(link)) document.body.removeChild(link);
-          }, 300);
-        } catch {
-          // sessizce geç
-        }
+        // Mobil / APK WebView: Kullanıcıya kart önizleme & kaydetme penceresini aç
         setPreviewStoryImage({ url: blobUrl, file, fileName, dataUrl });
       }
     } catch (err) {
@@ -861,18 +882,38 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
             </div>
 
             {/* Aksiyon Butonları */}
-            <div className="w-full space-y-2">
+            <div className="w-full space-y-2.5">
               {/* 1. Doğrudan İndirme Butonu */}
               <button
                 type="button"
                 onClick={() => handleDirectDownload(previewStoryImage)}
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-primary text-primary-foreground font-bold text-xs shadow-md shadow-primary/25 active:scale-95 transition-all cursor-pointer"
+                disabled={isDownloading}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-indigo-700 hover:from-purple-500 hover:to-indigo-600 text-white font-bold text-xs sm:text-sm shadow-md shadow-indigo-500/25 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
               >
-                <Download size={15} />
-                <span>Doğrudan Cihaza İndir</span>
+                {isDownloading ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>Galeriye Kaydediliyor...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download size={16} />
+                    <span>Doğrudan Cihaza İndir</span>
+                  </>
+                )}
               </button>
 
-              {/* 2. Sistem Paylaşımı / Galeriye Aktar */}
+              {/* 2. Liste Bağlantısını Kopyala */}
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/40 text-foreground font-semibold text-xs active:scale-95 transition-colors cursor-pointer"
+              >
+                {copied ? <Check size={15} className="text-emerald-500" /> : <Copy size={15} />}
+                <span>{copied ? 'Bağlantı Panoya Kopyalandı!' : 'Liste Bağlantısını Kopyala'}</span>
+              </button>
+
+              {/* 3. Diğer Uygulamalarda Paylaş */}
               {typeof navigator !== 'undefined' && navigator.share && (
                 <button
                   type="button"
@@ -897,38 +938,18 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
                       // Kullanıcı iptal etti
                     }
                   }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary font-bold text-xs active:scale-95 transition-all cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary font-medium text-xs active:scale-95 transition-all cursor-pointer"
                 >
-                  <Share2 size={15} />
-                  <span>Sistemde Paylaş / Galeriye Aktar</span>
+                  <Share2 size={14} />
+                  <span>Diğer Uygulamalarda Paylaş</span>
                 </button>
               )}
-
-              {/* 3. Panoya Kopyala (Instagram Hikayesine Yapıştırmak İçin) */}
-              <button
-                type="button"
-                onClick={handleCopyStoryImageToClipboard}
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/40 text-foreground font-semibold text-xs active:scale-95 transition-colors cursor-pointer"
-              >
-                {isImageCopied ? <Check size={15} className="text-emerald-500" /> : <Copy size={15} />}
-                <span>{isImageCopied ? 'Görsel Panoya Kopyalandı!' : 'Görseli Kopyala (Instagram İçin)'}</span>
-              </button>
-
-              {/* 4. Yeni Sekmede Aç */}
-              <button
-                type="button"
-                onClick={handleOpenImageInNewTab}
-                className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-border/30 bg-muted/10 hover:bg-muted/20 text-muted-foreground hover:text-foreground text-[11px] transition-colors cursor-pointer"
-              >
-                <ExternalLink size={13} />
-                <span>Görseli Tam Boyutta Aç</span>
-              </button>
 
               {/* Kapat */}
               <button
                 type="button"
                 onClick={() => setPreviewStoryImage(null)}
-                className="w-full py-2 rounded-xl text-muted-foreground hover:text-foreground font-medium text-xs transition-colors cursor-pointer"
+                className="w-full py-2.5 rounded-xl border border-border/30 bg-muted/10 hover:bg-muted/25 text-muted-foreground hover:text-foreground font-semibold text-xs transition-colors cursor-pointer"
               >
                 Pencereyi Kapat
               </button>
