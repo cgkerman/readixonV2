@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   X,
   Copy,
@@ -17,8 +17,8 @@ import { ReadingListCoverCollage } from './ReadingListCoverCollage';
 import type { ReadingList, Story } from '@readixon/core';
 import { toast } from 'sonner';
 
-const XTwitterIcon = ({ size = 15 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+const XTwitterIcon = ({ size = 15, className = '' }: { size?: number; className?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
   </svg>
 );
@@ -40,11 +40,45 @@ const loadImage = (src: string): Promise<HTMLImageElement | null> => {
     img.crossOrigin = 'anonymous';
     img.onload = () => resolve(img);
     img.onerror = () => {
-      // Hata durumunda (CORS vb.) null dön ki canvas patlamasın
       resolve(null);
     };
     img.src = src;
   });
+};
+
+/**
+ * Canvas üzerinde görseli en-boy oranını bozmadan (object-fit: cover) çizer
+ */
+const drawImageCover = (
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  x: number,
+  y: number,
+  w: number,
+  h: number
+) => {
+  const imgW = img.naturalWidth || img.width;
+  const imgH = img.naturalHeight || img.height;
+  if (!imgW || !imgH) {
+    ctx.drawImage(img, x, y, w, h);
+    return;
+  }
+  const imgRatio = imgW / imgH;
+  const targetRatio = w / h;
+  let sx = 0;
+  let sy = 0;
+  let sWidth = imgW;
+  let sHeight = imgH;
+
+  if (imgRatio > targetRatio) {
+    sWidth = imgH * targetRatio;
+    sx = (imgW - sWidth) / 2;
+  } else {
+    sHeight = imgW / targetRatio;
+    sy = (imgH - sHeight) / 2;
+  }
+
+  ctx.drawImage(img, sx, sy, sWidth, sHeight, x, y, w, h);
 };
 
 export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
@@ -55,7 +89,28 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
   const [isGeneratingStory, setIsGeneratingStory] = useState(false);
+  const [previewStoryImage, setPreviewStoryImage] = useState<{
+    url: string;
+    file: File;
+    fileName: string;
+  } | null>(null);
   const storyCardRef = useRef<HTMLDivElement>(null);
+
+  // ESC tuşu ile kapatma
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (previewStoryImage) {
+          setPreviewStoryImage(null);
+        } else {
+          onClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose, previewStoryImage]);
 
   if (!isOpen) return null;
 
@@ -89,12 +144,9 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
     }
   };
 
-  const shareText = encodeURIComponent(
-    `"${list.title}" okuma listesini Readixon'da keşfet! 📚✨\n${shareUrl}`
-  );
-
   /**
-   * Instagram Story (9:16 - 1080x1920) formatında yüksek çözünürlüklü görsel oluşturup indirir
+   * Instagram Story (9:16 - 1080x1920) formatında yüksek çözünürlüklü görsel oluşturur
+   * Mobilde / Webview'de indirme ve yerel paylaşımı sorunsuz destekler
    */
   const handleDownloadStoryImage = async () => {
     setIsGeneratingStory(true);
@@ -151,6 +203,7 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
       }
 
       // 4. Liste Kapağı (Kare 420x420, Yuvarlatılmış Köşeler & Derin Gölge)
+      // Basık görünmemesi için drawImageCover kullanılır!
       const coverSize = 420;
       const coverX = (1080 - coverSize) / 2;
       const coverY = 225;
@@ -168,9 +221,8 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
       ctx.clip();
 
       if (mainCoverImg) {
-        ctx.drawImage(mainCoverImg, coverX, coverY, coverSize, coverSize);
+        drawImageCover(ctx, mainCoverImg, coverX, coverY, coverSize, coverSize);
       } else {
-        // Fallback Kapak Gradients
         const fallbackGrad = ctx.createLinearGradient(coverX, coverY, coverX + coverSize, coverY + coverSize);
         fallbackGrad.addColorStop(0, '#4f46e5');
         fallbackGrad.addColorStop(1, '#7c3aed');
@@ -225,7 +277,7 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Kutu Başlığı
+      // Kutu Başlığı (Emojisiz)
       ctx.fillStyle = '#c7d2fe';
       ctx.font = 'bold 22px sans-serif';
       ctx.textAlign = 'left';
@@ -256,7 +308,7 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
         displayStories.forEach((story, idx) => {
           const sCoverImg = storyCoverImgs[idx];
 
-          // 1. Sıra Numarası Çemberi (#1, #2...)
+          // 1. Sıra Numarası Çemberi
           ctx.beginPath();
           ctx.arc(boxX + 55, rowY - 5, 20, 0, Math.PI * 2);
           ctx.fillStyle = 'rgba(129, 140, 248, 0.22)';
@@ -270,7 +322,7 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
           ctx.textAlign = 'center';
           ctx.fillText(`${idx + 1}`, boxX + 55, rowY + 2);
 
-          // 2. Kitap Kapağı Görseli (Küçük Thumbnail)
+          // 2. Kitap Kapağı Görseli (Basık görünmemesi için drawImageCover)
           const thumbX = boxX + 92;
           const thumbY = rowY - 38;
           const thumbW = 50;
@@ -285,9 +337,8 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
           ctx.clip();
 
           if (sCoverImg) {
-            ctx.drawImage(sCoverImg, thumbX, thumbY, thumbW, thumbH);
+            drawImageCover(ctx, sCoverImg, thumbX, thumbY, thumbW, thumbH);
           } else {
-            // Placeholder degrade
             const thGrad = ctx.createLinearGradient(thumbX, thumbY, thumbX + thumbW, thumbY + thumbH);
             thGrad.addColorStop(0, '#312e81');
             thGrad.addColorStop(1, '#4338ca');
@@ -305,7 +356,7 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
           ctx.stroke();
           ctx.restore();
 
-          // 3. Kitap Başlığı (Kapağın sağına yerleşir)
+          // 3. Kitap Başlığı
           const textStartX = thumbX + thumbW + 20;
           ctx.fillStyle = '#ffffff';
           ctx.font = 'bold 26px sans-serif';
@@ -326,12 +377,12 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
           ctx.font = '500 19px sans-serif';
           ctx.fillText(story.authorName || 'Bilinmeyen Yazar', textStartX, rowY + 18);
 
-          // 5. Sağ Taraf Rozeti (Format / Bölüm Sayısı)
+          // 5. Sağ Taraf Rozeti (Emojisiz temiz tasarım)
           ctx.fillStyle = '#818cf8';
           ctx.font = 'bold 18px sans-serif';
           ctx.textAlign = 'right';
           const infoText =
-            story.format === 'webtoon' ? '🎨 Webtoon' : `${story.stats?.chapterCount || 0} Bölüm`;
+            story.format === 'webtoon' ? 'Webtoon' : `${story.stats?.chapterCount || 0} Bölüm`;
           ctx.fillText(infoText, boxX + boxWidth - 40, rowY - 2);
 
           // Satır arası ayırıcı çizgi
@@ -346,7 +397,6 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
           rowY += 105;
         });
 
-        // 5'ten fazla kitap varsa not
         if (stories.length > 5) {
           ctx.fillStyle = 'rgba(165, 180, 252, 0.9)';
           ctx.font = 'italic 19px sans-serif';
@@ -356,7 +406,7 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
       }
       ctx.restore();
 
-      // 7. Alt Alan (Maskot Çekirix & Platform Çağrısı)
+      // 7. Alt Alan (Maskot Çekirix & Çağrı - Emojisiz Doğal Tasarım)
       const footerY = 1600;
 
       // Sol Taraf: Metinler & Çağrı
@@ -367,11 +417,11 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
 
       ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
       ctx.font = '400 20px sans-serif';
-      ctx.fillText('Kitap, Webtoon & Çevrimiçi Edebiyat', 110, footerY + 135);
+      ctx.fillText('Kitap, Webtoon ve Çevrimiçi Edebiyat', 110, footerY + 135);
 
-      // Konuşma Baloncuğu / Rozet
+      // Rozet (Emojisiz profesyonel görünüm)
       ctx.save();
-      const badgeW = 230;
+      const badgeW = 210;
       const badgeH = 46;
       ctx.beginPath();
       ctx.roundRect(110, footerY + 18, badgeW, badgeH, 23);
@@ -382,9 +432,9 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
       ctx.stroke();
 
       ctx.fillStyle = '#c7d2fe';
-      ctx.font = 'bold 17px sans-serif';
+      ctx.font = 'bold 16px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('✨ İyi Okumalar!', 110 + badgeW / 2, footerY + 47);
+      ctx.fillText('READIXON SEÇKİSİ', 110 + badgeW / 2, footerY + 47);
       ctx.restore();
 
       // Sağ Taraf: Sevimli Çekirix Maskotumuz
@@ -395,7 +445,6 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
         const mascotX = 750;
         const mascotY = 1585;
 
-        // Maskot arkasına hafif tatlı ışıma
         const mascotGlow = ctx.createRadialGradient(
           mascotX + 125,
           mascotY + 125,
@@ -404,7 +453,7 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
           mascotY + 125,
           150
         );
-        mascotGlow.addColorStop(0, 'rgba(132, 204, 22, 0.25)'); // Çekirix yeşili ışıltı
+        mascotGlow.addColorStop(0, 'rgba(132, 204, 22, 0.25)');
         mascotGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = mascotGlow;
         ctx.fillRect(mascotX - 40, mascotY - 40, mascotW + 80, mascotH + 80);
@@ -413,13 +462,54 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
         ctx.restore();
       }
 
-      // 8. İndirme Tetikleme
-      const dataUrl = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.download = `readixon-liste-${list.title.toLowerCase().replace(/[^a-z0-9]/g, '-')}.png`;
-      link.href = dataUrl;
-      link.click();
-      toast.success('Instagram Story kartı başarıyla indirildi!');
+      // 8. İndirme ve Mobil Uyumluluk Tetikleme (Blob / Web Share API / File)
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('Görsel dosyası oluşturulamadı.');
+
+      const cleanTitle = list.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-');
+      const fileName = `readixon-liste-${cleanTitle || 'paylasim'}.png`;
+      const file = new File([blob], fileName, { type: 'image/png' });
+      const blobUrl = URL.createObjectURL(blob);
+
+      // Mobil Tarayıcı veya Capacitor Webview Kontrolü
+      const isMobileDevice =
+        typeof window !== 'undefined' &&
+        (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768);
+
+      // Eğer mobil veya dosya paylaşımı destekleniyorsa doğrudan sistem paylaşımını aç
+      if (typeof navigator !== 'undefined' && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: `${list.title} | Readixon`,
+            text: `"${list.title}" okuma listesi`,
+          });
+          toast.success('Story kartı paylaşıldı!');
+          return;
+        } catch (shareErr: any) {
+          if (shareErr.name === 'AbortError') {
+            return;
+          }
+          console.warn('Doğrudan dosya paylaşımı başarısız, önizleme açılıyor:', shareErr);
+        }
+      }
+
+      if (!isMobileDevice) {
+        // Masaüstü tarayıcılarda doğrudan indirme
+        const link = document.createElement('a');
+        link.download = fileName;
+        link.href = blobUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success('Instagram Story kartı başarıyla indirildi!');
+      } else {
+        // Mobil / APK WebView: WebView indirmeyi yutabileceği için kullanıcıya kart önizleme & kaydetme penceresini aç
+        setPreviewStoryImage({ url: blobUrl, file, fileName });
+      }
     } catch (err) {
       console.error(err);
       toast.error('Görsel oluşturulurken bir hata oluştu.');
@@ -429,207 +519,322 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-lg rounded-3xl bg-card border border-border/40 shadow-2xl overflow-hidden p-6 sm:p-7 max-h-[92vh] overflow-y-auto">
-        {/* Kapat Butonu */}
-        <button
-          onClick={onClose}
-          className="absolute top-5 right-5 w-9 h-9 rounded-full bg-muted/20 hover:bg-muted/40 text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors"
-          aria-label="Kapat"
-        >
-          <X size={18} />
-        </button>
-
-        {/* Başlık */}
-        <div className="flex items-center gap-3 mb-5">
-          <div className="w-10 h-10 rounded-2xl bg-primary/15 text-primary flex items-center justify-center border border-primary/20 shadow-sm">
-            <Share2 size={20} />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-foreground">Listeyi Paylaş</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Spotify tarzı görsellikle takipçilerinle ve arkadaşlarınla paylaş.
-            </p>
-          </div>
-        </div>
-
-        {/* Canlı Önizleme Kartı (Modal İçi Görsel Kart) */}
+    <>
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            onClose();
+          }
+        }}
+      >
         <div
-          ref={storyCardRef}
-          className="relative rounded-2xl overflow-hidden bg-gradient-to-b from-indigo-950/40 via-card to-background border border-indigo-500/25 p-4 sm:p-5 mb-5 shadow-inner"
+          className="relative w-full max-w-lg rounded-3xl bg-card border border-border/40 shadow-2xl overflow-hidden p-4 sm:p-6 max-h-[92vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
         >
-          {/* Sağ Üst Readixon & Çekirix Rozeti */}
-          <div className="absolute top-3 right-3 flex items-center gap-2 px-2.5 py-1 rounded-full bg-background/80 border border-primary/30 backdrop-blur-sm shadow-sm">
-            <img src="/white-Readixon.png" alt="Readixon" className="h-3.5 w-auto object-contain" />
-            <span className="w-1 h-1 rounded-full bg-primary/40" />
-            <img src="/cekirix.png" alt="Çekirix" className="w-4 h-4 object-contain" />
-          </div>
+          {/* Kapat Butonu */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute top-4 right-4 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-muted/30 hover:bg-muted/60 text-foreground flex items-center justify-center transition-colors z-30 cursor-pointer shadow-sm"
+            aria-label="Kapat"
+          >
+            <X size={18} />
+          </button>
 
-          <div className="flex items-center gap-4">
-            <ReadingListCoverCollage
-              covers={covers}
-              customCoverUrl={list.coverUrl}
-              size="md"
-              className="shrink-0 shadow-lg"
-            />
-
-            <div className="min-w-0 flex-1 pr-14">
-              <span className="text-[10px] font-bold text-primary uppercase tracking-wider block mb-1">
-                Readixon Çalma Listesi
-              </span>
-              <h3 className="font-bold text-base text-foreground truncate">{list.title}</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {list.userName || 'Readixon Okuru'} • {list.storyIds?.length || stories.length} Hikaye
+          {/* Başlık */}
+          <div className="flex items-center gap-2.5 sm:gap-3 mb-4 pr-8">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-primary/15 text-primary flex items-center justify-center border border-primary/20 shadow-sm shrink-0">
+              <Share2 size={18} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg sm:text-xl font-bold text-foreground truncate">Listeyi Paylaş</h2>
+              <p className="text-xs text-muted-foreground truncate">
+                Hikayelerini sosyal medyada ve arkadaşlarınla paylaş.
               </p>
             </div>
           </div>
 
-          {/* Listelenen Kitaplar (Kitap Kapak Görselleri Dahil) */}
-          {stories.length > 0 ? (
-            <div className="mt-4 pt-3.5 border-t border-border/25 space-y-2">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 mb-1 flex items-center justify-between">
-                <span>Listede Yer Alan Kitaplar</span>
-                <span className="text-[10px] text-primary/75">{stories.length} Kitap</span>
+          {/* Canlı Önizleme Kartı (Modal İçi Görsel Kart - Tam Responsive) */}
+          <div
+            ref={storyCardRef}
+            className="relative rounded-2xl overflow-hidden bg-gradient-to-b from-indigo-950/40 via-card to-background border border-indigo-500/25 p-3.5 sm:p-4 mb-4 shadow-inner"
+          >
+            {/* Üst Kısım: Kapak & Bilgiler (Responsive Flex) */}
+            <div className="flex items-start gap-3 sm:gap-4 mb-3">
+              <ReadingListCoverCollage
+                covers={covers}
+                customCoverUrl={list.coverUrl}
+                size="md"
+                className="w-18 h-18 sm:w-20 sm:h-20 shrink-0 shadow-lg"
+              />
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-1 mb-1">
+                  <span className="text-[10px] font-bold text-primary uppercase tracking-wider truncate">
+                    Okuma Listesi
+                  </span>
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-background/80 border border-primary/30 shrink-0">
+                    <img src="/white-Readixon.png" alt="Readixon" className="h-3 w-auto object-contain" />
+                  </div>
+                </div>
+                <h3 className="font-bold text-sm sm:text-base text-foreground truncate">{list.title}</h3>
+                <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5 truncate">
+                  {list.userName || 'Readixon Okuru'} • {list.storyIds?.length || stories.length} Hikaye
+                </p>
               </div>
-              {stories.slice(0, 4).map((story, idx) => {
-                const cover = story.coverImage || (story as any).coverUrl;
-                return (
-                  <div
-                    key={story.storyId}
-                    className="flex items-center justify-between gap-3 text-xs py-1.5 px-2 rounded-xl hover:bg-muted/20 transition-colors"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      {/* Sıra No */}
-                      <span className="w-4 h-4 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center shrink-0">
-                        {idx + 1}
-                      </span>
+            </div>
 
-                      {/* Kitap Kapağı Görseli */}
-                      <div className="relative w-7 h-10 rounded-md overflow-hidden bg-muted/40 shrink-0 border border-border/40 shadow-sm">
-                        {cover ? (
-                          <img
-                            src={cover}
-                            alt={story.title}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-indigo-950/40 text-indigo-400">
-                            <BookOpen size={12} />
+            {/* Listelenen Kitaplar (Emojisiz, Tam Responsive) */}
+            {stories.length > 0 ? (
+              <div className="pt-2.5 border-t border-border/25 space-y-1.5">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 mb-1 flex items-center justify-between">
+                  <span>Listede Yer Alan Kitaplar</span>
+                  <span className="text-[10px] text-primary/75">{stories.length} Kitap</span>
+                </div>
+                {stories.slice(0, 4).map((story, idx) => {
+                  const cover = story.coverImage || (story as any).coverUrl;
+                  return (
+                    <div
+                      key={story.storyId}
+                      className="flex items-center justify-between gap-2 text-xs py-1.5 px-2 rounded-xl hover:bg-muted/20 transition-colors"
+                    >
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        {/* Sıra No */}
+                        <span className="w-4 h-4 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center shrink-0">
+                          {idx + 1}
+                        </span>
+
+                        {/* Kitap Kapağı */}
+                        <div className="relative w-6 h-8 sm:w-7 sm:h-9 rounded-md overflow-hidden bg-muted/40 shrink-0 border border-border/40 shadow-sm">
+                          {cover ? (
+                            <img
+                              src={cover}
+                              alt={story.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-indigo-950/40 text-indigo-400">
+                              <BookOpen size={11} />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Kitap Başlığı ve Yazar */}
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-foreground truncate text-xs">{story.title}</div>
+                          <div className="text-[11px] text-muted-foreground truncate">
+                            {story.authorName || 'Yazar'}
                           </div>
-                        )}
-                      </div>
-
-                      {/* Kitap Başlığı ve Yazar */}
-                      <div className="min-w-0 flex-1">
-                        <div className="font-semibold text-foreground truncate text-xs">{story.title}</div>
-                        <div className="text-[11px] text-muted-foreground truncate">
-                          {story.authorName || 'Yazar'}
                         </div>
                       </div>
+
+                      <span className="text-[10px] font-medium text-primary/80 shrink-0">
+                        {story.format === 'webtoon' ? 'Webtoon' : `${story.stats?.chapterCount || 0} Bölüm`}
+                      </span>
                     </div>
+                  );
+                })}
+                {stories.length > 4 && (
+                  <p className="text-[10px] text-primary/80 italic pt-1 pl-2">
+                    + {stories.length - 4} diğer kitap daha bu listede
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="pt-3 border-t border-border/20 text-center text-xs text-muted-foreground">
+                Henüz bu listeye kitap eklenmemiş.
+              </div>
+            )}
+          </div>
 
-                    <span className="text-[10px] font-medium text-primary/80 shrink-0">
-                      {story.format === 'webtoon' ? '🎨 Webtoon' : `${story.stats?.chapterCount || 0} Bölüm`}
-                    </span>
-                  </div>
-                );
-              })}
-              {stories.length > 4 && (
-                <p className="text-[10px] text-primary/80 italic pt-1 pl-2">
-                  + {stories.length - 4} diğer kitap daha bu listede
-                </p>
-              )}
-            </div>
-          ) : (
-            <div className="mt-3 pt-3 border-t border-border/20 text-center text-xs text-muted-foreground">
-              Henüz bu listeye kitap eklenmemiş.
-            </div>
-          )}
-        </div>
-
-        {/* 1. Aksiyon: Instagram Story Kartı İndir (Spotify Estetiği + Logo + Çekirix Maskot) */}
-        <button
-          onClick={handleDownloadStoryImage}
-          disabled={isGeneratingStory}
-          className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-indigo-700 hover:from-purple-500 hover:to-indigo-600 text-white font-bold text-sm shadow-lg shadow-indigo-500/25 active:scale-[0.98] transition-all mb-4 disabled:opacity-50"
-        >
-          {isGeneratingStory ? (
-            <div className="flex items-center gap-2">
-              <Loader2 size={18} className="animate-spin" />
-              <span>Görsel Kart Hazırlanıyor...</span>
-            </div>
-          ) : (
-            <>
-              <Sparkles size={18} />
-              <span>Instagram Story Kartı İndir (9:16)</span>
-            </>
-          )}
-        </button>
-
-        {/* 2. Aksiyon: Bağlantıyı Kopyala */}
-        <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-background border border-border/40 mb-4">
-          <input
-            type="text"
-            readOnly
-            value={shareUrl}
-            className="flex-1 px-3 py-1.5 bg-transparent text-xs text-foreground/80 focus:outline-none truncate select-all font-mono"
-          />
+          {/* 1. Aksiyon: Instagram Story Kartı İndir */}
           <button
-            onClick={handleCopyLink}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              copied
-                ? 'bg-emerald-500 text-white shadow-sm'
-                : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm'
-            }`}
+            onClick={handleDownloadStoryImage}
+            disabled={isGeneratingStory}
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-indigo-700 hover:from-purple-500 hover:to-indigo-600 text-white font-bold text-xs sm:text-sm shadow-lg shadow-indigo-500/25 active:scale-[0.98] transition-all mb-3.5 disabled:opacity-50"
           >
-            {copied ? (
-              <>
-                <Check size={14} className="stroke-[3]" /> Kopyalandı
-              </>
+            {isGeneratingStory ? (
+              <div className="flex items-center gap-2">
+                <Loader2 size={16} className="animate-spin" />
+                <span>Görsel Kart Hazırlanıyor...</span>
+              </div>
             ) : (
               <>
-                <Copy size={14} /> Kopyala
+                <Sparkles size={16} />
+                <span>Instagram Story Kartı İndir (9:16)</span>
               </>
             )}
           </button>
-        </div>
 
-        {/* 3. Aksiyon: Hızlı Sosyal Medya Paylaşımı (WhatsApp, Twitter, Telegram) */}
-        <div className="grid grid-cols-3 gap-2.5 pt-3 border-t border-border/15">
-          <a
-            href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
-              `"${list.title}" okuma listesini keşfet! 📚✨\n${shareUrl}`
-            )}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-xs font-semibold transition-colors"
-          >
-            <MessageCircle size={15} /> WhatsApp
-          </a>
+          {/* 2. Aksiyon: Bağlantıyı Kopyala */}
+          <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-background border border-border/40 mb-3.5">
+            <input
+              type="text"
+              readOnly
+              value={shareUrl}
+              className="flex-1 px-3 py-1.5 bg-transparent text-xs text-foreground/80 focus:outline-none truncate select-all font-mono"
+            />
+            <button
+              onClick={handleCopyLink}
+              className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                copied
+                  ? 'bg-emerald-500 text-white shadow-sm'
+                  : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm'
+              }`}
+            >
+              {copied ? (
+                <>
+                  <Check size={14} className="stroke-[3]" /> Kopyalandı
+                </>
+              ) : (
+                <>
+                  <Copy size={14} /> Kopyala
+                </>
+              )}
+            </button>
+          </div>
 
-          <a
-            href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
-              `"${list.title}" okuma listesini Readixon'da keşfet! 📚✨`
-            )}&url=${encodeURIComponent(shareUrl)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/20 text-xs font-semibold transition-colors"
-          >
-            <XTwitterIcon size={14} /> X (Twitter)
-          </a>
+          {/* 3. Aksiyon: Hızlı Sosyal Medya Paylaşımı (Emojisiz Temiz Metin) */}
+          <div className="grid grid-cols-3 gap-2 pt-3 border-t border-border/15">
+            <a
+              href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                `"${list.title}" okuma listesini keşfet:\n${shareUrl}`
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-1.5 p-2 sm:p-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-[11px] sm:text-xs font-semibold transition-colors truncate"
+            >
+              <MessageCircle size={14} className="shrink-0" />
+              <span className="truncate">WhatsApp</span>
+            </a>
 
-          <a
-            href={`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(
-              `"${list.title}" okuma listesini Readixon'da keşfet! 📚✨`
-            )}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 text-xs font-semibold transition-colors"
-          >
-            <Send size={15} /> Telegram
-          </a>
+            <a
+              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
+                `"${list.title}" okuma listesini Readixon'da keşfet!`
+              )}&url=${encodeURIComponent(shareUrl)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-1.5 p-2 sm:p-2.5 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/20 text-[11px] sm:text-xs font-semibold transition-colors truncate"
+            >
+              <XTwitterIcon size={13} className="shrink-0" />
+              <span className="truncate">X (Twitter)</span>
+            </a>
+
+            <a
+              href={`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(
+                `"${list.title}" okuma listesini Readixon'da keşfet!`
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-1.5 p-2 sm:p-2.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 text-[11px] sm:text-xs font-semibold transition-colors truncate"
+            >
+              <Send size={13} className="shrink-0" />
+              <span className="truncate">Telegram</span>
+            </a>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* ── Mobil / Uygulama İçin Story Kartı Önizleme ve Kolay Kaydetme Modalı ── */}
+      {previewStoryImage && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4 bg-black/90 backdrop-blur-md animate-fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setPreviewStoryImage(null);
+            }
+          }}
+        >
+          <div
+            className="relative w-full max-w-sm rounded-3xl bg-card border border-border/40 shadow-2xl p-4 sm:p-5 flex flex-col items-center max-h-[92vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Kapat Butonu */}
+            <button
+              type="button"
+              onClick={() => setPreviewStoryImage(null)}
+              className="absolute top-3.5 right-3.5 w-9 h-9 rounded-full bg-muted/40 hover:bg-muted/70 text-foreground flex items-center justify-center transition-colors z-30 cursor-pointer shadow-sm"
+              aria-label="Kapat"
+            >
+              <X size={18} />
+            </button>
+
+            <h3 className="font-bold text-sm text-foreground mb-1">Story Kartınız Hazır!</h3>
+            <p className="text-[11px] text-muted-foreground text-center mb-3">
+              Görseli indirebilir veya doğrudan Instagram ve diğer uygulamalarda paylaşabilirsiniz.
+            </p>
+
+            {/* Görsel Kart Önizlemesi */}
+            <div className="relative w-full aspect-[9/16] max-h-[50vh] rounded-2xl overflow-hidden border border-border/40 shadow-2xl bg-black/60 mb-3">
+              <img
+                src={previewStoryImage.url}
+                alt="Story Kartı"
+                className="w-full h-full object-contain"
+              />
+            </div>
+
+            {/* Mobil Kullanıcı İpucu */}
+            <div className="w-full p-2.5 rounded-xl bg-primary/10 border border-primary/20 text-center mb-3">
+              <p className="text-[11px] text-foreground/90 font-medium leading-relaxed">
+                💡 <strong>İpucu:</strong> Görselin üzerine basılı tutup <em>&quot;Resmi İndir&quot;</em> veya <em>&quot;Galeriye Kaydet&quot;</em> seçeneğini kullanabilirsiniz.
+              </p>
+            </div>
+
+            {/* Aksiyon Butonları */}
+            <div className="w-full space-y-2">
+              {typeof navigator !== 'undefined' && navigator.share && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      if (
+                        navigator.canShare &&
+                        navigator.canShare({ files: [previewStoryImage.file] })
+                      ) {
+                        await navigator.share({
+                          files: [previewStoryImage.file],
+                          title: `${list.title} | Readixon`,
+                          text: `"${list.title}" okuma listesi`,
+                        });
+                      } else {
+                        await navigator.share({
+                          title: list.title,
+                          url: shareUrl,
+                        });
+                      }
+                    } catch (e) {
+                      // Kullanıcı iptal etti
+                    }
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-primary text-primary-foreground font-bold text-xs shadow-md shadow-primary/25 active:scale-95 transition-all"
+                >
+                  <Share2 size={15} />
+                  <span>Paylaş / Galeriye Kaydet</span>
+                </button>
+              )}
+
+              <a
+                href={previewStoryImage.url}
+                download={previewStoryImage.fileName}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/40 text-foreground font-semibold text-xs transition-colors"
+              >
+                <Download size={15} />
+                <span>Doğrudan İndirmeyi Dene</span>
+              </a>
+
+              <button
+                type="button"
+                onClick={() => setPreviewStoryImage(null)}
+                className="w-full py-2.5 rounded-xl border border-border/30 bg-muted/10 hover:bg-muted/25 text-muted-foreground hover:text-foreground font-semibold text-xs transition-colors"
+              >
+                Pencereyi Kapat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
+

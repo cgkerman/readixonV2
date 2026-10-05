@@ -11,10 +11,10 @@ interface ReadingListCoverCollageProps {
 }
 
 const sizeClasses = {
-  sm: 'w-16 h-16 min-w-[4rem] min-h-[4rem] rounded-xl',
-  md: 'w-24 h-24 min-w-[6rem] min-h-[6rem] rounded-2xl',
-  lg: 'w-44 h-44 sm:w-56 sm:h-56 min-w-[11rem] min-h-[11rem] rounded-2xl sm:rounded-3xl',
-  xl: 'w-56 h-56 sm:w-72 sm:h-72 min-w-[14rem] min-h-[14rem] rounded-3xl',
+  sm: 'w-14 h-14 sm:w-16 sm:h-16 rounded-xl',
+  md: 'w-20 h-20 sm:w-24 sm:h-24 rounded-2xl',
+  lg: 'w-44 h-44 sm:w-56 sm:h-56 rounded-2xl sm:rounded-3xl',
+  xl: 'w-56 h-56 sm:w-72 sm:h-72 rounded-3xl',
 };
 
 export const ReadingListCoverCollage: React.FC<ReadingListCoverCollageProps> = ({

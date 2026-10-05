@@ -50,6 +50,17 @@ export const AddToReadingListModal: React.FC<AddToReadingListModalProps> = ({
     fetchLists();
   }, [isOpen, userId]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleToggle = async (list: ReadingList) => {
@@ -84,12 +95,23 @@ export const AddToReadingListModal: React.FC<AddToReadingListModalProps> = ({
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-        <div className="relative w-full max-w-sm rounded-3xl bg-card border border-border/40 shadow-2xl overflow-hidden p-6">
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            onClose();
+          }
+        }}
+      >
+        <div
+          className="relative w-full max-w-sm rounded-3xl bg-card border border-border/40 shadow-2xl overflow-hidden p-6"
+          onClick={(e) => e.stopPropagation()}
+        >
           {/* Kapat Butonu */}
           <button
+            type="button"
             onClick={onClose}
-            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-muted/20 hover:bg-muted/40 text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors"
+            className="absolute top-4 right-4 z-20 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-muted/20 hover:bg-muted/40 text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors cursor-pointer"
           >
             <X size={16} />
           </button>
