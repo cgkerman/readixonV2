@@ -171,11 +171,44 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
         setIsDownloading(false);
         return;
       } catch (nativeErr: any) {
-        console.warn('NativeImageSaver hatası, tarayıcı yöntemi deneniyor:', nativeErr);
+        console.warn('NativeImageSaver henüz bu derlemede yok veya hata verdi, sunucu indirmesi deneniyor:', nativeErr);
       }
     }
 
-    // 2. Mobil Tarayıcılar (Web Share API - Files desteği varsa doğrudan sistem paylaşımı)
+    // 2. Sunucu Tabanlı İndirme (/api/download - Content-Disposition: attachment)
+    // HTML form post işlemi tarayıcıyı sayfadan ayrılmadan doğrudan yerel dosya indirme servisine bağlar
+    try {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = '/api/download';
+      form.style.display = 'none';
+
+      const imgInput = document.createElement('input');
+      imgInput.type = 'hidden';
+      imgInput.name = 'image';
+      imgInput.value = item.dataUrl;
+      form.appendChild(imgInput);
+
+      const nameInput = document.createElement('input');
+      nameInput.type = 'hidden';
+      nameInput.name = 'fileName';
+      nameInput.value = item.fileName;
+      form.appendChild(nameInput);
+
+      document.body.appendChild(form);
+      form.submit();
+      setTimeout(() => {
+        if (document.body.contains(form)) document.body.removeChild(form);
+      }, 2000);
+
+      toast.success('Story kartı indirme işlemi başlatıldı! Bildirim panelinizi kontrol edebilirsiniz.');
+      setIsDownloading(false);
+      return;
+    } catch (formErr) {
+      console.warn('Form indirme hatası:', formErr);
+    }
+
+    // 3. Web Share API Fallback (Eğer tarayıcı dosya paylaşımını destekliyorsa)
     if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare && navigator.canShare({ files: [item.file] })) {
       try {
         await navigator.share({
@@ -191,11 +224,10 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
           setIsDownloading(false);
           return;
         }
-        console.warn('Web Share başarısız:', shareErr);
       }
     }
 
-    // 3. Masaüstü / Standart Tarayıcı İndirme
+    // 4. Son Çare: Masaüstü a[download] veya yeni pencerede aç
     try {
       const link = document.createElement('a');
       link.href = item.dataUrl || item.url;
@@ -206,7 +238,7 @@ export const ShareReadingListModal: React.FC<ShareReadingListModalProps> = ({
       setTimeout(() => {
         if (document.body.contains(link)) document.body.removeChild(link);
       }, 300);
-      toast.success('Story kartı indirildi!');
+      toast.success('İndirme tetiklendi!');
     } catch (err) {
       console.error('İndirme hatası:', err);
       if (item.dataUrl || item.url) {
