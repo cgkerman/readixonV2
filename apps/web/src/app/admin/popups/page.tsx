@@ -700,72 +700,77 @@ export default function AdminPopupsPage() {
 
       {/* ── Canlı Pop-up Önizleme Modalı ── */}
       {previewPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-card border border-primary/30 rounded-[2rem] overflow-hidden max-w-lg w-full shadow-2xl relative animate-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto py-6 sm:py-8 animate-in fade-in duration-300 select-none">
+          <div className="bg-card border border-primary/30 rounded-[2rem] overflow-hidden max-w-lg w-full max-h-[90dvh] flex flex-col shadow-2xl relative animate-in zoom-in-95 duration-300 my-auto">
             {/* Close Button */}
             <button 
               onClick={() => setPreviewPopup(null)}
-              className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur-md text-white flex items-center justify-center border border-white/20 transition-transform hover:scale-105"
+              className="absolute top-3.5 right-3.5 z-30 w-9 h-9 rounded-full bg-black/60 hover:bg-black/90 backdrop-blur-md text-white flex items-center justify-center border border-white/20 transition-transform hover:scale-105 cursor-pointer shadow-lg"
+              aria-label="Kapat"
             >
               <X size={18} />
             </button>
 
-            {/* Image (if exists) */}
-            {previewPopup.imageUrl && (
-              <div className="relative w-full aspect-video sm:aspect-[16/10] bg-muted/20 overflow-hidden">
-                <img 
-                  src={previewPopup.imageUrl} 
-                  alt={previewPopup.title} 
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-black/30" />
-              </div>
-            )}
-
-            {/* Content Body */}
-            <div className="p-6 sm:p-8">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-black uppercase tracking-wider mb-3">
-                <Sparkles size={12} /> Readixon Duyuru
-              </div>
-
-              <Typography variant="h2" className="text-2xl font-black text-text mb-2 leading-tight">
-                {previewPopup.title}
-              </Typography>
-
-              {previewPopup.description && (
-                <Typography variant="body" className="text-muted leading-relaxed text-sm mb-6 whitespace-pre-line">
-                  {previewPopup.description}
-                </Typography>
+            <div className="flex-1 overflow-y-auto styled-scrollbar flex flex-col">
+              {/* Image (if exists) */}
+              {previewPopup.imageUrl && (
+                <div className="relative w-full max-h-56 sm:max-h-72 bg-muted/20 overflow-hidden shrink-0">
+                  <img 
+                    src={previewPopup.imageUrl} 
+                    alt={previewPopup.title} 
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-black/30" />
+                </div>
               )}
 
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
-                {previewPopup.buttonText && (
-                  <Button 
-                    variant="primary" 
-                    className="w-full justify-center shadow-lg shadow-primary/25 text-base py-3"
-                    onPress={() => {
-                      toast.info(`Tıklandı: ${previewPopup.buttonLink || 'Bağlantı belirtilmemiş'}`);
-                      setPreviewPopup(null);
-                    }}
-                  >
-                    <span>{previewPopup.buttonText}</span>
-                    <ArrowRight size={18} className="ml-2" />
-                  </Button>
-                )}
-                <Button 
-                  variant="ghost" 
-                  className="w-full sm:w-auto text-muted hover:text-text"
-                  onPress={() => setPreviewPopup(null)}
-                >
-                  Kapat
-                </Button>
-              </div>
+              {/* Content Body */}
+              <div className="p-5 sm:p-8 flex-1 flex flex-col justify-between">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-black uppercase tracking-wider mb-3">
+                    <Sparkles size={12} /> Readixon Duyuru
+                  </div>
 
-              <div className="mt-4 text-center">
-                <span className="text-[11px] text-muted-foreground/70">
-                  Bu bir canlı önizlemedir. Kullanıcılara siteyi ilk açtıklarında 1 kez gösterilir.
-                </span>
+                  <Typography variant="h2" className="text-xl sm:text-2xl font-black text-text mb-2 leading-tight">
+                    {previewPopup.title}
+                  </Typography>
+
+                  {previewPopup.description && (
+                    <Typography variant="body" className="text-muted leading-relaxed text-xs sm:text-sm mb-6 whitespace-pre-line">
+                      {previewPopup.description}
+                    </Typography>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+                  {previewPopup.buttonText && (
+                    <Button 
+                      variant="primary" 
+                      className="w-full justify-center shadow-lg shadow-primary/25 text-sm sm:text-base py-3 font-bold"
+                      onPress={() => {
+                        toast.info(`Tıklandı: ${previewPopup.buttonLink || 'Bağlantı belirtilmemiş'}`);
+                        setPreviewPopup(null);
+                      }}
+                    >
+                      <span>{previewPopup.buttonText}</span>
+                      <ArrowRight size={18} className="ml-2" />
+                    </Button>
+                  )}
+                  <Button 
+                    variant="ghost" 
+                    className="w-full sm:w-auto text-muted hover:text-text text-xs sm:text-sm"
+                    onPress={() => setPreviewPopup(null)}
+                  >
+                    Kapat
+                  </Button>
+                </div>
+
+                <div className="mt-4 text-center">
+                  <span className="text-[11px] text-muted-foreground/70">
+                    Bu bir canlı önizlemedir. Kullanıcılara siteyi ilk açtıklarında 1 kez gösterilir.
+                  </span>
+                </div>
               </div>
             </div>
           </div>
