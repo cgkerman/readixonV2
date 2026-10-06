@@ -106,6 +106,8 @@ export async function createNotification(
           data: {
             type: data.type,
             notificationId: newNotifRef.id,
+            actorId: data.actorId,
+            targetUserId: data.userId,
           },
         }),
       }).catch((err) => console.warn('[FCM] Etkileşim bildirimi gönderilemedi:', err));

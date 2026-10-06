@@ -167,6 +167,7 @@ export async function sendMessage(chatId: string, senderId: string, text: string
   // 2. Update chat metadata
   await updateDoc(chatRef, {
     lastMessage: text,
+    lastMessageSenderId: senderId,
     lastMessageAt: serverTimestamp(),
     [`unreadCounts.${receiverId}`]: increment(1)
   });
@@ -192,6 +193,9 @@ export async function sendMessage(chatId: string, senderId: string, text: string
         data: {
           type: 'message',
           chatId,
+          senderId,
+          actorId: senderId,
+          targetUserId: receiverId,
         },
       }),
     }).catch((err) => console.warn('[FCM] Mesaj bildirimi gönderilemedi:', err));

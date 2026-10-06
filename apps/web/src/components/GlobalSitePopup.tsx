@@ -84,7 +84,7 @@ export default function GlobalSitePopup() {
   }
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto py-6 sm:py-10 animate-in fade-in duration-300 select-none"
       onClick={(e) => {
         // Close if backdrop clicked
@@ -93,7 +93,7 @@ export default function GlobalSitePopup() {
         }
       }}
     >
-      <div 
+      <div
         className="bg-card border border-primary/30 rounded-[2rem] sm:rounded-[2.2rem] overflow-hidden max-w-lg w-full max-h-[90dvh] flex flex-col shadow-2xl shadow-black/80 relative animate-in zoom-in-95 duration-300 my-auto"
         onClick={(e) => e.stopPropagation()}
       >
@@ -101,7 +101,7 @@ export default function GlobalSitePopup() {
         <div className="absolute -top-24 -left-24 w-48 h-48 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
 
         {/* Close (X) Button */}
-        <button 
+        <button
           onClick={handleClose}
           className="absolute top-3.5 right-3.5 z-30 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black/60 hover:bg-black/90 backdrop-blur-md text-white flex items-center justify-center border border-white/20 transition-all hover:scale-105 active:scale-95 shadow-xl cursor-pointer"
           aria-label="Kapat"
@@ -114,9 +114,9 @@ export default function GlobalSitePopup() {
           {/* Popup Image (WebP Optimized) */}
           {popup.imageUrl && (
             <div className="relative w-full max-h-56 sm:max-h-72 overflow-hidden bg-muted/20 shrink-0">
-              <img 
-                src={popup.imageUrl} 
-                alt={popup.title} 
+              <img
+                src={popup.imageUrl}
+                alt={popup.title}
                 className="w-full h-full object-cover"
                 loading="eager"
               />
@@ -128,7 +128,7 @@ export default function GlobalSitePopup() {
           <div className="p-5 sm:p-8 relative z-10 flex-1 flex flex-col justify-between">
             <div>
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/25 text-primary text-xs font-black uppercase tracking-wider mb-3">
-                <Sparkles size={12} className="animate-pulse" /> Readixon Duyuru
+                <Sparkles size={12} className="animate-pulse" /> Readıxon Duyuru
               </div>
 
               <Typography variant="h2" className="text-xl sm:text-2xl font-black text-text mb-2.5 leading-tight">
@@ -145,8 +145,8 @@ export default function GlobalSitePopup() {
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
               {popup.buttonText && (
-                <Button 
-                  variant="primary" 
+                <Button
+                  variant="primary"
                   className="flex-1 justify-center shadow-lg shadow-primary/25 text-sm sm:text-base py-3 font-bold"
                   onPress={handleActionClick}
                 >
@@ -154,8 +154,8 @@ export default function GlobalSitePopup() {
                   <ArrowRight size={18} className="ml-2" />
                 </Button>
               )}
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full sm:w-auto text-muted hover:text-text border-border/60 hover:bg-card/80 py-3 text-xs sm:text-sm"
                 onPress={handleClose}
               >
@@ -166,7 +166,7 @@ export default function GlobalSitePopup() {
             {/* "Bir daha gösterme" Checkbox */}
             <div className="mt-5 pt-3 border-t border-border/40 flex items-center justify-between text-xs text-muted">
               <label className="flex items-center gap-2 cursor-pointer hover:text-text transition-colors">
-                <input 
+                <input
                   type="checkbox"
                   checked={dontShowAgain}
                   onChange={(e) => setDontShowAgain(e.target.checked)}

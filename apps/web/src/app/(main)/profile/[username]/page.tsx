@@ -852,8 +852,8 @@ export default function ProfilePage() {
       {/* ─────────────────────────────────────────────────────────────
           2. ANA SEKME BAR (Unified Modern Tab Bar)
           ───────────────────────────────────────────────────────────── */}
-      <div className="sticky top-14 sm:top-16 z-30 bg-background/80 backdrop-blur-lg border-b border-border/40 mb-8 sm:mb-10">
-        <div className="flex items-center gap-2 sm:gap-8 overflow-x-auto scrollbar-hide py-1">
+      <div className="border-b border-border/40 mb-8 sm:mb-10">
+        <div className="flex items-center gap-2 sm:gap-8 overflow-x-auto scrollbar-hide py-1 -mx-4 px-4 sm:mx-0 sm:px-0">
           
           {/* 1. Eserler (Sadece yazarlarda veya hikayesi olanlarda) */}
           {(profileUser.isAuthor || stories.length > 0) && (

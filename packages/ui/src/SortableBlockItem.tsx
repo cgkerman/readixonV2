@@ -248,17 +248,18 @@ export function SortableBlockItem({ id, block, onChange, onDelete, onUploadImage
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="flex flex-row items-start gap-2 bg-card p-4 rounded-xl border border-border/30 relative group">
+    <div ref={setNodeRef} style={style} className="flex flex-row items-start gap-1.5 sm:gap-2 bg-card p-3 sm:p-4 rounded-xl border border-border/30 relative group">
       <div 
         {...attributes} 
         {...listeners} 
-        className="mt-2 p-1 cursor-grab active:cursor-grabbing hover:bg-muted/20 rounded"
+        className="mt-2 p-1.5 touch-none cursor-grab active:cursor-grabbing hover:bg-muted/20 rounded select-none shrink-0"
+        title="Sürükleyip sırasını değiştirin"
       >
-        <GripVertical size={20} className="text-muted" />
+        <GripVertical size={18} className="text-muted" />
       </div>
       
       <div className="flex-1 min-w-0">
-        <div className="text-xs font-bold text-muted uppercase tracking-wider mb-2">
+        <div className="text-[11px] sm:text-xs font-bold text-muted uppercase tracking-wider mb-2">
           {block.type === 'end_of_chapter' ? 'bölüm sonu' : block.type}
         </div>
         {renderEditor()}
@@ -266,9 +267,10 @@ export function SortableBlockItem({ id, block, onChange, onDelete, onUploadImage
 
       <button 
         onClick={onDelete}
-        className="p-2 text-muted hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+        className="p-1.5 sm:p-2 text-muted hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors shrink-0"
+        title="Bloku Sil"
       >
-        <Trash2 size={18} />
+        <Trash2 size={16} />
       </button>
     </div>
   );

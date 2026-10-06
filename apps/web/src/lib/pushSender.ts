@@ -16,6 +16,16 @@ export interface PushPayload {
 export async function sendPushNotification({ userId, title, body, data = {}, route }: PushPayload) {
   if (!userId) return null;
 
+  // Güvenlik kalkanı: Kullanıcının kendi kendine bildirim göndermesini kesinlikle engelle
+  if (data?.actorId && data.actorId === userId) {
+    console.log(`[FCM] Kendine tetiklenen push bildirimi filtrelendi (actorId === userId): ${userId}`);
+    return null;
+  }
+  if (data?.senderId && data.senderId === userId) {
+    console.log(`[FCM] Kendine tetiklenen mesaj push bildirimi filtrelendi (senderId === userId): ${userId}`);
+    return null;
+  }
+
   try {
     const adminDb = getAdminDb();
     const userDocRef = adminDb.collection('users').doc(userId);

@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Typography, Button, BlockEditor, Input, ContentRenderer } from '@readixon/ui';
-import { ArrowLeft, Save, PlusCircle, CheckCircle, FileText, Globe, Calendar, GripVertical, Trash2, Sparkles, Wand2, Eye, EyeOff, Info, X, HelpCircle, BarChart2, Plus, Music, Volume2, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Save, PlusCircle, CheckCircle, FileText, Globe, Calendar, GripVertical, Trash2, Sparkles, Wand2, Eye, EyeOff, Info, X, HelpCircle, BarChart2, Plus, Music, Volume2, ExternalLink, ChevronDown, ChevronRight, BookOpen } from 'lucide-react';
 import { fetchChapter, updateChapter, compressImage, fetchChapters, createChapter, deleteChapter, createNotification, getUserFollowerIds, getStoryById, updateStory, useAuthStore, trackWordCount, trackInteraction, parseAudioTrack, getAudioPlatformLabel, type Chapter, type ChapterAudioTrack } from '@readixon/core';
 import { ReadixonAIAssistant } from '@/components/ReadixonAIAssistant';
 import { uploadFile } from '@readixon/core/src/services/storageService';
@@ -29,6 +29,7 @@ export default function ChapterEditorPage() {
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [isAudioSectionOpen, setIsAudioSectionOpen] = useState(false);
   const [previewAudio, setPreviewAudio] = useState(false);
+  const [isChapterDrawerOpen, setIsChapterDrawerOpen] = useState(false);
   
   const isInitialLoad = useRef(true);
   const publishedRef = useRef(false);
@@ -280,84 +281,187 @@ export default function ChapterEditorPage() {
         </div>
       </aside>
 
-      {/* ── Mobil için Üst Bar (Sidebar yerine) ── */}
-      <div className="lg:hidden w-full p-4 border-b border-border/50 bg-card/30 flex items-center justify-between">
-         <Button variant="ghost" onPress={() => router.push(`/studio/story/${storyId}`)} className="-ml-2">
-          <ArrowLeft className="mr-2" size={18} /> Geri
+      {/* ── Mobil için Üst Bar (Hızlı Bölüm Seçici Entegre) ── */}
+      <div className="lg:hidden w-full px-3 py-2.5 border-b border-border/50 bg-card/90 backdrop-blur-md sticky top-0 z-30 flex items-center justify-between gap-2">
+        <Button 
+          variant="ghost" 
+          onPress={() => router.push(`/studio/story/${storyId}`)} 
+          className="p-2 -ml-1 text-muted hover:text-text cursor-pointer shrink-0"
+          aria-label="Hikayeye Dön"
+        >
+          <ArrowLeft size={18} />
         </Button>
-        <Typography variant="body" className="font-bold truncate">{chapter.title || 'Bölüm Düzenle'}</Typography>
-        <Button variant="ghost" className="p-2 text-primary" onPress={handleCreateNewChapter}>
-            <PlusCircle size={20} />
+
+        {/* Tıklanabilir Hızlı Bölüm Seçici Hapı */}
+        <button
+          type="button"
+          onClick={() => setIsChapterDrawerOpen(true)}
+          className="flex-1 min-w-0 max-w-[240px] mx-auto flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/15 hover:bg-muted/25 border border-border/60 transition-all cursor-pointer active:scale-95"
+          aria-label="Bölüm Değiştir"
+        >
+          <span className="font-bold text-xs text-text truncate">
+            {chapter.title || `Bölüm ${chapter.order}`}
+          </span>
+          <ChevronDown size={14} className="text-muted shrink-0" />
+        </button>
+
+        <Button 
+          variant="ghost" 
+          className="p-2 text-primary hover:bg-primary/10 rounded-full cursor-pointer shrink-0" 
+          onPress={handleCreateNewChapter}
+          aria-label="Yeni Bölüm Ekle"
+        >
+          <PlusCircle size={20} />
         </Button>
       </div>
 
       {/* ── Main Content (Sağ Sütun) ── */}
-      <main className="flex-1 p-4 md:p-8 lg:p-12 overflow-y-auto">
+      <main className="flex-1 p-3 sm:p-6 md:p-8 lg:p-12 pb-32 md:pb-16 overflow-y-auto">
         <div className="max-w-4xl mx-auto w-full">
           
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-            <div>
-              <Typography variant="h2" className="mb-2">Bölüm Düzenle</Typography>
-            </div>
-
-            <div className="flex items-center gap-3 flex-wrap">
-              {/* Status Select UI */}
-              <div className="bg-card border border-border/40 rounded-full flex items-center p-1 shadow-sm">
+                    {/* ── Üst Aksiyon & Kontrol Barı (Modern & Responsive 2 Katman) ── */}
+          <div className="bg-card/70 border border-border/60 rounded-2xl p-3 sm:p-4 mb-6 shadow-xs backdrop-blur-sm space-y-3">
+            
+            {/* 1. Satır: Yayın Durumu Seçici + Otomatik Kayıt + Kaydet Butonu + Sil */}
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              {/* Yayın Durumu Segment Seçici */}
+              <div className="bg-muted/15 border border-border/60 rounded-xl flex items-center p-0.5 shadow-inner">
                 <button 
+                  type="button"
                   onClick={() => setChapter({ ...chapter, status: 'draft' })}
-                  className={`flex items-center gap-1.5 px-3 md:px-4 py-2 rounded-full text-xs font-bold transition-all ${chapter.status === 'draft' ? 'bg-muted text-background' : 'text-muted hover:bg-muted/10'}`}
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    chapter.status === 'draft' 
+                      ? 'bg-card text-foreground shadow-xs' 
+                      : 'text-muted hover:text-foreground'
+                  }`}
                 >
-                  <FileText size={14} /> Taslak
+                  <FileText size={13} />
+                  <span>Taslak</span>
                 </button>
                 <button 
+                  type="button"
                   onClick={() => setChapter({ ...chapter, status: 'published' })}
-                  className={`flex items-center gap-1.5 px-3 md:px-4 py-2 rounded-full text-xs font-bold transition-all ${chapter.status === 'published' ? 'bg-green-500 text-white shadow-md' : 'text-muted hover:bg-muted/10'}`}
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    chapter.status === 'published' 
+                      ? 'bg-emerald-500 text-white shadow-xs' 
+                      : 'text-muted hover:text-foreground'
+                  }`}
                 >
-                  <Globe size={14} /> Yayınla
+                  <Globe size={13} />
+                  <span>Yayınla</span>
                 </button>
                 <button 
+                  type="button"
                   onClick={() => setChapter({ ...chapter, status: 'scheduled' })}
-                  className={`flex items-center gap-1.5 px-3 md:px-4 py-2 rounded-full text-xs font-bold transition-all ${chapter.status === 'scheduled' ? 'bg-blue-500 text-white shadow-md' : 'text-muted hover:bg-muted/10'}`}
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    chapter.status === 'scheduled' 
+                      ? 'bg-sky-500 text-white shadow-xs' 
+                      : 'text-muted hover:text-foreground'
+                  }`}
                 >
-                  <Calendar size={14} /> Planlı
+                  <Calendar size={13} />
+                  <span>Planlı</span>
                 </button>
               </div>
 
-              <Button variant="ghost" onPress={handleDeleteChapter} className="rounded-full p-2 text-red-500 hover:bg-red-500/10 hover:text-red-600 transition-colors">
-                <Trash2 size={20} />
-              </Button>
+              {/* Sağ: Otomatik Kayıt Durumu + Kaydet Butonu + Silme */}
+              <div className="flex items-center gap-2 ml-auto">
+                {/* Otomatik Kayıt Göstergesi */}
+                <div className="hidden sm:flex items-center text-xs mr-1">
+                  {autoSaveStatus === 'saving' && (
+                    <span className="text-muted flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 border-2 border-muted border-t-primary rounded-full animate-spin" />
+                      Kaydediliyor...
+                    </span>
+                  )}
+                  {autoSaveStatus === 'saved' && (
+                    <span className="text-emerald-400 font-semibold flex items-center gap-1 animate-in fade-in duration-200">
+                      <CheckCircle size={13} /> Kaydedildi
+                    </span>
+                  )}
+                  {autoSaveStatus === 'idle' && (
+                    <span className="text-muted/50 text-[11px]">Güncel</span>
+                  )}
+                </div>
 
-              <Button 
-                variant="outline" 
-                onPress={() => setIsPlannerOpen(!isPlannerOpen)} 
-                className="rounded-full px-4 border-primary/20 text-primary hover:bg-primary/5 hover:border-primary/40 transition-colors"
-              >
-                <Wand2 size={16} className="mr-2 hidden md:inline-block" /> 
-                Plan Notlarım
-              </Button>
+                {/* Manuel Kaydet Butonu */}
+                <Button 
+                  variant="primary" 
+                  onPress={() => handleSave(true)} 
+                  disabled={saving || autoSaveStatus === 'saving'} 
+                  className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-primary/20 cursor-pointer"
+                >
+                  <Save size={14} />
+                  <span>{saving ? 'Kaydediliyor...' : 'Kaydet'}</span>
+                </Button>
 
-              <Button 
-                variant="outline" 
-                onPress={() => setIsAIAssistantOpen(true)} 
-                className="rounded-full px-4 border-primary/20 text-primary hover:bg-primary/5 hover:border-primary/40 transition-colors"
-              >
-                <Sparkles size={16} className="mr-2" /> AI Asistan
-              </Button>
+                {/* Bölümü Sil Butonu */}
+                <button 
+                  type="button"
+                  onClick={handleDeleteChapter} 
+                  className="w-8 h-8 rounded-xl text-muted hover:text-red-400 hover:bg-red-500/10 flex items-center justify-center transition-colors cursor-pointer"
+                  title="Bölümü Sil"
+                  aria-label="Bölümü Sil"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            </div>
 
-              <Button 
-                variant="outline" 
-                onPress={() => setIsPreviewMode(!isPreviewMode)} 
-                className={`rounded-full px-4 transition-colors ${isPreviewMode ? 'bg-primary/10 border-primary text-primary' : 'border-primary/20 text-primary hover:bg-primary/5 hover:border-primary/40'}`}
-              >
-                {isPreviewMode ? <EyeOff size={16} className="mr-2" /> : <Eye size={16} className="mr-2" />}
-                {isPreviewMode ? 'Düzenle' : 'Ön İzleme'}
-              </Button>
+            {/* 2. Satır: Yazar Araçları Şeridi (AI Asistan, Plan Notlarım, Ön İzleme, Sayaçlar) */}
+            <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/40 overflow-x-auto scrollbar-hide">
+              <div className="flex items-center gap-1.5 shrink-0">
+                {/* AI Asistan Butonu */}
+                <button 
+                  type="button"
+                  onClick={() => setIsAIAssistantOpen(true)} 
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-primary/25 bg-primary/10 hover:bg-primary/20 text-primary font-semibold text-xs transition-colors cursor-pointer"
+                >
+                  <Sparkles size={13} />
+                  <span>AI Asistan</span>
+                </button>
 
-              <Button variant="primary" onPress={() => handleSave(true)} disabled={saving || autoSaveStatus === 'saving'} className="rounded-full px-6">
-                <Save size={16} className="mr-2 hidden md:inline-block" /> Kaydet
-              </Button>
+                {/* Plan Notlarım Butonu */}
+                <button 
+                  type="button"
+                  onClick={() => setIsPlannerOpen(!isPlannerOpen)} 
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
+                    isPlannerOpen 
+                      ? 'border-primary bg-primary/15 text-primary font-semibold' 
+                      : 'border-border/60 hover:border-primary/40 text-muted hover:text-text'
+                  }`}
+                >
+                  <BookOpen size={13} />
+                  <span>Plan Notlarım</span>
+                </button>
+
+                {/* Ön İzleme Butonu */}
+                <button 
+                  type="button"
+                  onClick={() => setIsPreviewMode(!isPreviewMode)} 
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
+                    isPreviewMode 
+                      ? 'border-primary bg-primary text-black font-semibold shadow-xs' 
+                      : 'border-border/60 hover:border-primary/40 text-muted hover:text-text'
+                  }`}
+                >
+                  {isPreviewMode ? <EyeOff size={13} /> : <Eye size={13} />}
+                  <span>{isPreviewMode ? 'Düzenle' : 'Ön İzleme'}</span>
+                </button>
+              </div>
+
+              {/* Sağ: Canlı Sayaçlar */}
+              <div className="flex items-center gap-2 shrink-0 ml-auto">
+                <span className="text-[11px] font-semibold text-primary bg-primary/10 px-2.5 py-1 rounded-full">
+                  {getWordCount()} Kelime
+                </span>
+                <span className="text-[11px] font-medium text-muted bg-muted/15 px-2 py-1 rounded-full hidden sm:inline-block">
+                  {chapter.contentBlocks.length} Blok
+                </span>
+              </div>
             </div>
           </div>
+
 
           {chapter.status === 'scheduled' && (
             <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl flex flex-col md:flex-row md:items-center gap-4 mb-8 animate-in fade-in slide-in-from-top-2">
@@ -377,7 +481,7 @@ export default function ChapterEditorPage() {
             </div>
           )}
 
-          <div className="bg-card p-4 md:p-8 rounded-2xl border border-border/20 shadow-sm mb-8">
+          <div className="bg-card p-4 md:p-8 rounded-2xl border border-border/20 shadow-sm mb-4">
             <Typography variant="caption" className="text-muted uppercase font-bold tracking-wider mb-2 block">
               Bölüm Başlığı
             </Typography>
@@ -389,190 +493,228 @@ export default function ChapterEditorPage() {
             />
           </div>
 
-          {/* Bölüm Fon Müziği (Soundtrack) Alanı */}
-          <div className="bg-card p-4 md:p-6 rounded-2xl border border-border/20 shadow-sm mb-8 transition-all">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                  <Music size={20} />
+          {/* Bölüm Fon Müziği (Soundtrack) Accordion */}
+          <div className="bg-card rounded-2xl border border-border/20 shadow-sm mb-6 transition-all overflow-hidden">
+            {/* Accordion Trigger */}
+            <div 
+              role="button"
+              tabIndex={0}
+              onClick={() => setIsAudioSectionOpen(!isAudioSectionOpen)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setIsAudioSectionOpen(!isAudioSectionOpen);
+                }
+              }}
+              className="w-full flex items-center justify-between p-3.5 md:p-4 cursor-pointer hover:bg-muted/10 transition-colors select-none text-left"
+            >
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                  chapter.audioTrack?.url 
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                    : 'bg-primary/10 text-primary'
+                }`}>
+                  <Music size={18} />
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <Typography variant="body" className="font-bold">
-                      Bölüm Fon Müziği (Soundtrack)
-                    </Typography>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-sm text-foreground">
+                      Bölüm Fon Müziği
+                    </span>
                     {chapter.audioTrack?.url ? (
-                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5 shrink-0">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                         {getAudioPlatformLabel(chapter.audioTrack.platform || 'other')}
                       </span>
                     ) : (
-                      <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-muted/10 text-muted">
+                      <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-muted/10 text-muted shrink-0">
                         İsteğe bağlı
                       </span>
                     )}
                   </div>
-                  <Typography variant="caption" className="text-muted text-xs">
-                    Okuyucu bu bölüme girdiğinde üst barda çalacak fon müziğini YouTube veya Spotify linkiyle ekleyebilirsiniz.
-                  </Typography>
+                  <p className="text-xs text-muted truncate mt-0.5">
+                    {chapter.audioTrack?.url 
+                      ? (chapter.audioTrack.title ? `Aktif: ${chapter.audioTrack.title}` : chapter.audioTrack.url)
+                      : 'Okuyucuya bölüm boyunca çalacak YouTube veya Spotify atmosfer müziği ekleyin'}
+                  </p>
                 </div>
               </div>
 
-              {chapter.audioTrack?.url && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setChapter({ ...chapter, audioTrack: undefined });
-                    setPreviewAudio(false);
-                  }}
-                  className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1 transition-colors self-start sm:self-center"
-                >
-                  <Trash2 size={13} /> Müziği Kaldır
-                </button>
-              )}
+              <div className="flex items-center gap-2 shrink-0 ml-3">
+                <span className="text-xs text-muted hidden sm:inline-block font-medium">
+                  {isAudioSectionOpen ? 'Daralt' : (chapter.audioTrack?.url ? 'Düzenle' : 'Müzik Ekle')}
+                </span>
+                <div className={`p-1.5 rounded-lg bg-muted/10 text-muted transition-transform duration-200 ${
+                  isAudioSectionOpen ? 'rotate-180 text-foreground' : ''
+                }`}>
+                  <ChevronDown size={16} />
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-4 pt-1">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col">
-                  <div className="h-5 flex items-center mb-1.5">
-                    <Typography variant="caption" className="text-muted uppercase font-bold tracking-wider text-[11px] truncate">
-                      Müzik Bağlantısı (URL)
-                    </Typography>
-                  </div>
-                  <div className="relative">
-                    <input
-                      type="url"
-                      value={chapter.audioTrack?.url || ''}
-                      onChange={(e) => {
-                        const url = e.target.value;
-                        if (!url.trim()) {
-                          setChapter({ ...chapter, audioTrack: undefined });
-                          return;
-                        }
-                        const parsed = parseAudioTrack(url);
-                        setChapter({
-                          ...chapter,
-                          audioTrack: {
-                            url,
-                            title: chapter.audioTrack?.title || '',
-                            platform: parsed.platform
-                          }
-                        });
+            {/* Accordion Body */}
+            {isAudioSectionOpen && (
+              <div className="p-4 md:p-6 pt-2 border-t border-border/10 space-y-4">
+                <div className="flex items-center justify-between gap-3 text-xs text-muted">
+                  <p>
+                    Okuyucu bu bölüme girdiğinde üst çubukta çalacak fon müziğini link ile ekleyebilirsiniz.
+                  </p>
+                  {chapter.audioTrack?.url && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setChapter({ ...chapter, audioTrack: undefined });
+                        setPreviewAudio(false);
                       }}
-                      placeholder="YouTube, Spotify veya MP3 linki yapıştırın..."
+                      className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1 transition-colors shrink-0 font-medium py-1 px-2 rounded-lg hover:bg-red-500/10"
+                    >
+                      <Trash2 size={13} /> Müziği Kaldır
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col">
+                    <div className="h-5 flex items-center mb-1.5">
+                      <Typography variant="caption" className="text-muted uppercase font-bold tracking-wider text-[11px] truncate">
+                        Müzik Bağlantısı (URL)
+                      </Typography>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="url"
+                        value={chapter.audioTrack?.url || ''}
+                        onChange={(e) => {
+                          const url = e.target.value;
+                          if (!url.trim()) {
+                            setChapter({ ...chapter, audioTrack: undefined });
+                            return;
+                          }
+                          const parsed = parseAudioTrack(url);
+                          setChapter({
+                            ...chapter,
+                            audioTrack: {
+                              url,
+                              title: chapter.audioTrack?.title || '',
+                              platform: parsed.platform
+                            }
+                          });
+                        }}
+                        placeholder="YouTube, Spotify veya MP3 linki yapıştırın..."
+                        className="w-full bg-background border border-border/40 focus:border-primary rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted/50 focus:outline-none transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col">
+                    <div className="h-5 flex items-center mb-1.5">
+                      <Typography variant="caption" className="text-muted uppercase font-bold tracking-wider text-[11px] truncate">
+                        Parça / Müzik Başlığı (İsteğe Bağlı)
+                      </Typography>
+                    </div>
+                    <input
+                      type="text"
+                      value={chapter.audioTrack?.title || ''}
+                      onChange={(e) => {
+                        const title = e.target.value;
+                        if (!chapter.audioTrack?.url) {
+                          setChapter({
+                            ...chapter,
+                            audioTrack: { url: '', title, platform: 'other' }
+                          });
+                        } else {
+                          setChapter({
+                            ...chapter,
+                            audioTrack: { ...chapter.audioTrack, title }
+                          });
+                        }
+                      }}
+                      placeholder="Örn: Ludovico Einaudi - Nuvole Bianche"
                       className="w-full bg-background border border-border/40 focus:border-primary rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted/50 focus:outline-none transition-colors"
                     />
                   </div>
                 </div>
 
-                <div className="flex flex-col">
-                  <div className="h-5 flex items-center mb-1.5">
-                    <Typography variant="caption" className="text-muted uppercase font-bold tracking-wider text-[11px] truncate">
-                      Parça / Müzik Başlığı (İsteğe Bağlı)
-                    </Typography>
-                  </div>
-                  <input
-                    type="text"
-                    value={chapter.audioTrack?.title || ''}
-                    onChange={(e) => {
-                      const title = e.target.value;
-                      if (!chapter.audioTrack?.url) {
-                        setChapter({
-                          ...chapter,
-                          audioTrack: { url: '', title, platform: 'other' }
-                        });
-                      } else {
-                        setChapter({
-                          ...chapter,
-                          audioTrack: { ...chapter.audioTrack, title }
-                        });
+                {/* Önizleme Alanı */}
+                {chapter.audioTrack?.url && (
+                  <div className="mt-3 p-3.5 bg-background/80 rounded-xl border border-border/20">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold text-muted flex items-center gap-1.5">
+                        <Volume2 size={14} className="text-primary" /> Önizleme Player
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewAudio(!previewAudio)}
+                        className="text-xs text-primary hover:underline font-medium"
+                      >
+                        {previewAudio ? 'Önizlemeyi Gizle' : 'Önizlemeyi Göster ve Test Et'}
+                      </button>
+                    </div>
+
+                    {previewAudio && (() => {
+                      const parsed = parseAudioTrack(chapter.audioTrack.url);
+                      if (parsed.platform === 'youtube' && parsed.id) {
+                        return (
+                          <div className="aspect-video max-w-sm rounded-lg overflow-hidden border border-border/30 bg-black mt-2">
+                            <iframe
+                              src={`https://www.youtube.com/embed/${parsed.id}`}
+                              title="YouTube Preview"
+                              className="w-full h-full"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                            />
+                          </div>
+                        );
                       }
-                    }}
-                    placeholder="Örn: Ludovico Einaudi - Nuvole Bianche"
-                    className="w-full bg-background border border-border/40 focus:border-primary rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted/50 focus:outline-none transition-colors"
-                  />
-                </div>
-              </div>
-
-              {/* Önizleme Alanı */}
-              {chapter.audioTrack?.url && (
-                <div className="mt-3 p-3.5 bg-background/80 rounded-xl border border-border/20">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-semibold text-muted flex items-center gap-1.5">
-                      <Volume2 size={14} className="text-primary" /> Önizleme Player
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setPreviewAudio(!previewAudio)}
-                      className="text-xs text-primary hover:underline font-medium"
-                    >
-                      {previewAudio ? 'Önizlemeyi Gizle' : 'Önizlemeyi Göster ve Test Et'}
-                    </button>
+                      if (parsed.platform === 'spotify' && parsed.embedUrl) {
+                        return (
+                          <div className="max-w-md rounded-xl overflow-hidden mt-2">
+                            <iframe
+                              src={parsed.embedUrl}
+                              width="100%"
+                              height="80"
+                              frameBorder="0"
+                              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                              loading="lazy"
+                            />
+                          </div>
+                        );
+                      }
+                      if (parsed.platform === 'direct') {
+                        return (
+                          <div className="mt-2">
+                            <audio src={chapter.audioTrack.url} controls className="w-full max-w-md" />
+                          </div>
+                        );
+                      }
+                      return (
+                        <p className="text-xs text-muted mt-1">
+                          Bağlantı geçerli bir formatta algılanamadı, ancak okuyucu sayfasında çalınması denenecektir.
+                        </p>
+                      );
+                    })()}
                   </div>
-
-                  {previewAudio && (() => {
-                    const parsed = parseAudioTrack(chapter.audioTrack.url);
-                    if (parsed.platform === 'youtube' && parsed.id) {
-                      return (
-                        <div className="aspect-video max-w-sm rounded-lg overflow-hidden border border-border/30 bg-black mt-2">
-                          <iframe
-                            src={`https://www.youtube.com/embed/${parsed.id}`}
-                            title="YouTube Preview"
-                            className="w-full h-full"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                          />
-                        </div>
-                      );
-                    }
-                    if (parsed.platform === 'spotify' && parsed.embedUrl) {
-                      return (
-                        <div className="max-w-md rounded-xl overflow-hidden mt-2">
-                          <iframe
-                            src={parsed.embedUrl}
-                            width="100%"
-                            height="80"
-                            frameBorder="0"
-                            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                            loading="lazy"
-                          />
-                        </div>
-                      );
-                    }
-                    if (parsed.platform === 'direct') {
-                      return (
-                        <div className="mt-2">
-                          <audio src={chapter.audioTrack.url} controls className="w-full max-w-md" />
-                        </div>
-                      );
-                    }
-                    return (
-                      <p className="text-xs text-muted mt-1">
-                        Bağlantı geçerli bir formatta algılanamadı, ancak okuyucu sayfasında çalınması denenecektir.
-                      </p>
-                    );
-                  })()}
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <Typography variant="h3" className="mb-1 flex items-center gap-2">
-                <FileText className="text-primary" /> İçerik Editörü
+              <Typography variant="h3" className="mb-1 flex items-center gap-2 text-base md:text-xl">
+                <FileText className="text-primary" size={20} /> İçerik Editörü
                 <button 
                   onClick={() => setIsInfoModalOpen(true)} 
-                  className="text-muted/60 hover:text-primary hover:bg-primary/10 p-1 rounded-full transition-all"
+                  className="text-muted/60 hover:text-primary hover:bg-primary/10 p-1.5 rounded-full transition-all"
                   title="Editör Özelliklerini Görüntüle"
                 >
-                  <Info size={18} />
+                  <Info size={16} />
                 </button>
               </Typography>
-              <Typography variant="caption" className="text-muted">Blokları ekleyip sürükleyerek sıralarını değiştirebilirsiniz.</Typography>
+              <Typography variant="caption" className="text-muted text-xs md:text-sm">Blokları ekleyip sürükleyerek sıralarını değiştirebilirsiniz.</Typography>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2">
               <Typography variant="caption" className="text-primary bg-primary/10 px-3 py-1 rounded-full font-bold">
                 {getWordCount()} Kelime
               </Typography>
@@ -582,7 +724,7 @@ export default function ChapterEditorPage() {
             </div>
           </div>
 
-          <div className="bg-background rounded-2xl border border-border/30 shadow-inner p-2 md:p-6 min-h-[500px] mb-24">
+          <div className="bg-background rounded-2xl border border-border/30 shadow-inner p-2 sm:p-4 md:p-6 min-h-[450px] mb-8 md:mb-12">
             {isPreviewMode ? (
               <div className="max-w-3xl mx-auto py-8">
                 <ContentRenderer blocks={chapter.contentBlocks} />
@@ -597,7 +739,7 @@ export default function ChapterEditorPage() {
           </div>
           
           {/* Bölüm Sonu Aktivitesi */}
-          <div className="bg-card p-4 md:p-8 rounded-2xl border border-border/20 shadow-sm mb-24">
+          <div className="bg-card p-4 md:p-8 rounded-2xl border border-border/20 shadow-sm mb-12">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <Typography variant="h3" className="mb-1 flex items-center gap-2">
@@ -704,28 +846,6 @@ export default function ChapterEditorPage() {
         </div>
       </main>
 
-      {/* ── Sticky Toolbar for AutoSave Indicator ── */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[40] flex items-center bg-background/90 backdrop-blur-md shadow-2xl rounded-full border border-border/20 px-6 py-3 min-w-[200px] justify-center pointer-events-none">
-        {autoSaveStatus === 'saving' && (
-          <div className="flex items-center gap-2 animate-in fade-in zoom-in duration-200">
-            <span className="w-4 h-4 border-2 border-muted border-t-primary rounded-full animate-spin" />
-            <Typography variant="caption" className="text-muted font-bold tracking-wide">Otomatik Kaydediliyor...</Typography>
-          </div>
-        )}
-        {autoSaveStatus === 'saved' && (
-          <div className="flex items-center gap-2 animate-in fade-in zoom-in duration-300">
-            <CheckCircle size={16} className="text-green-500" />
-            <Typography variant="caption" className="text-green-500 font-bold tracking-wide">Buluta Kaydedildi</Typography>
-          </div>
-        )}
-        {autoSaveStatus === 'idle' && (
-          <div className="flex items-center gap-2 opacity-50">
-            <CheckCircle size={16} className="text-muted" />
-            <Typography variant="caption" className="text-muted font-bold tracking-wide">Güncel</Typography>
-          </div>
-        )}
-      </div>
-
       {/* ── Planner Sidebar (Sağ Sütun) ── */}
       {isPlannerOpen && (
         <PlannerSidebar 
@@ -800,6 +920,119 @@ export default function ChapterEditorPage() {
           </div>
         </div>
       )}
+
+            {/* ── Mobil Hızlı Bölüm Değiştirici Çekmecesi (Bottom Sheet) ── */}
+      {isChapterDrawerOpen && (
+        <div 
+          onClick={() => setIsChapterDrawerOpen(false)}
+          className="lg:hidden fixed inset-0 z-[100] flex items-end justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+        >
+          <div 
+            className="w-full max-h-[82vh] flex flex-col bg-card border-t border-border/70 rounded-t-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-6 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Mobil Çekme Tutacağı */}
+            <div className="pt-3 pb-1 flex justify-center shrink-0">
+              <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
+            </div>
+
+            {/* Çekmece Başlığı */}
+            <div className="shrink-0 flex items-center justify-between px-5 py-3.5 border-b border-border/50 bg-card">
+              <div className="flex items-center gap-2">
+                <Typography variant="h3" className="font-bold text-base text-text">
+                  Bölümler
+                </Typography>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/15 text-primary">
+                  {allChapters.length}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  onPress={() => {
+                    setIsChapterDrawerOpen(false);
+                    handleCreateNewChapter();
+                  }}
+                  className="text-xs px-2.5 py-1 text-primary border-primary/30 hover:bg-primary/10 cursor-pointer"
+                >
+                  <PlusCircle size={14} className="mr-1" /> Yeni Bölüm
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => setIsChapterDrawerOpen(false)}
+                  className="w-8 h-8 rounded-full bg-muted/10 hover:bg-muted/20 text-muted hover:text-text flex items-center justify-center transition-colors cursor-pointer"
+                  aria-label="Kapat"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Bölüm Listesi */}
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2 scrollbar-thin pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
+              {allChapters.sort((a, b) => a.order - b.order).map(c => {
+                const isActive = c.chapterId === chapterId;
+                return (
+                  <div
+                    key={c.chapterId}
+                    onClick={() => {
+                      setIsChapterDrawerOpen(false);
+                      if (!isActive) {
+                        router.push(`/studio/story/${storyId}/chapter/${c.chapterId}`);
+                      }
+                    }}
+                    className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                      isActive 
+                        ? 'bg-primary/15 border-primary shadow-sm ring-1 ring-primary/40' 
+                        : 'bg-muted/5 border-border/50 hover:border-primary/40 active:scale-[0.99]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
+                        isActive 
+                          ? 'bg-primary text-black' 
+                          : 'bg-muted/20 text-muted'
+                      }`}>
+                        #{c.order}
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className={`font-semibold text-sm truncate ${isActive ? 'text-primary' : 'text-text'}`}>
+                          {c.title || 'İsimsiz Bölüm'}
+                        </h4>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className={`text-[10px] uppercase font-bold px-1.5 py-0.2 rounded ${
+                            c.status === 'published' 
+                              ? 'bg-green-500/15 text-green-400' 
+                              : c.status === 'scheduled' 
+                                ? 'bg-blue-500/15 text-blue-400' 
+                                : 'bg-muted/20 text-muted'
+                          }`}>
+                            {c.status === 'published' ? 'YAYINDA' : c.status === 'scheduled' ? 'PLANLI' : 'TASLAK'}
+                          </span>
+                          {c.audioTrack?.url && (
+                            <span className="text-[10px] text-primary flex items-center gap-0.5 font-medium">
+                              <Music size={10} /> Müzikli
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {isActive ? (
+                      <span className="text-primary text-xs font-bold px-2 py-0.5 rounded-full bg-primary/20 shrink-0">
+                        Şu Anki
+                      </span>
+                    ) : (
+                      <ChevronRight size={16} className="text-muted shrink-0" />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
 
       <ReadixonAIAssistant 
         isOpen={isAIAssistantOpen} 

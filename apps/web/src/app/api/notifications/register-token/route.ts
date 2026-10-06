@@ -13,19 +13,51 @@ export async function POST(req: Request) {
       );
     }
 
+    const cleanToken = token.trim();
     const adminDb = getAdminDb();
-    const userDocRef = adminDb.collection('users').doc(userId);
 
-    // Token'ı kullanıcının fcmTokens dizisine tekil olarak ekle
+    // 1. Cihaz Token'ını Tekilleştir:
+    // Eğer bu telefon daha önce başka bir hesapla (örneğin test hesabı) kullanıldıysa,
+    // o hesabın bildirimleri bu telefona düşmesin diye token'ı diğer tüm kullanıcılardan sil!
+    try {
+      const conflictingUsersSnap = await adminDb
+        .collection('users')
+        .where('fcmTokens', 'array-contains', cleanToken)
+        .get();
+
+      if (!conflictingUsersSnap.empty) {
+        const batch = adminDb.batch();
+        let cleanedCount = 0;
+
+        conflictingUsersSnap.forEach((docSnap) => {
+          if (docSnap.id !== userId) {
+            batch.update(docSnap.ref, {
+              fcmTokens: FieldValue.arrayRemove(cleanToken),
+            });
+            cleanedCount++;
+          }
+        });
+
+        if (cleanedCount > 0) {
+          await batch.commit();
+          console.log(`[FCM API] Token ${cleanedCount} eski hesaptan temizlendi.`);
+        }
+      }
+    } catch (cleanupErr) {
+      console.warn('[FCM API] Eski hesap token temizleme uyarısı:', cleanupErr);
+    }
+
+    // 2. Token'ı yalnızca mevcut kullanıcının fcmTokens dizisine ekle
+    const userDocRef = adminDb.collection('users').doc(userId);
     await userDocRef.set(
       {
-        fcmTokens: FieldValue.arrayUnion(token.trim()),
+        fcmTokens: FieldValue.arrayUnion(cleanToken),
         lastFcmRegisteredAt: FieldValue.serverTimestamp(),
       },
       { merge: true }
     );
 
-    console.log(`[FCM API] Token successfully registered for user: ${userId}`);
+    console.log(`[FCM API] Token başarıyla kaydedildi. Kullanıcı: ${userId}`);
     return NextResponse.json({ success: true, message: 'FCM token registered successfully' });
   } catch (error: any) {
     console.error('[FCM API] Register token error:', error);

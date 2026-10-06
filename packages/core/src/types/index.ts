@@ -480,6 +480,7 @@ export interface Chat {
   participants: string[]; // UIDs
   participantDetails: Record<string, ChatParticipant>; // uid -> Participant details
   lastMessage: string;
+  lastMessageSenderId?: string; // UID of the user who sent the last message
   lastMessageAt: Timestamp | null;
   unreadCounts: Record<string, number>; // uid -> unread count
   lastSeenAt?: Record<string, Timestamp>; // uid -> last seen timestamp for read receipts

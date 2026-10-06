@@ -31,6 +31,30 @@ export function MobileInAppNotificationManager() {
   const seenIdsRef = useRef<Set<string>>(new Set());
   const lastAlertTimeRef = useRef<Map<string, number>>(new Map());
   const dismissTimerRef = useRef<NodeJS.Timeout>();
+  const prevUserRef = useRef<string | null>(null);
+
+  // Oturum kapandığında cihaz bildirim token'ını eski hesaptan kaldır
+  useEffect(() => {
+    const currentUid = firebaseUser?.uid || null;
+    const prevUid = prevUserRef.current;
+
+    if (prevUid && prevUid !== currentUid) {
+      const savedToken = typeof window !== 'undefined' ? localStorage.getItem('readixon_fcm_token') : null;
+      if (savedToken) {
+        const baseUrl = typeof window !== 'undefined' && window.location.origin.includes('http') && !window.location.origin.includes('localhost')
+          ? window.location.origin
+          : 'https://www.readixon.com';
+
+        fetch(`${baseUrl}/api/notifications/unregister-token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: prevUid, token: savedToken }),
+        }).catch((err) => console.warn('[FCM] Çıkış token temizleme uyarısı:', err));
+      }
+    }
+
+    prevUserRef.current = currentUid;
+  }, [firebaseUser]);
 
   // 1. Android / Capacitor FCM Push Bildirim İzinleri ve Token Kaydı
   useEffect(() => {
@@ -62,11 +86,15 @@ export function MobileInAppNotificationManager() {
             console.log('[FCM] Push token başarıyla alındı:', token.value);
             if (!token?.value || !uid) return;
 
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('readixon_fcm_token', token.value);
+            }
+
             const baseUrl = typeof window !== 'undefined' && window.location.origin.includes('http') && !window.location.origin.includes('localhost')
               ? window.location.origin
               : 'https://www.readixon.com';
 
-            // 1. Sunucu API üzerinden kaydet (Admin SDK tam yetkili)
+            // 1. Sunucu API üzerinden kaydet (Admin SDK tüm eski hesaplardan token'ı temizler)
             try {
               await fetch(`${baseUrl}/api/notifications/register-token`, {
                 method: 'POST',
@@ -80,17 +108,6 @@ export function MobileInAppNotificationManager() {
             } catch (apiErr) {
               console.warn('[FCM] Sunucu API kayıt hatası:', apiErr);
             }
-
-            // 2. Yedek olarak doğrudan istemci Firestore'a da yaz
-            try {
-              const userDocRef = doc(db, 'users', uid);
-              await updateDoc(userDocRef, {
-                fcmTokens: arrayUnion(token.value),
-              });
-              console.log('[FCM] Token Firestore profiline doğrudan eklendi.');
-            } catch (tokenErr) {
-              console.warn('[FCM] Token doğrudan Firestore kayıt uyarısı:', tokenErr);
-            }
           });
 
           PushNotifications.addListener('registrationError', (err) => {
@@ -101,6 +118,14 @@ export function MobileInAppNotificationManager() {
           // (Firestore canlı dinleyicisi zaten 0ms'de gösterdiyse mükerrer gösterme!)
           PushNotifications.addListener('pushNotificationReceived', (notification) => {
             console.log('[FCM] Ön planda bildirim yakalandı:', notification);
+
+            // GÜVENLİK KALKANI: Bu etkileşimi biz yaptıysak ASLA bildirim gösterme!
+            const actorId = notification.data?.actorId || notification.data?.senderId;
+            if (actorId && actorId === uid) {
+              console.log('[FCM] Kendi aksiyonumuz olduğu için ön plan push bildirimi yoksayıldı.');
+              return;
+            }
+
             const chatId = notification.data?.chatId;
             if (chatId) {
               const lastTime = lastAlertTimeRef.current.get(chatId) || 0;
@@ -206,12 +231,15 @@ export function MobileInAppNotificationManager() {
           // Sadece bileşen açıldıktan sonra gelen yeni mesajları bildir (15sn saat farkı toleransı)
           if (msgTime < mountedAtRef.current - 15000) return;
 
+          // 1. Kendi attığımız mesajsa ASLA bildirim gösterme
+          if (chat.lastMessageSenderId && chat.lastMessageSenderId === uid) return;
+
           const unreadForMe = chat.unreadCounts?.[uid] || 0;
           if (unreadForMe <= 0) return;
 
           // Diğer katılımcı (Gönderen)
-          const senderId = chat.participants.find((p) => p !== uid);
-          if (!senderId) return;
+          const senderId = chat.lastMessageSenderId || chat.participants.find((p) => p !== uid);
+          if (!senderId || senderId === uid) return;
 
           // MÜKERRER BİLDİRİM ENGELLEYİCİ:
           // Aynı sohbet için 3 saniye içinde birden fazla snapshot (local vs serverTimestamp) gelirse engelle
@@ -261,6 +289,12 @@ export function MobileInAppNotificationManager() {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
           const notif = { id: change.doc.id, ...change.doc.data() } as AppNotification;
+
+          // Kendi tetiklediğimiz aksiyonsa ASLA bildirim gösterme
+          if (notif.actorId === uid) {
+            seenIdsRef.current.add(notif.id);
+            return;
+          }
 
           if (!notif.createdAt) return;
 

@@ -179,7 +179,7 @@ export function BlockEditor({ initialBlocks = [], onChange, onUploadImage }: Blo
   };
 
   return (
-    <div className="flex flex-col gap-6 pb-32">
+    <div className="flex flex-col gap-4">
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
           <div className="flex flex-col gap-4">
@@ -230,12 +230,12 @@ export function BlockEditor({ initialBlocks = [], onChange, onUploadImage }: Blo
         </SortableContext>
       </DndContext>
 
-      {/* Toolbar */}
-      <div className="sticky bottom-6 z-40 flex flex-row flex-wrap gap-3 p-4 bg-background/90 backdrop-blur-md shadow-2xl rounded-2xl border border-border/20 justify-center mx-auto mt-4">
+      {/* Blok Ekleme Araç Çubuğu (Doğal Akışta, Blokların Altında) */}
+      <div className="flex flex-row items-center gap-2 p-2.5 sm:p-3 bg-card/80 border border-border/40 rounded-2xl max-w-full overflow-x-auto no-scrollbar sm:flex-wrap justify-start sm:justify-center mx-auto mt-2 shadow-xs">
         
         {/* Docx Yükleme Butonu */}
-        <Button variant="primary" onPress={() => document.getElementById('docx-upload-input')?.click()} className="flex flex-row items-center gap-2">
-          <FileText size={16} /> Word Yükle
+        <Button size="sm" variant="primary" onPress={() => document.getElementById('docx-upload-input')?.click()} className="flex flex-row items-center gap-1.5 shrink-0 whitespace-nowrap">
+          <FileText size={15} /> Word Yükle
         </Button>
         <input 
           id="docx-upload-input"
@@ -245,25 +245,25 @@ export function BlockEditor({ initialBlocks = [], onChange, onUploadImage }: Blo
           onChange={handleDocxUpload} 
         />
         
-        <div className="w-[1px] h-8 bg-border/50 self-center mx-1" />
+        <div className="w-[1px] h-6 bg-border/50 self-center mx-0.5 shrink-0" />
 
-        <Button variant="outline" onPress={() => addBlock('paragraph')} className="flex flex-row items-center gap-2">
-          <Type size={16} /> Metin
+        <Button size="sm" variant="outline" onPress={() => addBlock('paragraph')} className="flex flex-row items-center gap-1.5 shrink-0 whitespace-nowrap">
+          <Type size={15} /> Metin
         </Button>
-        <Button variant="outline" onPress={() => addBlock('image')} className="flex flex-row items-center gap-2">
-          <ImageIcon size={16} /> Görsel
+        <Button size="sm" variant="outline" onPress={() => addBlock('image')} className="flex flex-row items-center gap-1.5 shrink-0 whitespace-nowrap">
+          <ImageIcon size={15} /> Görsel
         </Button>
-        <Button variant="outline" onPress={() => addBlock('quote')} className="flex flex-row items-center gap-2">
-          <Quote size={16} /> Alıntı
+        <Button size="sm" variant="outline" onPress={() => addBlock('quote')} className="flex flex-row items-center gap-1.5 shrink-0 whitespace-nowrap">
+          <Quote size={15} /> Alıntı
         </Button>
-        <Button variant="outline" onPress={() => addBlock('divider')} className="flex flex-row items-center gap-2">
-          <Minus size={16} /> Ayırıcı
+        <Button size="sm" variant="outline" onPress={() => addBlock('divider')} className="flex flex-row items-center gap-1.5 shrink-0 whitespace-nowrap">
+          <Minus size={15} /> Ayırıcı
         </Button>
-        <Button variant="outline" onPress={() => addBlock('end_of_chapter')} className="flex flex-row items-center gap-2">
-          <Flag size={16} /> Bölüm Sonu
+        <Button size="sm" variant="outline" onPress={() => addBlock('end_of_chapter')} className="flex flex-row items-center gap-1.5 shrink-0 whitespace-nowrap">
+          <Flag size={15} /> Bölüm Sonu
         </Button>
-        <Button variant="outline" onPress={() => addBlock('end_of_story')} className="flex flex-row items-center gap-2">
-          <Flag size={16} className="text-primary" /> Hikaye Sonu
+        <Button size="sm" variant="outline" onPress={() => addBlock('end_of_story')} className="flex flex-row items-center gap-1.5 shrink-0 whitespace-nowrap">
+          <Flag size={15} className="text-primary" /> Hikaye Sonu
         </Button>
       </div>
     </div>
