@@ -206,9 +206,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   ];
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-background overflow-hidden">
+    <div className="flex flex-col min-h-screen bg-background">
       {/* ── Top Navbar (Desktop) ── */}
-      <header className="hidden xl:flex items-center justify-between border-b border-border/50 bg-card/20 px-8 h-[76px] shrink-0 backdrop-blur-md z-50">
+      <header className="hidden xl:flex sticky top-0 z-50 items-center justify-between border-b border-border/50 bg-background/80 px-8 h-[76px] shrink-0 backdrop-blur-md">
         {/* Left: Logo */}
         <Link href="/feed" className="shrink-0 flex items-center">
           <Typography variant="h2" className="font-bold text-primary tracking-tighter">readixon</Typography>
@@ -396,7 +396,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
 
       {/* ── Main Content ── */}
-      <main className="flex-1 flex flex-col overflow-y-auto relative">
+      <main className="flex-1 flex flex-col relative">
         <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none -z-10" />
 
         {/* ── Modern Mobile App Header ── */}

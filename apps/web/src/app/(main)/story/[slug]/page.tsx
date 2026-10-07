@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { Typography, Button, Input, ReadixCard, StoryCard } from '@readixon/ui';
+import { Typography, Button, ReadixCard, StoryCard } from '@readixon/ui';
 import { collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { 
   getStoryById, 
@@ -29,13 +29,15 @@ import {
 import type { Story, User, Chapter, Review, Character, EditorialReview, ReadingProgress } from '@readixon/core';
 import { 
   BookOpen, Heart, Eye, List, Play, BookmarkPlus, BookmarkCheck, 
-  ArrowLeft, Loader2, Star, MessageSquare, Users, Award, PenTool, Hash,
-  Lock, Calendar, Bell, Info, X, Sparkles, ChevronRight, CheckCircle, Bookmark, Check,
-  ListPlus
+  ArrowLeft, Loader2, Star, MessageSquare, Users, Hash,
+  Lock, Calendar, Bell, Info, X, Sparkles, ChevronRight, Bookmark, Check,
+  ListPlus, Share2, ArrowUpDown
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from "sonner";
 import { AddToReadingListModal } from '@/components/reading-list/AddToReadingListModal';
+
+type ActiveTab = 'about' | 'chapters' | 'reviews' | 'characters';
 
 export default function StoryDetailPage() {
   const params = useParams();
@@ -65,9 +67,15 @@ export default function StoryDetailPage() {
   const [showCharacterBookInfo, setShowCharacterBookInfo] = useState(false);
   const [visibleChaptersCount, setVisibleChaptersCount] = useState(20);
 
+  // Tab State
+  const [activeTab, setActiveTab] = useState<ActiveTab>('about');
+  const [chapterSortOrder, setChapterSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [showStickyBar, setShowStickyBar] = useState(false);
+
   // Metin Genişletme Durumları
   const [isForewordExpanded, setIsForewordExpanded] = useState(false);
   const [isBackCoverExpanded, setIsBackCoverExpanded] = useState(false);
+  const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
 
   // Bahsedilenler
   const [mentions, setMentions] = useState<Readix[]>([]);
@@ -84,6 +92,40 @@ export default function StoryDetailPage() {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reminders, setReminders] = useState<string[]>([]);
   const [isAddToReadingListOpen, setIsAddToReadingListOpen] = useState(false);
+
+  // Floating Bar için hem <main>, document hem window scroll dinleyicisi
+  useEffect(() => {
+    if (loading) return;
+
+    const handleScroll = (e?: any) => {
+      const targetScroll = e?.target?.scrollTop ?? 0;
+      const mainEl = document.querySelector('main');
+      const scrollPos = Math.max(
+        targetScroll,
+        window.scrollY || 0,
+        window.pageYOffset || 0,
+        document.documentElement.scrollTop || 0,
+        document.body.scrollTop || 0,
+        mainEl?.scrollTop || 0
+      );
+      setShowStickyBar(scrollPos > 180);
+    };
+
+    const mainEl = document.querySelector('main');
+    if (mainEl) {
+      mainEl.addEventListener('scroll', handleScroll, { passive: true });
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    document.addEventListener('scroll', handleScroll, { passive: true, capture: true });
+
+    handleScroll();
+
+    return () => {
+      if (mainEl) mainEl.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', handleScroll);
+      document.removeEventListener('scroll', handleScroll, { capture: true } as any);
+    };
+  }, [story, loading]);
 
   useEffect(() => {
     // Load reminders from local storage
@@ -146,13 +188,12 @@ export default function StoryDetailPage() {
         setReviews(fetchedReviews);
         setCharacters(fetchedCharacters);
         setEditorialReview(fetchedEditorialReview);
-        setLoading(false); // <-- Performans: Ana içerik yüklendi, sayfayı göster
+        setLoading(false);
 
         // Benzer kitapları getir (Arka planda yüklenir)
         if (fetchedStory.tags && fetchedStory.tags.length > 0) {
           try {
             const storiesRef = collection(db, 'stories');
-            // Firestore array-contains-any can take up to 10 elements
             const similarQuery = query(
               storiesRef,
               where('tags', 'array-contains-any', fetchedStory.tags.slice(0, 10)),
@@ -168,11 +209,10 @@ export default function StoryDetailPage() {
                 }
               }
             });
-            // Beğeniye göre sırala
+            
             similar.sort((a, b) => (b.stats?.likes || 0) - (a.stats?.likes || 0));
-            const top5 = similar.slice(0, 5);
+            const top5 = similar.slice(0, 6);
 
-            // Yazarları çek
             const enrichedTop5 = await Promise.all(top5.map(async (sim) => {
               if (sim.authorId) {
                 const user = await getUserProfile(sim.authorId);
@@ -259,12 +299,37 @@ export default function StoryDetailPage() {
       const nowSaved = await toggleSaveStory(firebaseUser.uid, storyId);
       setIsSaved(nowSaved);
       if (nowSaved) {
+        toast.success("Kitap kütüphanene eklendi!");
         trackInteraction(firebaseUser.uid, 'story_library_added').catch(console.error);
+      } else {
+        toast.info("Kitap kütüphanenden çıkarıldı.");
       }
     } catch (err) {
       console.error("Kaydetme işlemi başarısız:", err);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleShare = async () => {
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: story?.title || 'Readixon Kitabı',
+          text: `${story?.title} hikayesini Readixon'da keşfet!`,
+          url,
+        });
+        return;
+      } catch (e) {
+        // İptal edildi veya desteklenmiyor
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Kitap bağlantısı panoya kopyalandı!");
+    } catch (e) {
+      toast.error("Bağlantı kopyalanamadı.");
     }
   };
 
@@ -278,7 +343,6 @@ export default function StoryDetailPage() {
     setSubmittingReview(true);
     try {
       await addReview(storyId, firebaseUser.uid, reviewRating, reviewText);
-      // Geçici olarak UI'a ekle
       setReviews(prev => [{
         reviewId: Date.now().toString(),
         storyId,
@@ -292,12 +356,12 @@ export default function StoryDetailPage() {
       }, ...prev]);
       setReviewText('');
       setReviewRating(10);
+      toast.success("İncelemeniz başarıyla yayınlandı!");
       trackInteraction(firebaseUser.uid, 'comment_given').catch(console.error);
       
-      // Hikaye puanını geçici olarak güncelle
       if (story) {
-        const newCount = (story.stats.reviewCount || 0) + 1;
-        const currentTotal = (story.stats.rating || 0) * (story.stats.reviewCount || 0);
+        const newCount = (story.stats?.reviewCount || 0) + 1;
+        const currentTotal = (story.stats?.rating || 0) * (story.stats?.reviewCount || 0);
         const newRating = (currentTotal + reviewRating) / newCount;
         setStory({
           ...story,
@@ -310,6 +374,7 @@ export default function StoryDetailPage() {
       }
     } catch (error) {
       console.error("İnceleme gönderilirken hata:", error);
+      toast.error("İnceleme gönderilemedi.");
     } finally {
       setSubmittingReview(false);
     }
@@ -329,7 +394,6 @@ export default function StoryDetailPage() {
       
       const likeDelta = nowLiked ? 1 : -1;
       
-      // Update story stats optimistically
       setStory({
         ...story,
         stats: {
@@ -338,7 +402,6 @@ export default function StoryDetailPage() {
         }
       });
       
-      // Keşfet (Feed) sayfasındaki önbelleği güncelle ki anında yansısın
       queryClient.setQueryData(['stories', 'recent'], (oldData: any) => {
         if (!oldData) return oldData;
         if (oldData.pages) {
@@ -359,6 +422,7 @@ export default function StoryDetailPage() {
         }
         return oldData;
       });
+
       queryClient.setQueryData(['stories', 'top'], (oldData: any) => {
         if (!oldData) return oldData;
         if (oldData.pages) {
@@ -387,9 +451,38 @@ export default function StoryDetailPage() {
     }
   };
 
+  // Hedef Bölüm Hesabı (Kaldığı yer veya ilk bölüm)
+  const targetChapterId = useMemo(() => {
+    if (chapters.length === 0) return null;
+    if (!readingProgress) return chapters[0]?.chapterId;
+    if (readingProgress.currentChapterId && !readingProgress.completedChapters?.includes(readingProgress.currentChapterId)) {
+      return readingProgress.currentChapterId;
+    }
+    const nextUnread = chapters.find(c => !readingProgress.completedChapters?.includes(c.chapterId));
+    return nextUnread?.chapterId || readingProgress.currentChapterId || chapters[0]?.chapterId;
+  }, [chapters, readingProgress]);
+
+  const targetChapterTitle = useMemo(() => {
+    if (!targetChapterId) return null;
+    const chap = chapters.find(c => c.chapterId === targetChapterId);
+    return chap?.title || null;
+  }, [chapters, targetChapterId]);
+
+  // Sıralanmış bölümler
+  const sortedChapters = useMemo(() => {
+    if (chapterSortOrder === 'desc') {
+      return [...chapters].reverse();
+    }
+    return chapters;
+  }, [chapters, chapterSortOrder]);
+
+  const hasReadingHistory = Boolean(
+    readingProgress?.currentChapterId || (readingProgress?.completedChapters && readingProgress.completedChapters.length > 0)
+  );
+
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center min-h-[50vh]">
+      <div className="flex-1 flex items-center justify-center min-h-[60vh]">
         <Loader2 className="animate-spin text-primary" size={40} />
       </div>
     );
@@ -397,13 +490,13 @@ export default function StoryDetailPage() {
 
   if (error || !story) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center min-h-[50vh] text-center p-6">
-        <div className="w-24 h-24 rounded-full bg-red-950/30 flex items-center justify-center mb-6">
-          <BookOpen size={40} className="text-red-400" />
+      <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
+        <div className="w-20 h-20 rounded-full bg-red-950/30 border border-red-500/20 flex items-center justify-center mb-5">
+          <BookOpen size={36} className="text-red-400" />
         </div>
-        <Typography variant="h2" className="text-text mb-2">Eyvah!</Typography>
-        <Typography variant="body" className="text-muted mb-6">{error}</Typography>
-        <Button variant="outline" onPress={() => router.push('/feed')}>Geri Dön</Button>
+        <Typography variant="h2" className="text-text mb-2 font-black text-xl">Eyvah!</Typography>
+        <Typography variant="body" className="text-muted mb-6 text-sm max-w-sm">{error}</Typography>
+        <Button variant="outline" onPress={() => router.push('/feed')}>Akışa Dön</Button>
       </div>
     );
   }
@@ -416,26 +509,43 @@ export default function StoryDetailPage() {
     ? (Object.values(editorialReview.scores).reduce((a, b) => a + b, 0) / Object.values(editorialReview.scores).length).toFixed(1)
     : '9.0';
 
+  const handleStartReading = () => {
+    if (targetChapterId) {
+      router.push(`/read/${storyId}/${targetChapterId}`);
+    }
+  };
+
+  const handleGoBack = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/feed');
+    }
+  };
+
   return (
-    <div className="flex flex-col w-full min-h-screen bg-background pb-20 overflow-x-hidden">
+    <div className="flex flex-col w-full min-h-screen bg-background pb-32 overflow-x-hidden selection:bg-primary/20">
       
-      {/* Karakter Defteri Bilgi Modalı */}
+      {/* ── Karakter Defteri Bilgi Modalı ── */}
       {showCharacterBookInfo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-          <div className="bg-card border border-border/50 rounded-3xl p-8 max-w-md w-full shadow-2xl relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in">
+          <div className="bg-card border border-border/60 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative">
             <button 
               onClick={() => setShowCharacterBookInfo(false)}
-              className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/5 text-muted transition-colors"
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted/20 text-muted transition-colors cursor-pointer"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
-            <Typography variant="h2" className="text-2xl font-black text-text mb-4">Karakter Defteri</Typography>
-            <div className="space-y-4 text-muted">
-              <p>Karakter defteri, hikayedeki tüm karakterlerin fiziksel, psikolojik ve geçmişe dair derinlemesine bilgilerinin yer aldığı özel bir ansiklopedidir.</p>
-              <p>Yazarlar bu bölümü kullanarak okuyucularına karakterlerin bilinmeyen yönlerini sunabilir. Bu özellik sadece <strong className="text-yellow-500">Premium</strong> üyelere özeldir.</p>
+            <div className="flex items-center gap-2.5 mb-3">
+              <Users size={22} className="text-primary" />
+              <Typography variant="h2" className="text-xl font-black text-text">Karakter Defteri</Typography>
             </div>
-            <div className="mt-8 flex justify-end">
-              <Button variant="primary" onPress={() => setShowCharacterBookInfo(false)} className="rounded-full px-6">
+            <div className="space-y-3 text-xs sm:text-sm text-muted leading-relaxed">
+              <p>Karakter defteri, hikayedeki kahramanların fiziksel, psikolojik ve geçmişe dair derinlemesine bilgilerinin yer aldığı özel bir kurgu ansiklopedisidir.</p>
+              <p>Yazarlar bu bölümü kullanarak okuyucularına karakterlerin bilinmeyen yönlerini sunabilir. Bu özellik <strong className="text-amber-500 font-bold">Premium</strong> üyelere ve hikaye sahibine açıktır.</p>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <Button variant="primary" onPress={() => setShowCharacterBookInfo(false)} className="rounded-xl px-5 text-xs font-bold">
                 Anladım
               </Button>
             </div>
@@ -443,69 +553,109 @@ export default function StoryDetailPage() {
         </div>
       )}
 
-      {/* ── Hero Alanı (Kapak & Temel Bilgiler) ── */}
+      {/* ── 1. HERO ALANI (Kapak, Başlık, İstatistikler, Hızlı Aksiyonlar) ── */}
       <div className="relative w-full">
-        {/* Back Button */}
-        <div className="absolute top-4 md:top-8 left-4 md:left-8 z-50 flex pointer-events-none">
-          <button 
-            onClick={() => router.push('/feed')}
-            className="pointer-events-auto p-2.5 md:p-3 rounded-full bg-black/30 hover:bg-black/50 backdrop-blur-md border border-white/20 text-white transition-all shadow-lg"
-            title="Akışa Dön"
-          >
-            <ArrowLeft size={24} />
-          </button>
-        </div>
-
-        {/* Arka Plan Bulanık Kapak (Webtoon Tarzı) */}
-        <div className="absolute inset-0 z-0 overflow-hidden">
+        
+        {/* Arka Plan Bulanık Kapak */}
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
           <div 
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat scale-110 filter blur-3xl opacity-35"
             style={{ backgroundImage: `url(${story.coverImage})` }}
           />
-          {/* Overlay Gradients & Blur */}
-          <div className="absolute inset-0 bg-background/60 backdrop-blur-3xl" />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
+          <div className="absolute inset-0 bg-background/70 backdrop-blur-2xl" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/90 to-transparent" />
         </div>
 
-        <div className="relative z-10 max-w-6xl mx-auto px-6 pt-24 md:pt-32 pb-8 flex flex-col lg:flex-row gap-10 items-center lg:items-end">
-          {/* Kapak Resmi */}
-          <div className="w-48 md:w-64 flex-shrink-0 aspect-[2/3] rounded-xl overflow-hidden shadow-2xl shadow-black/60 border border-text/10">
+        {/* Üst Bar: Geri Dönüş & Paylaş */}
+        <div className="relative z-20 max-w-6xl mx-auto px-4 sm:px-6 pt-4 flex items-center justify-between">
+          <button 
+            onClick={handleGoBack}
+            className="p-2.5 rounded-full bg-card/60 hover:bg-card/90 active:scale-95 backdrop-blur-md border border-border/50 text-text transition-all shadow-sm cursor-pointer"
+            title="Geri Dön"
+          >
+            <ArrowLeft size={20} />
+          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleToggleLike}
+              disabled={isLikeLoading}
+              className={`p-2.5 rounded-full backdrop-blur-md border transition-all shadow-sm active:scale-95 cursor-pointer flex items-center gap-1.5 text-xs font-bold ${
+                isLiked 
+                  ? 'bg-rose-500/15 border-rose-500/30 text-rose-500' 
+                  : 'bg-card/60 hover:bg-card/90 border-border/50 text-text/80'
+              }`}
+              title="Beğen"
+            >
+              <Heart size={18} className={isLiked ? "fill-rose-500 text-rose-500" : ""} />
+              <span>{story.stats?.likes || 0}</span>
+            </button>
+
+            <button 
+              onClick={handleShare}
+              className="p-2.5 rounded-full bg-card/60 hover:bg-card/90 active:scale-95 backdrop-blur-md border border-border/50 text-text transition-all shadow-sm cursor-pointer"
+              title="Kitabı Paylaş"
+            >
+              <Share2 size={18} />
+            </button>
+          </div>
+        </div>
+
+        {/* Hero İçeriği */}
+        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 pt-4 sm:pt-8 pb-8 flex flex-col md:flex-row gap-6 md:gap-10 items-center md:items-end">
+          
+          {/* Kapak Resmi (Mobilde 136px, Geniş ekranda 220px) */}
+          <div className="w-36 sm:w-44 md:w-56 shrink-0 aspect-[2/3] rounded-2xl overflow-hidden shadow-[0_16px_40px_rgba(0,0,0,0.5)] border border-border/60 relative group">
             {story.coverImage ? (
-              <img src={story.coverImage} alt={story.title} className="w-full h-full object-cover" />
+              <img 
+                src={story.coverImage} 
+                alt={story.title} 
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+              />
             ) : (
-              <div className="w-full h-full bg-muted/20 flex items-center justify-center">
-                <BookOpen size={48} className="text-muted/50" />
+              <div className="w-full h-full bg-muted/10 flex items-center justify-center">
+                <BookOpen size={44} className="text-muted/40" />
               </div>
             )}
           </div>
 
-          {/* Kitap Bilgileri */}
-          <div className="flex-1 flex flex-col items-center lg:items-start text-center lg:text-left animate-fade-in-up">
+          {/* Kitap Bilgileri & Başlık */}
+          <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left w-full min-w-0">
             
             {/* Status & Puan Rozetleri */}
-            <div className="flex flex-wrap gap-2 mb-3 justify-center lg:justify-start items-center">
-              <span className="px-3 py-1 bg-background/80 backdrop-blur-md text-text text-xs font-bold rounded-full border border-border/50 shadow-sm">
+            <div className="flex flex-wrap gap-2 mb-2.5 justify-center md:justify-start items-center">
+              <span className="px-3 py-1 bg-card/80 backdrop-blur-md text-text text-[11px] font-bold rounded-full border border-border/50 shadow-xs">
                 {story.status === 'completed' ? 'Tamamlandı' : story.status === 'ongoing' ? 'Devam Ediyor' : 'Taslak'}
               </span>
-              <span className="px-3 py-1 bg-background/80 backdrop-blur-md text-text text-xs font-bold rounded-full border border-border/50 shadow-sm flex items-center gap-1">
-                <Star size={12} className="text-amber-500" /> {story.stats?.rating?.toFixed(1) || '0.0'}
+
+              <span className="px-3 py-1 bg-card/80 backdrop-blur-md text-text text-[11px] font-bold rounded-full border border-border/50 shadow-xs flex items-center gap-1">
+                <Star size={12} className="text-amber-500 fill-amber-500" /> {story.stats?.rating?.toFixed(1) || '0.0'}
               </span>
+
               {editorialReview && (
                 <Link href={`/reviews/${editorialReview.id}`} className="group inline-flex items-center">
-                  <span className="px-3 py-1 bg-amber-500/15 hover:bg-amber-500/25 text-amber-500 text-xs font-bold rounded-full border border-amber-500/30 shadow-sm flex items-center gap-1.5 transition-all">
+                  <span className="px-3 py-1 bg-amber-500/15 hover:bg-amber-500/25 text-amber-500 text-[11px] font-bold rounded-full border border-amber-500/30 shadow-xs flex items-center gap-1.5 transition-all">
                     <Sparkles size={12} className="text-amber-500 animate-pulse" /> Editör Puanı: {editorialAverageScore}/10
                   </span>
                 </Link>
               )}
             </div>
 
-            <Typography variant="h1" className="text-4xl md:text-5xl lg:text-6xl font-black text-text mb-2 leading-tight drop-shadow-lg">
+            {/* Başlık */}
+            <Typography 
+              variant="h1" 
+              className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-text mb-2 leading-tight tracking-tight drop-shadow-md break-words max-w-2xl"
+            >
               {story.title}
             </Typography>
             
+            {/* Yazar */}
             {author && (
-              <Link href={`/profile/@${author.username}`} className="group flex items-center gap-3 mt-1 mb-3 hover:opacity-80 transition-opacity">
-                <div className="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-background/50 shadow-sm overflow-hidden bg-primary/20 flex items-center justify-center shrink-0">
+              <Link 
+                href={`/profile/@${author.username}`} 
+                className="group flex items-center gap-2.5 mt-0.5 mb-3 hover:opacity-90 transition-opacity"
+              >
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-border/60 shadow-xs overflow-hidden bg-primary/20 flex items-center justify-center shrink-0">
                   {author.avatarUrl ? (
                     <img 
                       src={author.avatarUrl} 
@@ -513,24 +663,26 @@ export default function StoryDetailPage() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <span className="text-sm md:text-base font-bold text-primary uppercase">
+                    <span className="text-xs font-bold text-primary uppercase">
                       {author.displayName?.charAt(0) || author.username?.charAt(0) || 'U'}
                     </span>
                   )}
                 </div>
-                <div className="flex flex-col text-left">
-                  <span className="text-sm md:text-base font-bold text-text group-hover:text-primary transition-colors">{author.displayName}</span>
-                  <span className="text-xs text-muted-foreground font-medium">@{author.username}</span>
+                <div className="flex items-center gap-1.5 text-left">
+                  <span className="text-xs sm:text-sm font-bold text-text group-hover:text-primary transition-colors">
+                    {author.displayName}
+                  </span>
+                  <span className="text-[11px] text-muted font-medium">@{author.username}</span>
                 </div>
               </Link>
             )}
 
-            {/* Tags / Genres */}
+            {/* Etiketler (Tags) */}
             {story.tags && story.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mb-4 justify-center lg:justify-start max-w-sm lg:max-w-none">
-                {story.tags.map(t => (
+              <div className="flex flex-wrap gap-1.5 mb-3.5 justify-center md:justify-start max-w-md md:max-w-none">
+                {story.tags.slice(0, 5).map(t => (
                   <Link href={`/search?tag=${t}`} key={t}>
-                    <span className="px-2.5 py-1 bg-background/50 backdrop-blur-md border border-border/20 text-text hover:bg-primary hover:text-primary-foreground hover:border-primary/50 transition-all rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm block">
+                    <span className="px-2.5 py-0.5 bg-card/60 backdrop-blur-md border border-border/40 text-muted hover:text-text hover:border-primary/40 transition-all rounded-md text-[10px] font-bold uppercase tracking-wider block">
                       #{t}
                     </span>
                   </Link>
@@ -538,282 +690,806 @@ export default function StoryDetailPage() {
               </div>
             )}
 
-            {/* İstatistikler */}
-            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 mb-8">
-              <div className="flex items-center gap-1.5 text-text/80 bg-background/30 border border-border/20 px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-sm shadow-sm cursor-default" title="Okunma Sayısı">
-                <Eye size={14} /> <span>{story.stats?.views?.toLocaleString('tr-TR') || '0'}</span>
+            {/* İstatistik Rozetleri */}
+            <div className="flex items-center justify-center md:justify-start gap-4 mb-5 text-xs text-muted">
+              <div className="flex items-center gap-1.5" title="Okunma Sayısı">
+                <Eye size={14} className="text-sky-400" />
+                <span className="font-bold text-text">{story.stats?.views?.toLocaleString('tr-TR') || '0'}</span> Okunma
               </div>
-              <button 
-                onClick={handleToggleLike}
-                disabled={isLikeLoading}
-                className={`flex items-center gap-1.5 border px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-sm shadow-sm transition-colors disabled:opacity-50
-                  ${isLiked ? 'bg-primary/20 border-primary/40 text-primary' : 'bg-background/30 border-border/20 text-text/80 hover:bg-white/10'}
-                `}
-                title="Beğen"
-              >
-                <Heart size={14} className={isLiked ? "fill-primary text-primary" : ""} /> 
-                <span>{story.stats?.likes || 0}</span>
-              </button>
-              <div className="flex items-center gap-1.5 text-text/80 bg-background/30 border border-border/20 px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-sm shadow-sm cursor-default" title="Bölüm Sayısı">
-                <List size={14} /> <span>{chapters.length} Bölüm</span>
+              <div className="w-1 h-1 rounded-full bg-border" />
+              <div className="flex items-center gap-1.5" title="Beğeni Sayısı">
+                <Heart size={14} className="text-rose-400" />
+                <span className="font-bold text-text">{story.stats?.likes || 0}</span> Beğeni
+              </div>
+              <div className="w-1 h-1 rounded-full bg-border" />
+              <div className="flex items-center gap-1.5" title="Bölüm Sayısı">
+                <List size={14} className="text-primary" />
+                <span className="font-bold text-text">{chapters.length}</span> Bölüm
               </div>
             </div>
 
-            {/* Aksiyon Butonları */}
-            <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 mt-2 w-full max-w-sm mx-auto lg:mx-0 lg:max-w-none">
+            {/* ── Hero Aksiyonları (Ana CTA + Kompakt 4'lü Bar) ── */}
+            <div className="w-full max-w-md md:max-w-lg space-y-2.5">
+              
+              {/* 1. Satır: Ana Okuma Butonu (Full Width) */}
               <Button 
                 variant="primary" 
-                onPress={() => {
-                  const targetChapterId = (() => {
-                    if (!readingProgress) return chapters[0]?.chapterId;
-                    if (readingProgress.currentChapterId && !readingProgress.completedChapters?.includes(readingProgress.currentChapterId)) {
-                      return readingProgress.currentChapterId;
-                    }
-                    const nextUnread = chapters.find(c => !readingProgress.completedChapters?.includes(c.chapterId));
-                    return nextUnread?.chapterId || readingProgress.currentChapterId || chapters[0]?.chapterId;
-                  })();
-
-                  if (targetChapterId) {
-                    router.push(`/read/${storyId}/${targetChapterId}`);
-                  }
-                }} 
-                className="w-full md:w-auto shadow-lg shadow-primary/20 text-base md:px-8 py-3"
+                onPress={handleStartReading} 
+                className="w-full shadow-lg shadow-primary/25 text-sm sm:text-base font-bold py-3.5 rounded-2xl active:scale-[0.99] transition-all flex items-center justify-center cursor-pointer"
                 disabled={chapters.length === 0}
               >
-                {readingProgress?.currentChapterId || (readingProgress?.completedChapters && readingProgress.completedChapters.length > 0) ? (
+                {hasReadingHistory ? (
                   <>
-                    <Bookmark size={20} className="mr-2 fill-current" /> Kaldığın Yerden Devam Et
+                    <Bookmark size={18} className="mr-2 fill-current shrink-0" />
+                    <span>Kaldığın Yerden Devam Et {targetChapterTitle ? `(${targetChapterTitle})` : ''}</span>
                   </>
                 ) : (
                   <>
-                    <BookOpen size={20} className="mr-2" /> {chapters.length === 0 ? 'Bölüm Yok' : 'İlk Bölümü Oku'}
+                    <BookOpen size={18} className="mr-2 shrink-0" />
+                    <span>{chapters.length === 0 ? 'Henüz Bölüm Yok' : 'İlk Bölümü Oku'}</span>
                   </>
                 )}
               </Button>
-              
-              <Button 
-                variant="outline" 
-                onPress={() => router.push(`/readix?hashtag=${encodeURIComponent(story.title.replace(/\s+/g, ''))}`)}
-                className="w-full md:w-auto bg-background/80 border-border/50 hover:bg-muted text-text shadow-sm backdrop-blur-md text-base md:px-6 py-3 h-[52px]"
-              >
-                <Hash size={20} className="mr-2 text-primary" /> Readixle
-              </Button>
 
-              <button 
-                onClick={handleToggleSave} 
-                disabled={saving}
-                className="w-full md:w-auto h-[52px] bg-background/80 border border-border/50 hover:bg-muted text-text shadow-sm backdrop-blur-md rounded-xl flex items-center justify-center px-4 md:px-5 transition-colors disabled:opacity-50"
-              >
-                {saving ? <Loader2 size={18} className="animate-spin" /> : (
-                  isSaved ? <BookmarkCheck size={18} className="text-primary" /> : <BookmarkPlus size={18} />
-                )}
-                <span className="ml-2 font-medium whitespace-nowrap text-sm">{isSaved ? 'Kütüphanede' : 'Kütüphaneye Ekle'}</span>
-              </button>
+              {/* 2. Satır: Kompakt Yatay Aksiyon Barı (Grid 4-Col) */}
+              <div className="grid grid-cols-4 gap-2 w-full">
+                
+                {/* Kitaplığa Ekle */}
+                <button 
+                  onClick={handleToggleSave} 
+                  disabled={saving}
+                  className={`h-11 rounded-xl flex flex-col items-center justify-center p-1 border transition-all text-center select-none active:scale-95 cursor-pointer ${
+                    isSaved 
+                      ? 'bg-primary/15 border-primary/40 text-primary' 
+                      : 'bg-card/70 hover:bg-card border-border/50 text-text/80'
+                  }`}
+                  title="Kitaplığa Ekle"
+                >
+                  {saving ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : isSaved ? (
+                    <BookmarkCheck size={16} className="text-primary" />
+                  ) : (
+                    <BookmarkPlus size={16} />
+                  )}
+                  <span className="text-[10px] font-bold mt-0.5 truncate w-full">
+                    {isSaved ? 'Kitaplıkta' : 'Kitaplık'}
+                  </span>
+                </button>
 
-              <button 
-                onClick={() => {
-                  if (!firebaseUser) {
-                    toast.info('Okuma listelerine eklemek için giriş yapmalısınız.');
-                    router.push('/login');
-                    return;
-                  }
-                  setIsAddToReadingListOpen(true);
-                }}
-                className="w-full md:w-auto h-[52px] bg-background/80 border border-border/50 hover:bg-muted text-text shadow-sm backdrop-blur-md rounded-xl flex items-center justify-center px-4 md:px-5 transition-colors"
-                title="Okuma Listesine Ekle"
-              >
-                <ListPlus size={18} className="text-primary" />
-                <span className="ml-2 font-medium whitespace-nowrap text-sm">Listeye Ekle</span>
-              </button>
+                {/* Readixle */}
+                <button 
+                  onClick={() => router.push(`/readix?hashtag=${encodeURIComponent(story.title.replace(/\s+/g, ''))}`)}
+                  className="h-11 rounded-xl flex flex-col items-center justify-center p-1 bg-card/70 hover:bg-card border border-border/50 text-text/80 transition-all text-center select-none active:scale-95 cursor-pointer"
+                  title="Kitap hakkında Readix paylaş"
+                >
+                  <Hash size={16} className="text-primary" />
+                  <span className="text-[10px] font-bold mt-0.5 truncate w-full">Readixle</span>
+                </button>
+
+                {/* Listeye Ekle */}
+                <button 
+                  onClick={() => {
+                    if (!firebaseUser) {
+                      toast.info('Okuma listelerine eklemek için giriş yapmalısınız.');
+                      router.push('/login');
+                      return;
+                    }
+                    setIsAddToReadingListOpen(true);
+                  }}
+                  className="h-11 rounded-xl flex flex-col items-center justify-center p-1 bg-card/70 hover:bg-card border border-border/50 text-text/80 transition-all text-center select-none active:scale-95 cursor-pointer"
+                  title="Okuma Listesine Ekle"
+                >
+                  <ListPlus size={16} className="text-amber-500" />
+                  <span className="text-[10px] font-bold mt-0.5 truncate w-full">Listeye Ekle</span>
+                </button>
+
+                {/* Paylaş */}
+                <button 
+                  onClick={handleShare}
+                  className="h-11 rounded-xl flex flex-col items-center justify-center p-1 bg-card/70 hover:bg-card border border-border/50 text-text/80 transition-all text-center select-none active:scale-95 cursor-pointer"
+                  title="Paylaş"
+                >
+                  <Share2 size={16} className="text-sky-400" />
+                  <span className="text-[10px] font-bold mt-0.5 truncate w-full">Paylaş</span>
+                </button>
+
+              </div>
             </div>
+
           </div>
         </div>
       </div>
 
-      {/* ── Alt İçerik Alanı (3 Sütunlu Yapı) ── */}
-      <div className="max-w-[1600px] mx-auto px-6 md:px-8 w-full animate-fade-in grid grid-cols-1 xl:grid-cols-4 gap-6 xl:gap-10 pb-20 mt-10">
-        
-        {/* ================================== */}
-        {/* SÜTUN 1: HAKKINDA & KARAKTERLER   */}
-        {/* ================================== */}
-        <div className="xl:col-span-1 flex flex-col gap-10">
+      {/* ── 2. SEKME BARI (Segmented Tabs - Stüdyo Tarzı) ── */}
+      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-xl border-y border-border/60 py-2.5 px-4 mb-6 transition-all shadow-xs">
+        <div className="max-w-6xl mx-auto flex items-center justify-start sm:justify-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5">
           
-          <div className="space-y-10">
+          {/* Sekme: Hakkında */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('about')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 cursor-pointer ${
+              activeTab === 'about'
+                ? 'bg-primary text-black shadow-md shadow-primary/20 font-bold'
+                : 'text-muted hover:text-text hover:bg-muted/10'
+            }`}
+          >
+            <BookOpen size={16} />
+            <span>Hakkında</span>
+          </button>
+
+          {/* Sekme: Bölümler */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('chapters')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 cursor-pointer ${
+              activeTab === 'chapters'
+                ? 'bg-primary text-black shadow-md shadow-primary/20 font-bold'
+                : 'text-muted hover:text-text hover:bg-muted/10'
+            }`}
+          >
+            <List size={16} />
+            <span>Bölümler</span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+              activeTab === 'chapters' ? 'bg-black/20 text-black' : 'bg-muted/20 text-muted'
+            }`}>
+              {chapters.length}
+            </span>
+          </button>
+
+          {/* Sekme: Yorumlar & İncelemeler */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('reviews')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 cursor-pointer ${
+              activeTab === 'reviews'
+                ? 'bg-primary text-black shadow-md shadow-primary/20 font-bold'
+                : 'text-muted hover:text-text hover:bg-muted/10'
+            }`}
+          >
+            <MessageSquare size={16} />
+            <span>Yorumlar</span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+              activeTab === 'reviews' ? 'bg-black/20 text-black' : 'bg-muted/20 text-muted'
+            }`}>
+              {reviews.length}
+            </span>
+          </button>
+
+          {/* Sekme: Karakterler (Hikayede varsa gösterilir) */}
+          {characters.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('characters')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 cursor-pointer ${
+                activeTab === 'characters'
+                  ? 'bg-primary text-black shadow-md shadow-primary/20 font-bold'
+                  : 'text-muted hover:text-text hover:bg-muted/10'
+              }`}
+            >
+              <Users size={16} />
+              <span>Karakterler</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                activeTab === 'characters' ? 'bg-black/20 text-black' : 'bg-muted/20 text-muted'
+              }`}>
+                {characters.length}
+              </span>
+            </button>
+          )}
+
+        </div>
+      </div>
+
+      {/* ── 3. SEKME İÇERİKLERİ ── */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 w-full animate-fade-in">
+        
+        {/* ==================================================== */}
+        {/* SEKME 1: HAKKINDA (Özet, Önsöz, Arka Kapak, Ekip vb.)*/}
+        {/* ==================================================== */}
+        {activeTab === 'about' && (
+          <div className="space-y-6">
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
-              {/* Editör Değerlendirmesi Kartı (Varsa) */}
-              {editorialReview && (
-                <Link 
-                  href={`/reviews/${editorialReview.id}`}
-                  className="block group"
-                >
-                  <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-950/25 via-card/80 to-card border border-amber-500/30 hover:border-amber-500/70 p-6 transition-all duration-300 shadow-xl shadow-black/40 hover:shadow-amber-500/10 hover:-translate-y-0.5">
-                    {/* Ambient Glow */}
-                    <div className="absolute -top-12 -right-12 w-36 h-36 bg-amber-500/15 rounded-full blur-2xl pointer-events-none group-hover:bg-amber-500/25 transition-all" />
-
-                    {/* Header Row */}
-                    <div className="flex items-center justify-between gap-3 mb-3 relative z-10">
-                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-500 text-[11px] font-black uppercase tracking-wider">
-                        <Sparkles size={12} className="animate-pulse" />
-                        Editör Değerlendirmesi
-                      </div>
-
-                      <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-amber-500 text-black text-xs font-black shadow-sm">
-                        <Star size={11} className="fill-black text-black" />
-                        {editorialAverageScore} / 10
-                      </div>
-                    </div>
-
-                    {/* Excerpt */}
-                    <p className="text-sm text-text/90 italic leading-relaxed mb-4 line-clamp-3 font-serif relative z-10">
-                      "{editorialReview.firstImpression || editorialReview.finalWord || editorialReview.about || 'Bu eser Readixon editoryal heyeti tarafından detaylı olarak incelenmiştir.'}"
-                    </p>
-
-                    {/* Footer Row */}
-                    <div className="flex items-center justify-between pt-3 border-t border-amber-500/15 text-xs relative z-10">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-[10px] font-bold text-amber-400 overflow-hidden shrink-0">
-                          {editorialReview.editorAvatar ? (
-                            <img src={editorialReview.editorAvatar} alt={editorialReview.editorName} className="w-full h-full object-cover" />
-                          ) : (
-                            editorialReview.editorName.charAt(0)
-                          )}
-                        </div>
-                        <span className="text-muted-foreground font-medium truncate max-w-[130px]">
-                          Editör: <strong className="text-text">{editorialReview.editorName}</strong>
-                        </span>
-                      </div>
-
-                      <span className="text-amber-500 font-bold flex items-center gap-1 group-hover:translate-x-1 transition-transform shrink-0">
-                        İncelemeyi Oku <ChevronRight size={14} />
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              )}
-
-              {/* Kitap Fragmanı (Video) */}
-              {story.trailerVideoUrl && (
-                <div className="bg-black/90 rounded-3xl overflow-hidden shadow-2xl shadow-black/50 border border-white/10 relative group animate-fade-in-up">
-                  <div className="absolute top-4 left-4 z-10 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 pointer-events-none">
-                    <Typography variant="caption" className="font-bold text-white flex items-center gap-2 uppercase tracking-widest text-[10px]">
-                      <Play size={12} className="text-primary fill-current" /> Fragmanı İzle
+              {/* Sol / Ana Kolon: Özet, Önsöz, Arka Kapak */}
+              <div className="lg:col-span-2 space-y-6">
+                
+                {/* Hikaye Özeti */}
+                <div className="bg-card/50 border border-border/50 p-5 sm:p-7 rounded-2xl relative shadow-xs">
+                  <div className="flex items-center gap-2 mb-3">
+                    <BookOpen size={18} className="text-primary" />
+                    <Typography variant="h3" className="text-base sm:text-lg font-bold text-text">
+                      Hikaye Özeti
                     </Typography>
                   </div>
-                  <video 
-                    src={story.trailerVideoUrl} 
-                    controls 
-                    className="w-full aspect-video object-contain"
-                    controlsList="nodownload"
-                    poster={story.coverImage}
-                  />
-                </div>
-              )}
 
-              {/* Özet */}
-              <div className="bg-card/30 border border-white/5 p-6 md:p-8 rounded-3xl relative overflow-hidden">
-                <Typography variant="h3" className="text-xl font-bold mb-4 text-text flex items-center gap-2 relative z-10">
-                  <BookOpen size={20} className="text-primary" /> Hikaye Özeti
-                </Typography>
-                <Typography variant="body" className="text-muted leading-relaxed whitespace-pre-line text-lg relative z-10">
-                  {story.summary || 'Bu kitap için henüz bir özet girilmemiş.'}
-                </Typography>
-              </div>
+                  <Typography 
+                    variant="body" 
+                    className={`text-muted leading-relaxed whitespace-pre-line text-sm sm:text-base ${
+                      !isSummaryExpanded && story.summary && story.summary.length > 360 ? 'line-clamp-4' : ''
+                    }`}
+                  >
+                    {story.summary || 'Bu kitap için henüz bir özet girilmemiş.'}
+                  </Typography>
 
-              {/* Önsöz (Varsa) */}
-              {story.foreword && (
-                <div className="bg-card/30 border border-white/5 p-6 md:p-8 rounded-3xl relative overflow-hidden">
-                  <Typography variant="h3" className="text-xl font-bold mb-4 text-text flex items-center gap-2 relative z-10">
-                    Önsöz
-                  </Typography>
-                  <Typography variant="body" className={`text-muted leading-relaxed whitespace-pre-line text-lg italic relative z-10 ${!isForewordExpanded ? 'line-clamp-4' : ''}`}>
-                    "{story.foreword}"
-                  </Typography>
-                  {story.foreword.length > 200 && (
+                  {story.summary && story.summary.length > 360 && (
                     <button 
-                      onClick={() => setIsForewordExpanded(!isForewordExpanded)}
-                      className="text-primary font-semibold text-sm hover:underline mt-2 transition-all relative z-10"
+                      onClick={() => setIsSummaryExpanded(!isSummaryExpanded)}
+                      className="text-primary font-bold text-xs sm:text-sm hover:underline mt-2.5 cursor-pointer block"
                     >
-                      {isForewordExpanded ? 'Daha Az Göster' : 'Devamını Oku...'}
+                      {isSummaryExpanded ? 'Daha Az Göster' : 'Devamını Oku...'}
                     </button>
                   )}
                 </div>
-              )}
 
-              {/* Arka Kapak Yazısı (Varsa) */}
-              {story.backCover && (
-                <div className="bg-card/30 border border-white/5 p-6 md:p-8 rounded-3xl relative overflow-hidden">
-                  <div className="border-l-4 border-primary pl-4 py-1">
-                    <Typography variant="h3" className="text-lg font-bold mb-3 text-text/90">Arka Kapak Yazısı</Typography>
-                    <Typography variant="body" className={`text-muted/90 leading-relaxed whitespace-pre-line ${!isBackCoverExpanded ? 'line-clamp-4' : ''}`}>
-                      {story.backCover}
+                {/* Önsöz (Varsa) */}
+                {story.foreword && (
+                  <div className="bg-card/50 border border-border/50 p-5 sm:p-7 rounded-2xl shadow-xs">
+                    <Typography variant="h3" className="text-base sm:text-lg font-bold mb-3 text-text">
+                      Yazarın Önsözü
                     </Typography>
-                    {story.backCover.length > 200 && (
+                    <Typography 
+                      variant="body" 
+                      className={`text-muted leading-relaxed whitespace-pre-line text-sm italic font-serif ${
+                        !isForewordExpanded && story.foreword.length > 220 ? 'line-clamp-3' : ''
+                      }`}
+                    >
+                      "{story.foreword}"
+                    </Typography>
+                    {story.foreword.length > 220 && (
                       <button 
-                        onClick={() => setIsBackCoverExpanded(!isBackCoverExpanded)}
-                        className="text-primary font-semibold text-sm hover:underline mt-2 transition-all"
+                        onClick={() => setIsForewordExpanded(!isForewordExpanded)}
+                        className="text-primary font-bold text-xs sm:text-sm hover:underline mt-2.5 cursor-pointer block"
                       >
-                        {isBackCoverExpanded ? 'Daha Az Göster' : 'Devamını Oku...'}
+                        {isForewordExpanded ? 'Daha Az Göster' : 'Devamını Oku...'}
                       </button>
                     )}
                   </div>
+                )}
+
+                {/* Arka Kapak Yazısı (Varsa) */}
+                {story.backCover && (
+                  <div className="bg-card/50 border border-border/50 p-5 sm:p-7 rounded-2xl shadow-xs">
+                    <div className="border-l-4 border-primary pl-4 py-1">
+                      <Typography variant="h3" className="text-base sm:text-lg font-bold mb-2 text-text">
+                        Arka Kapak Yazısı
+                      </Typography>
+                      <Typography 
+                        variant="body" 
+                        className={`text-muted leading-relaxed whitespace-pre-line text-sm ${
+                          !isBackCoverExpanded && story.backCover.length > 220 ? 'line-clamp-3' : ''
+                        }`}
+                      >
+                        {story.backCover}
+                      </Typography>
+                      {story.backCover.length > 220 && (
+                        <button 
+                          onClick={() => setIsBackCoverExpanded(!isBackCoverExpanded)}
+                          className="text-primary font-bold text-xs sm:text-sm hover:underline mt-2.5 cursor-pointer block"
+                        >
+                          {isBackCoverExpanded ? 'Daha Az Göster' : 'Devamını Oku...'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+              </div>
+
+              {/* Sağ Kolon: Editör İncelemesi, Fragman, Ekip */}
+              <div className="space-y-6">
+                
+                {/* Editör Değerlendirmesi Kartı */}
+                {editorialReview && (
+                  <Link href={`/reviews/${editorialReview.id}`} className="block group">
+                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-950/30 via-card to-card border border-amber-500/30 hover:border-amber-500/60 p-5 transition-all duration-300 shadow-md hover:shadow-amber-500/10 hover:-translate-y-0.5">
+                      <div className="flex items-center justify-between gap-3 mb-2.5">
+                        <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-500 text-[10px] font-bold uppercase tracking-wider">
+                          <Sparkles size={11} className="animate-pulse" />
+                          Editör Notu
+                        </div>
+                        <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500 text-black text-xs font-black shadow-xs">
+                          <Star size={11} className="fill-black text-black" />
+                          {editorialAverageScore} / 10
+                        </div>
+                      </div>
+
+                      <p className="text-xs sm:text-sm text-text/90 italic leading-relaxed mb-3 line-clamp-3 font-serif">
+                        "{editorialReview.firstImpression || editorialReview.finalWord || editorialReview.about || 'Bu eser Readixon editoryal heyeti tarafından incelenmiştir.'}"
+                      </p>
+
+                      <div className="flex items-center justify-between pt-2.5 border-t border-amber-500/15 text-xs">
+                        <span className="text-muted text-[11px] font-medium truncate max-w-[150px]">
+                          Editör: <strong className="text-text">{editorialReview.editorName}</strong>
+                        </span>
+                        <span className="text-amber-500 font-bold flex items-center gap-1 group-hover:translate-x-1 transition-transform text-xs">
+                          İncele <ChevronRight size={13} />
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                )}
+
+                {/* Fragman Videosu */}
+                {story.trailerVideoUrl && (
+                  <div className="bg-black/90 rounded-2xl overflow-hidden shadow-md border border-border/50 relative group">
+                    <div className="absolute top-3 left-3 z-10 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 pointer-events-none">
+                      <Typography variant="caption" className="font-bold text-white flex items-center gap-1.5 uppercase tracking-wider text-[9px]">
+                        <Play size={10} className="text-primary fill-current" /> Fragman
+                      </Typography>
+                    </div>
+                    <video 
+                      src={story.trailerVideoUrl} 
+                      controls 
+                      className="w-full aspect-video object-contain"
+                      controlsList="nodownload"
+                      poster={story.coverImage}
+                    />
+                  </div>
+                )}
+
+                {/* Ekip & Katkıda Bulunanlar */}
+                {story.contributors && story.contributors.length > 0 && (
+                  <div className="bg-card/50 border border-border/50 p-5 rounded-2xl shadow-xs">
+                    <Typography variant="h3" className="text-sm font-bold mb-3 flex items-center gap-2 text-text">
+                      <Users size={16} className="text-primary" /> Ekip & Katkıda Bulunanlar
+                    </Typography>
+                    <div className="space-y-2">
+                      {story.contributors.map((contributor, i) => {
+                        const isString = typeof contributor === 'string';
+                        const role = isString ? 'Katkıda Bulunan' : contributor.role;
+                        const name = isString ? contributor : contributor.name;
+                        
+                        return (
+                          <div key={i} className="flex items-center justify-between p-2.5 bg-muted/10 rounded-xl border border-border/40 text-xs">
+                            <span className="font-semibold text-text">{name}</span>
+                            <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                              {role}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+              </div>
+
+            </div>
+
+            {/* Bunları Da Seveceksiniz (Benzer Kitaplar) */}
+            {similarStories.length > 0 && (
+              <div className="pt-6 border-t border-border/40">
+                <Typography variant="h2" className="text-lg sm:text-xl font-bold mb-4 flex items-center gap-2">
+                  <Heart size={20} className="text-primary" /> Bunları Da Seveceksiniz
+                </Typography>
+                <div className="flex gap-4 overflow-x-auto no-scrollbar pb-3">
+                  {similarStories.map(sim => (
+                    <div key={sim.storyId} className="w-[125px] sm:w-[145px] shrink-0 transition-transform duration-200 hover:-translate-y-1">
+                      <StoryCard 
+                        title={sim.title}
+                        authorName={sim.authorName || ''}
+                        authorUsername={sim.authorUsername || ''}
+                        authorAvatarUrl={sim.authorAvatarUrl}
+                        coverImage={sim.coverImage}
+                        views={sim.stats?.views || 0}
+                        likes={sim.stats?.likes || 0}
+                        tags={sim.tags}
+                        isWebtoon={sim.format === 'webtoon'}
+                        onPress={() => router.push(`/story/${sim.storyId}`)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+          </div>
+        )}
+
+        {/* ==================================================== */}
+        {/* SEKME 2: BÖLÜMLER (İçindekiler & Sıralama Filtresi) */}
+        {/* ==================================================== */}
+        {activeTab === 'chapters' && (
+          <div className="space-y-4">
+            
+            {/* Kontrol Barı: Bölüm Sayısı + Sıralama Butonu */}
+            <div className="flex items-center justify-between p-3.5 sm:p-4 bg-card/60 backdrop-blur-md rounded-2xl border border-border/50">
+              <div className="flex items-center gap-2.5">
+                <span className="text-xs sm:text-sm font-bold text-text">Bölüm Listesi</span>
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary/15 text-primary border border-primary/25">
+                  {chapters.length} Bölüm
+                </span>
+              </div>
+
+              {/* Sıralama Toggle'ı */}
+              <button
+                type="button"
+                onClick={() => setChapterSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-muted/10 hover:bg-muted/20 border border-border/50 text-text transition-colors cursor-pointer select-none"
+                title="Bölüm sıralamasını tersine çevir"
+              >
+                <ArrowUpDown size={13} className="text-primary" />
+                <span>{chapterSortOrder === 'asc' ? '1 → Son' : 'Son → 1'}</span>
+              </button>
+            </div>
+
+            {/* Bölüm Kartları */}
+            <div className="space-y-2.5">
+              {sortedChapters.length > 0 ? (
+                <>
+                  {sortedChapters.slice(0, visibleChaptersCount).map((chapter, index) => {
+                    let isScheduled = false;
+                    let publishDateObj = null;
+                    if (chapter.status === 'scheduled' && chapter.publishDate) {
+                      publishDateObj = chapter.publishDate.toDate ? chapter.publishDate.toDate() : new Date(chapter.publishDate as any);
+                      if (publishDateObj > new Date()) {
+                        isScheduled = true;
+                      }
+                    }
+
+                    const isCompleted = Boolean(readingProgress?.completedChapters?.includes(chapter.chapterId));
+                    const isCurrent = !isCompleted && readingProgress?.currentChapterId === chapter.chapterId;
+                    const chapterIndexDisplay = chapterSortOrder === 'asc' ? index + 1 : chapters.length - index;
+
+                    return (
+                      <div
+                        key={chapter.chapterId}
+                        className={`p-3.5 sm:p-4 rounded-2xl transition-all duration-200 group relative overflow-hidden flex items-start gap-3 sm:gap-4 ${
+                          isScheduled 
+                            ? 'bg-card/25 border border-border/20 opacity-70 cursor-default' 
+                            : isCurrent
+                            ? 'bg-primary/[0.08] border border-primary/45 shadow-[0_0_20px_rgba(99,102,241,0.12)] cursor-pointer'
+                            : isCompleted
+                            ? 'bg-card/40 border border-primary/20 hover:border-primary/40 hover:bg-card/70 cursor-pointer shadow-xs'
+                            : 'bg-card/40 border border-border/40 hover:border-primary/40 hover:bg-card/80 hover:shadow-md cursor-pointer'
+                        }`}
+                        onClick={() => {
+                          if (!isScheduled) router.push(`/read/${storyId}/${chapter.chapterId}`);
+                        }}
+                      >
+                        {/* Aktif İndikatör Çizgisi */}
+                        {isCurrent && (
+                          <div className="absolute left-0 top-0 bottom-0 w-1 sm:w-1.5 bg-primary rounded-l-2xl shadow-[0_0_12px_var(--color-primary)]" />
+                        )}
+
+                        {/* Sol Sayı / Durum Rozeti */}
+                        <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 font-extrabold text-xs sm:text-sm transition-all duration-200 self-start mt-0.5 ${
+                          isScheduled 
+                            ? 'bg-muted/10 text-muted border border-border/20' 
+                            : isCurrent
+                            ? 'bg-primary text-black border border-primary shadow-sm font-black'
+                            : isCompleted
+                            ? 'bg-primary/10 text-primary border border-primary/25 shadow-xs'
+                            : 'bg-muted/15 text-muted-foreground border border-border/20 group-hover:border-primary/30 group-hover:text-primary group-hover:bg-primary/10'
+                        }`}>
+                          {isScheduled ? (
+                            <Lock size={15} />
+                          ) : isCurrent ? (
+                            <Bookmark size={16} className="fill-black" />
+                          ) : isCompleted ? (
+                            <Check size={16} className="text-primary" strokeWidth={2.5} />
+                          ) : (
+                            chapterIndexDisplay
+                          )}
+                        </div>
+
+                        {/* İçerik Alanı: Başlık ve İstatistikler */}
+                        <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                          
+                          {/* 1. Satır: Bölüm Başlığı */}
+                          <div className="flex items-start justify-between gap-2">
+                            <Typography 
+                              variant="body" 
+                              className={`font-bold text-sm sm:text-base text-foreground break-words leading-snug transition-colors flex-1 ${
+                                isScheduled ? 'text-text/70' : isCurrent ? 'text-primary' : 'group-hover:text-primary'
+                              }`}
+                            >
+                              {chapter.title}
+                            </Typography>
+
+                            {!isScheduled && (
+                              <ChevronRight size={16} className="text-muted/30 group-hover:text-primary group-hover:translate-x-1 transition-all shrink-0 mt-0.5" />
+                            )}
+                          </div>
+
+                          {/* 2. Satır: İstatistikler ve Durum Rozeti */}
+                          <div className="flex items-center justify-between gap-x-3 gap-y-1.5 flex-wrap pt-0.5">
+                            {!isScheduled ? (
+                              <div className="flex items-center gap-2.5 sm:gap-3.5 text-[11px] text-muted/70 flex-wrap">
+                                {chapter.publishDate && (
+                                  <span className="flex items-center gap-1 shrink-0">
+                                    <Calendar size={11} className="opacity-70" />
+                                    {(chapter.publishDate as any)?.seconds
+                                      ? new Date((chapter.publishDate as any).seconds * 1000).toLocaleDateString('tr-TR')
+                                      : new Date(chapter.publishDate as any).toLocaleDateString('tr-TR')}
+                                  </span>
+                                )}
+                                <span className="flex items-center gap-1 shrink-0">
+                                  <Eye size={11} className="opacity-70" />
+                                  {(chapter.stats?.views || 0).toLocaleString()}
+                                </span>
+                                <span className="flex items-center gap-1 shrink-0">
+                                  <Heart size={11} className="opacity-70" />
+                                  {(chapter.stats?.likes || 0).toLocaleString()}
+                                </span>
+                                <span className="flex items-center gap-1 shrink-0">
+                                  <MessageSquare size={11} className="opacity-70" />
+                                  {(chapter.stats?.commentCount || 0).toLocaleString()}
+                                </span>
+                              </div>
+                            ) : (
+                              publishDateObj && (
+                                <div className="flex items-center gap-1 text-[11px] text-blue-400">
+                                  <Calendar size={12} />
+                                  <span>Planlandı: {publishDateObj.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</span>
+                                </div>
+                              )
+                            )}
+
+                            {/* Sağ Rozet */}
+                            <div className="flex items-center gap-2 shrink-0 ml-auto">
+                              {isCurrent && (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/15 text-primary border border-primary/30">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                                  Şu An Okunuyor
+                                </span>
+                              )}
+                              {isCompleted && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/25">
+                                  <Check size={11} strokeWidth={2.5} />
+                                  Okundu
+                                </span>
+                              )}
+                              {isScheduled && (
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleToggleReminder(chapter.chapterId);
+                                  }}
+                                  className="text-[10px] py-0.5 h-6 px-2.5 rounded-full border border-blue-500/30 text-blue-400 hover:bg-blue-500/10 flex items-center justify-center gap-1 cursor-pointer"
+                                >
+                                  <Bell size={11} /> Bildir
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                        </div>
+                      </div>
+                    );
+                  })}
+                  
+                  {visibleChaptersCount < chapters.length && (
+                    <button 
+                      onClick={() => setVisibleChaptersCount(prev => prev + 20)}
+                      className="w-full mt-3 py-3.5 bg-primary/10 text-primary font-bold text-xs sm:text-sm rounded-xl hover:bg-primary/20 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <List size={16} /> Sonraki Bölümleri Yükle ({chapters.length - visibleChaptersCount} kaldı)
+                    </button>
+                  )}
+                </>
+              ) : (
+                <div className="py-12 text-center bg-card/40 rounded-2xl border border-dashed border-border/40">
+                  <BookOpen size={40} className="mx-auto text-muted/30 mb-3" />
+                  <Typography variant="h3" className="text-muted text-sm font-bold mb-1">Henüz Bölüm Yok</Typography>
+                  <Typography variant="body" className="text-muted/60 text-xs">Yazar henüz bu kitap için bir bölüm yayınlamadı.</Typography>
                 </div>
               )}
-          </div>
+            </div>
 
-          {/* Karakterler */}
-          {characters.length > 0 && (
-            <div className="space-y-6 mt-4">
-              <div className="flex flex-col xl:flex-row xl:items-center justify-between mb-4 gap-2">
-                <div className="flex items-center gap-3">
-                  <Typography variant="h2" className="text-2xl font-black text-text">Karakterler</Typography>
-                  <button 
-                    onClick={() => setShowCharacterBookInfo(true)}
-                    className="p-1 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                    title="Karakter Defteri Nedir?"
-                  >
-                    <Info size={16} />
-                  </button>
+          </div>
+        )}
+
+        {/* ==================================================== */}
+        {/* SEKME 3: YORUMLAR (İncelemeler, Form & Bahsedilenler)*/}
+        {/* ==================================================== */}
+        {activeTab === 'reviews' && (
+          <div className="space-y-6">
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              
+              {/* Sol / Ana Alan: İnceleme Yaz + İnceleme Listesi */}
+              <div className="lg:col-span-2 space-y-6">
+                
+                {/* İnceleme Yazma Formu */}
+                <div className="bg-card/50 border border-primary/25 p-5 sm:p-6 rounded-2xl relative overflow-hidden shadow-xs">
+                  <Typography variant="h3" className="text-base sm:text-lg font-bold mb-1">Kendi İncelemeni Yaz</Typography>
+                  <Typography variant="body" className="text-muted text-xs mb-4">Kitabı puanlayıp düşüncelerini diğer okurlarla paylaş.</Typography>
+                  
+                  <div className="flex flex-col gap-3.5 relative z-10">
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold text-xs text-text/80">Puanın:</span>
+                      <input 
+                        type="range" 
+                        min="1" 
+                        max="10" 
+                        step="0.5" 
+                        value={reviewRating}
+                        onChange={(e) => setReviewRating(parseFloat(e.target.value))}
+                        className="flex-1 accent-primary cursor-pointer"
+                      />
+                      <span className="font-black text-lg text-amber-500 w-10 text-center flex items-center justify-end gap-1">
+                        <Star size={14} className="fill-amber-500" /> {reviewRating}
+                      </span>
+                    </div>
+                    
+                    <textarea 
+                      value={reviewText}
+                      onChange={(e) => setReviewText(e.target.value)}
+                      placeholder="Kitap hakkındaki düşüncelerin, beğendiğin kısımlar..."
+                      className="w-full bg-background/80 border border-border/60 rounded-xl p-3.5 text-xs sm:text-sm text-text focus:outline-none focus:border-primary resize-y min-h-[90px]"
+                    />
+                    
+                    <div className="flex justify-end">
+                      <Button 
+                        variant="primary" 
+                        onPress={handleSubmitReview} 
+                        disabled={submittingReview || !reviewText.trim()}
+                        className="px-6 py-2 rounded-xl text-xs font-bold cursor-pointer"
+                      >
+                        {submittingReview ? 'Gönderiliyor...' : 'İncelemeyi Gönder'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* İnceleme Listesi */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <Typography variant="h3" className="text-base font-bold flex items-center gap-2">
+                      Topluluk İncelemeleri <span className="text-muted text-xs font-normal">({reviews.length})</span>
+                    </Typography>
+                  </div>
+
+                  {reviews.length > 0 ? (
+                    reviews.map(review => (
+                      <div key={review.reviewId} className="bg-card/40 border border-border/50 p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row gap-3.5">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 shrink-0 flex items-center justify-center font-bold text-xs text-primary overflow-hidden">
+                          {review.authorAvatarUrl ? (
+                            <img src={review.authorAvatarUrl} alt={review.authorName || 'User'} className="w-full h-full object-cover" />
+                          ) : (
+                            (review.authorName ? review.authorName.substring(0,2) : review.userId.substring(0,2)).toUpperCase()
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="font-bold text-xs sm:text-sm text-text">
+                              {review.authorName || `Kullanıcı ${review.userId.substring(0,6)}`}
+                            </span>
+                            <div className="flex items-center gap-1 text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-md text-xs font-bold">
+                              <Star size={11} className="fill-current" /> {review.rating}/10
+                            </div>
+                          </div>
+                          <Typography variant="body" className="text-muted leading-relaxed whitespace-pre-line text-xs sm:text-sm">
+                            {review.text}
+                          </Typography>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-10 bg-card/20 rounded-2xl border border-dashed border-border/40">
+                      <MessageSquare size={36} className="mx-auto text-muted/30 mb-2" />
+                      <Typography variant="h3" className="text-text/70 text-xs font-bold mb-1">Henüz İnceleme Yok</Typography>
+                      <Typography variant="body" className="text-muted text-xs">Bu kitabı ilk inceleyen sen ol!</Typography>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+
+              {/* Sağ Kolon: Bahsedilen Readixler */}
+              <div className="space-y-4">
+                <div className="bg-card/50 p-4 sm:p-5 rounded-2xl border border-border/50">
+                  <Typography variant="h3" className="font-bold text-sm mb-3 flex items-center gap-2">
+                    <Hash size={16} className="text-primary" /> Bahsedilenler
+                  </Typography>
+                  
+                  {mentionsLoading ? (
+                    <div className="flex items-center justify-center py-6">
+                      <Loader2 className="animate-spin text-primary" size={20} />
+                    </div>
+                  ) : mentions.length > 0 ? (
+                    <div className="flex flex-col gap-3">
+                      {mentions.slice(0, visibleMentionsCount).map((readix) => {
+                        const rAuthor = mentionsAuthors[readix.authorId] || userProfile;
+                        return (
+                          <ReadixCard
+                            key={readix.id}
+                            linkedStory={readix.linkedStory}
+                            authorName={rAuthor?.displayName || 'Bilinmiyor'}
+                            authorUsername={rAuthor?.username || 'user'}
+                            authorAvatarUrl={rAuthor?.avatarUrl}
+                            content={readix.content}
+                            mediaUrls={readix.mediaUrls}
+                            createdAtStr={readix.createdAt ? new Date((readix.createdAt as any).seconds ? (readix.createdAt as any).seconds * 1000 : (readix.createdAt as unknown as number)).toLocaleDateString() : 'Şimdi'}
+                            likesCount={readix.stats?.likes || 0}
+                            commentsCount={readix.stats?.comments || 0}
+                            repostsCount={readix.stats?.reposts || 0}
+                            readOnlyStats={true}
+                            onPress={() => router.push(`/readix?id=${readix.id}`)}
+                          />
+                        );
+                      })}
+                      {visibleMentionsCount < mentions.length && (
+                        <Button 
+                          variant="ghost" 
+                          className="w-full mt-1 text-primary text-xs py-1"
+                          onPress={() => setVisibleMentionsCount(prev => prev + 5)}
+                        >
+                          Daha Fazla Göster ({mentions.length - visibleMentionsCount})
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <Typography variant="caption" className="text-muted italic text-center block text-xs py-4">
+                      Henüz bu kitaptan bahsedilen bir Readix paylaşılmamış.
+                    </Typography>
+                  )}
                 </div>
               </div>
+
+            </div>
+
+          </div>
+        )}
+
+        {/* ==================================================== */}
+        {/* SEKME 4: KARAKTERLER (Karakter Defteri Ansiklopedisi) */}
+        {/* ==================================================== */}
+        {activeTab === 'characters' && characters.length > 0 && (
+          <div className="space-y-4">
+            
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Typography variant="h2" className="text-lg font-bold text-text">Karakter Defteri</Typography>
+                <button 
+                  onClick={() => setShowCharacterBookInfo(true)}
+                  className="p-1 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer"
+                  title="Karakter Defteri Nedir?"
+                >
+                  <Info size={15} />
+                </button>
+              </div>
+            </div>
 
             {!canViewCharacters ? (
-              <div className="text-center py-20 bg-card/50 rounded-3xl border border-white/5 relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-orange-500/10 opacity-50"></div>
-                <div className="relative z-10 flex flex-col items-center">
-                  <div className="w-20 h-20 rounded-full bg-yellow-500/20 flex items-center justify-center mb-6 border border-yellow-500/30">
-                    <Lock size={32} className="text-yellow-500" />
-                  </div>
-                  <Typography variant="h3" className="mb-2 text-text font-bold text-center">Premium Özellik</Typography>
-                  <Typography variant="body" className="text-muted text-center max-w-md mx-auto mb-8 px-4">
-                    Karakter defteri özelliği sadece Premium üyelere ve Adminlere özeldir. Hikayedeki karakterlerin derinliklerini keşfetmek için Premium'a geçin.
-                  </Typography>
-                  <Button onPress={() => router.push('/premium')} variant="primary" className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-none px-8 py-3 rounded-full font-bold shadow-lg shadow-yellow-500/20 hover:shadow-yellow-500/40 hover:-translate-y-1 transition-all">
-                    Premium'a Yükselt
-                  </Button>
+              <div className="text-center py-16 bg-card/50 rounded-2xl border border-amber-500/20 relative overflow-hidden group p-6">
+                <div className="w-16 h-16 rounded-full bg-amber-500/15 flex items-center justify-center mb-4 mx-auto border border-amber-500/30">
+                  <Lock size={28} className="text-amber-500" />
                 </div>
-              </div>
-            ) : characters.length === 0 ? (
-              <div className="text-center py-20 bg-card/50 rounded-3xl border border-white/5">
-                <Users size={64} className="mx-auto text-muted/30 mb-6" />
-                <Typography variant="h3" className="mb-2 text-text/80 text-center">Karakterler Gizli</Typography>
-                <Typography variant="body" className="text-muted text-center max-w-md mx-auto px-4">
-                  Yazar henüz bu hikaye için karakter defterini paylaşmamış veya karakterler gizli tutuluyor.
+                <Typography variant="h3" className="mb-2 text-text font-bold text-base">Premium Özellik</Typography>
+                <Typography variant="body" className="text-muted text-xs text-center max-w-md mx-auto mb-6">
+                  Karakter defteri özelliği sadece Premium üyelere ve hikaye sahibine özeldir. Hikayedeki karakterlerin derinliklerini keşfetmek için Premium'a geçebilirsiniz.
                 </Typography>
+                <Button 
+                  onPress={() => router.push('/premium')} 
+                  variant="primary" 
+                  className="bg-gradient-to-r from-amber-500 to-orange-500 text-black border-none px-6 py-2.5 rounded-full font-bold shadow-md cursor-pointer text-xs"
+                >
+                  Premium'a Yükselt
+                </Button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {characters.map(char => (
-                  <div key={char.id} className="bg-card border border-border/40 hover:border-primary/50 rounded-3xl overflow-hidden transition-all group flex flex-col shadow-lg shadow-black/5 hover:-translate-y-1 hover:shadow-xl">
-                    <div className="relative h-64 w-full bg-muted/10 overflow-hidden">
+                  <div key={char.id} className="bg-card/50 border border-border/50 hover:border-primary/50 rounded-2xl overflow-hidden transition-all group flex flex-col shadow-xs hover:-translate-y-0.5">
+                    
+                    <div className="relative h-52 w-full bg-muted/10 overflow-hidden">
                       {char.avatarUrl ? (
-                        <img src={char.avatarUrl} alt={char.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                        <img 
+                          src={char.avatarUrl} 
+                          alt={char.name} 
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                        />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-primary/5 group-hover:bg-primary/10 transition-colors">
-                          <Users size={48} className="text-primary/20" />
+                          <Users size={40} className="text-primary/20" />
                         </div>
                       )}
-                      <div className="absolute top-3 right-3 bg-background/80 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-lg border border-border/50">
-                        <span className="text-[10px] font-bold text-text">{
+                      <div className="absolute top-2.5 right-2.5 bg-background/80 backdrop-blur-md px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm border border-border/50">
+                        <span className="text-[9px] font-bold text-text">{
                           char.role === 'protagonist' ? 'Baş Karakter' :
                           char.role === 'antagonist' ? 'Düşman' :
                           char.role === 'supporting' ? 'Yan Karakter' : 'Figüran'
@@ -821,414 +1497,75 @@ export default function StoryDetailPage() {
                       </div>
                     </div>
 
-                    <div className="p-4">
-                      <Typography variant="h3" className="font-black text-text mb-1 group-hover:text-primary transition-colors text-lg">
+                    <div className="p-3.5">
+                      <Typography variant="h3" className="font-bold text-text mb-0.5 group-hover:text-primary transition-colors text-base truncate">
                         {char.name}
                       </Typography>
-                      <Typography variant="caption" className="text-muted font-medium mb-3 block text-xs">
+                      <Typography variant="caption" className="text-muted font-medium mb-2.5 block text-xs">
                         {char.occupation || 'Meslek Belirtilmedi'} • {char.age || '?'} Yaşında
                       </Typography>
                       
-                      <div className="flex flex-wrap gap-1.5 mb-1">
-                        {char.personalityTraits?.slice(0, 2).map((trait: string, i: number) => (
-                          <span key={i} className="bg-primary/10 text-primary text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-md">
+                      <div className="flex flex-wrap gap-1">
+                        {char.personalityTraits?.slice(0, 3).map((trait: string, i: number) => (
+                          <span key={i} className="bg-primary/10 text-primary text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md">
                             {trait}
                           </span>
                         ))}
-                        {(char.personalityTraits?.length || 0) > 2 && (
-                          <span className="bg-muted/10 text-muted text-[9px] font-bold px-2 py-1 rounded-md">
-                            +{(char.personalityTraits?.length || 0) - 2}
-                          </span>
-                        )}
                       </div>
                     </div>
+
                   </div>
                 ))}
               </div>
             )}
-            </div>
-          )}
-        </div>
 
-        {/* ================================== */}
-        {/* SÜTUN 2: BÖLÜMLER                 */}
-        {/* ================================== */}
-        <div className="xl:col-span-2 flex flex-col gap-10">
-          <div className="w-full">
-            <div className="bg-card/40 backdrop-blur-xl border border-border/40 rounded-3xl p-4 sm:p-6 md:p-8 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.15)]">
-              <div className="flex items-center justify-between mb-6 sm:mb-8">
-                <div className="flex items-center gap-2.5 sm:gap-3">
-                  <Typography variant="h2" className="text-xl sm:text-2xl font-bold tracking-tight">İçindekiler</Typography>
-                  <span className="px-3 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-primary/10 text-primary border border-primary/20 backdrop-blur-md">
-                    {chapters.length} Bölüm
-                  </span>
-                </div>
-              </div>
-              
-              <div className="space-y-3">
-                {chapters.length > 0 ? (
-                  <>
-                    {chapters.slice(0, visibleChaptersCount).map((chapter, index) => {
-                      let isScheduled = false;
-                      let publishDateObj = null;
-                      if (chapter.status === 'scheduled' && chapter.publishDate) {
-                        publishDateObj = chapter.publishDate.toDate ? chapter.publishDate.toDate() : new Date(chapter.publishDate as any);
-                        if (publishDateObj > new Date()) {
-                          isScheduled = true;
-                        }
-                      }
-
-                      // Okundu ve Şu An Okunuyor asla aynı anda görünmez:
-                      // Bir bölüm tamamlanmışsa öncelik Okundu'dur.
-                      // Sadece tamamlanmamışsa ve aktif bölümse "Şu An Okunuyor" gösterilir.
-                      const isCompleted = Boolean(readingProgress?.completedChapters?.includes(chapter.chapterId));
-                      const isCurrent = !isCompleted && readingProgress?.currentChapterId === chapter.chapterId;
-
-                      return (
-                        <div
-                          key={chapter.chapterId}
-                          className={`p-3.5 sm:p-4 md:p-5 rounded-2xl transition-all duration-300 group relative overflow-hidden flex items-start gap-3 sm:gap-4.5 ${
-                            isScheduled 
-                              ? 'bg-background/40 border border-border/10 opacity-70 cursor-default' 
-                              : isCurrent
-                              ? 'bg-primary/[0.06] border border-primary/45 shadow-[0_0_20px_rgba(99,102,241,0.12)] cursor-pointer'
-                              : isCompleted
-                              ? 'bg-card/40 border border-primary/20 hover:border-primary/45 hover:bg-card/70 cursor-pointer shadow-sm'
-                              : 'bg-card/40 border border-border/30 hover:border-primary/40 hover:bg-card/80 hover:shadow-lg hover:shadow-primary/5 cursor-pointer'
-                          }`}
-                          onClick={() => {
-                            if (!isScheduled) router.push(`/read/${storyId}/${chapter.chapterId}`);
-                          }}
-                        >
-                          {/* Login11 Style Active Indicator bar on left edge */}
-                          {isCurrent && (
-                            <div className="absolute left-0 top-0 bottom-0 w-1 sm:w-1.5 bg-primary rounded-l-2xl shadow-[0_0_14px_var(--color-primary,#6366f1)]" />
-                          )}
-
-                          {/* Sol Sayı / Durum Kutusu */}
-                          <div className={`w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center shrink-0 font-extrabold text-xs sm:text-sm md:text-base transition-all duration-300 self-start mt-0.5 ${
-                            isScheduled 
-                              ? 'bg-muted/10 text-muted border border-border/20' 
-                              : isCurrent
-                              ? 'bg-primary text-white border border-primary shadow-[0_0_16px_rgba(99,102,241,0.4)] ring-2 ring-primary/20'
-                              : isCompleted
-                              ? 'bg-primary/10 text-primary border border-primary/25 shadow-sm'
-                              : 'bg-muted/15 text-muted-foreground border border-border/20 group-hover:border-primary/30 group-hover:text-primary group-hover:bg-primary/10'
-                          }`}>
-                            {isScheduled ? (
-                              <Lock size={15} className="sm:w-[17px] sm:h-[17px]" />
-                            ) : isCurrent ? (
-                              <Bookmark size={16} className="text-white fill-current sm:w-[18px] sm:h-[18px]" />
-                            ) : isCompleted ? (
-                              <Check size={16} className="text-primary sm:w-[18px] sm:h-[18px]" strokeWidth={2.5} />
-                            ) : (
-                              index + 1
-                            )}
-                          </div>
-
-                          {/* İçerik Alanı: Bölüm Başlığı (Tam Genişlik) + Alt Bilgi Çizgisi (İstatistikler ve Durum Rozeti) */}
-                          <div className="flex-1 min-w-0 flex flex-col gap-1.5 sm:gap-2">
-                            {/* 1. Satır: Bölüm Başlığı (Mobilde de tablette de hiçbir şey tarafından sıkıştırılmaz) */}
-                            <div className="flex items-start justify-between gap-2">
-                              <Typography 
-                                variant="body" 
-                                className={`font-bold text-sm sm:text-base md:text-lg text-foreground break-words leading-snug transition-colors flex-1 ${
-                                  isScheduled ? 'text-text/70' : isCurrent ? 'text-primary' : 'group-hover:text-primary'
-                                }`}
-                              >
-                                {chapter.title}
-                              </Typography>
-
-                              {!isScheduled && (
-                                <ChevronRight size={18} className="text-muted/30 group-hover:text-primary group-hover:translate-x-1 transition-all hidden sm:block shrink-0 mt-0.5" />
-                              )}
-                            </div>
-
-                            {/* 2. Satır: İstatistikler ve Rozet (En sonda ve esnek) */}
-                            <div className="flex items-center justify-between gap-x-3 gap-y-1.5 flex-wrap pt-0.5">
-                              {!isScheduled ? (
-                                <div className="flex items-center gap-2.5 sm:gap-3.5 text-[11px] sm:text-xs text-muted/70 flex-wrap">
-                                  {chapter.publishDate && (
-                                    <span className="flex items-center gap-1 shrink-0">
-                                      <Calendar size={12} className="opacity-70 sm:w-3.5 sm:h-3.5" />
-                                      {(chapter.publishDate as any)?.seconds
-                                        ? new Date((chapter.publishDate as any).seconds * 1000).toLocaleDateString('tr-TR')
-                                        : new Date(chapter.publishDate as any).toLocaleDateString('tr-TR')}
-                                    </span>
-                                  )}
-                                  <span className="flex items-center gap-1 shrink-0">
-                                    <Eye size={12} className="opacity-70 sm:w-3.5 sm:h-3.5" />
-                                    {(chapter.stats?.views || 0).toLocaleString()}
-                                  </span>
-                                  <span className="flex items-center gap-1 shrink-0">
-                                    <Heart size={12} className="opacity-70 sm:w-3.5 sm:h-3.5" />
-                                    {(chapter.stats?.likes || 0).toLocaleString()}
-                                  </span>
-                                  <span className="flex items-center gap-1 shrink-0">
-                                    <MessageSquare size={12} className="opacity-70 sm:w-3.5 sm:h-3.5" />
-                                    {(chapter.stats?.commentCount || 0).toLocaleString()}
-                                  </span>
-                                </div>
-                              ) : (
-                                publishDateObj && (
-                                  <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-blue-400/80">
-                                    <Calendar size={12} className="sm:w-3.5 sm:h-3.5" />
-                                    <span>Planlandı: {publishDateObj.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</span>
-                                  </div>
-                                )
-                              )}
-
-                              {/* Sağ / En Son Alan: Durum Rozeti */}
-                              <div className="flex items-center gap-2 shrink-0 ml-auto">
-                                {isCurrent && (
-                                  <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-primary/15 text-primary border border-primary/30 shadow-[0_0_12px_rgba(99,102,241,0.2)] backdrop-blur-sm whitespace-nowrap">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                                    Şu An Okunuyor
-                                  </span>
-                                )}
-                                {isCompleted && (
-                                  <span className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-primary/10 text-primary border border-primary/25 shadow-sm backdrop-blur-sm whitespace-nowrap">
-                                    <Check size={11} className="text-primary sm:w-3 sm:h-3" strokeWidth={2.5} />
-                                    Okundu
-                                  </span>
-                                )}
-                                {isScheduled && (
-                                  <Button 
-                                    variant="outline" 
-                                    className="text-[10px] sm:text-xs py-0.5 sm:py-1 h-6 sm:h-7 px-2.5 rounded-full border-blue-500/30 text-blue-400 hover:bg-blue-500/10 flex items-center justify-center gap-1 whitespace-nowrap"
-                                    onPress={(e) => {
-                                      e.stopPropagation();
-                                      handleToggleReminder(chapter.chapterId);
-                                    }}
-                                  >
-                                    <Bell size={11} /> Bildirimleri Aç
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    
-                    {visibleChaptersCount < chapters.length && (
-                      <button 
-                        onClick={() => setVisibleChaptersCount(prev => prev + 20)}
-                        className="w-full mt-4 py-4 bg-primary/10 text-primary font-bold rounded-xl hover:bg-primary/20 transition-colors flex items-center justify-center gap-2"
-                      >
-                        <List size={18} /> Sonraki Bölümleri Yükle ({chapters.length - visibleChaptersCount} kaldı)
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <div className="py-12 text-center">
-                    <BookOpen size={48} className="mx-auto text-muted/20 mb-4" />
-                    <Typography variant="h3" className="text-muted mb-2">Henüz Bölüm Yok</Typography>
-                    <Typography variant="body" className="text-muted/60">Yazar henüz bu kitap için bir bölüm yayınlamadı.</Typography>
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
-        </div>
-
-        {/* ================================== */}
-        {/* SÜTUN 3: SAĞ PANEL (İncelemeler)  */}
-        {/* ================================== */}
-        <div className="xl:col-span-1 flex flex-col gap-10">
-          
-          {/* Katkıda Bulunanlar (Ekip) */}
-          {story.contributors && story.contributors.length > 0 && (
-            <div className="bg-card/50 border border-white/5 p-6 md:p-8 rounded-3xl">
-              <Typography variant="h3" className="text-xl font-bold mb-6 flex items-center gap-2">
-                <Users size={20} className="text-primary" /> Ekip
-              </Typography>
-              <div className="space-y-2">
-                {story.contributors.map((contributor, i) => {
-                  const isString = typeof contributor === 'string';
-                  const role = isString ? 'Katkıda Bulunan' : contributor.role;
-                  const name = isString ? contributor : contributor.name;
-                  
-                  return (
-                    <div key={i} className="flex flex-col mb-3 bg-text/5 border border-white/5 rounded-2xl p-4 hover:bg-text/10 transition-colors">
-                      <span className="text-[10px] font-bold text-primary/80 uppercase tracking-widest mb-1.5">{role}</span>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-sm font-bold text-primary shadow-inner">
-                          {name.charAt(0).toUpperCase()}
-                        </div>
-                        <span className="text-text/90 font-semibold">{name}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-10">
-            {/* İnceleme Yazma Formu */}
-            <div className="bg-card/50 border border-primary/20 p-6 md:p-8 rounded-3xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
-              
-              <Typography variant="h3" className="text-xl font-bold mb-2">Kendi İncelemeni Yaz</Typography>
-              <Typography variant="body" className="text-muted mb-6">Kitabı değerlendirerek diğer okurlara ve yazara destek olabilirsin.</Typography>
-              
-              <div className="flex flex-col gap-4 relative z-10">
-                <div className="flex items-center gap-4">
-                  <span className="font-bold text-text/80">Puanın (1-10):</span>
-                  <input 
-                    type="range" 
-                    min="1" 
-                    max="10" 
-                    step="0.5" 
-                    value={reviewRating}
-                    onChange={(e) => setReviewRating(parseFloat(e.target.value))}
-                    className="flex-1 accent-primary"
-                  />
-                  <span className="font-black text-2xl text-yellow-500 w-12 text-center">{reviewRating}</span>
-                </div>
-                
-                <textarea 
-                  value={reviewText}
-                  onChange={(e) => setReviewText(e.target.value)}
-                  placeholder="Düşüncelerini buraya yaz..."
-                  className="w-full bg-background border border-text/10 rounded-2xl p-5 text-text focus:outline-none focus:border-primary resize-y min-h-[120px]"
-                />
-                
-                <div className="flex justify-end">
-                  <Button 
-                    variant="primary" 
-                    onPress={handleSubmitReview} 
-                    disabled={submittingReview || !reviewText.trim()}
-                    className="px-8 rounded-full"
-                  >
-                    {submittingReview ? 'Gönderiliyor...' : 'İncelemeyi Gönder'}
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* İnceleme Listesi */}
-            <div className="space-y-6">
-              <Typography variant="h3" className="text-2xl font-bold mb-6 flex items-center gap-2">
-                Topluluk İncelemeleri <span className="text-muted text-lg font-normal">({reviews.length})</span>
-              </Typography>
-
-              {reviews.length > 0 ? (
-                reviews.map(review => (
-                  <div key={review.reviewId} className="bg-card/20 border border-white/5 p-6 rounded-3xl flex flex-col md:flex-row gap-6">
-                    {/* Sol taraf avatar vb. eklenebilir. Şimdilik sade */}
-                    <div className="w-12 h-12 rounded-full bg-text/10 flex-shrink-0 flex items-center justify-center font-bold text-lg text-text/50 overflow-hidden">
-                      {review.authorAvatarUrl ? (
-                        <img src={review.authorAvatarUrl} alt={review.authorName || 'User'} className="w-full h-full object-cover" />
-                      ) : (
-                        (review.authorName ? review.authorName.substring(0,2) : review.userId.substring(0,2)).toUpperCase()
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-bold text-text">{review.authorName || `Kullanıcı ${review.userId.substring(0,6)}`}</span>
-                        <div className="flex items-center gap-1 text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded-md text-sm font-bold">
-                          <Star size={14} className="fill-current" /> {review.rating}/10
-                        </div>
-                      </div>
-                      <Typography variant="body" className="text-muted leading-relaxed whitespace-pre-line">
-                        {review.text}
-                      </Typography>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-12 bg-card/10 rounded-3xl border border-dashed border-text/10">
-                  <MessageSquare size={40} className="mx-auto text-muted/30 mb-4" />
-                  <Typography variant="h3" className="text-text/60 mb-2">Henüz İnceleme Yok</Typography>
-                  <Typography variant="body" className="text-muted">İlk incelemeyi yapan sen ol!</Typography>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* BAHSEDİLENLER */}
-          <div className="bg-card p-6 md:p-8 rounded-2xl border border-border/20">
-            <Typography variant="h3" className="font-bold mb-4 flex items-center gap-2">
-              <Hash size={18} className="text-primary" /> Bahsedilenler
-            </Typography>
-            
-            {mentionsLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="animate-spin text-primary" size={24} />
-              </div>
-            ) : mentions.length > 0 ? (
-              <div className="flex flex-col gap-4">
-                {mentions.slice(0, visibleMentionsCount).map((readix) => {
-                  const author = mentionsAuthors[readix.authorId] || userProfile;
-                  return (
-                    <ReadixCard
-                      key={readix.id}
-                      linkedStory={readix.linkedStory}
-                      authorName={author?.displayName || 'Bilinmiyor'}
-                      authorUsername={author?.username || 'user'}
-                      authorAvatarUrl={author?.avatarUrl}
-                      content={readix.content}
-                      mediaUrls={readix.mediaUrls}
-                      createdAtStr={readix.createdAt ? new Date((readix.createdAt as any).seconds ? (readix.createdAt as any).seconds * 1000 : (readix.createdAt as unknown as number)).toLocaleDateString() : 'Şimdi'}
-                      likesCount={readix.stats?.likes || 0}
-                      commentsCount={readix.stats?.comments || 0}
-                      repostsCount={readix.stats?.reposts || 0}
-                      readOnlyStats={true}
-                      onPress={() => router.push(`/readix?id=${readix.id}`)}
-                    />
-                  );
-                })}
-                {visibleMentionsCount < mentions.length && (
-                  <Button 
-                    variant="ghost" 
-                    className="w-full mt-2 text-primary text-sm py-1"
-                    onPress={() => setVisibleMentionsCount(prev => prev + 5)}
-                  >
-                    Daha Fazla Göster ({mentions.length - visibleMentionsCount})
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <Typography variant="caption" className="text-muted italic text-center block">
-                Henüz bu kitaptan bahsedilen bir Readix paylaşılmamış.
-              </Typography>
-            )}
-          </div>
-
-        </div>
+        )}
 
       </div>
 
-      {/* BUNLARI DA SEVEBİLİRSİNİZ */}
-      {similarStories.length > 0 && (
-        <div className="max-w-[1600px] mx-auto px-6 md:px-8 w-full mt-12 pb-20 animate-fade-in-up border-t border-white/5 pt-12">
-          <Typography variant="h2" className="text-2xl font-bold mb-8 flex items-center gap-2">
-            <Heart size={24} className="text-primary" /> Bunları Da Seveceksiniz
-          </Typography>
-          <div className="flex flex-wrap gap-4 md:gap-6">
-            {similarStories.map(sim => (
-              <div key={sim.storyId} className="w-[130px] md:w-[150px] flex-shrink-0 transition-transform duration-300 hover:-translate-y-2">
-                <StoryCard 
-                  title={sim.title}
-                  authorName={sim.authorName || ''}
-                  authorUsername={sim.authorUsername || ''}
-                  authorAvatarUrl={sim.authorAvatarUrl}
-                  coverImage={sim.coverImage}
-                  views={sim.stats?.views || 0}
-                  likes={sim.stats?.likes || 0}
-                  tags={sim.tags}
-                  isWebtoon={sim.format === 'webtoon'}
-                  onPress={() => router.push(`/story/${sim.storyId}`)}
-                />
+      {/* ── 4. YÜZEN HIZLI OKUMA ÇUBUĞU (Scroll Edilince Mobilde Beliren Bar) ── */}
+      {showStickyBar && chapters.length > 0 && (
+        <aside 
+          aria-label="Hızlı Okuma Çubuğu"
+          className="xl:hidden fixed bottom-[74px] left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] max-w-md z-40 pointer-events-auto animate-in fade-in slide-in-from-bottom-2 duration-200"
+        >
+          <div className="rounded-2xl bg-card/95 backdrop-blur-2xl border border-primary/30 p-2.5 px-3 flex items-center justify-between shadow-[0_10px_35px_rgba(0,0,0,0.5)]">
+            
+            <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-3">
+              <div className="w-8 h-11 shrink-0 rounded-lg overflow-hidden border border-border/50 shadow-xs">
+                {story.coverImage ? (
+                  <img src={story.coverImage} alt={story.title} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-muted/20 flex items-center justify-center">
+                    <BookOpen size={12} className="text-muted" />
+                  </div>
+                )}
               </div>
-            ))}
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold text-text truncate leading-tight">{story.title}</p>
+                <p className="text-[10px] text-muted truncate">
+                  {hasReadingHistory 
+                    ? `Devam et: ${targetChapterTitle || 'Bölüm'}` 
+                    : `${chapters.length} Bölüm`}
+                </p>
+              </div>
+            </div>
+
+            <Button
+              variant="primary"
+              onPress={handleStartReading}
+              className="px-4 py-2 rounded-xl text-xs font-bold shrink-0 shadow-md shadow-primary/20 flex items-center gap-1.5 cursor-pointer"
+            >
+              <Play size={12} className="fill-current" />
+              <span>{hasReadingHistory ? 'Devam Et' : 'Oku'}</span>
+            </Button>
+
           </div>
-        </div>
+        </aside>
       )}
 
-      {/* Okuma Listesine Ekle Modalı */}
+      {/* ── Okuma Listesine Ekle Modalı ── */}
       {firebaseUser && (
         <AddToReadingListModal
           isOpen={isAddToReadingListOpen}
@@ -1238,6 +1575,7 @@ export default function StoryDetailPage() {
           storyTitle={story?.title}
         />
       )}
+
     </div>
   );
 }
