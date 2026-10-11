@@ -73,6 +73,68 @@ export type {
   SitePopup,
   ChapterAudioTrack,
   ReadingList,
+  // Seri Tipleri
+  Series,
+  SeriesBookItem,
+  SeriesStats,
+  SeriesStatus,
+  // Evren Tipleri
+  Universe,
+  UniverseVisibility,
+  UniverseGenre,
+  UniverseStats,
+  CharacterArc,
+  CharacterRelationship,
+  CharacterPNGGallery,
+  UniverseLocation,
+  LocationType,
+  UniverseTimelineEvent,
+  TimelineEventType,
+  UniverseOrganization,
+  OrganizationType,
+  UniverseItem,
+  UniversePowerSystem,
+  PowerTier,
+  UniverseGlossaryTerm,
+  UniverseLore,
+  LoreCategory,
+  UniverseMap,
+  UniverseMapMarker,
+  UniverseMapRoute,
+  MapMarkerIcon,
+  MapType,
+  UniverseRace,
+  UniverseCreature,
+  CreatureType,
+  CreatureDangerLevel,
+  UniverseCulture,
+  CultureCategory,
+  UniverseMedia,
+  MediaCategory,
+  UniverseSoundtrack,
+  SoundtrackTheme,
+  UniverseCanonRule,
+  CanonRuleCategory,
+  UniversePlotThread,
+  PlotThreadStatus,
+  PlotThreadImportance,
+  PlotThreadClue,
+  InlineEntityType,
+  InlineUniverseEntity,
+  UniverseMemberRole,
+  UniverseMember,
+} from './types';
+
+export {
+  CANON_RULE_CATEGORY_LABELS,
+  PLOT_THREAD_STATUS_LABELS,
+  PLOT_THREAD_IMPORTANCE_LABELS,
+  UNIVERSE_MEMBER_ROLE_CONFIG,
+  getUserUniverseRole,
+  canManageUniverseMembers,
+  canEditUniverseLore,
+  canManageUniverseStories,
+  canManageUniverseMedia,
 } from './types';
 
 // Auth servisi
@@ -97,6 +159,7 @@ export {
   updateUserProfile,
   becomeAuthor,
   getUserByUsername,
+  searchUsersByQuery,
   getFeaturedAuthors,
   followUser,
   unfollowUser,
@@ -120,6 +183,8 @@ export type { ReaderState, ReaderTheme, ReaderFontFamily, ReaderLineHeight, Read
 // Story Servisi
 
 export * from './services/storyService';
+export * from './services/seriesService';
+export * from './services/universeService';
 export * from './services/storageService';
 export * from './services/interactionService';
 export * from './services/readixService';
@@ -144,6 +209,7 @@ export * from './utils/audioUtils';
 export * from './constants/tags';
 export * from './utils/slug';
 export * from './utils/sanitize';
+export * from './utils/loreAnnotation';
 
 // Auth Store & Hooks
 export { useAuthStore } from './store/useAuthStore';

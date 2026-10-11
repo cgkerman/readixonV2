@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import HeroBannerForm from '../_components/HeroBannerForm';
 import { Typography } from '@readixon/ui';
 import Link from 'next/link';
@@ -19,7 +19,9 @@ export default function CreateHeroBannerPage() {
         </div>
       </div>
       
-      <HeroBannerForm />
+      <Suspense fallback={<div className="p-12 text-center text-muted">Yükleniyor...</div>}>
+        <HeroBannerForm />
+      </Suspense>
     </div>
   );
 }

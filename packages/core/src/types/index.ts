@@ -7,6 +7,7 @@
  */
 
 import type { Timestamp } from 'firebase/firestore';
+import type { CharacterArc, CharacterRelationship, CharacterPNGGallery } from './universe';
 
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // 3.1. KullanÄ±cÄ±lar (/users)
@@ -173,6 +174,14 @@ export interface Story {
   createdAt: Timestamp;
   updatedAt: Timestamp;
   format?: 'novel' | 'webtoon';
+
+  // Evren & Seri Entegrasyonu (Geriye dönük uyumlu / Opsiyonel)
+  universeId?: string;
+  universeTitle?: string;
+  seriesId?: string;
+  seriesTitle?: string;
+  seriesOrder?: number;
+  seriesLabel?: string;
 }
 
 export type StoryWithLatestChapter = Story & {
@@ -777,6 +786,18 @@ export interface Character {
   // Stats
   rpgStats?: CharacterRPGStats;
   
+  // Evren Defteri 2.0 Entegrasyonu (Geriye dönük uyumlu / Opsiyonel)
+  universeId?: string;
+  storyIds?: string[];
+  characterArc?: CharacterArc;
+  relationships?: CharacterRelationship[];
+  pngGallery?: CharacterPNGGallery;
+  authorNotes?: string;
+  readerNotes?: string;
+  secretLore?: string;
+  isSpoiler?: boolean;
+  spoilerThresholdChapter?: number;
+
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -843,4 +864,10 @@ export interface ReadingList {
   createdAt: any;
   updatedAt: any;
 }
+
+// ─────────────────────────────────────────────────────────────────
+// Evren & Seri Modül Dışa Aktarımları
+// ─────────────────────────────────────────────────────────────────
+export * from './series';
+export * from './universe';
 

@@ -24,14 +24,19 @@ import {
   Readix,
   db,
   getEditorialReviewByStoryId,
-  getReadingProgress
+  getReadingProgress,
+  getSeriesById,
+  getUniverseById,
+  generateSeriesSlug,
+  generateUniverseSlug,
+  generateStorySlug
 } from '@readixon/core';
-import type { Story, User, Chapter, Review, Character, EditorialReview, ReadingProgress } from '@readixon/core';
+import type { Story, User, Chapter, Review, Character, EditorialReview, ReadingProgress, Series, Universe } from '@readixon/core';
 import { 
   BookOpen, Heart, Eye, List, Play, BookmarkPlus, BookmarkCheck, 
   ArrowLeft, Loader2, Star, MessageSquare, Users, Hash,
   Lock, Calendar, Bell, Info, X, Sparkles, ChevronRight, Bookmark, Check,
-  ListPlus, Share2, ArrowUpDown
+  ListPlus, Share2, ArrowUpDown, Layers, Globe
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from "sonner";
@@ -56,6 +61,11 @@ export default function StoryDetailPage() {
   const [editorialReview, setEditorialReview] = useState<EditorialReview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  
+  // Seri & Evren Durumları
+  const [series, setSeries] = useState<Series | null>(null);
+  const [seriesBooks, setSeriesBooks] = useState<{ story: Story; order: number; customLabel?: string }[]>([]);
+  const [universe, setUniverse] = useState<Universe | null>(null);
   
   const [isSaved, setIsSaved] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -189,6 +199,35 @@ export default function StoryDetailPage() {
         setCharacters(fetchedCharacters);
         setEditorialReview(fetchedEditorialReview);
         setLoading(false);
+
+        // Seri verilerini çek
+        if (fetchedStory.seriesId) {
+          getSeriesById(fetchedStory.seriesId).then(async (s) => {
+            if (s) {
+              setSeries(s);
+              if (s.books && s.books.length > 0) {
+                const sorted = [...s.books].sort((a, b) => a.order - b.order);
+                const bPromises = sorted.map(async (bk) => {
+                  const bStory = await getStoryById(bk.storyId);
+                  return {
+                    story: bStory || ({ storyId: bk.storyId, title: 'Kitap' } as Story),
+                    order: bk.order,
+                    customLabel: bk.customLabel,
+                  };
+                });
+                const resolved = await Promise.all(bPromises);
+                setSeriesBooks(resolved);
+              }
+            }
+          }).catch(console.error);
+        }
+
+        // Evren verilerini çek
+        if (fetchedStory.universeId) {
+          getUniverseById(fetchedStory.universeId).then((u) => {
+            if (u) setUniverse(u);
+          }).catch(console.error);
+        }
 
         // Benzer kitapları getir (Arka planda yüklenir)
         if (fetchedStory.tags && fetchedStory.tags.length > 0) {
@@ -622,6 +661,30 @@ export default function StoryDetailPage() {
           {/* Kitap Bilgileri & Başlık */}
           <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left w-full min-w-0">
             
+            {/* Seri & Evren Üst Rozetleri */}
+            {(story.seriesId || story.universeId) && (
+              <div className="flex flex-wrap items-center gap-2 mb-2 justify-center md:justify-start">
+                {story.seriesId && (
+                  <Link
+                    href={`/series/${series?.slug || story.seriesId}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-500 text-[11px] font-extrabold shadow-xs transition-colors"
+                  >
+                    <Layers size={12} />
+                    <span>{story.seriesTitle || series?.title || 'Kitap Serisi'} #{story.seriesOrder || 1}</span>
+                  </Link>
+                )}
+                {story.universeId && (
+                  <Link
+                    href={`/universe/${universe?.slug || story.universeId}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/15 hover:bg-primary/25 border border-primary/30 text-primary text-[11px] font-extrabold shadow-xs transition-colors"
+                  >
+                    <Sparkles size={12} />
+                    <span>🌌 {story.universeTitle || universe?.title || 'Evren'}</span>
+                  </Link>
+                )}
+              </div>
+            )}
+
             {/* Status & Puan Rozetleri */}
             <div className="flex flex-wrap gap-2 mb-2.5 justify-center md:justify-start items-center">
               <span className="px-3 py-1 bg-card/80 backdrop-blur-md text-text text-[11px] font-bold rounded-full border border-border/50 shadow-xs">
@@ -800,6 +863,114 @@ export default function StoryDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* ── 1.5. Serinin Kitapları Şeridi ── */}
+      {series && seriesBooks.length > 0 && (
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 my-6">
+          <div className="p-4 sm:p-5 rounded-3xl bg-card/60 border border-border/50 backdrop-blur-sm shadow-xs">
+            <div className="flex items-center justify-between mb-3.5">
+              <div className="flex items-center gap-2">
+                <Layers size={18} className="text-amber-500" />
+                <Typography variant="h3" className="font-bold text-sm sm:text-base text-foreground">
+                  {series.title} ({seriesBooks.length} Kitaplık Seri)
+                </Typography>
+              </div>
+              <Link
+                href={`/series/${series.slug || story.seriesId}`}
+                className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+              >
+                Tüm Seriyi Gör <ChevronRight size={14} />
+              </Link>
+            </div>
+
+            <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-none">
+              {seriesBooks.map((item, idx) => {
+                const isCurrent = item.story.storyId === storyId;
+                const itemSlug = (item.story as any).slug || generateStorySlug(item.story.title, item.story.storyId);
+                return (
+                  <Link
+                    key={item.story.storyId}
+                    href={`/story/${itemSlug}`}
+                    className={`flex items-center gap-3 p-2.5 rounded-2xl border transition-all shrink-0 w-64 ${
+                      isCurrent
+                        ? 'bg-primary/10 border-primary/40 shadow-sm'
+                        : 'bg-background/60 hover:bg-background border-border/40 hover:border-primary/30'
+                    }`}
+                  >
+                    <div className="w-10 h-14 rounded-lg bg-card border border-border/50 overflow-hidden shrink-0">
+                      {item.story.coverImage ? (
+                        <img src={item.story.coverImage} alt={item.story.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-muted">
+                          <BookOpen size={16} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-black px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-500">
+                          #{idx + 1}
+                        </span>
+                        {isCurrent && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-primary text-black">
+                            Şu Anki
+                          </span>
+                        )}
+                        {item.customLabel && (
+                          <span className="text-[9px] font-medium text-muted truncate">
+                            {item.customLabel}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs font-bold text-foreground truncate block mt-0.5">
+                        {item.story.title}
+                      </span>
+                      <span className="text-[10px] text-muted block">
+                        {item.story.stats?.chapterCount || 0} Bölüm
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 1.6. Evrene Gir Çağrı Kartı ── */}
+      {universe && (
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 mb-6">
+          <Link
+            href={`/universe/${universe.slug || story.universeId}`}
+            className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-primary/15 via-card/70 to-purple-500/15 border border-primary/30 hover:border-primary/60 transition-all flex items-center justify-between group shadow-sm hover:shadow-md"
+          >
+            <div className="flex items-center gap-3.5 sm:gap-4">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-primary/20 text-primary flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <Globe size={22} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-primary/20 text-primary uppercase">
+                    Kurgusal Evren
+                  </span>
+                  <span className="text-xs text-muted font-semibold capitalize">{universe.genre}</span>
+                </div>
+                <Typography variant="h3" className="font-extrabold text-sm sm:text-base text-foreground group-hover:text-primary transition-colors">
+                  {universe.title} — Evrene Gir & Keşfet
+                </Typography>
+                <p className="text-[11px] text-muted line-clamp-1 mt-0.5">
+                  Bu eserin geçtiği dünyanın karakterlerini, mekânlarını ve zaman çizelgesini keşfedin.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary text-black text-xs font-bold shrink-0 shadow-sm ml-2 group-hover:translate-x-0.5 transition-transform">
+              <span>Evrene Gir</span>
+              <ChevronRight size={14} />
+            </div>
+          </Link>
+        </div>
+      )}
 
       {/* ── 2. SEKME BARI (Segmented Tabs - Stüdyo Tarzı) ── */}
       <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-xl border-y border-border/60 py-2.5 px-4 mb-6 transition-all shadow-xs">

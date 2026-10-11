@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, LogOut, BellRing, HelpCircle, Quote, 
-  LayoutTemplate, BookOpen, Award, Menu, X, ArrowLeft 
+  LayoutTemplate, BookOpen, Award, Menu, X, ArrowLeft,
+  Layers, Globe
 } from 'lucide-react';
 import { Typography, Button } from '@readixon/ui';
 import { useAuthStore, signOut } from '@readixon/core';
@@ -42,6 +43,8 @@ export default function EditorLayout({ children }: { children: React.ReactNode }
   const navItems = [
     { name: 'Dashboard', href: '/editor', icon: LayoutDashboard },
     { name: 'Hikayeler', href: '/editor/stories', icon: BookOpen },
+    { name: 'Kitap Serileri', href: '/editor/series', icon: Layers },
+    { name: 'Kurgusal Evrenler', href: '/editor/universes', icon: Globe },
     { name: 'Kitap Değerlendirmeleri', href: '/editor/reviews', icon: Award },
     { name: 'Manşet Yönetimi', href: '/editor/hero', icon: LayoutTemplate },
     { name: 'Kültür Sanat Haberleri', href: '/editor/news', icon: BellRing },

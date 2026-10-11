@@ -61,7 +61,11 @@ export default function EditHeroBannerPage() {
         </div>
       </div>
       
-      {data && <HeroBannerForm initialData={data} />}
+      {data && (
+        <React.Suspense fallback={<div className="p-12 text-center text-muted">Yükleniyor...</div>}>
+          <HeroBannerForm initialData={data} />
+        </React.Suspense>
+      )}
     </div>
   );
 }

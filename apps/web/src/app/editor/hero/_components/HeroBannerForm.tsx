@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Typography, Button, Input } from '@readixon/ui';
 import { createHeroBanner, updateHeroBanner, type HeroBanner, uploadFile, getCroppedImg } from '@readixon/core';
 import { toast } from 'sonner';
-import { Image as ImageIcon } from 'lucide-react';
+import { Image as ImageIcon, Sparkles } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 
 interface HeroBannerFormProps {
@@ -14,14 +14,21 @@ interface HeroBannerFormProps {
 
 export default function HeroBannerForm({ initialData }: HeroBannerFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const qTitle = searchParams?.get('title') || '';
+  const qSummary = searchParams?.get('summary') || '';
+  const qBadge = searchParams?.get('badge') || '';
+  const qLink = searchParams?.get('link') || '';
+  const qImage = searchParams?.get('imageUrl') || '';
 
   const [formData, setFormData] = useState({
-    title: initialData?.title || '',
-    summary: initialData?.summary || '',
-    badge: initialData?.badge || '',
-    link: initialData?.primaryLink || '',
-    label: initialData?.primaryLabel || '',
-    imageUrl: initialData?.imageUrl || '',
+    title: initialData?.title || qTitle,
+    summary: initialData?.summary || qSummary,
+    badge: initialData?.badge || qBadge,
+    link: initialData?.primaryLink || qLink,
+    label: initialData?.primaryLabel || (qLink.includes('/series/') ? 'Seriyi Keşfet' : qLink.includes('/universe/') ? 'Evrene Gir' : ''),
+    imageUrl: initialData?.imageUrl || qImage,
     isActive: initialData !== undefined ? initialData.isActive : true,
     order: initialData?.order || 0
   });
@@ -160,12 +167,32 @@ export default function HeroBannerForm({ initialData }: HeroBannerFormProps) {
             value={formData.summary}
             onChangeText={(val) => setFormData({ ...formData, summary: val })}
           />
-          <Input
-            label="Rozet (Badge)"
-            placeholder="Örn: DEV GÜNCELLEME"
-            value={formData.badge}
-            onChangeText={(val) => setFormData({ ...formData, badge: val })}
-          />
+          <div>
+            <Input
+              label="Rozet (Badge)"
+              placeholder="Örn: DEV GÜNCELLEME"
+              value={formData.badge}
+              onChangeText={(val) => setFormData({ ...formData, badge: val })}
+            />
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {[
+                'Editörün Seçimi Seri',
+                'Büyük Kurgusal Evren',
+                'Kusursuz Seri',
+                'Binge-Read Tavsiyesi',
+                'Haftanın Başyapıtı',
+              ].map((bg) => (
+                <button
+                  type="button"
+                  key={bg}
+                  onClick={() => setFormData({ ...formData, badge: bg })}
+                  className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-card hover:bg-primary/10 hover:text-primary border border-border/50 text-muted transition-colors cursor-pointer"
+                >
+                  +{bg}
+                </button>
+              ))}
+            </div>
+          </div>
           <Input
             label="Sıralama Değeri"
             placeholder="Örn: 1 (Küçük sayı önce çıkar)"

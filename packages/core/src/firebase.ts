@@ -25,7 +25,7 @@
 
 import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
-import { getFirestore, type Firestore } from 'firebase/firestore';
+import { initializeFirestore, getFirestore, type Firestore } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
 
 // ─────────────────────────────────────────────
@@ -94,8 +94,18 @@ export const firebaseApp: FirebaseApp = getFirebaseApp();
 /** Firebase Authentication servisi */
 export const auth: Auth = getAuth(firebaseApp);
 
+function getFirestoreDb(): Firestore {
+  try {
+    return initializeFirestore(firebaseApp, {
+      ignoreUndefinedProperties: true,
+    });
+  } catch {
+    return getFirestore(firebaseApp);
+  }
+}
+
 /** Firestore veritabanı servisi */
-export const db: Firestore = getFirestore(firebaseApp);
+export const db: Firestore = getFirestoreDb();
 
 /** Firebase Storage servisi */
 export const storage: FirebaseStorage = getStorage(firebaseApp);

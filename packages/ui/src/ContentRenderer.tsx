@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import type { ContentBlock } from '@readixon/core/src/types';
 import { Typography } from './Typography';
 import { MessageSquare, Bookmark, Share2, Sparkles, X } from 'lucide-react';
-import { sanitizeHtml } from '@readixon/core';
+import { sanitizeHtml, annotateHtmlWithLore, type InlineUniverseEntity } from '@readixon/core';
 
 export interface ContentRendererProps {
   blocks: ContentBlock[];
@@ -18,6 +18,9 @@ export interface ContentRendererProps {
   onQuoteSave?: (text: string) => void;
   onQuoteShare?: (text: string) => void;
   isWebtoon?: boolean;
+  inlineEntities?: InlineUniverseEntity[];
+  enableLoreAnnotations?: boolean;
+  onEntityClick?: (entity: InlineUniverseEntity, rect: DOMRect) => void;
 }
 
 export const ContentRenderer: React.FC<ContentRendererProps> = ({ 
@@ -31,11 +34,30 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
   paragraphCommentCounts = {},
   onQuoteSave,
   onQuoteShare,
-  isWebtoon = false
+  isWebtoon = false,
+  inlineEntities,
+  enableLoreAnnotations = true,
+  onEntityClick
 }) => {
   let globalParagraphIndex = 0;
   const containerRef = useRef<HTMLDivElement>(null);
   
+  const handleContainerClick = (e: React.MouseEvent) => {
+    const target = (e.target as HTMLElement).closest('.readixon-lore-entity') as HTMLElement | null;
+    if (target && onEntityClick && inlineEntities) {
+      e.stopPropagation();
+      e.preventDefault();
+      const entityId = target.getAttribute('data-entity-id');
+      if (entityId) {
+        const found = inlineEntities.find((ent) => ent.id === entityId);
+        if (found) {
+          const rect = target.getBoundingClientRect();
+          onEntityClick(found, rect);
+        }
+      }
+    }
+  };
+
   const [selection, setSelection] = useState<{text: string; top: number; left: number} | null>(null);
 
   useEffect(() => {
@@ -109,12 +131,24 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
   const textAlignClass = textAlign === 'justify' ? 'text-justify [text-align-last:left] [hyphens:auto]' : 'text-left';
 
   return (
-    <div className={`readixon-content flex flex-col relative ${isWebtoon ? 'gap-0' : 'gap-6'} ${fontClass}`} ref={containerRef}>
+    <div 
+      className={`readixon-content flex flex-col relative ${isWebtoon ? 'gap-0' : 'gap-6'} ${fontClass}`} 
+      ref={containerRef}
+      onClick={handleContainerClick}
+    >
       <style dangerouslySetInnerHTML={{ __html: `
         .readixon-content p, 
         .readixon-content span {
            color: inherit !important;
            background-color: transparent !important;
+        }
+        .readixon-content button.readixon-lore-entity {
+          color: hsl(var(--primary, 220 90% 56%)) !important;
+          background-color: hsla(var(--primary, 220 90% 56%), 0.12) !important;
+        }
+        .readixon-content button.readixon-lore-entity:hover {
+          color: #ffffff !important;
+          background-color: hsl(var(--primary, 220 90% 56%)) !important;
         }
       ` }} />
       
@@ -199,10 +233,18 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
               .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
               .replace(/\*(.*?)\*/g, '<i>$1</i>');
 
-            const htmlContent = sanitizeHtml(rawHtml, {
-              ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'span', 'u', 's', 'sub', 'sup', 'mark'],
-              ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style'],
+            const sanitizedHtml = sanitizeHtml(rawHtml, {
+              ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'span', 'u', 's', 'sub', 'sup', 'mark', 'button'],
+              ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style', 'type', 'title', 'data-entity-id', 'data-entity-type'],
+              ALLOW_DATA_ATTR: true,
             });
+
+            const applyLore = (html: string) => {
+              if (!enableLoreAnnotations || !inlineEntities || inlineEntities.length === 0) return html;
+              return annotateHtmlWithLore(html, inlineEntities);
+            };
+
+            const htmlContent = applyLore(sanitizedHtml);
 
             // Paragraf içindeki <p> etiketlerini bul
             // Eğer <p> etiketleri varsa her birini ayrı bir yorum yapılabilir satır olarak ayır
@@ -212,7 +254,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
               return (
                 <div key={blockIndex} className="flex flex-col gap-2">
                   {pMatches.map((match, i) => {
-                    const innerHtml = match[0];
+                    const innerHtml = applyLore(match[0]);
                     const rawText = match[1];
                     const currentIndex = globalParagraphIndex++;
                     const commentCount = paragraphCommentCounts[currentIndex] || 0;

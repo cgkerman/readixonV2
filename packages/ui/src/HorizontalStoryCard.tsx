@@ -15,6 +15,8 @@ export interface HorizontalStoryCardProps {
   latestChapterTitle?: string;
   latestChapterExcerpt?: string;
   badgeText?: string;
+  seriesTitle?: string;
+  seriesOrder?: number;
   onPress?: () => void;
   className?: string;
 }
@@ -30,6 +32,8 @@ export const HorizontalStoryCard: React.FC<HorizontalStoryCardProps> = ({
   latestChapterTitle,
   latestChapterExcerpt,
   badgeText,
+  seriesTitle,
+  seriesOrder,
   onPress,
   className = '',
 }) => {
@@ -67,6 +71,11 @@ export const HorizontalStoryCard: React.FC<HorizontalStoryCardProps> = ({
         {/* Kitap & Yazar Bilgisi */}
         <div className="flex items-start justify-between mb-2 shrink-0">
           <div className="flex flex-col min-w-0">
+            {seriesTitle && (
+              <span className="text-[10px] font-black text-amber-500 uppercase tracking-wider mb-0.5 truncate">
+                📚 {seriesOrder ? `${seriesTitle} #${seriesOrder}` : seriesTitle}
+              </span>
+            )}
             <Typography variant="h4" className="font-bold text-text truncate pr-2">
               {title}
             </Typography>

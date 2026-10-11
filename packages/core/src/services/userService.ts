@@ -575,3 +575,27 @@ export async function consumeFreeCharacterBook(uid: string, storyId: string): Pr
   const userRef = doc(db, USERS_COLLECTION, uid);
   await updateDoc(userRef, { freeCharacterBookStoryId: storyId });
 }
+
+/**
+ * Kullanıcı adına göre arama yapar (Ekip davetleri ve işbirlikleri için)
+ */
+export async function searchUsersByQuery(searchQuery: string, maxResults = 8): Promise<User[]> {
+  const clean = searchQuery.trim().toLowerCase().replace(/^@/, '');
+  if (!clean || clean.length < 2) return [];
+
+  const usersRef = collection(db, USERS_COLLECTION);
+  const q = query(
+    usersRef,
+    where('username', '>=', clean),
+    where('username', '<=', clean + '\uf8ff'),
+    limit(maxResults)
+  );
+
+  const snap = await getDocs(q);
+  const list: User[] = [];
+  snap.forEach((d) => {
+    list.push({ uid: d.id, ...d.data() } as User);
+  });
+  return list;
+}
+

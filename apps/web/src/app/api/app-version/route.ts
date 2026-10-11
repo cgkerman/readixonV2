@@ -16,18 +16,18 @@ export interface AppVersionResponse {
 
 export async function GET() {
   const versionData: AppVersionResponse = {
-    latestVersion: '1.1',
-    latestBuild: 2,
+    latestVersion: '1.9',
+    latestBuild: 3,
     minRequiredBuild: 1, // Build 1 (v1.0) can continue, but is strongly prompted to upgrade
     apkUrl: 'https://www.readixon.com/downloads/readixon.apk',
-    releaseDate: '2026-10-05',
+    releaseDate: '2026-10-12',
     title: 'Yeni Readixon Güncellemesi Mevcut!',
     description: 'En son yeniliklerden ve performans geliştirmelerinden faydalanmak için uygulamanızı güncelleyin.',
     releaseNotes: [
-      'Story ve okuma listesi kartlarını doğrudan cihaz galerisine kaydetme desteği',
-      'Android 14+ yerleşik indirme yöneticisi entegrasyonu',
-      'Akıcı paylaşım ve görsel oluşturma optimizasyonları',
-      'Genel performans ve kararlılık geliştirmeleri'
+      'Kurgusal Evrenler ve Seri Kitaplar oluşturma ve ana sayfa keşfet vitrini',
+      'Evren içi global hızlı arama ve kategorize gezinme (Cmd+K)',
+      'Yazar Akademisi evren entegrasyonu ve hazır kurgu şablonları',
+      'Gelişmiş evren yayın/taslak yönetimi ve kararlılık iyileştirmeleri'
     ],
     isMandatory: false,
   };

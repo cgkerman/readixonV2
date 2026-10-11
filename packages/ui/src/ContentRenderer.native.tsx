@@ -6,6 +6,7 @@ import { Typography } from './Typography';
 export interface ContentRendererProps {
   blocks: ContentBlock[];
   fontSize?: number;
+  [key: string]: any;
 }
 
 export const ContentRenderer: React.FC<ContentRendererProps> = ({ blocks, fontSize = 16 }) => {

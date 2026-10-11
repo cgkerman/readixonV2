@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Typography } from '@readixon/ui';
-import { BookOpen, PenTool, BarChart3, ArrowLeft, Users, GalleryVertical } from 'lucide-react';
+import { BookOpen, PenTool, BarChart3, ArrowLeft, Users, GalleryVertical, Layers, Sparkles } from 'lucide-react';
 import { useAuthStore } from '@readixon/core';
 
 export default function StudioLayout({ children }: { children: React.ReactNode }) {
@@ -13,9 +13,11 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
 
   const studioNavItems = [
     { name: 'Romanlarım', href: '/studio', icon: BookOpen },
+    { name: 'Serilerim', href: '/studio/series', icon: Layers },
+    { name: 'Evrenlerim', href: '/studio/universes', icon: Sparkles },
     { name: 'Webtoon', href: '/studio/webtoons', icon: GalleryVertical },
-    { name: 'İstatistik', href: '/studio/stats', icon: BarChart3 },
     { name: 'Karakterler', href: '/studio/characters', icon: Users },
+    { name: 'İstatistik', href: '/studio/stats', icon: BarChart3 },
     { name: 'Akademi', href: '/studio/academy', icon: PenTool },
   ];
 

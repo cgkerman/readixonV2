@@ -19,17 +19,27 @@ import {
   BookOpen,
   Settings,
   Eye,
-  Heart
+  Heart,
+  Layers,
+  Sparkles
 } from 'lucide-react';
 import {
   getStoryById,
   updateStory,
   createChapter,
   fetchChapters,
+  getSeriesByAuthorId,
+  getUniversesByAuthorId,
+  addStoryToSeries,
+  removeStoryFromSeries,
+  linkStoryToUniverse,
+  unlinkStoryFromUniverse,
   type Story,
   type Chapter,
   type StoryStatus,
   type Contributor,
+  type Series,
+  type Universe,
   compressImage
 } from '@readixon/core';
 import { uploadFile } from '@readixon/core/src/services/storageService';
@@ -63,6 +73,13 @@ export default function StoryDetailAdminPage() {
   const [videoUploading, setVideoUploading] = useState(false);
   const videoInputRef = React.useRef<HTMLInputElement>(null);
 
+  // Seri & Evren Bağlantıları
+  const [authorSeriesList, setAuthorSeriesList] = useState<Series[]>([]);
+  const [authorUniverseList, setAuthorUniverseList] = useState<Universe[]>([]);
+  const [selectedSeriesId, setSelectedSeriesId] = useState<string>('');
+  const [selectedUniverseId, setSelectedUniverseId] = useState<string>('');
+  const [seriesLabel, setSeriesLabel] = useState<string>('');
+
   useEffect(() => {
     loadData();
   }, [storyId]);
@@ -84,6 +101,22 @@ export default function StoryDetailAdminPage() {
         setForeword(realStory.foreword || '');
         setBackCover(realStory.backCover || '');
         setTrailerVideoUrl(realStory.trailerVideoUrl || '');
+        setSelectedSeriesId(realStory.seriesId || '');
+        setSelectedUniverseId(realStory.universeId || '');
+        setSeriesLabel(realStory.seriesLabel || '');
+
+        if (realStory.authorId) {
+          try {
+            const [sList, uList] = await Promise.all([
+              getSeriesByAuthorId(realStory.authorId),
+              getUniversesByAuthorId(realStory.authorId)
+            ]);
+            setAuthorSeriesList(sList);
+            setAuthorUniverseList(uList);
+          } catch (listErr) {
+            console.error("Seri/Evren listesi alınamadı:", listErr);
+          }
+        }
 
         // Geriye dönük uyumluluk: eski string dizisi ise nesneye çevir
         const rawContributors = realStory.contributors || [];
@@ -106,6 +139,26 @@ export default function StoryDetailAdminPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
+      // Seri bağlantısı güncellendiyse
+      if (selectedSeriesId !== (story?.seriesId || '')) {
+        if (story?.seriesId) {
+          await removeStoryFromSeries(story.seriesId, storyId);
+        }
+        if (selectedSeriesId) {
+          await addStoryToSeries(selectedSeriesId, storyId, seriesLabel.trim() || undefined);
+        }
+      }
+
+      // Evren bağlantısı güncellendiyse
+      if (selectedUniverseId !== (story?.universeId || '')) {
+        if (story?.universeId) {
+          await unlinkStoryFromUniverse(story.universeId, storyId);
+        }
+        if (selectedUniverseId) {
+          await linkStoryToUniverse(selectedUniverseId, storyId);
+        }
+      }
+
       const validContributors = contributors.filter(c => c.name.trim().length > 0);
       await updateStory(storyId, {
         title,
@@ -115,7 +168,8 @@ export default function StoryDetailAdminPage() {
         foreword,
         backCover,
         trailerVideoUrl,
-        contributors: validContributors
+        contributors: validContributors,
+        seriesLabel: seriesLabel.trim() || undefined
       });
       toast.success('Kaydedildi');
     } catch (e) {
@@ -644,6 +698,60 @@ export default function StoryDetailAdminPage() {
                   <div className="absolute inset-y-0 right-3.5 flex items-center pointer-events-none text-muted">
                     <ChevronDown size={18} />
                   </div>
+                </div>
+              </div>
+
+              {/* Seri & Evren Bağlantısı */}
+              <div className="bg-card p-4 sm:p-5 rounded-2xl border border-border/60 shadow-xs space-y-3">
+                <Typography variant="caption" className="font-bold text-muted uppercase block">
+                  Seri & Evren Bağlantısı
+                </Typography>
+
+                {/* Seri Dropdown */}
+                <div>
+                  <label className="text-[11px] font-bold text-muted block mb-1">Kitap Serisi</label>
+                  <select
+                    value={selectedSeriesId}
+                    onChange={(e) => setSelectedSeriesId(e.target.value)}
+                    className="w-full bg-muted/10 border border-border/60 rounded-xl p-2.5 text-xs text-text focus:outline-none focus:border-primary cursor-pointer"
+                  >
+                    <option value="">Bağımsız (Seriye Bağlı Değil)</option>
+                    {authorSeriesList.map((ser) => (
+                      <option key={ser.seriesId} value={ser.seriesId}>
+                        📚 {ser.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Seri Etiketi */}
+                {selectedSeriesId && (
+                  <div>
+                    <label className="text-[11px] font-bold text-muted block mb-1">Özel Seri Etiketi (Opsiyonel)</label>
+                    <Input
+                      value={seriesLabel}
+                      onChangeText={setSeriesLabel}
+                      placeholder="Örn: 1. Kitap, Başlangıç, Prequel"
+                      className="text-xs"
+                    />
+                  </div>
+                )}
+
+                {/* Evren Dropdown */}
+                <div className="pt-2 border-t border-border/40">
+                  <label className="text-[11px] font-bold text-muted block mb-1">Kurgusal Evren</label>
+                  <select
+                    value={selectedUniverseId}
+                    onChange={(e) => setSelectedUniverseId(e.target.value)}
+                    className="w-full bg-muted/10 border border-border/60 rounded-xl p-2.5 text-xs text-text focus:outline-none focus:border-primary cursor-pointer"
+                  >
+                    <option value="">Bağımsız (Evrene Bağlı Değil)</option>
+                    {authorUniverseList.map((u) => (
+                      <option key={u.universeId} value={u.universeId}>
+                        🌌 {u.title}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

@@ -3,13 +3,14 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Typography, Button, BlockEditor, Input, ContentRenderer } from '@readixon/ui';
-import { ArrowLeft, Save, PlusCircle, CheckCircle, FileText, Globe, Calendar, GripVertical, Trash2, Sparkles, Wand2, Eye, EyeOff, Info, X, HelpCircle, BarChart2, Plus, Music, Volume2, ExternalLink, ChevronDown, ChevronRight, BookOpen } from 'lucide-react';
-import { fetchChapter, updateChapter, compressImage, fetchChapters, createChapter, deleteChapter, createNotification, getUserFollowerIds, getStoryById, updateStory, useAuthStore, trackWordCount, trackInteraction, parseAudioTrack, getAudioPlatformLabel, type Chapter, type ChapterAudioTrack } from '@readixon/core';
+import { ArrowLeft, Save, PlusCircle, CheckCircle, FileText, Globe, Calendar, GripVertical, Trash2, Sparkles, Wand2, Eye, EyeOff, Info, X, HelpCircle, BarChart2, Plus, Music, Volume2, ExternalLink, ChevronDown, ChevronRight, BookOpen, Layers } from 'lucide-react';
+import { fetchChapter, updateChapter, compressImage, fetchChapters, createChapter, deleteChapter, createNotification, getUserFollowerIds, getStoryById, updateStory, useAuthStore, trackWordCount, trackInteraction, parseAudioTrack, getAudioPlatformLabel, type Chapter, type ChapterAudioTrack, type Story } from '@readixon/core';
 import { ReadixonAIAssistant } from '@/components/ReadixonAIAssistant';
 import { uploadFile } from '@readixon/core/src/services/storageService';
 import { toast } from "sonner";
 import Link from 'next/link';
 import { PlannerSidebar } from './PlannerSidebar';
+import { UniverseSidebar } from './UniverseSidebar';
 
 export default function ChapterEditorPage() {
   const params = useParams();
@@ -20,11 +21,13 @@ export default function ChapterEditorPage() {
   const { userProfile } = useAuthStore();
   const [chapter, setChapter] = useState<Chapter | null>(null);
   const [allChapters, setAllChapters] = useState<Chapter[]>([]);
+  const [story, setStory] = useState<Story | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
   const [isPlannerOpen, setIsPlannerOpen] = useState(false);
+  const [isUniverseOpen, setIsUniverseOpen] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [isAudioSectionOpen, setIsAudioSectionOpen] = useState(false);
@@ -42,12 +45,14 @@ export default function ChapterEditorPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [data, chaps] = await Promise.all([
+      const [data, chaps, sData] = await Promise.all([
         fetchChapter(storyId, chapterId),
-        fetchChapters(storyId)
+        fetchChapters(storyId),
+        getStoryById(storyId)
       ]);
       
       setAllChapters(chaps || []);
+      setStory(sData);
 
       if (data) {
         if (!data.status) data.status = 'draft';
@@ -433,6 +438,20 @@ export default function ChapterEditorPage() {
                 >
                   <BookOpen size={13} />
                   <span>Plan Notlarım</span>
+                </button>
+
+                {/* Evren Bilgi Ağı Butonu */}
+                <button 
+                  type="button"
+                  onClick={() => setIsUniverseOpen(!isUniverseOpen)} 
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
+                    isUniverseOpen 
+                      ? 'border-indigo-500 bg-indigo-500/15 text-indigo-400 font-semibold' 
+                      : 'border-border/60 hover:border-indigo-500/40 text-muted hover:text-indigo-400'
+                  }`}
+                >
+                  <Layers size={13} />
+                  <span>Evren Paneli</span>
                 </button>
 
                 {/* Ön İzleme Butonu */}
@@ -1039,6 +1058,63 @@ export default function ChapterEditorPage() {
         onClose={() => setIsAIAssistantOpen(false)} 
         currentContent={chapter.contentBlocks?.map((b: any) => b.text).join('\n') || ''} 
       />
+
+      {isPlannerOpen && (
+        <PlannerSidebar 
+          storyId={storyId} 
+          chapterId={chapterId} 
+          chapterTitle={chapter?.title}
+          chapterOrder={chapter?.order}
+          onInsertText={(textToInsert) => {
+            if (!chapter) return;
+            const existingBlocks = chapter.contentBlocks || [];
+            const newBlock = {
+              id: `b_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+              type: 'paragraph' as const,
+              text: textToInsert,
+            };
+            setChapter({
+              ...chapter,
+              contentBlocks: [...existingBlocks, newBlock],
+            });
+            toast.success(`"${textToInsert}" bölüme eklendi.`);
+          }}
+          onOpenUniverse={() => {
+            setIsPlannerOpen(false);
+            setIsUniverseOpen(true);
+          }}
+          onClose={() => setIsPlannerOpen(false)} 
+        />
+      )}
+
+      {isUniverseOpen && (
+        <UniverseSidebar 
+          storyId={storyId} 
+          chapterId={chapterId} 
+          chapterTitle={chapter?.title}
+          chapterOrder={chapter?.order}
+          currentContent={chapter?.contentBlocks?.map((b: any) => b.text).filter(Boolean).join('\n') || ''}
+          onInsertText={(textToInsert) => {
+            if (!chapter) return;
+            const existingBlocks = chapter.contentBlocks || [];
+            const newBlock = {
+              id: `b_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+              type: 'paragraph' as const,
+              text: textToInsert,
+            };
+            setChapter({
+              ...chapter,
+              contentBlocks: [...existingBlocks, newBlock],
+            });
+            toast.success(`"${textToInsert}" bölüme eklendi.`);
+          }}
+          onOpenPlanner={() => {
+            setIsUniverseOpen(false);
+            setIsPlannerOpen(true);
+          }}
+          onClose={() => setIsUniverseOpen(false)} 
+        />
+      )}
     </div>
   );
 }

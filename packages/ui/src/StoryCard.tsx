@@ -22,6 +22,8 @@ export interface StoryCardProps {
   isWebtoon?: boolean;
   status?: 'ongoing' | 'completed' | 'draft';
   chapterCount?: number;
+  seriesTitle?: string;
+  seriesOrder?: number;
 }
 
 export const StoryCard: React.FC<StoryCardProps> = ({
@@ -41,6 +43,8 @@ export const StoryCard: React.FC<StoryCardProps> = ({
   isWebtoon = false,
   status,
   chapterCount,
+  seriesTitle,
+  seriesOrder,
 }) => {
   if (isWebtoon) {
     return (
@@ -58,8 +62,14 @@ export const StoryCard: React.FC<StoryCardProps> = ({
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90 group-hover:opacity-100 transition-opacity" />
         
         {/* Top Badges */}
-        <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
-          <div className="bg-primary/90 backdrop-blur-sm text-primary-foreground text-[10px] uppercase font-black px-2 py-0.5 rounded shadow">
+        <div className="absolute top-2 left-2 flex flex-col gap-1 z-10 max-w-[80%]">
+          {(seriesTitle || (seriesOrder !== undefined && seriesOrder > 0)) && (
+            <div className="bg-amber-500/95 text-black text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded shadow flex items-center gap-1 backdrop-blur-sm truncate">
+              <span>📚</span>
+              <span className="truncate">{seriesOrder ? `#${seriesOrder} ${seriesTitle || 'Seri'}` : seriesTitle}</span>
+            </div>
+          )}
+          <div className="bg-primary/90 backdrop-blur-sm text-primary-foreground text-[10px] uppercase font-black px-2 py-0.5 rounded shadow w-max">
             {status === 'completed' ? 'Tamamlandı' : status === 'ongoing' ? 'Devam Ediyor' : 'Webtoon'}
           </div>
           {chapterCount !== undefined && chapterCount >= 0 && (
@@ -67,7 +77,7 @@ export const StoryCard: React.FC<StoryCardProps> = ({
               {chapterCount} Bölüm
             </div>
           )}
-          {badgeText && <div className="bg-background/90 backdrop-blur-sm text-text text-[10px] font-bold px-2 py-0.5 rounded shadow">{badgeText}</div>}
+          {badgeText && <div className="bg-background/90 backdrop-blur-sm text-text text-[10px] font-bold px-2 py-0.5 rounded shadow w-max">{badgeText}</div>}
         </div>
 
         {/* Stats overlay top right */}
@@ -123,6 +133,14 @@ export const StoryCard: React.FC<StoryCardProps> = ({
       {/* Kapak Resmi Alanı */}
       <div className={`relative w-full ${isWebtoon ? 'aspect-[9/16] shadow-md border-primary/20' : 'aspect-[2/3] shadow-sm'} rounded-xl bg-muted/20 overflow-hidden hover:shadow-lg transition-all duration-300 border border-border/40`}>
         
+        {/* Top Badges / Seri Etiketi */}
+        {(seriesTitle || (seriesOrder !== undefined && seriesOrder > 0)) && (
+          <div className="absolute top-2 left-2 z-20 bg-amber-500/95 text-black text-[9px] font-black px-2 py-0.5 rounded-md shadow-md flex items-center gap-1 backdrop-blur-sm max-w-[75%] truncate">
+            <span>📚</span>
+            <span className="truncate">{seriesOrder ? `#${seriesOrder} ${seriesTitle || 'Seri'}` : seriesTitle}</span>
+          </div>
+        )}
+
         {/* Badge (Opsiyonel) */}
         {badgeText && (
           <div className="absolute top-2 right-2 z-20 bg-primary text-primary-foreground text-[10px] md:text-xs font-bold px-2 py-1 rounded-md shadow-lg flex items-center gap-1 animate-in zoom-in duration-300">

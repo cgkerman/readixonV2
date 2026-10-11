@@ -3,16 +3,45 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { fetchChapter, getPublishedChapters, syncReadingProgress, incrementChapterView, checkChapterLiked, toggleChapterLike, addChapterComment, getAllChapterComments, getStoryById, saveQuote, getUserProfile, trackInteraction, toggleChapterCommentLike, generateStorySlug } from '@readixon/core';
-import type { Chapter, Comment, Story, User } from '@readixon/core';
+import { 
+  fetchChapter, 
+  getPublishedChapters, 
+  syncReadingProgress, 
+  incrementChapterView, 
+  checkChapterLiked, 
+  toggleChapterLike, 
+  addChapterComment, 
+  getAllChapterComments, 
+  getStoryById, 
+  saveQuote, 
+  getUserProfile, 
+  trackInteraction, 
+  toggleChapterCommentLike, 
+  generateStorySlug, 
+  getSeriesById, 
+  generateSeriesSlug,
+  getUniverseCharacters,
+  getUniverseLocations,
+  getUniverseGlossary,
+  getUniverseItems,
+  getUniverseCreatures,
+  getUniversePlotThreads,
+  extractMentionedEntities,
+  type InlineUniverseEntity,
+  type UniversePlotThread
+} from '@readixon/core';
+import type { Chapter, Comment, Story, User, Series } from '@readixon/core';
 import { useReaderStore, useAuthStore } from '@readixon/core';
 import { ContentRenderer, ReadingSettingsPanel, Button, Typography } from '@readixon/ui';
-import { ArrowLeft, Settings, List, ChevronLeft, ChevronRight, CheckCircle, X, Heart, MessageSquare, Eye, Reply, Clock, Sparkles, Star, Award, BookOpen } from 'lucide-react';
+import { ArrowLeft, Settings, List, ChevronLeft, ChevronRight, CheckCircle, X, Heart, MessageSquare, Eye, Reply, Clock, Sparkles, Star, Award, BookOpen, Layers, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 import { ChapterEndActivity } from '@/components/ChapterEndActivity';
 import { ChapterReactions } from '@/components/ChapterReactions';
 import { ChapterMusicPlayer } from '@/components/ChapterMusicPlayer';
 import { useBackButton } from '@/hooks/useBackButton';
+import { ReaderUniverseDrawer, type ReaderUniverseTabType } from './ReaderUniverseDrawer';
+import { InlineLorePopover } from './InlineLorePopover';
+import { ChapterUniverseRecap } from './ChapterUniverseRecap';
 
 function ChapterTitleMarquee({ title, storyTitle, textColor }: { title: string; storyTitle?: string; textColor: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -119,9 +148,14 @@ export default function ReadPage() {
   const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [showChapterList, setShowChapterList] = useState(false);
+  const [showUniverseDrawer, setShowUniverseDrawer] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [isNavbarVisible, setIsNavbarVisible] = useState(true);
   const lastScrollY = useRef(0);
+
+  // Seri ve Sonraki Kitap Bilgileri
+  const [series, setSeries] = useState<Series | null>(null);
+  const [nextSeriesBook, setNextSeriesBook] = useState<{ story: Story; order: number; customLabel?: string } | null>(null);
 
   // Etkileşim State'leri
   const [isLiked, setIsLiked] = useState(false);
@@ -143,6 +177,15 @@ export default function ReadPage() {
   // Yanıt (Reply) State'leri
   const [replyingToComment, setReplyingToComment] = useState<Comment | null>(null);
   const [replyingToParagraphComment, setReplyingToParagraphComment] = useState<Comment | null>(null);
+
+  // Evren ve Akıllı Dipnot State'leri (PRD Bölüm 40, 41)
+  const [universeEntities, setUniverseEntities] = useState<InlineUniverseEntity[]>([]);
+  const [universePlotThreads, setUniversePlotThreads] = useState<UniversePlotThread[]>([]);
+  const [activePopoverEntity, setActivePopoverEntity] = useState<InlineUniverseEntity | null>(null);
+  const [popoverAnchorRect, setPopoverAnchorRect] = useState<DOMRect | null>(null);
+  const [drawerInitialTab, setDrawerInitialTab] = useState<ReaderUniverseTabType>('characters');
+  const [drawerInitialSearch, setDrawerInitialSearch] = useState<string>('');
+  const [enableLoreAnnotations, setEnableLoreAnnotations] = useState(true);
 
   const {
     theme,
@@ -178,7 +221,19 @@ export default function ReadPage() {
     return true;
   }, selectedParagraphIndex !== null);
 
-  // 4. Hiçbir modal açık değilken okuma sayfasında geri tuşuna basılırsa doğrudan hikaye detayına dönsün (uygulamadan çıkmasın!)
+  // 4. Akıllı Lore Popover açıkken geri tuşu sadece popover'ı kapatsın
+  useBackButton(() => {
+    setActivePopoverEntity(null);
+    return true;
+  }, activePopoverEntity !== null);
+
+  // 5. Evren rehberi açıkken geri tuşu sadece evren rehberini kapatsın
+  useBackButton(() => {
+    setShowUniverseDrawer(false);
+    return true;
+  }, showUniverseDrawer);
+
+  // 6. Hiçbir modal açık değilken okuma sayfasında geri tuşuna basılırsa doğrudan hikaye detayına dönsün (uygulamadan çıkmasın!)
   useBackButton(() => {
     if (story) {
       const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
@@ -187,7 +242,7 @@ export default function ReadPage() {
       router.back();
     }
     return true;
-  }, !showSettings && !showChapterList && selectedParagraphIndex === null);
+  }, !showSettings && !showChapterList && !showUniverseDrawer && selectedParagraphIndex === null && activePopoverEntity === null);
 
   // Kelime sayısı ve tahmini okuma süresi hesaplama (~200 kelime/dk)
   const wordCount = React.useMemo(() => {
@@ -205,6 +260,103 @@ export default function ReadPage() {
   const readingTimeMinutes = React.useMemo(() => {
     return Math.max(1, Math.ceil(wordCount / 200));
   }, [wordCount]);
+
+  // Evren Varlıklarını Arka Planda Yükle (PRD Bölüm 40, 41)
+  useEffect(() => {
+    if (!story?.universeId) return;
+    const uId = story.universeId;
+
+    const loadUniverseLore = async () => {
+      try {
+        const [chars, locs, terms, itemsList, creatureList, threadList] = await Promise.all([
+          getUniverseCharacters(uId),
+          getUniverseLocations(uId),
+          getUniverseGlossary(uId),
+          getUniverseItems(uId),
+          getUniverseCreatures(uId),
+          getUniversePlotThreads(uId),
+        ]);
+
+        const combinedEntities: InlineUniverseEntity[] = [
+          ...chars.map((c) => ({
+            id: c.id,
+            name: c.name,
+            type: 'character' as const,
+            roleOrType: c.role,
+            shortDescription: c.readerNotes || c.occupation || (c.personalityTraits ? c.personalityTraits.join(', ') : undefined),
+            avatarUrl: c.avatarUrl,
+            isSpoiler: c.isSpoiler,
+            spoilerChapterOrder: c.spoilerThresholdChapter,
+            universeId: uId,
+          })),
+          ...locs.map((l) => ({
+            id: l.id,
+            name: l.name,
+            type: 'location' as const,
+            roleOrType: l.type,
+            shortDescription: l.description || l.readerNotes,
+            avatarUrl: l.imageUrl,
+            isSpoiler: l.isSpoiler,
+            spoilerChapterOrder: l.spoilerThresholdChapter,
+            universeId: uId,
+          })),
+          ...terms.map((g) => ({
+            id: g.id,
+            name: g.term,
+            type: 'glossary' as const,
+            roleOrType: g.category,
+            shortDescription: g.meaning,
+            isSpoiler: g.isSpoiler,
+            spoilerChapterOrder: g.spoilerThresholdChapter,
+            universeId: uId,
+          })),
+          ...itemsList.map((it) => ({
+            id: it.id,
+            name: it.name,
+            type: 'item' as const,
+            roleOrType: it.type,
+            shortDescription: it.description || it.powerDescription,
+            avatarUrl: it.imageUrl,
+            isSpoiler: it.isSpoiler,
+            spoilerChapterOrder: it.spoilerThresholdChapter,
+            universeId: uId,
+          })),
+          ...creatureList.map((cr) => ({
+            id: cr.id,
+            name: cr.name,
+            type: 'creature' as const,
+            roleOrType: cr.dangerLevel,
+            shortDescription: cr.appearance || cr.lore || cr.behavior,
+            avatarUrl: cr.imageUrl,
+            isSpoiler: cr.isSpoiler,
+            spoilerChapterOrder: cr.spoilerThresholdChapter,
+            universeId: uId,
+          })),
+        ];
+
+        setUniverseEntities(combinedEntities);
+        setUniversePlotThreads(threadList);
+      } catch (err) {
+        console.error("Evren dipnot verileri yüklenirken hata:", err);
+      }
+    };
+
+    loadUniverseLore();
+  }, [story?.universeId]);
+
+  // Bu bölümde geçen evren varlıklarını tespit et
+  const chapterFullText = React.useMemo(() => {
+    if (!chapter?.contentBlocks) return '';
+    return chapter.contentBlocks
+      .filter((b) => b.type === 'paragraph' && b.text)
+      .map((b) => b.text)
+      .join(' ');
+  }, [chapter?.contentBlocks]);
+
+  const chapterMentionedEntities = React.useMemo(() => {
+    if (!chapterFullText || universeEntities.length === 0) return [];
+    return extractMentionedEntities(chapterFullText, universeEntities);
+  }, [chapterFullText, universeEntities]);
 
   // Bölüm geçişi (doğrudan ve sayfa başı sıfırlama ile)
   const handleNavigateChapter = (targetChapterId: string) => {
@@ -263,6 +415,33 @@ export default function ReadPage() {
           }
         }
         setStory(storyData as Story);
+
+        // Seri ve Serideki Sonraki Kitap Kontrolü
+        if (storyData.seriesId) {
+          try {
+            const s = await getSeriesById(storyData.seriesId);
+            if (s) {
+              setSeries(s);
+              if (s.books && s.books.length > 0) {
+                const sortedBooks = [...s.books].sort((a, b) => a.order - b.order);
+                const currentBookIndex = sortedBooks.findIndex(b => b.storyId === storyId);
+                if (currentBookIndex >= 0 && currentBookIndex < sortedBooks.length - 1) {
+                  const nextItem = sortedBooks[currentBookIndex + 1];
+                  const nextStory = await getStoryById(nextItem.storyId);
+                  if (nextStory) {
+                    setNextSeriesBook({
+                      story: nextStory,
+                      order: nextItem.order,
+                      customLabel: nextItem.customLabel,
+                    });
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            console.error("Seri bilgisi alınamadı", e);
+          }
+        }
       }
 
       // Yorumları ayır
@@ -698,6 +877,25 @@ export default function ReadPage() {
                 autoPlay={true}
               />
             )}
+            {story?.universeId && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDrawerInitialTab('characters');
+                  setDrawerInitialSearch('');
+                  setShowUniverseDrawer(true);
+                }}
+                className="h-11 px-3 sm:px-3.5 rounded-2xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 active:scale-95 flex items-center gap-1.5 transition-all shadow-sm group"
+                title={story.universeTitle ? `${story.universeTitle} Rehberi` : 'Evren Rehberi'}
+                aria-label="Evren Rehberi"
+              >
+                <Globe size={18} className="transition-transform group-hover:rotate-45" />
+                <span className="hidden sm:inline text-xs font-bold tracking-wide">Evren</span>
+                {chapterMentionedEntities.length > 0 && (
+                  <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse ml-0.5" />
+                )}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setShowChapterList(true)}
@@ -778,6 +976,23 @@ export default function ReadPage() {
             >
               {chapter.title}
             </Typography>
+            {story?.universeId && (
+              <div className="mt-3 flex items-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDrawerInitialTab('characters');
+                    setDrawerInitialSearch('');
+                    setShowUniverseDrawer(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/30 transition-all hover:scale-105 active:scale-95 shadow-sm"
+                >
+                  <Globe size={13} />
+                  <span>{story.universeTitle ? `${story.universeTitle} Rehberi` : 'Kurgusal Evren Rehberi'}</span>
+                  <span className="text-[10px] bg-indigo-500/25 px-1.5 py-0.5 rounded-md font-bold ml-0.5">İncele</span>
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -820,8 +1035,33 @@ export default function ReadPage() {
                 toast.error("Alıntı kaydedilemedi.");
               }
             }}
+            inlineEntities={universeEntities}
+            enableLoreAnnotations={enableLoreAnnotations}
+            onEntityClick={(ent, rect) => {
+              setActivePopoverEntity(ent);
+              setPopoverAnchorRect(rect);
+            }}
           />
         </div>
+
+        {/* Bölüm Sonu Evren Özeti (PRD Bölüm 40.4) */}
+        {story?.universeId && (chapterMentionedEntities.length > 0 || universePlotThreads.length > 0) && (
+          <ChapterUniverseRecap
+            universeTitle={story.universeTitle}
+            entities={chapterMentionedEntities}
+            plotThreads={universePlotThreads}
+            currentChapterOrder={chapter?.order || 1}
+            onSelectEntity={(ent, rect) => {
+              setActivePopoverEntity(ent);
+              setPopoverAnchorRect(rect);
+            }}
+            onOpenDrawer={(tab, search) => {
+              setDrawerInitialTab(tab);
+              setDrawerInitialSearch(search || '');
+              setShowUniverseDrawer(true);
+            }}
+          />
+        )}
 
         {/* Bölüm Sonu Aktivitesi */}
         {chapter.endActivity && (
@@ -895,6 +1135,18 @@ export default function ReadPage() {
                 Sonraki Bölüm
                 <ChevronRight size={18} />
               </Button>
+            ) : nextSeriesBook ? (
+              <Button
+                variant="primary"
+                onPress={() => {
+                  const slug = (nextSeriesBook.story as any).slug || generateStorySlug(nextSeriesBook.story.title, nextSeriesBook.story.storyId);
+                  router.push(nextSeriesBook.story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
+                }}
+                className="w-full sm:flex-1 flex flex-row justify-center items-center gap-2 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-extrabold shadow-lg shadow-amber-500/25"
+              >
+                <span>Serinin {nextSeriesBook.order}. Kitabına Geç</span>
+                <ChevronRight size={18} />
+              </Button>
             ) : (
               <Button
                 variant="primary"
@@ -913,6 +1165,63 @@ export default function ReadPage() {
               </Button>
             )}
           </div>
+
+          {/* Serinin Sonraki Kitabına Devam Kartı */}
+          {!nextChapter && nextSeriesBook && (
+            <div className="mb-8 p-6 sm:p-7 rounded-3xl bg-gradient-to-br from-amber-500/15 via-card/80 to-card border border-amber-500/30 text-left relative overflow-hidden shadow-xl animate-fade-in">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
+                <div className="w-20 sm:w-24 aspect-[2/3] rounded-xl bg-background border border-amber-500/30 overflow-hidden shrink-0 shadow-lg relative">
+                  {nextSeriesBook.story.coverImage ? (
+                    <img src={nextSeriesBook.story.coverImage} alt={nextSeriesBook.story.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-amber-500">
+                      <BookOpen size={24} />
+                    </div>
+                  )}
+                  <span className="absolute top-1 left-1 bg-amber-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded shadow">
+                    #{nextSeriesBook.order}
+                  </span>
+                </div>
+                <div className="flex-1 text-center sm:text-left min-w-0">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-500 text-[10px] font-extrabold uppercase mb-1.5 border border-amber-500/20">
+                    <Sparkles size={12} />
+                    <span>Seri Devam Ediyor: {series?.title || 'Kitap Serisi'}</span>
+                  </div>
+                  <h4 className="text-lg sm:text-xl font-black text-foreground mb-1 line-clamp-1">
+                    {nextSeriesBook.story.title}
+                  </h4>
+                  <p className="text-xs text-muted mb-4 line-clamp-2">
+                    {nextSeriesBook.story.summary || 'Bu kitap serinin bir sonraki cildidir. Maceraya ara vermeden hemen devam edin!'}
+                  </p>
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
+                    <Button
+                      variant="primary"
+                      onPress={() => {
+                        const slug = (nextSeriesBook.story as any).slug || generateStorySlug(nextSeriesBook.story.title, nextSeriesBook.story.storyId);
+                        router.push(nextSeriesBook.story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
+                      }}
+                      className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-extrabold shadow-lg shadow-amber-500/25 flex items-center gap-2 rounded-xl text-xs sm:text-sm"
+                    >
+                      <span>Sıradaki Kitaba Başla</span>
+                      <ChevronRight size={16} />
+                    </Button>
+                    {series && (
+                      <Button
+                        variant="outline"
+                        onPress={() => {
+                          const sSlug = series.slug || generateSeriesSlug(series.title, series.seriesId);
+                          router.push(`/series/${sSlug}`);
+                        }}
+                        className="px-4 py-2.5 rounded-xl text-xs font-semibold"
+                      >
+                        Seri Sayfasına Bak
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Son Bölüm Sonu Tebrik ve Yönlendirme Kartı */}
           {!nextChapter && (
@@ -1095,15 +1404,38 @@ export default function ReadPage() {
               )}
             </div>
 
-            <button
-              type="button"
-              disabled={!nextChapter}
-              onClick={() => nextChapter && handleNavigateChapter(nextChapter.chapterId)}
-              className="h-11 px-3.5 sm:px-4 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-1.5 disabled:opacity-25 disabled:pointer-events-none bg-primary text-black hover:bg-primary/90 active:scale-95 transition-all shadow-md shadow-primary/20 shrink-0"
-            >
-              <span className="hidden xs:inline">Sonraki</span>
-              <ChevronRight size={20} />
-            </button>
+            {nextChapter ? (
+              <button
+                type="button"
+                onClick={() => handleNavigateChapter(nextChapter.chapterId)}
+                className="h-11 px-3.5 sm:px-4 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-1.5 bg-primary text-black hover:bg-primary/90 active:scale-95 transition-all shadow-md shadow-primary/20 shrink-0"
+              >
+                <span className="hidden xs:inline">Sonraki</span>
+                <ChevronRight size={20} />
+              </button>
+            ) : nextSeriesBook ? (
+              <button
+                type="button"
+                onClick={() => {
+                  const slug = (nextSeriesBook.story as any).slug || generateStorySlug(nextSeriesBook.story.title, nextSeriesBook.story.storyId);
+                  router.push(nextSeriesBook.story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
+                }}
+                className="h-11 px-3 sm:px-3.5 rounded-2xl text-xs sm:text-sm font-black flex items-center gap-1.5 bg-amber-500 text-black hover:bg-amber-400 active:scale-95 transition-all shadow-md shadow-amber-500/25 shrink-0"
+                title={`Serinin ${nextSeriesBook.order}. Kitabına Geç: ${nextSeriesBook.story.title}`}
+              >
+                <span>Kitap #{nextSeriesBook.order}</span>
+                <ChevronRight size={18} />
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled
+                className="h-11 px-3.5 sm:px-4 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-1.5 opacity-25 pointer-events-none bg-primary text-black shrink-0"
+              >
+                <span className="hidden xs:inline">Sonraki</span>
+                <ChevronRight size={20} />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1268,6 +1600,34 @@ export default function ReadPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Evren Rehberi Drawer ── */}
+      {showUniverseDrawer && story?.universeId && (
+        <ReaderUniverseDrawer
+          universeId={story.universeId}
+          universeTitle={story.universeTitle}
+          currentChapterOrder={chapter?.order || 1}
+          initialTab={drawerInitialTab}
+          initialSearch={drawerInitialSearch}
+          onClose={() => setShowUniverseDrawer(false)}
+        />
+      )}
+
+      {/* ── İnteraktif Akıllı Lore Popover Mini Kartı (PRD 40.1, 40.2, 40.3) ── */}
+      {activePopoverEntity && (
+        <InlineLorePopover
+          entity={activePopoverEntity}
+          anchorRect={popoverAnchorRect}
+          currentChapterOrder={chapter?.order || 1}
+          onClose={() => setActivePopoverEntity(null)}
+          onOpenInUniverseDrawer={(tab, search) => {
+            setActivePopoverEntity(null);
+            setDrawerInitialTab(tab);
+            setDrawerInitialSearch(search);
+            setShowUniverseDrawer(true);
+          }}
+        />
       )}
     </div>
   );

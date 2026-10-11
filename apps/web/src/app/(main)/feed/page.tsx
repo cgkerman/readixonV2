@@ -4,16 +4,47 @@ import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Typography, StoryCard, Button, HorizontalStoryCard } from '@readixon/ui';
-import { getRecentStoriesPaginated, getTopStoriesPaginated, getFeaturedAuthors, getAdvancedPersonalizedStories, getCompletedStories, getMostLikedStories, getRecentlyUpdatedStories, getActiveAnnouncements, getActiveHeroBanners, getUserReadingProgress, getStoriesByIds, getTrendingDiscussions, getWebtoonsPaginated, getEditorialReviews, POPULAR_TAGS, generateStorySlug, toggleStoryLike, followUser, unfollowUser, useAuthStore, sanitizeHtml, type Story, type User, type Announcement } from '@readixon/core';
+import { 
+  getRecentStoriesPaginated, 
+  getTopStoriesPaginated, 
+  getFeaturedAuthors, 
+  getAdvancedPersonalizedStories, 
+  getCompletedStories, 
+  getMostLikedStories, 
+  getRecentlyUpdatedStories, 
+  getActiveAnnouncements, 
+  getActiveHeroBanners, 
+  getUserReadingProgress, 
+  getStoriesByIds, 
+  getTrendingDiscussions, 
+  getWebtoonsPaginated, 
+  getEditorialReviews, 
+  getPublicUniverses,
+  getPublicSeries,
+  POPULAR_TAGS, 
+  generateStorySlug, 
+  toggleStoryLike, 
+  followUser, 
+  unfollowUser, 
+  useAuthStore, 
+  sanitizeHtml, 
+  type Story, 
+  type User, 
+  type Announcement,
+  type Universe,
+  type Series
+} from '@readixon/core';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Flame, Sparkles, TrendingUp, Clock, ChevronRight, ChevronLeft, ChevronDown, Play, Users, Heart, CheckCircle, BellRing, BookOpen, MessageCircle, RotateCcw, Gem, Award, GalleryVertical,
   Rocket, Wand2, Eye, Ghost, Compass, ShieldAlert, Smile, Feather, Swords, Theater, Laugh, Moon, Skull, Brain, PenTool, Zap, Hourglass,
-  GraduationCap, Coffee, Cpu, Crown, Fingerprint, FileText
+  GraduationCap, Coffee, Cpu, Crown, Fingerprint, FileText, Globe, Layers
 } from 'lucide-react';
 import { AuthorCard } from '@readixon/ui';
 import { toast } from "sonner";
 import { AppDownloadBanner } from '@/components/AppDownloadBanner';
+import { UniverseCard } from '@/components/UniverseCard';
+import { SeriesCard } from '@/components/SeriesCard';
 
 // Tür ikonları eşleştirmesi (Tüm kategoriler için özel ikonlar)
 const TAG_ICONS: Record<string, React.ElementType> = {
@@ -156,6 +187,17 @@ export default function FeedPage() {
       const stories = await getStoriesByIds(storyIds);
       return stories.filter(s => s.status !== 'draft');
     }
+  });
+
+  // Kurgusal Evrenler & Kitap Serileri (PRD Bölüm 39 & Seri Kitap Faz 4)
+  const { data: publicUniverses = [] } = useQuery({
+    queryKey: ['universes', 'public', 'feed'],
+    queryFn: () => getPublicUniverses(10),
+  });
+
+  const { data: publicSeries = [] } = useQuery({
+    queryKey: ['series', 'public', 'feed'],
+    queryFn: () => getPublicSeries(10),
   });
 
   const recentStories = recentData?.pages.flatMap((p: any) => p.stories) || [];
@@ -917,6 +959,12 @@ export default function FeedPage() {
             />
           ) : null}
 
+          {/* ── Kurgusal Evrenler Vitrini (PRD Bölüm 39) ── */}
+          <UniverseShowcaseRow universes={publicUniverses} />
+
+          {/* ── Sürükleyici Kitap Serileri Vitrini (Seri Kitap Faz 4) ── */}
+          <SeriesShowcaseRow seriesList={publicSeries} />
+
           {/* 1.5 Son Tartışılanlar */}
           {trendingDiscussions.length > 0 && (
             <CarouselRow
@@ -1319,6 +1367,8 @@ function HorizontalCarouselRow({ title, subtitle, icon, stories, seeAllHref, onS
               latestChapterTitle={story.latestChapter?.title}
               latestChapterExcerpt={story.latestChapter?.excerpt}
               badgeText={getBadgeText ? getBadgeText(story) : undefined}
+              seriesTitle={story.seriesTitle}
+              seriesOrder={story.seriesOrder}
               onPress={() => onStoryClick?.(story)}
             />
           </div>
@@ -1451,6 +1501,240 @@ function ComingSoonBlock({ title, subtitle, icon }: { title: string, subtitle: s
           <Sparkles size={16} />
           Burası yakında çok şenlenecek!
         </Typography>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Yardımcı Bileşen: Kurgusal Evrenler Vitrini (PRD Bölüm 39)
+// ─────────────────────────────────────────────
+interface UniverseShowcaseRowProps {
+  universes: Universe[];
+}
+
+function UniverseShowcaseRow({ universes }: UniverseShowcaseRowProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(true);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const scrollAmount = direction === 'left' ? -380 : 380;
+      scrollRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
+  const handleScroll = () => {
+    if (scrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+      setShowLeftArrow(scrollLeft > 20);
+      setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 20);
+    }
+  };
+
+  if (!universes || universes.length === 0) {
+    return (
+      <div className="relative group/section rounded-3xl bg-gradient-to-r from-primary/10 via-card to-card border border-primary/20 p-6 sm:p-7 flex flex-col md:flex-row items-center justify-between gap-5 shadow-xs overflow-hidden">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-primary/20 text-primary flex items-center justify-center shrink-0">
+            <Globe size={24} />
+          </div>
+          <div>
+            <h3 className="font-extrabold text-base sm:text-lg text-foreground">Kurgusal Evrenler Atlası</h3>
+            <p className="text-muted text-xs mt-0.5">Platformda ilk kurgusal evrenini sen kur, karakterlerini ve haritanı okurlarla buluştur.</p>
+          </div>
+        </div>
+        <Link href="/studio/universes" className="shrink-0">
+          <Button variant="primary" className="rounded-xl text-xs font-bold px-4 py-2">
+            İlk Evreni Kur
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative group/section">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-xs">
+              <Globe size={20} />
+            </div>
+            <div>
+              <Typography variant="h2" className="text-2xl font-bold flex items-center gap-2">
+                <span>Kurgusal Evrenler</span>
+                <span className="text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/25">
+                  Evren Atlası
+                </span>
+              </Typography>
+            </div>
+          </div>
+          <Typography variant="body" className="text-muted text-sm mt-1">
+            Tek bir kitapla yetinmeyin; haritaları, karakter ağları ve derin kurgusuyla yaşayan dünyalara adım atın.
+          </Typography>
+        </div>
+
+        <Link
+          href="/universe"
+          className="text-primary text-sm font-semibold hover:underline flex items-center gap-1 group"
+        >
+          <span>Tüm Evrenleri Gör</span>
+          <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+        </Link>
+      </div>
+
+      {showLeftArrow && (
+        <button
+          type="button"
+          onClick={() => scroll('left')}
+          className="hidden md:flex absolute left-[-20px] top-[55%] -translate-y-1/2 z-20 w-11 h-11 bg-card/90 backdrop-blur-md border border-border/50 rounded-full items-center justify-center text-primary shadow-xl hover:bg-primary/10 hover:scale-110 transition-all cursor-pointer"
+        >
+          <ChevronLeft size={22} />
+        </button>
+      )}
+      {showRightArrow && universes.length > 2 && (
+        <button
+          type="button"
+          onClick={() => scroll('right')}
+          className="hidden md:flex absolute right-[-20px] top-[55%] -translate-y-1/2 z-20 w-11 h-11 bg-card/90 backdrop-blur-md border border-border/50 rounded-full items-center justify-center text-primary shadow-xl hover:bg-primary/10 hover:scale-110 transition-all cursor-pointer"
+        >
+          <ChevronRight size={22} />
+        </button>
+      )}
+
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex gap-5 overflow-x-auto pb-6 pt-2 scrollbar-hide snap-x"
+        style={{ scrollSnapType: 'x mandatory' }}
+      >
+        {universes.map((universe) => (
+          <div
+            key={universe.universeId}
+            className="w-[280px] sm:w-[320px] md:w-[340px] flex-shrink-0 snap-start"
+          >
+            <UniverseCard universe={universe} className="h-full" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Yardımcı Bileşen: Sürükleyici Kitap Serileri Vitrini (Seri Kitap Faz 4)
+// ─────────────────────────────────────────────
+interface SeriesShowcaseRowProps {
+  seriesList: Series[];
+}
+
+function SeriesShowcaseRow({ seriesList }: SeriesShowcaseRowProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(true);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const scrollAmount = direction === 'left' ? -380 : 380;
+      scrollRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
+  const handleScroll = () => {
+    if (scrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+      setShowLeftArrow(scrollLeft > 20);
+      setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 20);
+    }
+  };
+
+  if (!seriesList || seriesList.length === 0) {
+    return (
+      <div className="relative group/section rounded-3xl bg-gradient-to-r from-amber-500/10 via-card to-card border border-amber-500/20 p-6 sm:p-7 flex flex-col md:flex-row items-center justify-between gap-5 shadow-xs overflow-hidden">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+            <Layers size={24} />
+          </div>
+          <div>
+            <h3 className="font-extrabold text-base sm:text-lg text-foreground">Sürükleyici Kitap Serileri</h3>
+            <p className="text-muted text-xs mt-0.5">Birden fazla kitabını bir seride topla, okurlarına soluksuz binge-read keyfi sun.</p>
+          </div>
+        </div>
+        <Link href="/studio/series" className="shrink-0">
+          <Button variant="primary" className="rounded-xl text-xs font-bold px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black">
+            İlk Seriyi Başlat
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative group/section">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shadow-xs">
+              <Layers size={20} />
+            </div>
+            <div>
+              <Typography variant="h2" className="text-2xl font-bold flex items-center gap-2">
+                <span>Sürükleyici Kitap Serileri</span>
+                <span className="text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25">
+                  Binge-Read
+                </span>
+              </Typography>
+            </div>
+          </div>
+          <Typography variant="body" className="text-muted text-sm mt-1">
+            Birbirine bağlı ciltler, destansı kurgular ve tek solukta bitirilecek kitap serileri.
+          </Typography>
+        </div>
+
+        <Link
+          href="/series"
+          className="text-amber-400 text-sm font-semibold hover:underline flex items-center gap-1 group"
+        >
+          <span>Tüm Serileri Gör</span>
+          <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+        </Link>
+      </div>
+
+      {showLeftArrow && (
+        <button
+          type="button"
+          onClick={() => scroll('left')}
+          className="hidden md:flex absolute left-[-20px] top-[55%] -translate-y-1/2 z-20 w-11 h-11 bg-card/90 backdrop-blur-md border border-border/50 rounded-full items-center justify-center text-amber-500 shadow-xl hover:bg-amber-500/10 hover:scale-110 transition-all cursor-pointer"
+        >
+          <ChevronLeft size={22} />
+        </button>
+      )}
+      {showRightArrow && seriesList.length > 2 && (
+        <button
+          type="button"
+          onClick={() => scroll('right')}
+          className="hidden md:flex absolute right-[-20px] top-[55%] -translate-y-1/2 z-20 w-11 h-11 bg-card/90 backdrop-blur-md border border-border/50 rounded-full items-center justify-center text-amber-500 shadow-xl hover:bg-amber-500/10 hover:scale-110 transition-all cursor-pointer"
+        >
+          <ChevronRight size={22} />
+        </button>
+      )}
+
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex gap-5 overflow-x-auto pb-6 pt-2 scrollbar-hide snap-x"
+        style={{ scrollSnapType: 'x mandatory' }}
+      >
+        {seriesList.map((series) => (
+          <div
+            key={series.seriesId}
+            className="w-[260px] sm:w-[290px] md:w-[320px] flex-shrink-0 snap-start"
+          >
+            <SeriesCard series={series} className="h-full" />
+          </div>
+        ))}
       </div>
     </div>
   );

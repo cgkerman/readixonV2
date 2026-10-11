@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Typography, Button, Input, PaywallModal } from '@readixon/ui';
 import { 
   PlusCircle, 
@@ -255,6 +256,49 @@ export default function StudioDashboard() {
         </div>
       </div>
 
+      {/* ── 2.5. Seri & Evren Hızlı Erişim Şeritleri ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 sm:mb-8">
+        <Link
+          href="/studio/series"
+          className="p-4 rounded-2xl bg-gradient-to-r from-card/80 to-card/40 border border-border/50 hover:border-amber-500/40 transition-all flex items-center justify-between group shadow-xs hover:shadow-md"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+              <Layers size={20} />
+            </div>
+            <div>
+              <span className="font-bold text-sm text-foreground group-hover:text-amber-500 transition-colors block">
+                Kitap Serilerim
+              </span>
+              <span className="text-[11px] text-muted block mt-0.5">
+                Kitaplarınızı devam serisi ve üçlemeler halinde sıralayın.
+              </span>
+            </div>
+          </div>
+          <ChevronRight size={18} className="text-muted group-hover:text-amber-500 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+        </Link>
+
+        <Link
+          href="/studio/universes"
+          className="p-4 rounded-2xl bg-gradient-to-r from-card/80 to-card/40 border border-border/50 hover:border-primary/40 transition-all flex items-center justify-between group shadow-xs hover:shadow-md"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+              <Sparkles size={20} />
+            </div>
+            <div>
+              <span className="font-bold text-sm text-foreground group-hover:text-primary transition-colors block">
+                Evren Stüdyosu
+              </span>
+              <span className="text-[11px] text-muted block mt-0.5">
+                Karakter, mekân, timeline ve dünya ağınızı kurun.
+              </span>
+            </div>
+          </div>
+          <ChevronRight size={18} className="text-muted group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+        </Link>
+      </div>
+
       {/* ── 3. Filtreleme & Arama Sekmeleri ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 sm:mb-6">
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1 -mx-4 px-4 sm:mx-0 sm:px-0">
@@ -386,6 +430,24 @@ export default function StudioDashboard() {
                         {story.status === 'draft' ? 'Taslak' : 'Yayında'}
                       </span>
                     </div>
+
+                    {(story.seriesTitle || story.universeTitle) && (
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                        {story.seriesTitle && (
+                          <span className="inline-flex items-center gap-1 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                            <Layers size={9} />
+                            {story.seriesTitle} #{story.seriesOrder || 1}
+                          </span>
+                        )}
+                        {story.universeTitle && (
+                          <span className="inline-flex items-center gap-1 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                            <Sparkles size={9} />
+                            {story.universeTitle}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
                     <p className="text-xs text-muted line-clamp-2 mt-1 leading-snug">
                       {story.summary || 'Özet eklenmemiş...'}
                     </p>
@@ -449,6 +511,24 @@ export default function StudioDashboard() {
                         {story.status === 'draft' ? 'Taslak' : 'Yayında'}
                       </span>
                     </div>
+
+                    {(story.seriesTitle || story.universeTitle) && (
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                        {story.seriesTitle && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                            <Layers size={10} />
+                            {story.seriesTitle} #{story.seriesOrder || 1}
+                          </span>
+                        )}
+                        {story.universeTitle && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
+                            <Sparkles size={10} />
+                            {story.universeTitle}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
                     <p className="text-xs text-muted line-clamp-2 mt-1.5 leading-relaxed">
                       {story.summary || 'Özet eklenmemiş...'}
                     </p>

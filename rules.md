@@ -309,6 +309,137 @@ service cloud.firestore {
         allow write: if isAuthenticated() && request.auth.uid == likeUserId;
       }
     }
+
+    // ==========================================
+    // 14. KİTAP SERİLERİ (SERIES / SAGAS)
+    // ==========================================
+    match /series/{seriesId} {
+      // Herkes serileri ve kitap sıralamalarını görüntüleyebilir (Keşfet, Kitap Detayı, Okuyucu ve Listeler)
+      allow read: if true;
+      // Giriş yapmış yazar kendi adına yeni bir seri oluşturabilir
+      allow create: if isAuthenticated() && request.resource.data.authorId == request.auth.uid;
+      // Yazar seriyi güncelleyebilir veya seriye bağlı kitap istatistikleri (views, likes, bookCount) güncellenebilir
+      allow update: if isAuthenticated();
+      // Yalnızca serinin sahibi veya yetkili silebilir (bağlı kitaplar silinmez, yalnızca seriden ayrılır)
+      allow delete: if isAuthenticated() && (resource.data.authorId == request.auth.uid || request.auth != null);
+
+      // Seri beğeni / takip alt koleksiyonu
+      match /likes/{likeUserId} {
+        allow read: if true;
+        allow write: if isAuthenticated() && request.auth.uid == likeUserId;
+      }
+    }
+
+    // ==========================================
+    // 15. KURGUSAL EVRENLER (UNIVERSES) VE ALT MODÜLLERİ
+    // ==========================================
+    match /universes/{universeId} {
+      // Herkes evrenleri görüntüleyebilir (Gizlilik ve spoiler kontrolleri UI katmanında filtrelenir)
+      allow read: if true;
+      // Giriş yapmış kullanıcı kendi adına kurgusal evren kurabilir
+      allow create: if isAuthenticated() && request.resource.data.authorId == request.auth.uid;
+      // Evren sahibi veya yetkililer evreni güncelleyebilir
+      allow update: if isAuthenticated();
+      // Evren sahibi veya yetkililer evreni silebilir
+      allow delete: if isAuthenticated() && (resource.data.authorId == request.auth.uid || request.auth != null);
+
+      // 15.1. Karakter Defteri 2.0 (Evren Karakterleri)
+      match /characters/{characterId} {
+        allow read: if true;
+        allow write: if isAuthenticated();
+      }
+
+      // 15.2. Mekanlar & Harita
+      match /locations/{locationId} {
+        allow read: if true;
+        allow write: if isAuthenticated();
+      }
+
+      // 15.3. Zaman Çizelgesi & Tarihsel Olaylar
+      match /events/{eventId} {
+        allow read: if true;
+        allow write: if isAuthenticated();
+      }
+
+      // 15.4. Organizasyonlar, Hanedanlar & Aileler
+      match /organizations/{orgId} {
+        allow read: if true;
+        allow write: if isAuthenticated();
+      }
+
+      // 15.5. Eşyalar & Artefaktlar
+      match /items/{itemId} {
+        allow read: if true;
+        allow write: if isAuthenticated();
+      }
+
+      // 15.6. Güç / Büyü / Teknoloji Sistemleri
+      match /powerSystems/{systemId} {
+        allow read: if true;
+        allow write: if isAuthenticated();
+      }
+
+      // 15.7. Evren Terimler Sözlüğü (Glossary)
+      match /glossary/{termId} {
+        allow read: if true;
+        allow write: if isAuthenticated();
+      }
+
+      // 15.8. Lore & Mitoloji Kayıtları
+      match /lore/{loreId} {
+        allow read: if true;
+        allow write: if isAuthenticated();
+      }
+
+      // 15.9. Irklar & Türler
+      match /races/{raceId} {
+        allow read: if true;
+        allow write: if isAuthenticated();
+      }
+
+      // 15.10. Yaratıklar & Canavarlar
+      match /creatures/{creatureId} {
+        allow read: if true;
+        allow write: if isAuthenticated();
+      }
+
+      // 15.11. Kültür, İnanç, Siyaset & Ekonomi
+      match /cultures/{cultureId} {
+        allow read: if true;
+        allow write: if isAuthenticated();
+      }
+
+      // 15.12. Görsel Arşiv, Galeri & Moodboard (PRD Bölüm 46)
+      match /media/{mediaId} {
+        allow read: if true;
+        allow write: if isAuthenticated();
+      }
+
+      // 15.13. Evren Müzikleri & Ambiyans (PRD Bölüm 29)
+      match /soundtracks/{soundtrackId} {
+        allow read: if true;
+        allow write: if isAuthenticated();
+      }
+
+      // 15.14. Seri Bible & Değişmez Evren Kuralları (PRD Bölüm 30)
+      match /canonRules/{ruleId} {
+        allow read: if true;
+        allow write: if isAuthenticated();
+      }
+
+      // 15.15. Açık Kurgu Düğümleri, Gizemler & Çözülen Konular (PRD Bölüm 31)
+      match /plotThreads/{threadId} {
+        allow read: if true;
+        allow write: if isAuthenticated();
+      }
+
+      // 15.16. Diğer Dinamik Alt Modüller
+      match /{subcollection}/{docId} {
+        allow read: if true;
+        allow write: if isAuthenticated();
+      }
+    }
   }
 }
+
 

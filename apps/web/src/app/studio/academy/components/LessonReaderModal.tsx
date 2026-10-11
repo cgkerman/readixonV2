@@ -193,7 +193,7 @@ export default function LessonReaderModal({
               </div>
               <Link
                 href={lesson.studioTask.actionUrl}
-                target="_blank"
+                onClick={onClose}
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-primary-foreground font-bold text-xs shrink-0 hover:bg-primary/90 transition-transform active:scale-95 shadow-sm shadow-primary/20"
               >
                 <span>{lesson.studioTask.actionLabel}</span>

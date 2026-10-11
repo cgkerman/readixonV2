@@ -43,7 +43,7 @@ export const LEARNING_PATHS: LearningPath[] = [
     badge: 'İleri Seviye',
     iconName: 'Sparkles',
     gradient: 'from-purple-500/20 via-pink-500/10 to-transparent',
-    lessonIds: ['series-bible-guide', 'character-continuity', 'long-term-payoffs']
+    lessonIds: ['power-system-design', 'series-bible-guide', 'character-arc-transformation', 'character-continuity', 'long-term-payoffs']
   }
 ];
 
@@ -906,44 +906,103 @@ export const ACADEMY_LESSONS: AcademyLesson[] = [
 
   // ── 4. SERİ & EVREN KURUCULUĞU ──
   {
+    id: 'power-system-design',
+    title: 'Güç Sistemi Nasıl Kurulur? (Hard vs Soft Magic)',
+    summary: 'Brandon Sanderson yasalarıyla inandırıcı büyü, teknoloji ve güç hiyerarşisi inşa etme sanatı.',
+    pathId: 'series',
+    category: 'Dünya Kurma (Worldbuilding)',
+    level: 'Orta',
+    durationMinutes: 10,
+    xp: 60,
+    introduction: 'Büyü veya teknoloji bir kurguyu sadece fantastik kılmaz; karakterlerin problem çözme biçimini ve dünyanın sosyolojisini belirler. Güçlü bir sistem, sınırları ve bedelleriyle parlar.',
+    coreConcepts: [
+      {
+        heading: 'Sert vs Yumuşak Güç Sistemleri (Sanderson Yasaları)',
+        body: 'Sert (Hard) Sistemler: Okuyucu kuralları, bedelleri ve sınırları tam olarak anlar; karakter mantıklı problem çözer (Fullmetal Alchemist, Mistborn). Yumuşak (Soft) Sistemler: Büyü gizemli, tahmin edilemez ve huşu vericidir (Lord of the Rings).'
+      },
+      {
+        heading: 'Sınırlar ve Bedeller Güçten Daha İlginçtir',
+        body: 'Bir gücün ne yapabildiği değil, neyi yapamadığı ve kullanıldığında sahibinden ne aldığı (ömür, hafıza, acı, hammadde) hikâyeyi gerilimli kılar.'
+      },
+      {
+        heading: 'Dünya ile Organik Entegrasyon',
+        body: 'Eğer dünyada ışınlanma büyüsü varsa, surlar ve kaleler anlamını yitirir. Gücün ekonomiyi, savaş taktiklerini ve dini nasıl şekillendirdiğini tasarlamalısın.'
+      }
+    ],
+    comparison: {
+      weakTitle: 'Kuralsız & Bedelsiz Güç (Deus Ex Machina)',
+      weak: 'Kahraman köşeye sıkıştığında birdenbire daha önce hiç bahsedilmeyen devasa bir alev patlamasıyla tüm düşmanları yok eder; ne yorulur ne de bir şey kaybeder.',
+      strongTitle: 'Kurallı, Bedelli ve Zekice Çözüm',
+      strong: 'Kahramanın sadece metalleri itebildiğini biliriz. Kahraman son kalan madeni parayı düşmanın kalkanına çarptırıp sekme açısıyla arkasındaki ipi keserek avizeyi düşürür.',
+      reason: 'Okur kuralları bildiği için kahramanın zekasına ve zaferine hayran kalır; ucuz bir mucize hissi doğmaz.'
+    },
+    proTip: 'Güç sistemine en az bir tane "Asla Yapılamaz" kuralı ekle (örn: Ölüler diriltilemez, yoktan madde var edilemez). Bu kural hem evrenini korur hem de çatışmayı derinleştirir.',
+    studioTask: {
+      title: 'Şimdi Kendi Güç Sistemini Oluştur',
+      description: 'Evren Defteri > Güç Sistemleri modülüne git; sisteminin temel prensiplerini, kaynağını, kurallarını, bedellerini ve rütbelerini tanımla.',
+      actionLabel: 'Güç Sistemini Oluştur →',
+      actionUrl: '/studio/universes?targetTab=powers&targetAction=new'
+    },
+    quiz: {
+      question: 'Sanderson\'ın birinci büyü yasasına göre, yazarın bir büyü sistemiyle hikâyedeki çatışmaları tatmin edici şekilde çözebilme kapasitesi neye bağlıdır?',
+      options: [
+        'Karakterin büyü yaparken ne kadar bağırdığına',
+        'Okuyucunun o gücün sınırlarını, kurallarını ve bedellerini ne kadar iyi kavradığına',
+        'Büyücülerin giydiği cübbelerin rengine',
+        'Büyünün görsel efektlerinin parlaklığına'
+      ],
+      correctAnswerIndex: 1,
+      explanation: 'Okur bir gücün çalışma mantığını bilirse, karakterin o kurallar çerçevesinde bulduğu zekice çözümleri takdir eder.'
+    },
+    keyTakeaways: [
+      'Sınırlar ve bedeller, gücün kendisinden daha dramatiktir.',
+      'Sert sistemlerde okuyucuya kuralları dürüstçe öğret.',
+      'Gücün dünyayı (şehirler, ordu, ekonomi) nasıl değiştirdiğini unutma.'
+    ]
+  },
+  {
     id: 'series-bible-guide',
-    title: 'Series Bible: Evren Defteri Nasıl Tutulur?',
-    summary: 'Çok kitaplı serilerde mantık hatalarına düşmemek için yazarın kişisel ansiklopedisi.',
+    title: 'Series Bible: Canon Kuralları & Düğüm Takibi',
+    summary: 'Çok kitaplı serilerde mantık ve devamlılık hatalarını önlemek için değişmez anayasa ve açık kurgu düğümlerini yönetme rehberi.',
     pathId: 'series',
     category: 'Dünya Kurma (Worldbuilding)',
     level: 'İleri',
     durationMinutes: 9,
     xp: 60,
-    introduction: 'Game of Thrones veya Harry Potter gibi devasa evrenler yazarın sadece aklında tuttuğu şeylerle yazılamaz. Series Bible, evreninin anayasasıdır.',
+    introduction: 'Game of Thrones veya Harry Potter gibi devasa evrenler yazarın sadece aklında tuttuğu şeylerle yazılamaz. Series Bible, evreninin anayasası ve kurgu düğümlerinin pusulasıdır.',
     coreConcepts: [
       {
-        heading: 'Series Bible\'da Neler Olmalı?',
-        body: '1. Zaman Çizelgesi (Timeline): Kim ne zaman doğdu, savaş ne zaman bitti? 2. Kurallar & Büyü/Teknoloji: Güçlerin sınırları ve bedelleri. 3. Mekanlar & Coğrafya: Şehirler arası mesafeler. 4. Karakter Kütükleri: Karakterlerin göz rengi, doğum günü, gizli geçmişi.'
+        heading: 'Değişmez Canon Kuralları (Evren Anayasası)',
+        body: '1. Doğaüstü Kanunlar: Büyünün sınırları. 2. Kozmoloji & Zaman: Zaman yolculuğu mümkün mü? 3. Biyoloji: Türlerin sınırları. 4. Değişmez Tarih: Geçmişte yaşanan ve değiştirilemeyecek dönüm noktaları.'
       },
       {
-        heading: 'Readixon Karakter Defteri Entegrasyonu',
-        body: 'Readixon Studio > Karakterler alanı dijital Series Bible\'ının karakter ayağıdır. Karakterlerin RPG statları, geçmişleri ve ilişkileri burada güvendedir.'
+        heading: 'Açık Kurgu Düğümleri (Plot Threads)',
+        body: 'Her seride çözülmeyi bekleyen gizemler vardır ("Kralı kim zehirledi?", "Kayıp prens nerede?"). Hangi kitapta hangi ipucunu ektiğini ve ne zaman çözeceğini takip etmelisin.'
+      },
+      {
+        heading: 'Readixon Evren Defteri Entegrasyonu',
+        body: 'Readixon Studio > Evren Defteri alanı dijital Series Bible\'ındır. Kurallar, gizemler, zaman çizelgesi ve karakter kütükleri burada tek merkezden yönetilir.'
       }
     ],
     comparison: {
       weakTitle: 'Hafızaya Güvenen Yazar',
-      weak: '1. kitapta kahramanın yeşil gözlü olduğu yazılmışken, 3. kitapta unutulup "kara gözleriyle baktı" yazılması.',
+      weak: '1. kitapta kahramanın yeşil gözlü olduğu yazılmışken, 3. kitapta unutulup "kara gözleriyle baktı" yazılması veya 1. kitapta imkansız denen bir büyünün 2. kitapta sebepsizce çalışması.',
       strongTitle: 'Kayıtlı ve Tutarlı Evren',
-      strong: 'Series Bible\'ında karakterin tüm fiziksel özellikleri, travmaları ve yara izleri kayıtlı; 5 kitap boyunca kusursuz tutarlılık.',
+      strong: 'Series Bible\'ında evrenin tüm fiziksel kuralları, canon yasaları ve kurgu düğümleri kayıtlı; 5 kitap boyunca kusursuz tutarlılık.',
       reason: 'Okurlar detay avcısıdır; devamlılık hatası görmediklerinde yazara ve evrene saygıları katlanır.'
     },
-    proTip: 'Daha sonra kullanmak istediğin küçük bir gizem veya ipucu aklına geldiğinde Series Bible\'ına "Açık Kalan Sorular" başlığı altında hemen kaydet.',
+    proTip: 'Aklına gelen her yan gizemi Series Bible\'ında bir "Kurgu Düğümü" olarak başlat. 1. kitapta bıraktığın ipucunu 3. kitapta çözdüğünde okur hayran kalacaktır.',
     studioTask: {
-      title: 'Karakter Defterine Yeni Karakter Ekle',
-      description: 'Studio > Karakterler alanına git ve serindeki ana karakterin tüm geçmişini ve RPG statlarını doldur.',
-      actionLabel: 'Karakter Defterini Aç',
-      actionUrl: '/studio/characters'
+      title: 'Canon Kurallarını & Düğüm Takibini Başlat',
+      description: 'Evren Defteri > Canon Kuralları ve Açık Kurgu Düğümleri modülüne git; evreninin çiğnenemez kurallarını ve ilk gizemini kaydet.',
+      actionLabel: 'Canon & Düğüm Takibini Aç →',
+      actionUrl: '/studio/universes?targetTab=canon_rules&targetAction=new'
     },
     quiz: {
       question: 'Bir seri yazarının "Series Bible" (Evren Defteri) tutmasının en hayati faydası nedir?',
       options: [
         'Kitabın sayfa sayısını artırmak',
-        'Kitaplar arasında ortaya çıkabilecek devamlılık (continuity) ve kural çelişkilerini sıfıra indirmek',
+        'Kitaplar arasında ortaya çıkabilecek devamlılık (continuity), kural ve gizem çelişkilerini sıfıra indirmek',
         'Yayınevine fazladan para ödemek',
         'Sosyal medyada paylaşmak'
       ],
@@ -953,7 +1012,62 @@ export const ACADEMY_LESSONS: AcademyLesson[] = [
     keyTakeaways: [
       'Hafızana güvenme, evren defterine kaydet.',
       'Kurallarını, zaman çizelgeni ve mesafeleri sabitle.',
-      'Karakter Defteri\'ni aktif tut.'
+      'Açık kurgu düğümlerini ve ipuçlarını düzenli takip et.'
+    ]
+  },
+  {
+    id: 'character-arc-transformation',
+    title: 'Karakter Arkı: 8 Aşamalı İçsel Dönüşüm',
+    summary: 'Statükodan aydınlanmaya: Karakterin zaafını, inandığı yalanı ve 8 aşamalı dönüşüm eğrisini kurgulama sanatı.',
+    pathId: 'series',
+    category: 'Karakter & Psikoloji',
+    level: 'İleri',
+    durationMinutes: 10,
+    xp: 60,
+    introduction: 'Okuyucu olay örgüsünü takip eder ama karakterin içsel dönüşümüne aşık olur. İyi bir karakter arkı, kahramanın inandığı bir yalanı yıkıp hakikati kabul etme yolculuğudur.',
+    coreConcepts: [
+      {
+        heading: 'İstek (Want) vs İhtiyaç (Need) & İnandığı Yalan (The Lie)',
+        body: 'Karakter hikâyeye yanlış bir inançla başlar ("Yalnız olursam kimse beni incitemez"). Bir şeyi çok ister (güç, para, intikam), ama aslında bambaşka bir şeye muhtaçtır (güven, bağ kurma, affetme).'
+      },
+      {
+        heading: '8 Aşamalı Klasik Dönüşüm Cetveli',
+        body: '1. Başlangıç Statükosu 2. İçsel Eksiklik & Zaaf 3. Tetikleyici Olay 4. Değişime Direnç 5. Sınavlar ve Yalanın Zirvesi 6. Kriz Noktası / Ruhun Karanlık Gecesi 7. Aydınlanma & Dönüşüm 8. Yeni Statüko ve Denge.'
+      },
+      {
+        heading: 'Pozitif, Negatif ve Düz Arklar',
+        body: 'Pozitif Ark: Yalanı terk edip hakikati bulur. Negatif Ark: Yalanına daha çok sarılıp trajediye sürüklenir (Walter White). Düz (Flat) Ark: Kendisi değişmez ama dünyayı dönüştürür (Sherlock Holmes, Goku).'
+      }
+    ],
+    comparison: {
+      weakTitle: 'Durağan veya Sebebsiz Değişen Karakter',
+      weak: 'Hikâye boyunca başına onlarca felaket gelen kahraman, kitabın sonunda ilk sayfadaki zihniyetle aynı kalır; hiçbir içsel ders çıkarmaz.',
+      strongTitle: 'Bedel Ödeyen ve Olgunlaşan Karakter',
+      strong: 'En büyük korkusuyla ve inandığı yalanla yüzleşen kahraman, kriz anında bencilce isteğinden vazgeçip başkalarını kurtaracak fedakarlığı yapar.',
+      reason: 'Fiziksel zaferden ziyade psikolojik olgunlaşma gerçekleştiği için hikâyenin sonu derin bir duygusal tatmin bırakır.'
+    },
+    proTip: 'Karakterinin 8 aşamalı arkını yazarken en çok "Kriz Noktası"na odaklan; karakterin eski inancının artık tamamen iflas ettiği an, dönüşümün doğduğu yerdir.',
+    studioTask: {
+      title: 'Karakter Defteri 2.0 Ark Cetvelini Doldur',
+      description: 'Evren Defteri > Karakterler modülüne git; ana karakterinin 8 aşamalı ark cetvelini (İçsel zaaf, Kriz ve Yeni Denge) doldur.',
+      actionLabel: 'Karakter Ark Cetveline Git →',
+      actionUrl: '/studio/universes?targetTab=characters&subTab=arc&targetAction=new'
+    },
+    quiz: {
+      question: 'Bir karakter arkında "İnandığı Yalan" (The Lie) kavramı en doğru şekilde nasıl tanımlanır?',
+      options: [
+        'Karakterin diğer karakterleri kandırmak için uydurduğu yalan',
+        'Karakterin kendisi veya dünya hakkında inandığı, gelişimini ve mutluluğunu engelleyen hatalı içsel inanç',
+        'Yazarın kitabın arka kapağına yazdığı aldatıcı tanıtım',
+        'Düşmanın karakteri tuzağa düşürmek için söylediği yalan'
+      ],
+      correctAnswerIndex: 1,
+      explanation: 'İnandığı Yalan, karakterin geçmiş travmalarından doğan ve hikâye boyunca yıkılması gereken temel kusurudur.'
+    },
+    keyTakeaways: [
+      'İstek dışsaldır, ihtiyaç içsel ve ahlakidir.',
+      'Dönüşüm kriz anında yapılan zor seçimle mühürlenir.',
+      '8 aşamalı ark cetveli karakterin duygusal omurgasını korur.'
     ]
   },
   {
