@@ -8,12 +8,14 @@ import {
   CheckCircle2, 
   X, 
   Smartphone,
-  ExternalLink,
   ShieldCheck,
   RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { AppVersionResponse } from '@/app/api/app-version/route';
+
+const SNOOZE_DISMISS_HOURS = 24; // Hatırlatmayı erteleyen kullanıcıya 24 saat boyunca tekrar gösterme
+const SNOOZE_DOWNLOAD_HOURS = 2;  // İndirmeyi başlatan kullanıcıya kurulum için 2 saat boyunca modalı tekrar açma
 
 export function AppUpdateChecker() {
   const [updateInfo, setUpdateInfo] = useState<AppVersionResponse | null>(null);
@@ -48,13 +50,35 @@ export function AppUpdateChecker() {
 
         // Eğer kurulu build numarası sunucudakinden küçükse güncelleme mevcuttur
         if (currentBuildNum < latestBuildNum) {
-          const dismissedKey = `readixon_update_dismissed_${latestBuildNum}`;
-          const isDismissed = sessionStorage.getItem(dismissedKey);
-
-          if (!isDismissed || data.isMandatory) {
+          // Zorunlu güncelleme ise erteleme kurallarını yok say
+          if (data.isMandatory) {
             setUpdateInfo(data);
             setIsOpen(true);
+            return;
           }
+
+          // 1. Kullanıcı indirmeyi zaten başlattı mı? (Kurulum yapması için 2 saat süre tanı)
+          const downloadedKey = `readixon_update_downloaded_${latestBuildNum}`;
+          const downloadedAt = localStorage.getItem(downloadedKey);
+          if (downloadedAt) {
+            const timePassedHours = (Date.now() - parseInt(downloadedAt, 10)) / (1000 * 60 * 60);
+            if (timePassedHours < SNOOZE_DOWNLOAD_HOURS) {
+              return;
+            }
+          }
+
+          // 2. Kullanıcı "Daha Sonra Hatırlat" dedi mi? (24 saat erteleme)
+          const dismissedKey = `readixon_update_dismissed_${latestBuildNum}`;
+          const dismissedAt = localStorage.getItem(dismissedKey);
+          if (dismissedAt) {
+            const timePassedHours = (Date.now() - parseInt(dismissedAt, 10)) / (1000 * 60 * 60);
+            if (timePassedHours < SNOOZE_DISMISS_HOURS) {
+              return;
+            }
+          }
+
+          setUpdateInfo(data);
+          setIsOpen(true);
         }
       } catch (err) {
         console.warn('[AppUpdateChecker] Sürüm kontrol hatası:', err);
@@ -77,20 +101,25 @@ export function AppUpdateChecker() {
     setIsUpdating(true);
 
     try {
+      // İndirme başlatıldığını kaydet (böylece kullanıcı uygulamaya döndüğünde modal hemen tekrar patlamaz)
+      try {
+        localStorage.setItem(`readixon_update_downloaded_${updateInfo.latestBuild}`, Date.now().toString());
+      } catch {}
+
       // Android sistem tarayıcısında APK dosyasını aç (DownloadManager doğrudan indirir)
       window.open(updateInfo.apkUrl, '_system');
 
-      toast.success('Güncelleme paketi indiriliyor! Bildirim çubuğunu kontrol edebilirsiniz.', {
-        duration: 6000,
+      toast.success('Güncelleme paketi indiriliyor! İndirme bitince bildirim çubuğundan APK dosyasına dokunarak kurulumu tamamlayabilirsiniz.', {
+        duration: 8000,
       });
 
-      // İndirme başlatıldıktan sonra modal kapatılabilir
+      // İndirme başlatıldıktan sonra modal kapatılır
       setTimeout(() => {
         setIsUpdating(false);
         if (!updateInfo.isMandatory) {
           setIsOpen(false);
         }
-      }, 2000);
+      }, 1500);
     } catch (e) {
       console.error('Güncelleme yönlendirme hatası:', e);
       window.location.href = updateInfo.apkUrl;
@@ -106,7 +135,7 @@ export function AppUpdateChecker() {
     }
 
     try {
-      sessionStorage.setItem(`readixon_update_dismissed_${updateInfo.latestBuild}`, 'true');
+      localStorage.setItem(`readixon_update_dismissed_${updateInfo.latestBuild}`, Date.now().toString());
     } catch {}
     setIsOpen(false);
   };
@@ -115,25 +144,25 @@ export function AppUpdateChecker() {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md">
         <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          initial={{ opacity: 0, scale: 0.92, y: 16 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          exit={{ opacity: 0, scale: 0.92, y: 16 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="relative w-full max-w-sm rounded-[28px] bg-gradient-to-b from-card/95 via-card/90 to-background border border-border/80 shadow-2xl p-5 sm:p-6 overflow-hidden"
+          className="relative w-full max-w-sm rounded-[28px] bg-card text-text border border-border shadow-2xl p-5 sm:p-6 overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Arka Plan Parlama Efektleri */}
-          <div className="absolute -top-16 -right-16 w-40 h-40 bg-primary/25 rounded-full blur-[60px] pointer-events-none" />
-          <div className="absolute -bottom-16 -left-16 w-40 h-40 bg-indigo-500/20 rounded-full blur-[60px] pointer-events-none" />
+          <div className="absolute -top-16 -right-16 w-36 h-36 bg-primary/20 rounded-full blur-[50px] pointer-events-none" />
+          <div className="absolute -bottom-16 -left-16 w-36 h-36 bg-indigo-500/15 rounded-full blur-[50px] pointer-events-none" />
 
           {/* Kapat Butonu (Zorunlu değilse) */}
           {!updateInfo.isMandatory && (
             <button
               type="button"
               onClick={handleDismiss}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-muted/30 hover:bg-muted/60 text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors cursor-pointer z-10"
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-background border border-border text-muted hover:text-text flex items-center justify-center transition-colors cursor-pointer z-10"
               aria-label="Kapat"
             >
               <X size={16} />
@@ -146,39 +175,39 @@ export function AppUpdateChecker() {
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary to-indigo-600 flex items-center justify-center text-white shadow-xl shadow-primary/30">
                 <Smartphone size={32} />
               </div>
-              <div className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full bg-emerald-500 border-2 border-card flex items-center justify-center text-white shadow">
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 border-2 border-card flex items-center justify-center text-white shadow">
                 <Sparkles size={12} />
               </div>
             </div>
 
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/15 border border-primary/30 text-primary text-[11px] font-bold tracking-wide mb-1.5">
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/25 text-primary text-[11px] font-bold tracking-wide">
                 <span>Yeni Sürüm v{updateInfo.latestVersion}</span>
                 {currentVersion && (
-                  <span className="text-muted-foreground font-normal">
+                  <span className="text-muted font-normal">
                     (Mevcut: v{currentVersion})
                   </span>
                 )}
               </div>
-              <h2 className="text-lg font-extrabold text-foreground">
+              <h2 className="text-lg font-extrabold text-text leading-snug">
                 {updateInfo.title}
               </h2>
-              <p className="text-xs text-muted-foreground mt-1 px-2 leading-relaxed">
+              <p className="text-xs text-muted px-1 leading-relaxed">
                 {updateInfo.description}
               </p>
             </div>
           </div>
 
           {/* Yenilikler Listesi */}
-          <div className="my-4 p-3.5 rounded-2xl bg-muted/20 border border-border/50 space-y-2">
-            <div className="flex items-center gap-1.5 text-[11px] font-bold text-foreground uppercase tracking-wider">
+          <div className="my-4 p-3.5 rounded-2xl bg-background border border-border space-y-2.5">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-text uppercase tracking-wider">
               <Sparkles size={13} className="text-primary" />
               <span>Neler Yeni?</span>
             </div>
-            <ul className="space-y-1.5">
+            <ul className="space-y-2">
               {updateInfo.releaseNotes.map((note, index) => (
-                <li key={index} className="flex items-start gap-2 text-xs text-foreground/85 leading-snug">
-                  <CheckCircle2 size={14} className="text-primary flex-shrink-0 mt-0.5" />
+                <li key={index} className="flex items-start gap-2.5 text-xs text-text leading-snug">
+                  <CheckCircle2 size={14} className="text-primary shrink-0 mt-0.5" />
                   <span>{note}</span>
                 </li>
               ))}
@@ -186,8 +215,8 @@ export function AppUpdateChecker() {
           </div>
 
           {/* Güvenlik Bilgisi */}
-          <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground mb-4">
-            <ShieldCheck size={14} className="text-emerald-500" />
+          <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted mb-4">
+            <ShieldCheck size={14} className="text-emerald-500 shrink-0" />
             <span>Mevcut verileriniz ve hesabınız korunur.</span>
           </div>
 
@@ -197,7 +226,7 @@ export function AppUpdateChecker() {
               type="button"
               onClick={handleUpdate}
               disabled={isUpdating}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-primary via-indigo-600 to-indigo-700 hover:from-primary/90 hover:to-indigo-600 text-white font-bold text-xs sm:text-sm shadow-lg shadow-primary/25 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-primary via-indigo-600 to-indigo-700 hover:opacity-95 text-white font-bold text-xs sm:text-sm shadow-lg shadow-primary/25 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
             >
               {isUpdating ? (
                 <>
@@ -216,7 +245,7 @@ export function AppUpdateChecker() {
               <button
                 type="button"
                 onClick={handleDismiss}
-                className="w-full py-2.5 rounded-xl border border-border/40 bg-muted/10 hover:bg-muted/25 text-muted-foreground hover:text-foreground font-semibold text-xs transition-colors cursor-pointer"
+                className="w-full py-2.5 rounded-xl border border-border bg-background hover:bg-card text-muted hover:text-text font-semibold text-xs transition-colors cursor-pointer"
               >
                 Daha Sonra Hatırlat
               </button>
