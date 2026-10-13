@@ -24,6 +24,7 @@ import {
   Loader2, 
   ChevronRight,
   Globe,
+  Mountain,
   AlertTriangle,
   Eye,
   Lock,
@@ -70,6 +71,7 @@ import { InteractiveWorldMap } from '@/components/InteractiveWorldMap';
 import { InteractiveRelationshipGraph } from '@/components/InteractiveRelationshipGraph';
 import { UniverseSearchDrawer, type UniverseSearchResultItem } from '@/components/UniverseSearchDrawer';
 import { UniverseOnboardingChecklist } from '@/components/UniverseOnboardingChecklist';
+import { UniverseNavigationTabs } from './UniverseNavigationTabs';
 import { 
   useAuthStore, 
   getUniverseById, 
@@ -81,6 +83,7 @@ import {
   unlinkSeriesFromUniverse,
   getUniverseLocations,
   createUniverseLocation,
+  updateUniverseLocation,
   deleteUniverseLocation,
   getUniverseTimelineEvents,
   createUniverseTimelineEvent,
@@ -154,10 +157,12 @@ import {
   getSeriesById,
   subscribeToAuthorStories,
   getSeriesByAuthorId,
+  LOCATION_TYPE_LABELS,
   type Universe, 
   type UniverseGenre, 
   type UniverseVisibility, 
   type UniverseLocation, 
+  type LocationType, 
   type UniverseTimelineEvent, 
   type UniverseGlossaryTerm, 
   type UniverseLore, 
@@ -419,9 +424,22 @@ export default function UniverseDetailPage() {
   // Yeni Mekan Modalı
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [newLocName, setNewLocName] = useState('');
-  const [newLocType, setNewLocType] = useState<any>('city');
+  const [newLocType, setNewLocType] = useState<LocationType>('city');
   const [newLocDesc, setNewLocDesc] = useState('');
   const [newLocClimate, setNewLocClimate] = useState('');
+  const [newLocParentId, setNewLocParentId] = useState('');
+
+  // Mekân Defteri 2.0 Detay / Düzenleme Modalı
+  const [selectedLocForDetail, setSelectedLocForDetail] = useState<UniverseLocation | null>(null);
+  const [isLocDetailModalOpen, setIsLocDetailModalOpen] = useState(false);
+  const [locDetailTab, setLocDetailTab] = useState<'basic' | 'geography' | 'society' | 'lore' | 'connections'>('basic');
+  const [editingLocData, setEditingLocData] = useState<Partial<UniverseLocation>>({});
+  const [isSavingLocDetail, setIsSavingLocDetail] = useState(false);
+  const [isUploadingLocImage, setIsUploadingLocImage] = useState(false);
+
+  // Mekân Arama & Filtreleme
+  const [locSearchQuery, setLocSearchQuery] = useState('');
+  const [locTypeFilter, setLocTypeFilter] = useState<string>('all');
 
   // Yeni Timeline Olayı Modalı
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
@@ -959,7 +977,7 @@ export default function UniverseDetailPage() {
     }
   };
 
-  // Yeni Mekan Ekle / Sil
+  // Yeni Mekan Ekle / Sil & Mekân Defteri 2.0
   const handleCreateLocation = async () => {
     if (!newLocName.trim()) {
       toast.error('Mekân adı gerekli.');
@@ -971,17 +989,70 @@ export default function UniverseDetailPage() {
         type: newLocType,
         description: newLocDesc.trim(),
         climate: newLocClimate.trim(),
+        parentLocationId: newLocParentId || undefined,
       });
       toast.success('Mekân eklendi.');
       setIsLocationModalOpen(false);
       setNewLocName('');
       setNewLocDesc('');
       setNewLocClimate('');
+      setNewLocParentId('');
       setLocations(await getUniverseLocations(universeId));
     } catch (error: any) {
       console.error('Mekân oluşturma hatası:', error);
       toast.error(error?.message || 'Mekân oluşturulamadı.');
     }
+  };
+
+  const openLocationDetail = (loc: UniverseLocation) => {
+    setSelectedLocForDetail(loc);
+    setEditingLocData({
+      ...loc,
+      importantCharacterIds: loc.importantCharacterIds || [],
+      relatedEventIds: loc.relatedEventIds || [],
+      relatedOrganizationIds: loc.relatedOrganizationIds || [],
+    });
+    setLocDetailTab('basic');
+    setIsLocDetailModalOpen(true);
+  };
+
+  const handleSaveLocationDetail = async () => {
+    if (!selectedLocForDetail) return;
+    setIsSavingLocDetail(true);
+    try {
+      await updateUniverseLocation(universeId, selectedLocForDetail.id, editingLocData);
+      toast.success('Mekân Defteri 2.0 güncellendi!');
+      setLocations(await getUniverseLocations(universeId));
+      setIsLocDetailModalOpen(false);
+      setSelectedLocForDetail(null);
+    } catch (error: any) {
+      console.error('Mekân güncelleme hatası:', error);
+      toast.error(error?.message || 'Güncelleme kaydedilemedi.');
+    } finally {
+      setIsSavingLocDetail(false);
+    }
+  };
+
+  const handleLocImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedLocForDetail) return;
+    setIsUploadingLocImage(true);
+    try {
+      const compressed = await compressToWebP(file, 1600, 1000, 0.85);
+      const path = `universes/${universeId}/locations/${selectedLocForDetail.id}/cover_${Date.now()}.webp`;
+      const url = await uploadFile(compressed, path);
+      setEditingLocData((prev) => ({ ...prev, imageUrl: url }));
+      toast.success('Mekân görseli WebP formatında optimize edildi ve yüklendi.');
+    } catch (err: any) {
+      toast.error('Mekân görseli yüklenemedi.');
+    } finally {
+      setIsUploadingLocImage(false);
+    }
+  };
+
+  const handleRemoveLocImage = () => {
+    setEditingLocData((prev) => ({ ...prev, imageUrl: undefined }));
+    toast.info('Görsel kaldırıldı. Değişikliği kaydetmeyi unutmayın.');
   };
 
   const handleDeleteLocation = async (id: string) => {
@@ -2209,6 +2280,23 @@ export default function UniverseDetailPage() {
     }
   };
 
+  const handleRemoveCharImage = (imageType: 'avatar' | 'transparentPng' | 'fullBody') => {
+    if (imageType === 'avatar') {
+      setEditingCharData((prev) => ({ ...prev, avatarUrl: undefined }));
+    } else if (imageType === 'transparentPng') {
+      setEditingCharData((prev) => ({
+        ...prev,
+        pngGallery: { ...(prev.pngGallery || {}), transparentPngUrl: undefined },
+      }));
+    } else if (imageType === 'fullBody') {
+      setEditingCharData((prev) => ({
+        ...prev,
+        pngGallery: { ...(prev.pngGallery || {}), fullBodyUrl: undefined },
+      }));
+    }
+    toast.info('Görsel kaldırıldı. Değişikliği kaydetmeyi unutmayın.');
+  };
+
   const handleDeleteChar = async (id: string) => {
     if (!window.confirm('Bu karakteri evrenden silmek istediğinize emin misiniz?')) return;
     try {
@@ -2660,236 +2748,32 @@ export default function UniverseDetailPage() {
         }}
       />
 
-      {/* ── Tab Bar Navigasyonu ── */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-6 border-b border-border/40 scrollbar-none">
-        <button
-          onClick={() => setActiveTab('overview')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-            activeTab === 'overview'
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted hover:text-foreground hover:bg-card'
-          }`}
-        >
-          <BookOpen size={15} />
-          <span>Genel & Eserler</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('characters')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-            activeTab === 'characters'
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted hover:text-foreground hover:bg-card'
-          }`}
-        >
-          <Users size={15} />
-          <span>Karakterler ({characters.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('relationships')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-            activeTab === 'relationships'
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted hover:text-foreground hover:bg-card'
-          }`}
-        >
-          <Share2 size={15} />
-          <span>İlişki Ağı</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('races')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-            activeTab === 'races'
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted hover:text-foreground hover:bg-card'
-          }`}
-        >
-          <Dna size={15} />
-          <span>Irklar & Türler ({races.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('creatures')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-            activeTab === 'creatures'
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted hover:text-foreground hover:bg-card'
-          }`}
-        >
-          <Skull size={15} />
-          <span>Yaratıklar & Canavarlar ({creatures.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('locations')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-            activeTab === 'locations'
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted hover:text-foreground hover:bg-card'
-          }`}
-        >
-          <MapPin size={15} />
-          <span>Mekânlar ({locations.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('maps')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-            activeTab === 'maps'
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted hover:text-foreground hover:bg-card'
-          }`}
-        >
-          <MapIcon size={15} />
-          <span>Dünya Haritası ({maps.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('organizations')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-            activeTab === 'organizations'
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted hover:text-foreground hover:bg-card'
-          }`}
-        >
-          <Building2 size={15} />
-          <span>Organizasyonlar ({organizations.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('items')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-            activeTab === 'items'
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted hover:text-foreground hover:bg-card'
-          }`}
-        >
-          <Sword size={15} />
-          <span>Eşyalar ({items.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('powers')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-            activeTab === 'powers'
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted hover:text-foreground hover:bg-card'
-          }`}
-        >
-          <Zap size={15} />
-          <span>Güç Sistemleri ({powerSystems.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('cultures')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-            activeTab === 'cultures'
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted hover:text-foreground hover:bg-card'
-          }`}
-        >
-          <Landmark size={15} />
-          <span>Kültür, İnanç & Düzen ({cultures.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('media')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-            activeTab === 'media'
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted hover:text-foreground hover:bg-card'
-          }`}
-        >
-          <Palette size={15} />
-          <span>Sanat & Moodboard ({mediaList.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('soundtracks')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-            activeTab === 'soundtracks'
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted hover:text-foreground hover:bg-card'
-          }`}
-        >
-          <Music size={15} />
-          <span>Müzik & Ambiyans ({soundtracks.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('canon_rules')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-            activeTab === 'canon_rules'
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted hover:text-foreground hover:bg-card'
-          }`}
-        >
-          <Scale size={15} />
-          <span>Seri Bible & Canon ({canonRules.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('plot_threads')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-            activeTab === 'plot_threads'
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted hover:text-foreground hover:bg-card'
-          }`}
-        >
-          <HelpCircle size={15} />
-          <span>Açık Düğümler & Gizemler ({plotThreads.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('timeline')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-            activeTab === 'timeline'
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted hover:text-foreground hover:bg-card'
-          }`}
-        >
-          <Clock size={15} />
-          <span>Zaman Çizelgesi ({timelineEvents.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('glossary')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-            activeTab === 'glossary'
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted hover:text-foreground hover:bg-card'
-          }`}
-        >
-          <BookA size={15} />
-          <span>Sözlük ({glossaryTerms.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('lore')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-            activeTab === 'lore'
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted hover:text-foreground hover:bg-card'
-          }`}
-        >
-          <Scroll size={15} />
-          <span>Lore & Kurallar ({loreList.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('members')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-            activeTab === 'members'
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted hover:text-foreground hover:bg-card'
-          }`}
-        >
-          <Users size={15} />
-          <span>👥 Ekip & İzinler ({(universe.members?.length || 0) + 1})</span>
-        </button>
-      </div>
+      {/* ── Akıllı Kategori Filtreli & Canlı Sayaçlı Tab Bar Navigasyonu ── */}
+      <UniverseNavigationTabs
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        counts={{
+          overview: connectedStories.length,
+          characters: characters.length,
+          relationships: characters.reduce((acc, c) => acc + (c.relationships?.length || 0), 0),
+          races: races.length,
+          creatures: creatures.length,
+          locations: locations.length,
+          maps: maps.length,
+          organizations: organizations.length,
+          items: items.length,
+          powers: powerSystems.length,
+          cultures: cultures.length,
+          media: mediaList.length,
+          soundtracks: soundtracks.length,
+          canon_rules: canonRules.length,
+          plot_threads: plotThreads.length,
+          timeline: timelineEvents.length,
+          glossary: glossaryTerms.length,
+          lore: loreList.length,
+          members: (universe.members?.length || 0) + 1,
+        }}
+      />
 
       {/* ── 1. SEKME: Genel & Eserler ── */}
       {activeTab === 'overview' && (
@@ -3450,46 +3334,197 @@ export default function UniverseDetailPage() {
         </div>
       )}
 
-      {/* ── 3. SEKME: Mekânlar ── */}
-      {activeTab === 'locations' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Typography variant="h3" className="font-bold text-base">Mekân Defteri</Typography>
-            <Button variant="primary" onPress={() => setIsLocationModalOpen(true)} className="text-xs font-bold py-2 px-3.5 rounded-xl">
-              <Plus size={14} className="mr-1" /> Mekân Ekle
-            </Button>
-          </div>
+      {/* ── 3. SEKME: Mekân Defteri 2.0 ── */}
+      {activeTab === 'locations' && (() => {
+        const filteredLocations = locations.filter((loc) => {
+          const q = locSearchQuery.toLowerCase().trim();
+          const matchesSearch = !q || 
+            loc.name.toLowerCase().includes(q) ||
+            (loc.description && loc.description.toLowerCase().includes(q)) ||
+            (loc.climate && loc.climate.toLowerCase().includes(q)) ||
+            (loc.governance && loc.governance.toLowerCase().includes(q));
+          const matchesType = locTypeFilter === 'all' || loc.type === locTypeFilter;
+          return matchesSearch && matchesType;
+        });
 
-          {locations.length === 0 ? (
-            <div className="p-8 rounded-2xl bg-card/40 border border-border/40 text-center">
-              <MapPin size={32} className="text-muted/40 mx-auto mb-2" />
-              <p className="text-xs text-muted">Henüz kayıtlı bir mekân yok. Krallık, şehir, orman veya kale ekleyin.</p>
+        return (
+          <div className="space-y-4">
+            {/* Üst Başlık & Ekleme */}
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <Typography variant="h3" className="font-extrabold text-base flex items-center gap-2">
+                  Mekân Defteri 2.0
+                  <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
+                    {locations.length} Mekân
+                  </span>
+                </Typography>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Evreninizin kıtaları, krallıkları, şehirleri, tapınakları ve hiyerarşik coğrafyası.
+                </p>
+              </div>
+              <Button variant="primary" onPress={() => setIsLocationModalOpen(true)} className="text-xs font-bold py-2 px-4 rounded-xl flex items-center gap-1.5 shadow-sm">
+                <Plus size={14} /> Yeni Mekân Ekle
+              </Button>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {locations.map((loc) => (
-                <div key={loc.id} className="p-4 rounded-2xl bg-card/60 border border-border/50 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-bold text-foreground">{loc.name}</span>
-                      <span className="text-[10px] uppercase font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md">
-                        {loc.type}
-                      </span>
+
+            {/* Arama ve Tür Filtreleme Çubuğu */}
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Mekân adı, iklim veya açıklama ara..."
+                  value={locSearchQuery}
+                  onChange={(e) => setLocSearchQuery(e.target.value)}
+                  className="w-full bg-card border border-border/60 rounded-xl pl-9 pr-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
+                />
+              </div>
+
+              <select
+                value={locTypeFilter}
+                onChange={(e) => setLocTypeFilter(e.target.value)}
+                className="bg-card border border-border/60 rounded-xl px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors"
+              >
+                <option value="all">Tüm Mekân Türleri ({locations.length})</option>
+                {Object.entries(LOCATION_TYPE_LABELS).map(([k, label]) => {
+                  const count = locations.filter((l) => l.type === k).length;
+                  return (
+                    <option key={k} value={k}>
+                      {label} ({count})
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
+            {/* Liste Durumu */}
+            {filteredLocations.length === 0 ? (
+              <div className="p-12 rounded-2xl bg-card/40 border border-border/40 text-center space-y-2">
+                <MapPin size={36} className="text-muted-foreground/40 mx-auto" />
+                <p className="text-xs font-medium text-foreground">
+                  {locations.length === 0 ? 'Henüz kayıtlı bir mekân yok.' : 'Arama kriterlerine uygun mekân bulunamadı.'}
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {locations.length === 0 ? 'Evreninize kıta, krallık, başkent veya özel bir yapı ekleyerek başlayın.' : 'Arama terimini veya filtreyi değiştirin.'}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredLocations.map((loc) => {
+                  const parentLoc = locations.find((l) => l.id === loc.parentLocationId);
+                  const childCount = locations.filter((l) => l.parentLocationId === loc.id).length;
+                  const charCount = loc.importantCharacterIds?.length || 0;
+
+                  return (
+                    <div
+                      key={loc.id}
+                      onClick={() => openLocationDetail(loc)}
+                      className="rounded-2xl bg-card border border-border/60 hover:border-primary/50 transition-all flex flex-col justify-between overflow-hidden group cursor-pointer shadow-xs hover:shadow-md"
+                    >
+                      {/* Görsel / Başlık Bandı */}
+                      <div className="w-full h-32 relative bg-muted/30 overflow-hidden">
+                        {loc.imageUrl ? (
+                          <img
+                            src={loc.imageUrl}
+                            alt={loc.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-primary/5 via-muted/20 to-background text-muted-foreground/40">
+                            <Landmark size={28} className="mb-1 text-muted-foreground/50" />
+                            <span className="text-[10px] font-semibold tracking-wider uppercase text-muted-foreground/60">
+                              {LOCATION_TYPE_LABELS[loc.type] || loc.type}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Tür Rozeti */}
+                        <div className="absolute top-2.5 left-2.5">
+                          <span className="text-[10px] font-bold uppercase text-primary bg-background/90 backdrop-blur-md px-2 py-0.5 rounded-md border border-border/60 shadow-xs">
+                            {LOCATION_TYPE_LABELS[loc.type] || loc.type}
+                          </span>
+                        </div>
+
+                        {/* Spoiler & Alt Mekân Rozetleri */}
+                        <div className="absolute top-2.5 right-2.5 flex items-center gap-1">
+                          {loc.isSpoiler && (
+                            <span className="text-[10px] font-bold text-amber-500 bg-background/90 backdrop-blur-md px-1.5 py-0.5 rounded-md border border-amber-500/30 flex items-center gap-0.5 shadow-xs">
+                              <Lock size={10} /> Bölüm {loc.spoilerThresholdChapter || 1}+
+                            </span>
+                          )}
+                          {childCount > 0 && (
+                            <span className="text-[10px] font-bold text-foreground bg-background/90 backdrop-blur-md px-1.5 py-0.5 rounded-md border border-border/60 shadow-xs">
+                              {childCount} Alt Mekân
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Kart Gövdesi */}
+                      <div className="p-4 flex-1 flex flex-col justify-between space-y-2.5">
+                        <div>
+                          {/* Hiyerarşik Üst Mekân Gösterimi */}
+                          {parentLoc && (
+                            <div className="flex items-center gap-1 text-[10.5px] font-medium text-muted-foreground mb-1">
+                              <MapPin size={11} className="text-primary shrink-0" />
+                              <span className="truncate">Üst: {parentLoc.name} ({LOCATION_TYPE_LABELS[parentLoc.type] || parentLoc.type})</span>
+                            </div>
+                          )}
+
+                          <h4 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors flex items-center justify-between">
+                            <span>{loc.name}</span>
+                            <Edit3 size={13} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                          </h4>
+                          <p className="text-xs text-muted-foreground line-clamp-2 mt-1 leading-relaxed">
+                            {loc.description || 'Açıklama girilmedi.'}
+                          </p>
+                        </div>
+
+                        {/* Alt Özellik Çipleri */}
+                        <div className="pt-2 border-t border-border/40 flex flex-wrap gap-1.5 text-[10px] text-muted-foreground">
+                          {loc.climate && (
+                            <span className="px-1.5 py-0.5 rounded-md bg-muted/60 border border-border/40 truncate max-w-[140px]">
+                              🌤 {loc.climate}
+                            </span>
+                          )}
+                          {loc.population && (
+                            <span className="px-1.5 py-0.5 rounded-md bg-muted/60 border border-border/40 truncate max-w-[120px]">
+                              👥 {loc.population}
+                            </span>
+                          )}
+                          {charCount > 0 && (
+                            <span className="px-1.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
+                              👤 {charCount} Karakter
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Alt Butonlar */}
+                        <div className="pt-2 border-t border-border/30 flex items-center justify-between text-[11px] text-muted-foreground">
+                          <span className="font-semibold text-primary group-hover:underline">
+                            Defteri Aç & Düzenle →
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteLocation(loc.id);
+                            }}
+                            className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                            title="Mekânı Sil"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-[11px] text-muted line-clamp-2">{loc.description || 'Açıklama yok.'}</p>
-                  </div>
-                  <div className="pt-3 mt-3 border-t border-border/40 flex items-center justify-between text-[10px] text-muted">
-                    <span>{loc.climate || 'İklim belirtilmedi'}</span>
-                    <button onClick={() => handleDeleteLocation(loc.id)} className="text-muted hover:text-destructive p-1">
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── 4. SEKME: Zaman Çizelgesi ── */}
       {activeTab === 'timeline' && (
@@ -5639,45 +5674,79 @@ export default function UniverseDetailPage() {
       {isLocationModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md">
           <div className="bg-card border border-border/60 rounded-3xl p-6 max-w-md w-full shadow-2xl relative">
-            <button onClick={() => setIsLocationModalOpen(false)} className="absolute top-4 right-4 text-muted"><X size={18} /></button>
-            <Typography variant="h3" className="font-bold text-base mb-4">Yeni Mekân Ekle</Typography>
+            <button onClick={() => setIsLocationModalOpen(false)} className="absolute top-4 right-4 text-muted hover:text-foreground"><X size={18} /></button>
+            <Typography variant="h3" className="font-bold text-base mb-4 flex items-center gap-2">
+              <MapPin size={18} className="text-primary" />
+              Yeni Mekân Ekle
+            </Typography>
             <div className="space-y-3">
-              <input
-                type="text"
-                placeholder="Mekân Adı *"
-                value={newLocName}
-                onChange={(e) => setNewLocName(e.target.value)}
-                className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground"
-              />
-              <select
-                value={newLocType}
-                onChange={(e) => setNewLocType(e.target.value)}
-                className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground"
-              >
-                <option value="city">Şehir</option>
-                <option value="country">Ülke / Krallık</option>
-                <option value="continent">Kıta</option>
-                <option value="region">Bölge</option>
-                <option value="building">Bina / Kale / Tapınak</option>
-                <option value="room">Oda / Özel Alan</option>
-              </select>
-              <input
-                type="text"
-                placeholder="İklim / Coğrafya (Örn: Çöl, Karlı dağlar)"
-                value={newLocClimate}
-                onChange={(e) => setNewLocClimate(e.target.value)}
-                className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground"
-              />
-              <textarea
-                rows={3}
-                placeholder="Mekân Açıklaması..."
-                value={newLocDesc}
-                onChange={(e) => setNewLocDesc(e.target.value)}
-                className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground resize-none"
-              />
+              <div>
+                <label className="text-[11px] font-bold text-muted mb-1 block">Mekân Adı *</label>
+                <input
+                  type="text"
+                  placeholder="Örn: Minas Tirith, Rivendell, Arrakis"
+                  value={newLocName}
+                  onChange={(e) => setNewLocName(e.target.value)}
+                  className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[11px] font-bold text-muted mb-1 block">Mekân Türü</label>
+                  <select
+                    value={newLocType}
+                    onChange={(e) => setNewLocType(e.target.value as LocationType)}
+                    className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:border-primary"
+                  >
+                    {Object.entries(LOCATION_TYPE_LABELS).map(([k, label]) => (
+                      <option key={k} value={k}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-muted mb-1 block">Bağlı Üst Mekân</label>
+                  <select
+                    value={newLocParentId}
+                    onChange={(e) => setNewLocParentId(e.target.value)}
+                    className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:border-primary"
+                  >
+                    <option value="">-- Bağımsız / Ana --</option>
+                    {locations.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        [{LOCATION_TYPE_LABELS[l.type] || l.type}] {l.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-muted mb-1 block">İklim / Coğrafya</label>
+                <input
+                  type="text"
+                  placeholder="Örn: Sert karasal, ılıman vadi, çöl"
+                  value={newLocClimate}
+                  onChange={(e) => setNewLocClimate(e.target.value)}
+                  className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-muted mb-1 block">Kısa Tanım</label>
+                <textarea
+                  rows={3}
+                  placeholder="Mekânın kurgudaki yeri ve temel özellikleri..."
+                  value={newLocDesc}
+                  onChange={(e) => setNewLocDesc(e.target.value)}
+                  className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground resize-none focus:outline-none focus:border-primary"
+                />
+              </div>
+
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="ghost" onPress={() => setIsLocationModalOpen(false)} className="text-xs">Vazgeç</Button>
-                <Button variant="primary" onPress={handleCreateLocation} className="text-xs font-bold">Ekle</Button>
+                <Button variant="primary" onPress={handleCreateLocation} className="text-xs font-bold">Mekânı Kaydet</Button>
               </div>
             </div>
           </div>
@@ -5849,7 +5918,7 @@ export default function UniverseDetailPage() {
       {/* ── Modal: Karakter Defteri 2.0 (Detaylı Düzenleme) ── */}
       {isCharDetailModalOpen && selectedCharForDetail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-background/85 backdrop-blur-md overflow-y-auto">
-          <div className="bg-card border border-border/70 rounded-3xl p-5 sm:p-6 max-w-3xl w-full shadow-2xl relative my-auto max-h-[90vh] flex flex-col">
+          <div className="bg-card border border-border/70 rounded-3xl p-5 sm:p-6 max-w-4xl w-full shadow-2xl relative my-auto max-h-[90vh] flex flex-col">
             
             {/* Üst Başlık & Kapat */}
             <div className="flex items-center justify-between pb-4 border-b border-border/50">
@@ -5965,51 +6034,137 @@ export default function UniverseDetailPage() {
                     </div>
                   </div>
 
-                  {/* Görsel ve PNG Vitrini Bölümü */}
-                  <div className="p-4 rounded-2xl bg-background/50 border border-border/50 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <ImageIcon size={15} className="text-primary" />
-                      <span className="font-bold text-xs text-foreground">Görsel & PNG Portre Vitrini</span>
+                  {/* Görsel ve PNG Vitrini Bölümü (Yazar Rehberi & Boyutlar) */}
+                  <div className="p-4 rounded-2xl bg-card border border-border/60 space-y-3.5">
+                    {/* Kurumsal Bilgilendirme Çubuğu */}
+                    <div className="flex items-center justify-between flex-wrap gap-2 px-3.5 py-2.5 rounded-xl bg-muted/30 border border-border/50 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <ImageIcon size={14} className="text-muted-foreground/80 shrink-0" />
+                        <span>Karakter vitrinlerinde en dengeli görünüm için <strong>dikey dikdörtgen (2:3 veya 3:4)</strong> formatlar önerilir.</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-[11px]">
+                        <span className="text-muted-foreground/70">AI Prompt Parametresi:</span>
+                        <code className="font-mono bg-background text-foreground border border-border/70 px-1.5 py-0.5 rounded font-semibold text-[10px]">--ar 2:3</code>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      {/* 1. Portre / Avatar */}
-                      <div className="p-3 rounded-xl bg-card border border-border/40 text-center space-y-2">
-                        <span className="text-[11px] font-bold text-muted block">1. Profil Portresi</span>
-                        {editingCharData.avatarUrl ? (
-                          <img src={editingCharData.avatarUrl} alt="" className="w-20 h-20 mx-auto rounded-xl object-cover border border-border/50" />
-                        ) : (
-                          <div className="w-20 h-20 mx-auto rounded-xl bg-primary/10 flex items-center justify-center text-muted">Yok</div>
-                        )}
-                        <label className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary/15 text-primary text-[10px] font-bold cursor-pointer hover:bg-primary/25">
-                          <Upload size={12} /> Yükle
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                      {/* 1. Portre & Atlas */}
+                      <div className="p-3.5 rounded-xl bg-muted/15 border border-border/60 hover:border-border transition-all flex flex-col justify-between space-y-3">
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-bold text-foreground">Portre & Atlas</span>
+                            <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-muted text-muted-foreground border border-border/40">2:3 / 3:4</span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground leading-normal">
+                            Atlas kartı, ilişki ağı ve okuma dipnotları
+                          </p>
+                        </div>
+
+                        <div className="w-full h-36 rounded-xl bg-muted/20 border border-dashed border-border/80 flex items-center justify-center overflow-hidden relative group">
+                          {editingCharData.avatarUrl ? (
+                            <>
+                              <img src={editingCharData.avatarUrl} alt="" className="w-full h-full object-contain" />
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveCharImage('avatar')}
+                                className="absolute top-1.5 right-1.5 p-1.5 rounded-lg bg-black/70 text-white hover:bg-destructive transition-colors opacity-0 group-hover:opacity-100 cursor-pointer shadow-md"
+                                title="Kaldır"
+                              >
+                                <X size={13} />
+                              </button>
+                            </>
+                          ) : (
+                            <div className="text-center p-3 text-muted-foreground/70">
+                              <Upload size={18} className="mx-auto mb-1 text-muted-foreground/50" />
+                              <span className="text-[11px] font-medium block text-foreground/80">Portre Yükle</span>
+                              <span className="text-[10px] text-muted-foreground/60">800×1200 px</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <label className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-secondary/80 hover:bg-secondary text-foreground text-xs font-semibold border border-border/50 hover:border-border transition-all cursor-pointer text-center">
+                          <Upload size={13} /> {editingCharData.avatarUrl ? 'Görseli Değiştir' : 'Portre Yükle'}
                           <input type="file" accept="image/*" className="hidden" onChange={(e) => handleCharImageUpload(e, 'avatar')} />
                         </label>
                       </div>
 
                       {/* 2. Şeffaf PNG Vitrini */}
-                      <div className="p-3 rounded-xl bg-card border border-border/40 text-center space-y-2">
-                        <span className="text-[11px] font-bold text-muted block">2. Şeffaf PNG (3D Vitrin)</span>
-                        {editingCharData.pngGallery?.transparentPngUrl ? (
-                          <img src={editingCharData.pngGallery.transparentPngUrl} alt="" className="w-20 h-20 mx-auto rounded-xl object-contain border border-border/50 bg-black/10" />
-                        ) : (
-                          <div className="w-20 h-20 mx-auto rounded-xl bg-purple-500/10 flex items-center justify-center text-muted">Yok</div>
-                        )}
-                        <label className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-500/15 text-purple-400 text-[10px] font-bold cursor-pointer hover:bg-purple-500/25">
-                          <Upload size={12} /> Şeffaf PNG Yükle
+                      <div className="p-3.5 rounded-xl bg-muted/15 border border-border/60 hover:border-border transition-all flex flex-col justify-between space-y-3">
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-bold text-foreground">3D Vitrin (Şeffaf)</span>
+                            <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-muted text-muted-foreground border border-border/40">Şeffaf PNG</span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground leading-normal">
+                            3D kart derinlik efekti & afiş tasarımı
+                          </p>
+                        </div>
+
+                        <div className="w-full h-36 rounded-xl bg-muted/20 border border-dashed border-border/80 flex items-center justify-center overflow-hidden relative group">
+                          {editingCharData.pngGallery?.transparentPngUrl ? (
+                            <>
+                              <img src={editingCharData.pngGallery.transparentPngUrl} alt="" className="w-full h-full object-contain filter drop-shadow-sm" />
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveCharImage('transparentPng')}
+                                className="absolute top-1.5 right-1.5 p-1.5 rounded-lg bg-black/70 text-white hover:bg-destructive transition-colors opacity-0 group-hover:opacity-100 cursor-pointer shadow-md"
+                                title="Kaldır"
+                              >
+                                <X size={13} />
+                              </button>
+                            </>
+                          ) : (
+                            <div className="text-center p-3 text-muted-foreground/70">
+                              <Sparkles size={18} className="mx-auto mb-1 text-muted-foreground/50" />
+                              <span className="text-[11px] font-medium block text-foreground/80">Arka Plansız PNG</span>
+                              <span className="text-[10px] text-muted-foreground/60">1000×1500 px</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <label className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-secondary/80 hover:bg-secondary text-foreground text-xs font-semibold border border-border/50 hover:border-border transition-all cursor-pointer text-center">
+                          <Upload size={13} /> {editingCharData.pngGallery?.transparentPngUrl ? 'PNG Değiştir' : 'Şeffaf PNG Yükle'}
                           <input type="file" accept="image/*" className="hidden" onChange={(e) => handleCharImageUpload(e, 'transparentPng')} />
                         </label>
                       </div>
 
-                      {/* 3. Tam Vücut Çizimi */}
-                      <div className="p-3 rounded-xl bg-card border border-border/40 text-center space-y-2">
-                        <span className="text-[11px] font-bold text-muted block">3. Tam Vücut / Konsept</span>
-                        {editingCharData.pngGallery?.fullBodyUrl ? (
-                          <img src={editingCharData.pngGallery.fullBodyUrl} alt="" className="w-20 h-20 mx-auto rounded-xl object-cover border border-border/50" />
-                        ) : (
-                          <div className="w-20 h-20 mx-auto rounded-xl bg-emerald-500/10 flex items-center justify-center text-muted">Yok</div>
-                        )}
-                        <label className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-400 text-[10px] font-bold cursor-pointer hover:bg-emerald-500/25">
-                          <Upload size={12} /> Görsel Yükle
+                      {/* 3. Tam Boy Çizim */}
+                      <div className="p-3.5 rounded-xl bg-muted/15 border border-border/60 hover:border-border transition-all flex flex-col justify-between space-y-3">
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-bold text-foreground">Tam Boy / Konsept</span>
+                            <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-muted text-muted-foreground border border-border/40">9:16 Dikey</span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground leading-normal">
+                            Detaylı kostüm & gardırop incelemesi
+                          </p>
+                        </div>
+
+                        <div className="w-full h-36 rounded-xl bg-muted/20 border border-dashed border-border/80 flex items-center justify-center overflow-hidden relative group">
+                          {editingCharData.pngGallery?.fullBodyUrl ? (
+                            <>
+                              <img src={editingCharData.pngGallery.fullBodyUrl} alt="" className="w-full h-full object-contain" />
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveCharImage('fullBody')}
+                                className="absolute top-1.5 right-1.5 p-1.5 rounded-lg bg-black/70 text-white hover:bg-destructive transition-colors opacity-0 group-hover:opacity-100 cursor-pointer shadow-md"
+                                title="Kaldır"
+                              >
+                                <X size={13} />
+                              </button>
+                            </>
+                          ) : (
+                            <div className="text-center p-3 text-muted-foreground/70">
+                              <User size={18} className="mx-auto mb-1 text-muted-foreground/50" />
+                              <span className="text-[11px] font-medium block text-foreground/80">Tam Boy Çizim</span>
+                              <span className="text-[10px] text-muted-foreground/60">1080×1920 px</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <label className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-secondary/80 hover:bg-secondary text-foreground text-xs font-semibold border border-border/50 hover:border-border transition-all cursor-pointer text-center">
+                          <Upload size={13} /> {editingCharData.pngGallery?.fullBodyUrl ? 'Görseli Değiştir' : 'Tam Boy Yükle'}
                           <input type="file" accept="image/*" className="hidden" onChange={(e) => handleCharImageUpload(e, 'fullBody')} />
                         </label>
                       </div>
@@ -6393,6 +6548,507 @@ export default function UniverseDetailPage() {
               >
                 {isSavingCharDetail ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                 Karakter Defteri 2.0'ı Kaydet
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: Mekân Defteri 2.0 (Detaylı Düzenleme) ── */}
+      {isLocDetailModalOpen && selectedLocForDetail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-background/85 backdrop-blur-md overflow-y-auto">
+          <div className="bg-card border border-border/70 rounded-3xl p-5 sm:p-6 max-w-4xl w-full shadow-2xl relative my-auto max-h-[90vh] flex flex-col">
+            
+            {/* Üst Başlık & Kapat */}
+            <div className="flex items-center justify-between pb-4 border-b border-border/50">
+              <div className="flex items-center gap-3">
+                {editingLocData.imageUrl ? (
+                  <img src={editingLocData.imageUrl} alt="" className="w-12 h-12 rounded-xl object-cover border border-border/50 shrink-0" />
+                ) : (
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <MapPin size={22} />
+                  </div>
+                )}
+                <div>
+                  <Typography variant="h3" className="font-extrabold text-base sm:text-lg flex items-center gap-2">
+                    {editingLocData.name || 'İsimsiz Mekân'}
+                    <span className="text-[10px] uppercase font-bold text-primary bg-primary/10 border border-primary/20 px-2.5 py-0.5 rounded-full">
+                      Mekân Defteri 2.0
+                    </span>
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground bg-muted border border-border/50 px-2 py-0.5 rounded-full">
+                      {LOCATION_TYPE_LABELS[editingLocData.type || 'city'] || editingLocData.type}
+                    </span>
+                  </Typography>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Hiyerarşik dünya kurma, coğrafya, toplum, yönetim, sırlar ve harita entegrasyonu
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsLocDetailModalOpen(false)} 
+                className="text-muted-foreground hover:text-foreground p-1.5 rounded-xl hover:bg-muted/30 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Sekme Butonları */}
+            <div className="flex items-center gap-1.5 overflow-x-auto py-3 border-b border-border/40 scrollbar-none">
+              {[
+                { id: 'basic', label: 'Temel & Görsel', icon: <Compass size={14} /> },
+                { id: 'geography', label: 'Coğrafya & İklim', icon: <Mountain size={14} /> },
+                { id: 'society', label: 'Toplum & Yönetim', icon: <Crown size={14} /> },
+                { id: 'lore', label: 'Kurallar & Tehlikeler', icon: <ShieldAlert size={14} /> },
+                { id: 'connections', label: `Bağlantılar & Iceberg (${(editingLocData.importantCharacterIds?.length || 0) + (editingLocData.relatedEventIds?.length || 0)})`, icon: <Sparkles size={14} /> },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setLocDetailTab(tab.id as any)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                    locDetailTab === tab.id
+                      ? 'bg-primary text-primary-foreground shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
+                  }`}
+                >
+                  {tab.icon}
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Sekme İçerikleri (Scrollable) */}
+            <div className="flex-1 overflow-y-auto py-4 space-y-4 pr-1 text-xs">
+              
+              {/* SEKME 1: Temel & Görsel */}
+              {locDetailTab === 'basic' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[11px] font-bold text-muted-foreground mb-1 block">Mekân Adı *</label>
+                      <input
+                        type="text"
+                        value={editingLocData.name || ''}
+                        onChange={(e) => setEditingLocData({ ...editingLocData, name: e.target.value })}
+                        className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-muted-foreground mb-1 block">Mekân Türü</label>
+                      <select
+                        value={editingLocData.type || 'city'}
+                        onChange={(e) => setEditingLocData({ ...editingLocData, type: e.target.value as LocationType })}
+                        className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:border-primary"
+                      >
+                        {Object.entries(LOCATION_TYPE_LABELS).map(([k, label]) => (
+                          <option key={k} value={k}>{label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-muted-foreground mb-1 block">Bağlı Üst Mekân (Hiyerarşi)</label>
+                      <select
+                        value={editingLocData.parentLocationId || ''}
+                        onChange={(e) => setEditingLocData({ ...editingLocData, parentLocationId: e.target.value || undefined })}
+                        className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:border-primary"
+                      >
+                        <option value="">-- Üst Mekân Yok (Ana / Bağımsız) --</option>
+                        {locations
+                          .filter((l) => l.id !== selectedLocForDetail.id)
+                          .map((l) => (
+                            <option key={l.id} value={l.id}>
+                              [{LOCATION_TYPE_LABELS[l.type] || l.type}] {l.name}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-muted-foreground mb-1 block">Kısa Tanım (Özet)</label>
+                    <input
+                      type="text"
+                      placeholder="Mekânın kurgudaki rolü ve tek cümlelik özeti..."
+                      value={editingLocData.description || ''}
+                      onChange={(e) => setEditingLocData({ ...editingLocData, description: e.target.value })}
+                      className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:border-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-muted-foreground mb-1 block">Detaylı Kurgusal Anlatı</label>
+                    <textarea
+                      rows={4}
+                      placeholder="Mekânın mimarisi, sokakları, tarihi binaları, atmosferi ve detaylı kurgusal tasviri..."
+                      value={editingLocData.detailedDescription || ''}
+                      onChange={(e) => setEditingLocData({ ...editingLocData, detailedDescription: e.target.value })}
+                      className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground resize-none focus:outline-none focus:border-primary leading-relaxed"
+                    />
+                  </div>
+
+                  {/* Mekân Görseli / Manzara Çizimi Kutusu */}
+                  <div className="p-4 rounded-2xl bg-muted/15 border border-border/60 space-y-3">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <ImageIcon size={15} className="text-muted-foreground" />
+                        <span className="font-bold text-xs text-foreground">Mekân Görseli & Manzara Çizimi</span>
+                      </div>
+                      <span className="text-[11px] text-muted-foreground">
+                        Önerilen: 16:9 yatay manzara (1200×675 px) veya 4:3 konsept çizim
+                      </span>
+                    </div>
+
+                    <div className="w-full h-44 rounded-xl bg-muted/20 border border-dashed border-border/80 flex items-center justify-center overflow-hidden relative group">
+                      {editingLocData.imageUrl ? (
+                        <>
+                          <img src={editingLocData.imageUrl} alt="" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={handleRemoveLocImage}
+                            className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/70 text-white hover:bg-destructive transition-colors opacity-0 group-hover:opacity-100 cursor-pointer shadow-md"
+                            title="Görseli Kaldır"
+                          >
+                            <X size={14} />
+                          </button>
+                        </>
+                      ) : (
+                        <div className="text-center p-4 text-muted-foreground/70">
+                          <Upload size={22} className="mx-auto mb-1.5 text-muted-foreground/50" />
+                          <span className="text-xs font-semibold block text-foreground/80">Manzara veya Konsept Görseli Yükle</span>
+                          <span className="text-[10px] text-muted-foreground/60">JPG, PNG veya WebP</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <label className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-secondary/80 hover:bg-secondary text-foreground text-xs font-semibold border border-border/50 hover:border-border transition-all cursor-pointer text-center">
+                      <Upload size={13} /> {editingLocData.imageUrl ? 'Görseli Değiştir' : 'Mekân Görseli Yükle'}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleLocImageUpload} disabled={isUploadingLocImage} />
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {/* SEKME 2: Coğrafya & İklim */}
+              {locDetailTab === 'geography' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] font-bold text-muted-foreground mb-1 block">İklim Koşulları</label>
+                      <input
+                        type="text"
+                        placeholder="Örn: Sert karasal, kışları -30°C dondurucu fırtınalar"
+                        value={editingLocData.climate || ''}
+                        onChange={(e) => setEditingLocData({ ...editingLocData, climate: e.target.value })}
+                        className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-muted-foreground mb-1 block">Atmosfer & Hissiyat</label>
+                      <input
+                        type="text"
+                        placeholder="Örn: Kasvetli sis, kadim büyü kokusu, daimi alacakaranlık"
+                        value={editingLocData.atmosphere || ''}
+                        onChange={(e) => setEditingLocData({ ...editingLocData, atmosphere: e.target.value })}
+                        className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-muted-foreground mb-1 block">Coğrafi Yapı & Doğal Unsurlar</label>
+                    <textarea
+                      rows={4}
+                      placeholder="Dağ silsileleri, nehirler, vadiler, kanyonlar, bataklıklar ve doğal koruganlar..."
+                      value={editingLocData.geography || ''}
+                      onChange={(e) => setEditingLocData({ ...editingLocData, geography: e.target.value })}
+                      className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground resize-none focus:outline-none focus:border-primary leading-relaxed"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* SEKME 3: Toplum & Yönetim */}
+              {locDetailTab === 'society' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] font-bold text-muted-foreground mb-1 block">Nüfus & Yaşayan Halk</label>
+                      <input
+                        type="text"
+                        placeholder="Örn: 250.000 (Çoğunluğu İnsanlar, %15 Cüceler)"
+                        value={editingLocData.population || ''}
+                        onChange={(e) => setEditingLocData({ ...editingLocData, population: e.target.value })}
+                        className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-muted-foreground mb-1 block">Konuşulan Diller & Lehçeler</label>
+                      <input
+                        type="text"
+                        placeholder="Örn: Ortak Dil, Kuzey Lehçesi, Kadim Elfçe"
+                        value={editingLocData.languages || ''}
+                        onChange={(e) => setEditingLocData({ ...editingLocData, languages: e.target.value })}
+                        className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[11px] font-bold text-muted-foreground mb-1 block">Yönetim Biçimi & Lider</label>
+                      <input
+                        type="text"
+                        placeholder="Örn: Kraliyet Konseyi, Kral Elessar"
+                        value={editingLocData.governance || ''}
+                        onChange={(e) => setEditingLocData({ ...editingLocData, governance: e.target.value })}
+                        className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-muted-foreground mb-1 block">Ekonomi & Ticaret</label>
+                      <input
+                        type="text"
+                        placeholder="Örn: Maden ihracatı, ipek ticareti, altın sikke"
+                        value={editingLocData.economy || ''}
+                        onChange={(e) => setEditingLocData({ ...editingLocData, economy: e.target.value })}
+                        className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-muted-foreground mb-1 block">Güvenlik & Savunma</label>
+                      <input
+                        type="text"
+                        placeholder="Örn: 3 kademeli beyaz surlar, 5.000 Muhafız"
+                        value={editingLocData.security || ''}
+                        onChange={(e) => setEditingLocData({ ...editingLocData, security: e.target.value })}
+                        className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-muted-foreground mb-1 block">Kültür, Gelenekler & Yaşam Tarzı</label>
+                    <textarea
+                      rows={3}
+                      placeholder="Mekânın bayramları, inanç ritüelleri, yemek kültürü ve toplumsal sınıfları..."
+                      value={editingLocData.culture || ''}
+                      onChange={(e) => setEditingLocData({ ...editingLocData, culture: e.target.value })}
+                      className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground resize-none focus:outline-none focus:border-primary leading-relaxed"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* SEKME 4: Kurallar & Tehlikeler */}
+              {locDetailTab === 'lore' && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-[11px] font-bold text-muted-foreground mb-1 block">Tarihçe & Kuruluş Efsanesi</label>
+                    <textarea
+                      rows={3}
+                      placeholder="Bu mekân ne zaman, kim tarafından kuruldu? Yaşadığı büyük savaşlar veya felaketler..."
+                      value={editingLocData.history || ''}
+                      onChange={(e) => setEditingLocData({ ...editingLocData, history: e.target.value })}
+                      className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground resize-none focus:outline-none focus:border-primary leading-relaxed"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-muted-foreground mb-1 block">Özel Yasalar, Kurallar & Yasaklar</label>
+                    <textarea
+                      rows={3}
+                      placeholder="Örn: Büyü kullanımı idamla cezalandırılır; gün batımından sonra şehir kapıları mühürlenir..."
+                      value={editingLocData.specialRules || ''}
+                      onChange={(e) => setEditingLocData({ ...editingLocData, specialRules: e.target.value })}
+                      className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground resize-none focus:outline-none focus:border-primary leading-relaxed"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-muted-foreground mb-1 block">Tehlikeler, Tehditler & Canavarlar</label>
+                    <textarea
+                      rows={3}
+                      placeholder="Örn: Çevredeki ormanda yaşayan kurt adamlar, zehirli bataklık gazı, gölge suikastçıları..."
+                      value={editingLocData.dangers || ''}
+                      onChange={(e) => setEditingLocData({ ...editingLocData, dangers: e.target.value })}
+                      className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground resize-none focus:outline-none focus:border-primary leading-relaxed"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* SEKME 5: Bağlantılar & Iceberg */}
+              {locDetailTab === 'connections' && (
+                <div className="space-y-4">
+                  {/* İlişkili Karakterler Seçici */}
+                  <div className="p-4 rounded-2xl bg-muted/15 border border-border/50 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-foreground flex items-center gap-1.5">
+                        <Users size={14} className="text-primary" /> Bu Mekânda Yaşayan / İlişkili Karakterler
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {editingLocData.importantCharacterIds?.length || 0} seçili
+                      </span>
+                    </div>
+                    {characters.length === 0 ? (
+                      <p className="text-[11px] text-muted-foreground">Evrende henüz kayıtlı karakter bulunmuyor.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
+                        {characters.map((c) => {
+                          const isSelected = editingLocData.importantCharacterIds?.includes(c.id);
+                          return (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => {
+                                const curr = editingLocData.importantCharacterIds || [];
+                                const updated = isSelected ? curr.filter((id) => id !== c.id) : [...curr, c.id];
+                                setEditingLocData({ ...editingLocData, importantCharacterIds: updated });
+                              }}
+                              className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all flex items-center gap-1.5 ${
+                                isSelected
+                                  ? 'bg-primary text-primary-foreground border-primary shadow-xs'
+                                  : 'bg-card text-muted-foreground border-border/60 hover:text-foreground hover:bg-muted/40'
+                              }`}
+                            >
+                              <span>{c.name}</span>
+                              <span className="text-[10px] opacity-70">({c.role})</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* İlişkili Olaylar Seçici */}
+                  <div className="p-4 rounded-2xl bg-muted/15 border border-border/50 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-foreground flex items-center gap-1.5">
+                        <Clock size={14} className="text-primary" /> Mekânda Gerçekleşen Tarihsel Olaylar
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {editingLocData.relatedEventIds?.length || 0} seçili
+                      </span>
+                    </div>
+                    {timelineEvents.length === 0 ? (
+                      <p className="text-[11px] text-muted-foreground">Evrende henüz zaman çizelgesi olayı bulunmuyor.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
+                        {timelineEvents.map((ev) => {
+                          const isSelected = editingLocData.relatedEventIds?.includes(ev.id);
+                          return (
+                            <button
+                              key={ev.id}
+                              type="button"
+                              onClick={() => {
+                                const curr = editingLocData.relatedEventIds || [];
+                                const updated = isSelected ? curr.filter((id) => id !== ev.id) : [...curr, ev.id];
+                                setEditingLocData({ ...editingLocData, relatedEventIds: updated });
+                              }}
+                              className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all flex items-center gap-1.5 ${
+                                isSelected
+                                  ? 'bg-primary text-primary-foreground border-primary shadow-xs'
+                                  : 'bg-card text-muted-foreground border-border/60 hover:text-foreground hover:bg-muted/40'
+                              }`}
+                            >
+                              <span>{ev.title}</span>
+                              {ev.era && <span className="text-[10px] opacity-70">({ev.era})</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Iceberg Dünya Kurma Katmanları */}
+                  <div className="p-4 rounded-2xl bg-card border border-border/60 space-y-3">
+                    <span className="font-bold text-xs text-foreground block">
+                      Iceberg Dünya Kurma Katmanları (PRD Bölüm 28)
+                    </span>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-[10.5px] font-bold text-muted-foreground mb-1 block">
+                          1. Yazar Notu (Yalnızca yazar görür — Taslak & Arka Plan)
+                        </label>
+                        <textarea
+                          rows={2}
+                          placeholder="Bu mekânı kurgularken aldığınız şahsi notlar..."
+                          value={editingLocData.authorNotes || ''}
+                          onChange={(e) => setEditingLocData({ ...editingLocData, authorNotes: e.target.value })}
+                          className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground resize-none focus:outline-none focus:border-primary"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10.5px] font-bold text-muted-foreground mb-1 block">
+                          2. Okuyucu Açıklaması (Okur vitrininde görünen katman)
+                        </label>
+                        <textarea
+                          rows={2}
+                          placeholder="Okuyucunun doğrudan evren atlasında göreceği genel bilgi..."
+                          value={editingLocData.readerNotes || ''}
+                          onChange={(e) => setEditingLocData({ ...editingLocData, readerNotes: e.target.value })}
+                          className="w-full bg-background border border-border/60 rounded-xl p-2.5 text-xs text-foreground resize-none focus:outline-none focus:border-primary"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10.5px] font-bold text-primary mb-1 block">
+                          3. Gizli Gerçek / Sır (Iceberg'in su altındaki katmanı — Plot Twist)
+                        </label>
+                        <textarea
+                          rows={2}
+                          placeholder="Örn: Bu kalenin altındaki zindanda kadim bir tanrı uyumaktadır..."
+                          value={editingLocData.secretLore || ''}
+                          onChange={(e) => setEditingLocData({ ...editingLocData, secretLore: e.target.value })}
+                          className="w-full bg-background border border-primary/30 rounded-xl p-2.5 text-xs text-foreground resize-none focus:outline-none focus:border-primary"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Spoiler ve Bölüm Eşiği */}
+                  <div className="p-4 rounded-2xl bg-card border border-border/60 flex items-center justify-between flex-wrap gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editingLocData.isSpoiler || false}
+                        onChange={(e) => setEditingLocData({ ...editingLocData, isSpoiler: e.target.checked })}
+                        className="rounded border-border accent-primary cursor-pointer"
+                      />
+                      <span className="text-xs font-bold text-foreground">Bu mekân spoiler içerir (Okurlara gizle)</span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-muted-foreground">Kaçıncı bölümden sonra açılsın:</span>
+                      <input
+                        type="number"
+                        placeholder="Örn: 10"
+                        value={editingLocData.spoilerThresholdChapter || ''}
+                        onChange={(e) => setEditingLocData({
+                          ...editingLocData,
+                          spoilerThresholdChapter: e.target.value ? Number(e.target.value) : undefined
+                        })}
+                        className="w-20 bg-background border border-border/60 rounded-xl p-1.5 text-xs text-foreground text-center"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </div>
+
+            {/* Alt İşlem Butonları */}
+            <div className="flex items-center justify-between pt-4 border-t border-border/50">
+              <Button variant="ghost" onPress={() => setIsLocDetailModalOpen(false)} className="text-xs">
+                Vazgeç
+              </Button>
+              <Button 
+                variant="primary" 
+                onPress={handleSaveLocationDetail} 
+                disabled={isSavingLocDetail || isUploadingLocImage}
+                className="text-xs font-bold py-2 px-5 rounded-xl flex items-center gap-1.5 shadow-sm"
+              >
+                {isSavingLocDetail ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                Mekân Defteri 2.0'ı Kaydet
               </Button>
             </div>
           </div>

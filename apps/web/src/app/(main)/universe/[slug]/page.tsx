@@ -24,6 +24,7 @@ import {
   getUniverseSoundtracks,
   getUniverseCanonRules,
   getUniversePlotThreads,
+  LOCATION_TYPE_LABELS,
   CANON_RULE_CATEGORY_LABELS,
   PLOT_THREAD_STATUS_LABELS,
   PLOT_THREAD_IMPORTANCE_LABELS,
@@ -371,10 +372,47 @@ export default function PublicUniversePage() {
     });
   }, [allCharacters, isAuthorPreview, userMaxChapter]);
 
+  // Rol eşleştirme yardımcısı (büyük/küçük harf ve eşanlamlı destekli)
+  const isRoleMatch = React.useCallback((charRole?: string, filterKey?: string) => {
+    if (!filterKey || filterKey === 'all') return true;
+    const c = (charRole || '').toLowerCase().trim();
+    const f = filterKey.toLowerCase().trim();
+    if (f === 'protagonist') return ['protagonist', 'baş kahraman', 'ana karakter', 'baskahraman'].includes(c);
+    if (f === 'antagonist') return ['antagonist', 'düşman', 'kötü karakter'].includes(c);
+    if (f === 'deuteragonist') return ['deuteragonist', 'ikincil', 'ikincil kahraman'].includes(c);
+    if (f === 'mentor') return ['mentor', 'usta', 'rehber'].includes(c);
+    if (f === 'love interest' || f === 'love_interest') return ['love interest', 'love_interest', 'aşk ilgisi', 'ask ilgisi'].includes(c);
+    if (f === 'side character' || f === 'supporting') return ['side character', 'supporting', 'yan karakter', 'side', 'destekleyici'].includes(c);
+    return c === f;
+  }, []);
+
+  // Rol bazlı canlı karakter sayıları
+  const roleCounts = React.useMemo(() => {
+    const counts: Record<string, number> = {
+      all: processedCharacters.length,
+      Protagonist: 0,
+      Antagonist: 0,
+      Deuteragonist: 0,
+      Mentor: 0,
+      'Love Interest': 0,
+      'Side Character': 0,
+    };
+    processedCharacters.forEach(({ character }) => {
+      const c = (character.role || '').toLowerCase().trim();
+      if (['protagonist', 'baş kahraman', 'ana karakter', 'baskahraman'].includes(c)) counts.Protagonist++;
+      else if (['antagonist', 'düşman', 'kötü karakter'].includes(c)) counts.Antagonist++;
+      else if (['deuteragonist', 'ikincil', 'ikincil kahraman'].includes(c)) counts.Deuteragonist++;
+      else if (['mentor', 'usta', 'rehber'].includes(c)) counts.Mentor++;
+      else if (['love interest', 'love_interest', 'aşk ilgisi', 'ask ilgisi'].includes(c)) counts['Love Interest']++;
+      else counts['Side Character']++;
+    });
+    return counts;
+  }, [processedCharacters]);
+
   // Filtrelenmiş karakterler
   const filteredCharacters = React.useMemo(() => {
     return processedCharacters.filter(({ character }) => {
-      if (characterRoleFilter !== 'all' && character.role !== characterRoleFilter) {
+      if (!isRoleMatch(character.role, characterRoleFilter)) {
         return false;
       }
       if (characterSearch.trim()) {
@@ -386,7 +424,7 @@ export default function PublicUniversePage() {
       }
       return true;
     });
-  }, [processedCharacters, characterRoleFilter, characterSearch]);
+  }, [processedCharacters, characterRoleFilter, characterSearch, isRoleMatch]);
 
   const discoveredCount = processedCharacters.filter((p) => p.isUnlocked).length;
   const totalCharacterCount = processedCharacters.length;
@@ -395,6 +433,38 @@ export default function PublicUniversePage() {
     if (!selectedCharacterIdForModal) return null;
     return allCharacters.find((c) => c.id === selectedCharacterIdForModal) || null;
   }, [allCharacters, selectedCharacterIdForModal]);
+
+  const totalLoreCount = React.useMemo(() => {
+    return (
+      races.length +
+      creatures.length +
+      organizations.length +
+      cultures.length +
+      items.length +
+      powerSystems.length +
+      canonRules.length +
+      lore.length
+    );
+  }, [races, creatures, organizations, cultures, items, powerSystems, canonRules, lore]);
+
+  const currentMainTab = React.useMemo<'works' | 'characters' | 'world' | 'lore' | 'media' | 'credits'>(() => {
+    if (['characters', 'relationships', 'races', 'creatures', 'organizations'].includes(activeTab)) {
+      return 'characters';
+    }
+    if (['locations', 'maps', 'cultures'].includes(activeTab)) {
+      return 'world';
+    }
+    if (['lore', 'timeline', 'glossary', 'powers', 'items', 'canon_rules', 'plot_threads'].includes(activeTab)) {
+      return 'lore';
+    }
+    if (['media', 'soundtracks'].includes(activeTab)) {
+      return 'media';
+    }
+    if (activeTab === 'credits') {
+      return 'credits';
+    }
+    return 'works';
+  }, [activeTab]);
 
   if (loading) {
     return (
@@ -477,8 +547,20 @@ export default function PublicUniversePage() {
       )}
 
       {/* ── 1. Hero Afiş Alanı ── */}
-      <div className="relative w-full overflow-hidden border-b border-border/40 bg-gradient-to-b from-primary/20 via-card/60 to-background pt-6 pb-12 sm:pb-16">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+      <div className="relative w-full overflow-hidden border-b border-border/40 bg-gradient-to-b from-primary/15 via-card/50 to-background pt-6 pb-10 sm:pb-14">
+        {/* Arka plan bulanık evren kapağı (Ambient Glow) */}
+        {universe.coverImage && (
+          <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+            <div 
+              className="absolute inset-0 bg-cover bg-center bg-no-repeat scale-125 filter blur-3xl opacity-20 dark:opacity-30"
+              style={{ backgroundImage: `url(${universe.coverImage})` }}
+            />
+            <div className="absolute inset-0 bg-background/80 backdrop-blur-2xl" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent" />
+          </div>
+        )}
+
+        <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6">
           {/* Üst Bar: Geri Dön & Arama & Paylaşım Vitrini */}
           <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
             <button
@@ -494,7 +576,7 @@ export default function PublicUniversePage() {
               <button
                 type="button"
                 onClick={() => setIsGlobalSearchOpen(true)}
-                className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-card hover:bg-card/90 border border-border/60 hover:border-primary/50 text-xs text-muted hover:text-foreground transition-all shadow-xs group cursor-pointer"
+                className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-card/80 hover:bg-card border border-border/60 hover:border-primary/50 text-xs text-muted hover:text-foreground transition-all shadow-xs group cursor-pointer backdrop-blur-md"
               >
                 <Search size={14} className="text-primary group-hover:scale-110 transition-transform" />
                 <span className="font-semibold hidden sm:inline">Evrende Ara...</span>
@@ -511,19 +593,23 @@ export default function PublicUniversePage() {
                   setSocialShareCharacter(characters.length > 0 ? characters[0] : null);
                   setShowSocialShareModal(true);
                 }}
-                className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary text-xs font-bold transition-all shadow-xs hover:shadow-primary/10 active:scale-95 cursor-pointer"
+                className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary text-xs font-bold transition-all shadow-xs hover:shadow-primary/10 active:scale-95 cursor-pointer backdrop-blur-md"
               >
                 <Share2 size={14} />
-                <span>📢 Paylaşım Kartı Üret</span>
+                <span>📢 Paylaş & Afiş Üret</span>
               </button>
             </div>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 items-center sm:items-start text-center sm:text-left">
             {/* Evren Kapağı */}
-            <div className="w-32 sm:w-44 aspect-[3/4] rounded-2xl bg-card border border-border/60 overflow-hidden shadow-2xl shrink-0 relative flex items-center justify-center">
+            <div className="w-36 sm:w-48 aspect-[3/4] rounded-2xl bg-card border border-border/60 overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.4)] shrink-0 relative flex items-center justify-center group">
               {universe.coverImage ? (
-                <img src={universe.coverImage} alt={universe.title} className="w-full h-full object-cover" />
+                <img 
+                  src={universe.coverImage} 
+                  alt={universe.title} 
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                />
               ) : (
                 <div className="p-4 text-center text-primary/40">
                   <Globe size={44} strokeWidth={1.5} className="mx-auto mb-2" />
@@ -533,137 +619,163 @@ export default function PublicUniversePage() {
             </div>
 
             {/* Evren Bilgileri */}
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 w-full">
+              {/* Tür & Kurgusal Evren Rozetleri */}
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-2">
-                <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary">
+                <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-primary/15 border border-primary/30 text-primary tracking-wider">
                   Hikâye Evreni
                 </span>
-                <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-card border border-border/60 text-muted">
-                  {universe.genre}
-                </span>
+                {universe.genre && (
+                  <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-card/80 border border-border/60 text-muted backdrop-blur-md">
+                    {universe.genre}
+                  </span>
+                )}
               </div>
 
-              <Typography variant="h1" className="text-2xl sm:text-3xl md:text-4xl font-black text-foreground mb-2 leading-tight">
+              {/* Başlık */}
+              <Typography variant="h1" className="text-2xl sm:text-3xl md:text-4xl font-black text-foreground mb-2.5 leading-tight tracking-tight">
                 {universe.title}
               </Typography>
 
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-3 gap-y-1 mb-4 text-xs sm:text-sm">
+              {/* Evren Mimarı Çipi & Katkıda Bulunanlar */}
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5 mb-3.5">
                 {universe.authorName && (
-                  <p className="text-muted font-medium">
-                    Evren Mimarı: <span className="text-foreground font-bold">{universe.authorName}</span>
-                  </p>
+                  <Link
+                    href={universe.authorUsername ? `/profile/@${universe.authorUsername}` : '#'}
+                    className="inline-flex items-center gap-2 p-1 pr-3 rounded-full bg-card/70 hover:bg-card border border-border/60 hover:border-primary/40 backdrop-blur-md transition-all group shadow-xs"
+                  >
+                    <div className="w-5 h-5 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-[10px] font-black text-primary overflow-hidden shrink-0">
+                      {universe.authorAvatarUrl ? (
+                        <img src={universe.authorAvatarUrl} alt={universe.authorName} className="w-full h-full object-cover" />
+                      ) : (
+                        <span>{universe.authorName.charAt(0).toUpperCase()}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <span className="text-[11px] text-muted">Mimar:</span>
+                      <span className="font-bold text-foreground group-hover:text-primary transition-colors">
+                        {universe.authorName}
+                      </span>
+                    </div>
+                  </Link>
                 )}
                 {universe.members && universe.members.length > 0 && (
-                  <p className="text-muted font-medium">
-                    <span className="text-muted/40 mr-2">•</span>
-                    Katkıda Bulunanlar: <span className="text-foreground font-semibold">{universe.members.map((m) => m.displayName).join(', ')}</span>
-                  </p>
+                  <button
+                    onClick={() => setActiveTab('credits')}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-500/10 hover:bg-indigo-500/15 border border-indigo-500/25 text-xs font-semibold text-indigo-400 transition-colors cursor-pointer"
+                  >
+                    <Users size={12} />
+                    <span>+{universe.members.length} Katkıda Bulunan</span>
+                  </button>
                 )}
               </div>
 
-              <Typography variant="body" className="text-xs sm:text-sm text-muted leading-relaxed max-w-2xl mb-6">
+              {/* Evren Açıklaması */}
+              <Typography variant="body" className="text-xs sm:text-sm text-muted leading-relaxed max-w-2xl mb-5 whitespace-pre-line">
                 {universe.description || 'Bu evrenin kuralları ve dünyası hakkında özet.'}
               </Typography>
 
-              {/* İstatistik Rozetleri */}
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 text-xs font-semibold">
-                {universe.members && universe.members.length > 0 && (
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card border border-indigo-500/30 text-indigo-400">
-                    <Users size={14} /> {universe.members.length + 1} Kişilik Ekip
-                  </span>
+              {/* ── Akıllı İstatistik & Hızlı Atlama Barı (Smart Metric Dock) ── */}
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-6">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('works')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-xs cursor-pointer group ${
+                    activeTab === 'works'
+                      ? 'bg-primary/15 border-primary/40 text-primary'
+                      : 'bg-card/70 hover:bg-card border-border/60 text-foreground'
+                  }`}
+                >
+                  <BookOpen size={14} className="text-primary group-hover:scale-110 transition-transform" />
+                  <span>{stories.length} Eser</span>
+                  {seriesList.length > 0 && (
+                    <span className="text-[10px] text-muted font-normal">({seriesList.length} Seri)</span>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('characters')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-xs cursor-pointer group ${
+                    activeTab === 'characters'
+                      ? 'bg-blue-500/15 border-blue-500/40 text-blue-400'
+                      : 'bg-card/70 hover:bg-card border-border/60 text-foreground'
+                  }`}
+                >
+                  <Users size={14} className="text-blue-500 group-hover:scale-110 transition-transform" />
+                  <span>{allCharacters.length} Karakter</span>
+                </button>
+
+                {(locations.length > 0 || maps.length > 0) && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab(maps.length > 0 ? 'maps' : 'locations')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-xs cursor-pointer group ${
+                      activeTab === 'locations' || activeTab === 'maps'
+                        ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
+                        : 'bg-card/70 hover:bg-card border-border/60 text-foreground'
+                    }`}
+                  >
+                    <MapPin size={14} className="text-emerald-500 group-hover:scale-110 transition-transform" />
+                    <span>{locations.length} Mekân</span>
+                    {maps.length > 0 && (
+                      <span className="text-[10px] text-muted font-normal">• {maps.length} Harita</span>
+                    )}
+                  </button>
                 )}
-                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card border border-border/50 text-foreground">
-                  <BookOpen size={14} className="text-primary" /> {stories.length} Eser
-                </span>
-                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card border border-border/50 text-foreground">
-                  <Layers size={14} className="text-amber-500" /> {seriesList.length} Seri
-                </span>
-                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card border border-border/50 text-foreground">
-                  <Users size={14} className="text-blue-500" /> {characters.length} Karakter
-                </span>
-                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card border border-border/50 text-foreground">
-                  <MapPin size={14} className="text-emerald-500" /> {locations.length} Mekân
-                </span>
-                {races.length > 0 && (
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card border border-border/50 text-foreground">
-                    <Dna size={14} className="text-teal-400" /> {races.length} Irk / Tür
-                  </span>
-                )}
-                {creatures.length > 0 && (
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card border border-border/50 text-foreground">
-                    <Skull size={14} className="text-rose-400" /> {creatures.length} Yaratık
-                  </span>
-                )}
-                {organizations.length > 0 && (
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card border border-border/50 text-foreground">
-                    <Building2 size={14} className="text-purple-500" /> {organizations.length} Örgüt
-                  </span>
-                )}
-                {cultures.length > 0 && (
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card border border-border/50 text-foreground">
-                    <Landmark size={14} className="text-amber-400" /> {cultures.length} Kültür & Düzen
-                  </span>
-                )}
-                {items.length > 0 && (
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card border border-border/50 text-foreground">
-                    <Sword size={14} className="text-indigo-400" /> {items.length} Eşya
-                  </span>
-                )}
-                {powerSystems.length > 0 && (
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card border border-border/50 text-foreground">
-                    <Zap size={14} className="text-amber-400" /> {powerSystems.length} Güç
-                  </span>
-                )}
-                {mediaList.length > 0 && (
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card border border-border/50 text-foreground">
-                    <ImageIcon size={14} className="text-pink-400" /> {mediaList.length} Görsel
-                  </span>
-                )}
-                {soundtracks.length > 0 && (
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card border border-border/50 text-foreground">
-                    <Music size={14} className="text-teal-400" /> {soundtracks.length} Müzik
-                  </span>
-                )}
-                {canonRules.length > 0 && (
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card border border-border/50 text-foreground">
-                    <Scale size={14} className="text-violet-400" /> {canonRules.length} Canon Kuralı
-                  </span>
-                )}
-                {plotThreads.length > 0 && (
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card border border-border/50 text-foreground">
-                    <HelpCircle size={14} className="text-amber-400" /> {plotThreads.length} Gizem
-                  </span>
+
+                {totalLoreCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('lore')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-xs cursor-pointer group ${
+                      activeTab === 'lore'
+                        ? 'bg-amber-500/15 border-amber-500/40 text-amber-500'
+                        : 'bg-card/70 hover:bg-card border-border/60 text-foreground'
+                    }`}
+                  >
+                    <Sparkles size={14} className="text-amber-500 group-hover:scale-110 transition-transform" />
+                    <span>{totalLoreCount} Lore Kaydı</span>
+                  </button>
                 )}
               </div>
 
-              {/* Hızlı Sosyal Paylaşım Butonları (PRD Bölüm 55 & 57) */}
-              <div className="mt-5 flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSocialShareCardType('universe');
-                    setSocialShareCharacter(null);
-                    setShowSocialShareModal(true);
-                  }}
-                  className="px-4 py-2 rounded-xl bg-primary text-black font-extrabold text-xs flex items-center gap-2 hover:bg-primary/90 transition-all shadow-md shadow-primary/20 active:scale-95"
-                >
-                  <Share2 size={14} />
-                  <span>Evren Afişi & Tanıtım Kartı Üret</span>
-                </button>
-                {characters.length > 0 && (
+              {/* ── Okur Odaklı Ana Aksiyonlar (Action Row) ── */}
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
+                {stories.length > 0 ? (
                   <button
                     type="button"
                     onClick={() => {
-                      setSocialShareCardType('character');
-                      setSocialShareCharacter(characters[0]);
-                      setShowSocialShareModal(true);
+                      const firstStorySlug = (stories[0] as any).slug || generateStorySlug(stories[0].title, stories[0].storyId);
+                      router.push(`/story/${firstStorySlug}`);
                     }}
-                    className="px-3.5 py-2 rounded-xl bg-card hover:bg-card/80 border border-border/60 text-foreground font-bold text-xs flex items-center gap-2 transition-all active:scale-95"
+                    className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-black font-extrabold text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-primary/25 active:scale-95 transition-all cursor-pointer"
                   >
-                    <Users size={14} className="text-primary" />
-                    <span>Karakter Kartı Paylaş</span>
+                    <BookOpen size={16} />
+                    <span>{stories.length === 1 ? 'Kitabı Oku' : 'İlk Eseri Oku'} ({stories[0].title})</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('characters')}
+                    className="px-5 py-2.5 rounded-xl bg-primary text-black font-extrabold text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-primary/25 active:scale-95 transition-all cursor-pointer"
+                  >
+                    <Users size={16} />
+                    <span>Karakterleri İncele</span>
                   </button>
                 )}
+
+                {allCharacters.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('characters')}
+                    className="px-4 py-2.5 rounded-xl bg-card/80 hover:bg-card border border-border/60 hover:border-primary/40 text-foreground font-bold text-xs sm:text-sm flex items-center gap-2 transition-all active:scale-95 shadow-xs cursor-pointer"
+                  >
+                    <Users size={15} className="text-primary" />
+                    <span>Karakter Atlası</span>
+                  </button>
+                )}
+
                 {userMaxChapter > 0 && (
                   <button
                     type="button"
@@ -671,10 +783,10 @@ export default function PublicUniversePage() {
                       setSocialShareCardType('discovery');
                       setShowSocialShareModal(true);
                     }}
-                    className="px-3.5 py-2 rounded-xl bg-card hover:bg-card/80 border border-emerald-500/30 text-emerald-400 font-bold text-xs flex items-center gap-2 transition-all active:scale-95"
+                    className="px-3.5 py-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold text-xs flex items-center gap-2 transition-all active:scale-95 shadow-xs cursor-pointer"
                   >
                     <Sparkles size={14} />
-                    <span>Keşif Kartı Paylaş (#{userMaxChapter})</span>
+                    <span>Keşif Kartı (#{userMaxChapter})</span>
                   </button>
                 )}
               </div>
@@ -683,263 +795,369 @@ export default function PublicUniversePage() {
         </div>
       </div>
 
-      {/* ── 2. Sekmeler (Tabs) ── */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8">
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-8 border-b border-border/40 scrollbar-none">
-          <button
-            onClick={() => setActiveTab('works')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-              activeTab === 'works'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted hover:text-foreground hover:bg-card'
-            }`}
-          >
-            <BookOpen size={15} />
-            <span>Eserler & Seriler ({stories.length + seriesList.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('characters')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-              activeTab === 'characters'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted hover:text-foreground hover:bg-card'
-            }`}
-          >
-            <Users size={15} />
-            <span>Karakterler ({allCharacters.length})</span>
-          </button>
-
-          {characters.length > 0 && (
+      {/* ── 2. Ana Sekmeler (Segmented Bar - Sıfır Kaydırma Çubuğu, Minimal & Modern) ── */}
+      <div id="universe-tabs-bar" className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-y border-border/40 py-2.5 px-4 mb-6 shadow-xs">
+        <div className="max-w-5xl mx-auto flex items-center justify-center">
+          <div className="inline-flex p-1.5 rounded-2xl bg-card/70 border border-border/60 backdrop-blur-xl shadow-xs flex-wrap items-center justify-center gap-1 sm:gap-1.5">
+            {/* 1. Eserler */}
             <button
-              onClick={() => setActiveTab('relationships')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-                activeTab === 'relationships'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted hover:text-foreground hover:bg-card'
+              type="button"
+              onClick={() => setActiveTab('works')}
+              className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                currentMainTab === 'works'
+                  ? 'bg-primary text-black shadow-md font-extrabold'
+                  : 'text-muted hover:text-foreground hover:bg-card/70'
               }`}
             >
-              <Share2 size={15} />
-              <span>İlişki Ağı</span>
+              <BookOpen size={15} />
+              <span>Eserler ({stories.length})</span>
             </button>
-          )}
 
-          {races.length > 0 && (
+            {/* 2. Karakterler & Topluluk */}
             <button
-              onClick={() => setActiveTab('races')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-                activeTab === 'races'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted hover:text-foreground hover:bg-card'
-              }`}
-            >
-              <Dna size={15} />
-              <span>Irklar & Türler ({races.length})</span>
-            </button>
-          )}
-
-          {creatures.length > 0 && (
-            <button
-              onClick={() => setActiveTab('creatures')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-                activeTab === 'creatures'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted hover:text-foreground hover:bg-card'
-              }`}
-            >
-              <Skull size={15} />
-              <span>Yaratıklar ({creatures.length})</span>
-            </button>
-          )}
-
-          <button
-            onClick={() => setActiveTab('locations')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-              activeTab === 'locations'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted hover:text-foreground hover:bg-card'
-            }`}
-          >
-            <MapPin size={15} />
-            <span>Mekânlar ({locations.length})</span>
-          </button>
-
-          {maps.length > 0 && (
-            <button
-              onClick={() => setActiveTab('maps')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-                activeTab === 'maps'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted hover:text-foreground hover:bg-card'
-              }`}
-            >
-              <MapIcon size={15} />
-              <span>Harita ({maps.length})</span>
-            </button>
-          )}
-
-          {organizations.length > 0 && (
-            <button
-              onClick={() => setActiveTab('organizations')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-                activeTab === 'organizations'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted hover:text-foreground hover:bg-card'
-              }`}
-            >
-              <Building2 size={15} />
-              <span>Organizasyonlar ({organizations.length})</span>
-            </button>
-          )}
-
-          {cultures.length > 0 && (
-            <button
-              onClick={() => setActiveTab('cultures')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-                activeTab === 'cultures'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted hover:text-foreground hover:bg-card'
-              }`}
-            >
-              <Landmark size={15} />
-              <span>Kültür & Düzen ({cultures.length})</span>
-            </button>
-          )}
-
-          {items.length > 0 && (
-            <button
-              onClick={() => setActiveTab('items')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-                activeTab === 'items'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted hover:text-foreground hover:bg-card'
-              }`}
-            >
-              <Sword size={15} />
-              <span>Eşyalar ({items.length})</span>
-            </button>
-          )}
-
-          {powerSystems.length > 0 && (
-            <button
-              onClick={() => setActiveTab('powers')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-                activeTab === 'powers'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted hover:text-foreground hover:bg-card'
-              }`}
-            >
-              <Zap size={15} />
-              <span>Güç Sistemleri ({powerSystems.length})</span>
-            </button>
-          )}
-
-          <button
-            onClick={() => setActiveTab('timeline')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-              activeTab === 'timeline'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted hover:text-foreground hover:bg-card'
-            }`}
-          >
-            <Clock size={15} />
-            <span>Zaman Çizelgesi ({timelineEvents.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('glossary')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-              activeTab === 'glossary'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted hover:text-foreground hover:bg-card'
-            }`}
-          >
-            <BookA size={15} />
-            <span>Sözlük ({glossary.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('lore')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-              activeTab === 'lore'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted hover:text-foreground hover:bg-card'
-            }`}
-          >
-            <Scroll size={15} />
-            <span>Lore & Efsaneler ({lore.length})</span>
-          </button>
-
-          {mediaList.length > 0 && (
-            <button
-              onClick={() => setActiveTab('media')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-                activeTab === 'media'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted hover:text-foreground hover:bg-card'
-              }`}
-            >
-              <ImageIcon size={15} />
-              <span>Görsel Arşiv ({mediaList.length})</span>
-            </button>
-          )}
-
-          {soundtracks.length > 0 && (
-            <button
-              onClick={() => setActiveTab('soundtracks')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-                activeTab === 'soundtracks'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted hover:text-foreground hover:bg-card'
-              }`}
-            >
-              <Music size={15} />
-              <span>Müzikler ({soundtracks.length})</span>
-            </button>
-          )}
-
-          {canonRules.length > 0 && (
-            <button
-              onClick={() => setActiveTab('canon_rules')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-                activeTab === 'canon_rules'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted hover:text-foreground hover:bg-card'
-              }`}
-            >
-              <Scale size={15} />
-              <span>Canon Kuralları ({canonRules.length})</span>
-            </button>
-          )}
-
-          {plotThreads.length > 0 && (
-            <button
-              onClick={() => setActiveTab('plot_threads')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-                activeTab === 'plot_threads'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted hover:text-foreground hover:bg-card'
-              }`}
-            >
-              <HelpCircle size={15} />
-              <span>Açık Gizemler ({plotThreads.length})</span>
-            </button>
-          )}
-
-          {universe.members && universe.members.length > 0 && (
-            <button
-              onClick={() => setActiveTab('credits')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
-                activeTab === 'credits'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted hover:text-foreground hover:bg-card'
+              type="button"
+              onClick={() => setActiveTab('characters')}
+              className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                currentMainTab === 'characters'
+                  ? 'bg-primary text-black shadow-md font-extrabold'
+                  : 'text-muted hover:text-foreground hover:bg-card/70'
               }`}
             >
               <Users size={15} />
-              <span>Ekip & Katkıda Bulunanlar ({universe.members.length + 1})</span>
+              <span>Karakterler ({allCharacters.length})</span>
             </button>
-          )}
+
+            {/* 3. Dünya & Coğrafya */}
+            {(locations.length > 0 || maps.length > 0 || cultures.length > 0) && (
+              <button
+                type="button"
+                onClick={() => setActiveTab(maps.length > 0 ? 'maps' : locations.length > 0 ? 'locations' : 'cultures')}
+                className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  currentMainTab === 'world'
+                    ? 'bg-primary text-black shadow-md font-extrabold'
+                    : 'text-muted hover:text-foreground hover:bg-card/70'
+                }`}
+              >
+                <MapPin size={15} />
+                <span>Dünya & Harita</span>
+              </button>
+            )}
+
+            {/* 4. Lore & Ansiklopedi */}
+            {totalLoreCount > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  const firstLoreTab: ReaderUniverseTab =
+                    lore.length > 0
+                      ? 'lore'
+                      : timelineEvents.length > 0
+                      ? 'timeline'
+                      : glossary.length > 0
+                      ? 'glossary'
+                      : powerSystems.length > 0
+                      ? 'powers'
+                      : items.length > 0
+                      ? 'items'
+                      : canonRules.length > 0
+                      ? 'canon_rules'
+                      : 'plot_threads';
+                  setActiveTab(firstLoreTab);
+                }}
+                className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  currentMainTab === 'lore'
+                    ? 'bg-primary text-black shadow-md font-extrabold'
+                    : 'text-muted hover:text-foreground hover:bg-card/70'
+                }`}
+              >
+                <Scroll size={15} />
+                <span>Lore & Ansiklopedi</span>
+              </button>
+            )}
+
+            {/* 5. Galeri & Medya (Varsa) */}
+            {(mediaList.length > 0 || soundtracks.length > 0) && (
+              <button
+                type="button"
+                onClick={() => setActiveTab(mediaList.length > 0 ? 'media' : 'soundtracks')}
+                className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  currentMainTab === 'media'
+                    ? 'bg-primary text-black shadow-md font-extrabold'
+                    : 'text-muted hover:text-foreground hover:bg-card/70'
+                }`}
+              >
+                <ImageIcon size={15} />
+                <span>Galeri & Medya</span>
+              </button>
+            )}
+
+            {/* 6. Ekip (Varsa) */}
+            {universe.members && universe.members.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('credits')}
+                className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  currentMainTab === 'credits'
+                    ? 'bg-primary text-black shadow-md font-extrabold'
+                    : 'text-muted hover:text-foreground hover:bg-card/70'
+                }`}
+              >
+                <Crown size={15} />
+                <span>Ekip</span>
+              </button>
+            )}
+          </div>
         </div>
+      </div>
+
+      {/* ── 3. İçerik Alanı & İkincil Alt Modül Çubuğu (Sub-Navigation) ── */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6">
+        {/* Karakterler Alt Menüsü */}
+        {currentMainTab === 'characters' && (
+          <div className="flex items-center justify-center mb-6">
+            <div className="inline-flex p-1 rounded-xl bg-card/50 border border-border/50 backdrop-blur-md flex-wrap items-center justify-center gap-1 shadow-xs">
+              <button
+                type="button"
+                onClick={() => setActiveTab('characters')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  activeTab === 'characters'
+                    ? 'bg-primary/20 text-primary border border-primary/40 shadow-xs'
+                    : 'text-muted hover:text-foreground hover:bg-card/70'
+                }`}
+              >
+                👥 Karakterler ({allCharacters.length})
+              </button>
+              {characters.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('relationships')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'relationships'
+                      ? 'bg-primary/20 text-primary border border-primary/40 shadow-xs'
+                      : 'text-muted hover:text-foreground hover:bg-card/70'
+                  }`}
+                >
+                  🕸️ İlişki Ağı
+                </button>
+              )}
+              {races.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('races')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'races'
+                      ? 'bg-primary/20 text-primary border border-primary/40 shadow-xs'
+                      : 'text-muted hover:text-foreground hover:bg-card/70'
+                  }`}
+                >
+                  🧬 Irklar & Türler ({races.length})
+                </button>
+              )}
+              {creatures.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('creatures')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'creatures'
+                      ? 'bg-primary/20 text-primary border border-primary/40 shadow-xs'
+                      : 'text-muted hover:text-foreground hover:bg-card/70'
+                  }`}
+                >
+                  💀 Yaratıklar ({creatures.length})
+                </button>
+              )}
+              {organizations.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('organizations')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'organizations'
+                      ? 'bg-primary/20 text-primary border border-primary/40 shadow-xs'
+                      : 'text-muted hover:text-foreground hover:bg-card/70'
+                  }`}
+                >
+                  🏛️ Örgütler ({organizations.length})
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Coğrafya Alt Menüsü */}
+        {currentMainTab === 'world' && (
+          <div className="flex items-center justify-center mb-6">
+            <div className="inline-flex p-1 rounded-xl bg-card/50 border border-border/50 backdrop-blur-md flex-wrap items-center justify-center gap-1 shadow-xs">
+              <button
+                type="button"
+                onClick={() => setActiveTab('locations')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  activeTab === 'locations'
+                    ? 'bg-primary/20 text-primary border border-primary/40 shadow-xs'
+                    : 'text-muted hover:text-foreground hover:bg-card/70'
+                }`}
+              >
+                📍 Mekânlar ({locations.length})
+              </button>
+              {maps.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('maps')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'maps'
+                      ? 'bg-primary/20 text-primary border border-primary/40 shadow-xs'
+                      : 'text-muted hover:text-foreground hover:bg-card/70'
+                  }`}
+                >
+                  🗺️ İnteraktif Harita ({maps.length})
+                </button>
+              )}
+              {cultures.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('cultures')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'cultures'
+                      ? 'bg-primary/20 text-primary border border-primary/40 shadow-xs'
+                      : 'text-muted hover:text-foreground hover:bg-card/70'
+                  }`}
+                >
+                  🏛️ Kültür & Düzen ({cultures.length})
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Lore Alt Menüsü */}
+        {currentMainTab === 'lore' && (
+          <div className="flex items-center justify-center mb-6">
+            <div className="inline-flex p-1 rounded-xl bg-card/50 border border-border/50 backdrop-blur-md flex-wrap items-center justify-center gap-1 shadow-xs">
+              <button
+                type="button"
+                onClick={() => setActiveTab('lore')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  activeTab === 'lore'
+                    ? 'bg-primary/20 text-primary border border-primary/40 shadow-xs'
+                    : 'text-muted hover:text-foreground hover:bg-card/70'
+                }`}
+              >
+                📜 Efsaneler & Mitler ({lore.length})
+              </button>
+              {timelineEvents.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('timeline')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'timeline'
+                      ? 'bg-primary/20 text-primary border border-primary/40 shadow-xs'
+                      : 'text-muted hover:text-foreground hover:bg-card/70'
+                  }`}
+                >
+                  ⏳ Zaman Çizelgesi ({timelineEvents.length})
+                </button>
+              )}
+              {glossary.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('glossary')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'glossary'
+                      ? 'bg-primary/20 text-primary border border-primary/40 shadow-xs'
+                      : 'text-muted hover:text-foreground hover:bg-card/70'
+                  }`}
+                >
+                  📖 Sözlük ({glossary.length})
+                </button>
+              )}
+              {powerSystems.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('powers')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'powers'
+                      ? 'bg-primary/20 text-primary border border-primary/40 shadow-xs'
+                      : 'text-muted hover:text-foreground hover:bg-card/70'
+                  }`}
+                >
+                  ⚡ Güç Sistemleri ({powerSystems.length})
+                </button>
+              )}
+              {items.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('items')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'items'
+                      ? 'bg-primary/20 text-primary border border-primary/40 shadow-xs'
+                      : 'text-muted hover:text-foreground hover:bg-card/70'
+                  }`}
+                >
+                  🗡️ Eşyalar ({items.length})
+                </button>
+              )}
+              {canonRules.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('canon_rules')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'canon_rules'
+                      ? 'bg-primary/20 text-primary border border-primary/40 shadow-xs'
+                      : 'text-muted hover:text-foreground hover:bg-card/70'
+                  }`}
+                >
+                  ⚖️ Canon Kuralları ({canonRules.length})
+                </button>
+              )}
+              {plotThreads.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('plot_threads')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'plot_threads'
+                      ? 'bg-primary/20 text-primary border border-primary/40 shadow-xs'
+                      : 'text-muted hover:text-foreground hover:bg-card/70'
+                  }`}
+                >
+                  🔍 Açık Gizemler ({plotThreads.length})
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Galeri & Medya Alt Menüsü */}
+        {currentMainTab === 'media' && (
+          <div className="flex items-center justify-center mb-6">
+            <div className="inline-flex p-1 rounded-xl bg-card/50 border border-border/50 backdrop-blur-md flex-wrap items-center justify-center gap-1 shadow-xs">
+              {mediaList.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('media')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'media'
+                      ? 'bg-primary/20 text-primary border border-primary/40 shadow-xs'
+                      : 'text-muted hover:text-foreground hover:bg-card/70'
+                  }`}
+                >
+                  🖼️ Görseller ({mediaList.length})
+                </button>
+              )}
+              {soundtracks.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('soundtracks')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'soundtracks'
+                      ? 'bg-primary/20 text-primary border border-primary/40 shadow-xs'
+                      : 'text-muted hover:text-foreground hover:bg-card/70'
+                  }`}
+                >
+                  🎵 Müzikler ({soundtracks.length})
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* ── ESERLER & SERİLER ── */}
         {activeTab === 'works' && (
@@ -989,40 +1207,73 @@ export default function PublicUniversePage() {
 
             {/* Eserler (Kitaplar & Webtoonlar) */}
             <div>
-              <Typography variant="h2" className="text-base sm:text-lg font-bold mb-4 flex items-center gap-2">
-                <BookOpen size={18} className="text-primary" />
-                <span>Bu Evrende Geçen Eserler</span>
-              </Typography>
+              <div className="flex items-center justify-between mb-4">
+                <Typography variant="h2" className="text-base sm:text-lg font-bold flex items-center gap-2">
+                  <BookOpen size={18} className="text-primary" />
+                  <span>Bu Evrende Geçen Eserler ({stories.length})</span>
+                </Typography>
+              </div>
+
               {stories.length === 0 ? (
-                <p className="text-xs text-muted">Bu evrene henüz bir kitap bağlanmamış.</p>
+                <div className="p-8 text-center bg-card/40 border border-border/50 rounded-2xl text-muted text-xs">
+                  Bu evrene henüz bir kitap bağlanmamış.
+                </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {stories.map((st) => {
                     const storySlug = (st as any).slug || generateStorySlug(st.title, st.storyId);
                     return (
                       <div
                         key={st.storyId}
                         onClick={() => router.push(`/story/${storySlug}`)}
-                        className="p-3.5 rounded-2xl bg-card/60 hover:bg-card border border-border/50 hover:border-primary/40 transition-all cursor-pointer flex items-center gap-3 group shadow-xs"
+                        className="p-4 rounded-2xl bg-card/60 hover:bg-card border border-border/50 hover:border-primary/40 transition-all cursor-pointer flex gap-4 group shadow-xs hover:shadow-md"
                       >
-                        <div className="w-12 h-16 rounded-xl bg-background border border-border/60 overflow-hidden shrink-0">
+                        {/* Kapak */}
+                        <div className="w-16 sm:w-20 aspect-[2/3] rounded-xl bg-background border border-border/60 overflow-hidden shrink-0 shadow-sm relative">
                           {st.coverImage ? (
-                            <img src={st.coverImage} alt={st.title} className="w-full h-full object-cover" />
+                            <img 
+                              src={st.coverImage} 
+                              alt={st.title} 
+                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" 
+                            />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-muted">
-                              <BookOpen size={18} />
+                              <BookOpen size={20} />
                             </div>
                           )}
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <span className="font-bold text-xs sm:text-sm text-foreground group-hover:text-primary transition-colors block truncate">
-                            {st.title}
-                          </span>
-                          <span className="text-[11px] text-muted block mt-0.5">
-                            {st.stats?.chapterCount || 0} Bölüm • {st.format === 'webtoon' ? 'Webtoon' : 'Roman'}
-                          </span>
+
+                        {/* Bilgiler */}
+                        <div className="min-w-0 flex-1 flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                                {st.format === 'webtoon' ? 'Webtoon' : 'Roman'}
+                              </span>
+                              <span className="text-[10px] text-muted font-medium">
+                                {st.status === 'completed' ? 'Tamamlandı' : 'Devam Ediyor'}
+                              </span>
+                            </div>
+                            <span className="font-bold text-sm sm:text-base text-foreground group-hover:text-primary transition-colors block truncate">
+                              {st.title}
+                            </span>
+                            {st.summary && (
+                              <p className="text-xs text-muted line-clamp-2 mt-1 leading-relaxed">
+                                {st.summary}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex items-center justify-between pt-2.5 border-t border-border/40 mt-2 text-xs">
+                            <span className="text-muted text-[11px] font-medium">
+                              {st.stats?.chapterCount || 0} Bölüm
+                            </span>
+                            <span className="text-primary font-bold flex items-center gap-1 group-hover:translate-x-1 transition-transform text-xs">
+                              <span>İncele & Oku</span>
+                              <ChevronRight size={13} />
+                            </span>
+                          </div>
                         </div>
-                        <ChevronRight size={16} className="text-muted group-hover:text-primary shrink-0" />
                       </div>
                     );
                   })}
@@ -1107,48 +1358,62 @@ export default function PublicUniversePage() {
               )}
             </div>
 
-            {/* Arama & Rol Filtreleme Barı */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            {/* Arama & Rol Filtreleme Barı (Sıfır Kaydırma, Modern & Minimal) */}
+            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3.5 mb-6">
               {/* Rol Filtre Hapları */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none text-xs">
+              <div className="flex items-center gap-1.5 flex-wrap text-xs">
                 {[
-                  { key: 'all', label: 'Tümü' },
-                  { key: 'Protagonist', label: 'Baş Kahraman' },
-                  { key: 'Antagonist', label: 'Antagonist' },
-                  { key: 'Deuteragonist', label: 'İkincil' },
-                  { key: 'Mentor', label: 'Mentor' },
-                  { key: 'Love Interest', label: 'Aşk İlgisi' },
-                  { key: 'Side Character', label: 'Yan Karakter' },
-                ].map((role) => (
-                  <button
-                    key={role.key}
-                    type="button"
-                    onClick={() => setCharacterRoleFilter(role.key)}
-                    className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all ${
-                      characterRoleFilter === role.key
-                        ? 'bg-primary text-black shadow-xs font-black'
-                        : 'bg-card/70 hover:bg-card border border-border/50 text-muted hover:text-foreground'
-                    }`}
-                  >
-                    {role.label}
-                  </button>
-                ))}
+                  { key: 'all', label: 'Tümü', count: roleCounts.all },
+                  { key: 'Protagonist', label: 'Baş Kahraman', count: roleCounts.Protagonist },
+                  { key: 'Antagonist', label: 'Antagonist', count: roleCounts.Antagonist },
+                  { key: 'Deuteragonist', label: 'İkincil', count: roleCounts.Deuteragonist },
+                  { key: 'Mentor', label: 'Mentor', count: roleCounts.Mentor },
+                  { key: 'Love Interest', label: 'Aşk İlgisi', count: roleCounts['Love Interest'] },
+                  { key: 'Side Character', label: 'Yan Karakter', count: roleCounts['Side Character'] },
+                ].map((role) => {
+                  const isActive = characterRoleFilter === role.key;
+                  return (
+                    <button
+                      key={role.key}
+                      type="button"
+                      onClick={() => setCharacterRoleFilter(role.key)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer shadow-2xs ${
+                        isActive
+                          ? 'bg-primary text-black shadow-xs font-black'
+                          : 'bg-card hover:bg-muted/20 border border-border/70 text-foreground/80 hover:text-foreground'
+                      }`}
+                    >
+                      <span>{role.label}</span>
+                      {role.count !== undefined && role.count > 0 && (
+                        <span
+                          className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                            isActive
+                              ? 'bg-black/20 text-black'
+                              : 'bg-muted/40 text-foreground/80'
+                          }`}
+                        >
+                          {role.count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Arama Kutusu */}
-              <div className="relative sm:w-64">
+              <div className="relative sm:w-64 shrink-0">
                 <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
                 <input
                   type="text"
                   value={characterSearch}
                   onChange={(e) => setCharacterSearch(e.target.value)}
                   placeholder="Karakter veya meslek ara..."
-                  className="w-full pl-9 pr-3.5 py-1.5 rounded-xl bg-card border border-border/60 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:border-primary transition-colors"
+                  className="w-full pl-9 pr-8 py-2 rounded-xl bg-card/80 border border-border/60 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/40 transition-all shadow-2xs"
                 />
                 {characterSearch && (
                   <button
                     onClick={() => setCharacterSearch('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-foreground"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-foreground p-0.5 cursor-pointer"
                   >
                     <X size={12} />
                   </button>
@@ -1406,22 +1671,92 @@ export default function PublicUniversePage() {
               <p className="text-xs text-muted text-center py-12">Bu evrene ait henüz açık bir mekân kaydı bulunmuyor.</p>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {locations.map((loc) => (
-                  <div key={loc.id} className="p-4 rounded-2xl bg-card/60 border border-border/50">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-bold text-sm text-foreground">{loc.name}</span>
-                      <span className="text-[10px] font-bold uppercase text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">
-                        {loc.type}
-                      </span>
+                {locations.map((loc) => {
+                  const parentLoc = locations.find((l) => l.id === loc.parentLocationId);
+                  const childLocs = locations.filter((l) => l.parentLocationId === loc.id);
+
+                  return (
+                    <div key={loc.id} className="rounded-2xl bg-card border border-border/60 overflow-hidden flex flex-col justify-between shadow-xs hover:shadow-md transition-all group">
+                      {/* Görsel / Başlık */}
+                      <div className="w-full h-36 relative bg-muted/30 overflow-hidden">
+                        {loc.imageUrl ? (
+                          <img
+                            src={loc.imageUrl}
+                            alt={loc.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-primary/5 via-muted/20 to-background text-muted-foreground/40">
+                            <MapPin size={32} className="mb-1 text-muted-foreground/50" />
+                            <span className="text-[10px] font-semibold tracking-wider uppercase text-muted-foreground/60">
+                              {LOCATION_TYPE_LABELS[loc.type] || loc.type}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="absolute top-2.5 left-2.5">
+                          <span className="text-[10px] font-bold uppercase text-primary bg-background/90 backdrop-blur-md px-2 py-0.5 rounded-md border border-border/60 shadow-xs">
+                            {LOCATION_TYPE_LABELS[loc.type] || loc.type}
+                          </span>
+                        </div>
+
+                        {childLocs.length > 0 && (
+                          <div className="absolute top-2.5 right-2.5">
+                            <span className="text-[10px] font-bold text-foreground bg-background/90 backdrop-blur-md px-2 py-0.5 rounded-md border border-border/60 shadow-xs">
+                              {childLocs.length} Alt Mekân
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="p-4 flex-1 flex flex-col justify-between space-y-2.5">
+                        <div>
+                          {parentLoc && (
+                            <div className="flex items-center gap-1 text-[10.5px] font-medium text-muted-foreground mb-1">
+                              <MapPin size={11} className="text-primary shrink-0" />
+                              <span className="truncate">Üst Mekân: {parentLoc.name} ({LOCATION_TYPE_LABELS[parentLoc.type] || parentLoc.type})</span>
+                            </div>
+                          )}
+
+                          <h4 className="font-bold text-sm text-foreground">{loc.name}</h4>
+                          <p className="text-xs text-muted-foreground line-clamp-3 mt-1 leading-relaxed">
+                            {loc.description || loc.readerNotes || 'Açıklama bulunmuyor.'}
+                          </p>
+
+                          {loc.detailedDescription && (
+                            <p className="text-[11px] text-muted-foreground/80 line-clamp-2 mt-1.5 italic">
+                              "{loc.detailedDescription}"
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Çipler */}
+                        <div className="pt-2 border-t border-border/40 flex flex-wrap gap-1.5 text-[10px] text-muted-foreground">
+                          {loc.climate && (
+                            <span className="px-1.5 py-0.5 rounded-md bg-muted/60 border border-border/40 truncate max-w-[150px]">
+                              🌤 {loc.climate}
+                            </span>
+                          )}
+                          {loc.atmosphere && (
+                            <span className="px-1.5 py-0.5 rounded-md bg-muted/60 border border-border/40 truncate max-w-[150px]">
+                              🌫 {loc.atmosphere}
+                            </span>
+                          )}
+                          {loc.population && (
+                            <span className="px-1.5 py-0.5 rounded-md bg-muted/60 border border-border/40 truncate max-w-[130px]">
+                              👥 {loc.population}
+                            </span>
+                          )}
+                          {loc.governance && (
+                            <span className="px-1.5 py-0.5 rounded-md bg-muted/60 border border-border/40 truncate max-w-[150px]">
+                              👑 {loc.governance}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-xs text-muted line-clamp-3 leading-relaxed">{loc.description || loc.readerNotes}</p>
-                    {loc.climate && (
-                      <span className="text-[11px] text-muted/80 block mt-2 pt-2 border-t border-border/40">
-                        İklim: {loc.climate}
-                      </span>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

@@ -104,22 +104,55 @@ export type LocationType =
   | 'room'
   | 'special';
 
+export const LOCATION_TYPE_LABELS: Record<LocationType, string> = {
+  world: 'Dünya / Evren',
+  continent: 'Kıta',
+  country: 'Ülke / Krallık',
+  region: 'Bölge',
+  city: 'Şehir / Başkent',
+  district: 'Mahalle / Semt',
+  building: 'Bina / Kale / Tapınak',
+  room: 'Oda / Özel Alan',
+  special: 'Özel / Boyutsal Alan',
+};
+
 export interface UniverseLocation {
   id: string;
   universeId: string;
   name: string;
   type: LocationType;
-  parentLocationId?: string;    // Üst mekân bağlantısı (Hiyerarşi için)
-  description: string;
-  climate?: string;             // İklim
-  geography?: string;           // Coğrafya
-  atmosphere?: string;          // Atmosfer / Havası
-  imageUrl?: string;
+  parentLocationId?: string;    // Üst mekân bağlantısı (Hiyerarşi: Dünya -> Kıta -> Ülke -> Şehir -> Bina vb.)
+  description: string;          // Kısa tanım
+  detailedDescription?: string; // Detaylı dünya kurma anlatısı
+  imageUrl?: string;            // Manzara, konsept çizim veya harita görseli
   
-  // Iceberg Dünya Kurma
-  authorNotes?: string;         // Yalnızca yazar notu
+  // Coğrafya, İklim & Atmosfer
+  climate?: string;             // İklim (örn: Sert karasal, tropik muson)
+  geography?: string;           // Coğrafya (örn: Uçurumlar, derin vadiler, volkanik topraklar)
+  atmosphere?: string;          // Atmosfer / Hissiyat (örn: Kasvetli sis, neon ışıklar, kadim büyü kokusu)
+  
+  // Toplum, Kültür & Yönetim
+  population?: string;          // Nüfus ve yaşayan halk (örn: 250.000, çoğunlukla Elfler ve Cüceler)
+  languages?: string;           // Konuşulan diller / lehçeler (örn: Yüksek Elfçe, Ortak Dil)
+  culture?: string;             // Kültür, gelenekler ve yaşam tarzı
+  governance?: string;          // Yönetim biçimi ve lider / hükümdar
+  economy?: string;             // Ekonomi, ticaret, ana üretim ve para birimi
+  security?: string;            // Güvenlik, askeri güç, surlar ve savunma durumu
+  history?: string;             // Tarihçe ve kuruluş efsanesi
+  
+  // Özel Kurallar & Tehlikeler
+  specialRules?: string;        // Özel kurallar ve yasalar (örn: Büyü kullanımı yasak)
+  dangers?: string;             // Tehlikeler, yaratıklar, zehirli alanlar ve tehditler
+  
+  // Bağlantılar (İlişkili Varlıklar)
+  importantCharacterIds?: string[];     // Bu mekânda yaşayan / doğan önemli karakterler
+  relatedEventIds?: string[];           // Mekânda gerçekleşen önemli tarihsel olaylar
+  relatedOrganizationIds?: string[];    // Mekânda bulunan loncalar, tarikatlar veya haneler
+  
+  // Iceberg Dünya Kurma & Görünürlük
+  authorNotes?: string;         // Yalnızca yazar notu (Görünmeyen derin katman)
   readerNotes?: string;         // Okuyucuya açık bilgi
-  secretLore?: string;          // Gizli gerçek
+  secretLore?: string;          // Gizli gerçek (Plot twist / iceberg'in altı)
   
   isSpoiler?: boolean;
   spoilerThresholdChapter?: number;

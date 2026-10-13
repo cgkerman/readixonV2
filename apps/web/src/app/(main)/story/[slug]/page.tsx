@@ -667,18 +667,21 @@ export default function StoryDetailPage() {
                 {story.seriesId && (
                   <Link
                     href={`/series/${series?.slug || story.seriesId}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-500 text-[11px] font-extrabold shadow-xs transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 dark:bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-900 dark:text-amber-200 text-[11px] font-extrabold shadow-xs transition-all backdrop-blur-md group"
                   >
-                    <Layers size={12} />
-                    <span>{story.seriesTitle || series?.title || 'Kitap Serisi'} #{story.seriesOrder || 1}</span>
+                    <Layers size={12} className="text-amber-700 dark:text-amber-400 group-hover:scale-110 transition-transform" />
+                    <span className="truncate max-w-[220px]">{story.seriesTitle || series?.title || 'Kitap Serisi'}</span>
+                    <span className="px-1.5 py-0.5 bg-amber-500/30 dark:bg-amber-400/20 rounded text-[10px] font-black text-amber-950 dark:text-amber-200">
+                      #{story.seriesOrder || 1}
+                    </span>
                   </Link>
                 )}
                 {story.universeId && (
                   <Link
                     href={`/universe/${universe?.slug || story.universeId}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/15 hover:bg-primary/25 border border-primary/30 text-primary text-[11px] font-extrabold shadow-xs transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/15 hover:bg-primary/25 border border-primary/35 text-indigo-950 dark:text-indigo-200 text-[11px] font-extrabold shadow-xs transition-all backdrop-blur-md group"
                   >
-                    <Sparkles size={12} />
+                    <Sparkles size={12} className="text-primary group-hover:rotate-12 transition-transform" />
                     <span>🌌 {story.universeTitle || universe?.title || 'Evren'}</span>
                   </Link>
                 )}
@@ -687,18 +690,20 @@ export default function StoryDetailPage() {
 
             {/* Status & Puan Rozetleri */}
             <div className="flex flex-wrap gap-2 mb-2.5 justify-center md:justify-start items-center">
-              <span className="px-3 py-1 bg-card/80 backdrop-blur-md text-text text-[11px] font-bold rounded-full border border-border/50 shadow-xs">
+              <span className="px-3 py-1 bg-card/90 backdrop-blur-md text-text text-[11px] font-bold rounded-full border border-border/60 shadow-xs">
                 {story.status === 'completed' ? 'Tamamlandı' : story.status === 'ongoing' ? 'Devam Ediyor' : 'Taslak'}
               </span>
 
-              <span className="px-3 py-1 bg-card/80 backdrop-blur-md text-text text-[11px] font-bold rounded-full border border-border/50 shadow-xs flex items-center gap-1">
-                <Star size={12} className="text-amber-500 fill-amber-500" /> {story.stats?.rating?.toFixed(1) || '0.0'}
+              <span className="px-3 py-1 bg-card/90 backdrop-blur-md text-text text-[11px] font-bold rounded-full border border-border/60 shadow-xs flex items-center gap-1">
+                <Star size={12} className="text-amber-500 fill-amber-500" />
+                <span className="font-extrabold">{story.stats?.rating?.toFixed(1) || '0.0'}</span>
               </span>
 
               {editorialReview && (
                 <Link href={`/reviews/${editorialReview.id}`} className="group inline-flex items-center">
-                  <span className="px-3 py-1 bg-amber-500/15 hover:bg-amber-500/25 text-amber-500 text-[11px] font-bold rounded-full border border-amber-500/30 shadow-xs flex items-center gap-1.5 transition-all">
-                    <Sparkles size={12} className="text-amber-500 animate-pulse" /> Editör Puanı: {editorialAverageScore}/10
+                  <span className="px-3 py-1 bg-amber-500/20 dark:bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 dark:text-amber-200 text-[11px] font-bold rounded-full border border-amber-500/40 shadow-xs flex items-center gap-1.5 transition-all backdrop-blur-md">
+                    <Sparkles size={12} className="text-amber-600 dark:text-amber-400 animate-pulse" />
+                    <span>Editör Puanı: <strong className="font-black text-amber-950 dark:text-amber-100">{editorialAverageScore}/10</strong></span>
                   </span>
                 </Link>
               )}
@@ -864,111 +869,172 @@ export default function StoryDetailPage() {
         </div>
       </div>
 
-      {/* ── 1.5. Serinin Kitapları Şeridi ── */}
-      {series && seriesBooks.length > 0 && (
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 my-6">
-          <div className="p-4 sm:p-5 rounded-3xl bg-card/60 border border-border/50 backdrop-blur-sm shadow-xs">
-            <div className="flex items-center justify-between mb-3.5">
-              <div className="flex items-center gap-2">
-                <Layers size={18} className="text-amber-500" />
-                <Typography variant="h3" className="font-bold text-sm sm:text-base text-foreground">
-                  {series.title} ({seriesBooks.length} Kitaplık Seri)
-                </Typography>
-              </div>
-              <Link
-                href={`/series/${series.slug || story.seriesId}`}
-                className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
-              >
-                Tüm Seriyi Gör <ChevronRight size={14} />
-              </Link>
-            </div>
+      {/* ── 1.5. Birleşik Kurgusal Dünya & Seri Hub'ı ── */}
+      {(universe || (series && seriesBooks.length > 0)) && (
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 my-4 sm:my-5">
+          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-card/60 backdrop-blur-xl border border-border/60 hover:border-border transition-all shadow-sm">
+            {/* Arka plan ambient aura efektleri */}
+            <div className="absolute -top-24 -left-24 w-72 h-72 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
-            <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-none">
-              {seriesBooks.map((item, idx) => {
-                const isCurrent = item.story.storyId === storyId;
-                const itemSlug = (item.story as any).slug || generateStorySlug(item.story.title, item.story.storyId);
-                return (
-                  <Link
-                    key={item.story.storyId}
-                    href={`/story/${itemSlug}`}
-                    className={`flex items-center gap-3 p-2.5 rounded-2xl border transition-all shrink-0 w-64 ${
-                      isCurrent
-                        ? 'bg-primary/10 border-primary/40 shadow-sm'
-                        : 'bg-background/60 hover:bg-background border-border/40 hover:border-primary/30'
-                    }`}
-                  >
-                    <div className="w-10 h-14 rounded-lg bg-card border border-border/50 overflow-hidden shrink-0">
-                      {item.story.coverImage ? (
-                        <img src={item.story.coverImage} alt={item.story.title} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-muted">
-                          <BookOpen size={16} />
-                        </div>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] font-black px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-500">
-                          #{idx + 1}
-                        </span>
-                        {isCurrent && (
-                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-primary text-black">
-                            Şu Anki
-                          </span>
-                        )}
-                        {item.customLabel && (
-                          <span className="text-[9px] font-medium text-muted truncate">
-                            {item.customLabel}
-                          </span>
-                        )}
+            <div className={`relative z-10 p-4 sm:p-5 ${
+              universe && series && seriesBooks.length > 0 
+                ? 'grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-border/50 gap-4 lg:gap-0'
+                : ''
+            }`}>
+              {/* ── Evren Kanadı ── */}
+              {universe && (
+                <div className={`flex flex-col justify-between ${
+                  series && seriesBooks.length > 0 ? 'lg:pr-6' : ''
+                }`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-primary/25 via-primary/10 to-purple-500/20 text-primary border border-primary/30 flex items-center justify-center shrink-0 shadow-xs">
+                        <Globe size={20} />
                       </div>
-                      <span className="text-xs font-bold text-foreground truncate block mt-0.5">
-                        {item.story.title}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-primary/15 text-primary uppercase tracking-wider">
+                            Kurgusal Evren
+                          </span>
+                          {universe.genre && (
+                            <span className="text-[11px] text-muted font-semibold capitalize truncate">
+                              • {universe.genre}
+                            </span>
+                          )}
+                        </div>
+                        <Link 
+                          href={`/universe/${universe.slug || story.universeId}`}
+                          className="group inline-flex items-center gap-1.5 max-w-full"
+                        >
+                          <Typography variant="h3" className="font-extrabold text-sm sm:text-base text-foreground group-hover:text-primary transition-colors truncate">
+                            {universe.title}
+                          </Typography>
+                        </Link>
+                      </div>
+                    </div>
+
+                    <Link
+                      href={`/universe/${universe.slug || story.universeId}`}
+                      className="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-primary/15 hover:bg-primary text-primary hover:text-black text-xs font-bold transition-all shrink-0 active:scale-95"
+                    >
+                      <span>Evrene Gir</span>
+                      <ChevronRight size={13} />
+                    </Link>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between text-xs text-muted">
+                    <p className="text-[11px] sm:text-xs text-muted line-clamp-1">
+                      Karakterler, haritalar ve zaman çizelgesini keşfedin.
+                    </p>
+                    <Link
+                      href={`/universe/${universe.slug || story.universeId}`}
+                      className="sm:hidden inline-flex items-center gap-1 text-[11px] font-bold text-primary shrink-0 ml-2"
+                    >
+                      <span>Evrene Gir</span>
+                      <ChevronRight size={12} />
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Seri Kanadı ── */}
+              {series && seriesBooks.length > 0 && (
+                <div className={`flex flex-col justify-between ${
+                  universe ? 'pt-4 lg:pt-0 lg:pl-6' : ''
+                }`}>
+                  <div className="flex items-start justify-between gap-3 mb-2.5">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center shrink-0 shadow-xs">
+                        <Layers size={20} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500 uppercase tracking-wider">
+                            Kitap Serisi
+                          </span>
+                          <span className="text-[11px] text-muted font-semibold">
+                            • {seriesBooks.length} Kitap
+                          </span>
+                        </div>
+                        <Link 
+                          href={`/series/${series.slug || story.seriesId}`}
+                          className="group inline-flex items-center gap-1.5 max-w-full"
+                        >
+                          <Typography variant="h3" className="font-extrabold text-sm sm:text-base text-foreground group-hover:text-amber-500 transition-colors truncate">
+                            {series.title}
+                          </Typography>
+                        </Link>
+                      </div>
+                    </div>
+
+                    <Link
+                      href={`/series/${series.slug || story.seriesId}`}
+                      className="inline-flex items-center gap-1 text-xs font-bold text-amber-500 hover:underline shrink-0"
+                    >
+                      <span>Tümü</span>
+                      <ChevronRight size={13} />
+                    </Link>
+                  </div>
+
+                  {/* Serideki Kitaplar - Akıllı Gösterim */}
+                  {seriesBooks.length > 1 ? (
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none pt-0.5">
+                      {seriesBooks.map((item, idx) => {
+                        const isCurrent = item.story.storyId === storyId;
+                        const itemSlug = (item.story as any).slug || generateStorySlug(item.story.title, item.story.storyId);
+                        return (
+                          <Link
+                            key={item.story.storyId}
+                            href={`/story/${itemSlug}`}
+                            title={`#${idx + 1} ${item.story.title}`}
+                            className={`flex items-center gap-2 p-1.5 pr-2.5 rounded-xl border transition-all shrink-0 ${
+                              isCurrent
+                                ? 'bg-amber-500/15 border-amber-500/40 shadow-xs'
+                                : 'bg-background/50 hover:bg-background border-border/40 hover:border-amber-500/30'
+                            }`}
+                          >
+                            <div className="w-6 h-8 rounded-md bg-card border border-border/40 overflow-hidden shrink-0">
+                              {item.story.coverImage ? (
+                                <img src={item.story.coverImage} alt={item.story.title} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-muted">
+                                  <BookOpen size={10} />
+                                </div>
+                              )}
+                            </div>
+                            <div className="min-w-0 max-w-[120px]">
+                              <div className="flex items-center gap-1">
+                                <span className="text-[9px] font-black text-amber-500">#{idx + 1}</span>
+                                {isCurrent && (
+                                  <span className="text-[8px] font-bold px-1 rounded bg-amber-500 text-black">
+                                    Mevcut
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[11px] font-bold text-foreground truncate block">
+                                {item.story.title}
+                              </span>
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between text-xs text-muted pt-1">
+                      <span className="text-[11px] text-muted flex items-center gap-1.5 font-medium">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                        Serinin 1. Kitabı (Tek Eser)
                       </span>
-                      <span className="text-[10px] text-muted block">
-                        {item.story.stats?.chapterCount || 0} Bölüm
+                      <span className="text-[10px] text-muted/80 hidden sm:inline">
+                        Yeni ciltler eklendiğinde burada listelenir
                       </span>
                     </div>
-                  </Link>
-                );
-              })}
+                  )}
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      )}
-
-      {/* ── 1.6. Evrene Gir Çağrı Kartı ── */}
-      {universe && (
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 mb-6">
-          <Link
-            href={`/universe/${universe.slug || story.universeId}`}
-            className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-primary/15 via-card/70 to-purple-500/15 border border-primary/30 hover:border-primary/60 transition-all flex items-center justify-between group shadow-sm hover:shadow-md"
-          >
-            <div className="flex items-center gap-3.5 sm:gap-4">
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-primary/20 text-primary flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                <Globe size={22} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-primary/20 text-primary uppercase">
-                    Kurgusal Evren
-                  </span>
-                  <span className="text-xs text-muted font-semibold capitalize">{universe.genre}</span>
-                </div>
-                <Typography variant="h3" className="font-extrabold text-sm sm:text-base text-foreground group-hover:text-primary transition-colors">
-                  {universe.title} — Evrene Gir & Keşfet
-                </Typography>
-                <p className="text-[11px] text-muted line-clamp-1 mt-0.5">
-                  Bu eserin geçtiği dünyanın karakterlerini, mekânlarını ve zaman çizelgesini keşfedin.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary text-black text-xs font-bold shrink-0 shadow-sm ml-2 group-hover:translate-x-0.5 transition-transform">
-              <span>Evrene Gir</span>
-              <ChevronRight size={14} />
-            </div>
-          </Link>
         </div>
       )}
 

@@ -104,6 +104,12 @@ export default function CharacterEditPage() {
     }));
   };
 
+  const handleRemoveImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    handleChange('avatarUrl', '');
+    toast.success('Karakter resmi kaldırıldı.');
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -168,14 +174,24 @@ export default function CharacterEditPage() {
         <div className="w-full md:w-80 shrink-0">
           <div className="bg-card border border-border/50 rounded-3xl p-6 sticky top-8 shadow-2xl shadow-primary/5">
             <div 
-              className="w-full aspect-[3/4] bg-background rounded-2xl border-2 border-dashed border-border/50 flex flex-col items-center justify-center mb-6 relative overflow-hidden group cursor-pointer"
+              className="w-full aspect-[3/4] bg-background rounded-2xl border-2 border-dashed border-border/50 flex flex-col items-center justify-center mb-3 relative overflow-hidden group cursor-pointer"
               onClick={() => fileInputRef.current?.click()}
             >
               {formData.avatarUrl ? (
                 <>
                   <img src={formData.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
-                    <Upload className="text-white mb-2" size={32} />
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm gap-2">
+                    <button 
+                      type="button" 
+                      onClick={handleRemoveImage}
+                      className="p-2 rounded-xl bg-destructive/80 hover:bg-destructive text-white transition-colors"
+                      title="Görseli Kaldır"
+                    >
+                      <X size={18} />
+                    </button>
+                    <div className="p-2 rounded-xl bg-white/20 text-white">
+                      <Upload size={18} />
+                    </div>
                   </div>
                 </>
               ) : (
@@ -190,6 +206,20 @@ export default function CharacterEditPage() {
                 </div>
               )}
               <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
+            </div>
+
+            {/* Yazar Görsel Rehberi & Ölçüler */}
+            <div className="mb-5 p-3 rounded-xl bg-primary/5 border border-primary/15 text-[11px] space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-foreground">Önerilen Oran: 2:3 veya 3:4</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-bold">800×1200 px</span>
+              </div>
+              <p className="text-muted-foreground leading-tight text-[10.5px]">
+                <strong>Kullanım Alanı:</strong> Karakter kartı, okuma içi dipnotlar ve evren profil görünümü.
+              </p>
+              <p className="text-muted-foreground/80 text-[10px]">
+                💡 AI Görseli İçin: <code className="bg-muted px-1 py-0.5 rounded text-foreground font-semibold">--ar 2:3</code> veya <code className="bg-muted px-1 py-0.5 rounded text-foreground font-semibold">--ar 3:4</code>
+              </p>
             </div>
 
             <Input 
