@@ -251,9 +251,21 @@ export default function StoryDetailAdminPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 20 * 1024 * 1024) {
-      toast.error('Öne çıkan video boyutu en fazla 20MB olabilir.');
+    if (file.size > 25 * 1024 * 1024) {
+      toast.error('Öne çıkan video boyutu en fazla 25MB olabilir.');
+      if (highlightVideoInputRef.current) highlightVideoInputRef.current.value = '';
       return;
+    }
+
+    // Mobil için anında geri bildirim ve önizleme
+    const previewUrl = URL.createObjectURL(file);
+    setNewHighlightFile(file);
+    setNewHighlightCoverPreview(previewUrl);
+
+    // Otomatik başlık öner
+    if (!newHighlightTitle.trim()) {
+      const cleanName = file.name.replace(/\.[^/.]+$/, '').trim();
+      setNewHighlightTitle(cleanName.slice(0, 25) || 'Tanıtım Teaser');
     }
 
     const videoEl = document.createElement('video');
@@ -261,36 +273,76 @@ export default function StoryDetailAdminPage() {
     videoEl.playsInline = true;
     videoEl.muted = true;
     
-    videoEl.onloadedmetadata = () => {
-      if (videoEl.duration > 20.5) {
-        toast.error(`Video en fazla 20 saniye olmalıdır. Seçtiğiniz video: ${Math.round(videoEl.duration)} saniye.`);
+    // Mobil WebView zaman aşımı güvencesi (metadata gecikirse donmayı engeller)
+    let isHandled = false;
+    const fallbackTimer = setTimeout(() => {
+      if (!isHandled) {
+        isHandled = true;
+        setNewHighlightDuration(15);
+      }
+    }, 2500);
+
+    const onMetadata = () => {
+      if (isHandled) return;
+      isHandled = true;
+      clearTimeout(fallbackTimer);
+
+      let dur = videoEl.duration;
+      // Android / Chrome Infinity veya NaN süresi kontrolü
+      if (!isFinite(dur) || isNaN(dur) || dur <= 0) {
+        dur = 15;
+      }
+
+      if (dur > 22) { // 2 saniye toleransla 20 saniye
+        toast.error(`Video süresi en fazla 20 saniye olmalıdır. (Seçilen: ${Math.round(dur)} sn)`);
+        setNewHighlightFile(null);
+        setNewHighlightCoverPreview('');
+        setNewHighlightDuration(0);
         if (highlightVideoInputRef.current) highlightVideoInputRef.current.value = '';
         return;
       }
 
-      setNewHighlightDuration(videoEl.duration);
-      setNewHighlightFile(file);
+      setNewHighlightDuration(dur);
 
-      // Otomatik 0.5s karesinden kapak görseli (thumbnail) üret
-      videoEl.currentTime = Math.min(0.5, videoEl.duration / 2);
-      videoEl.onseeked = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = videoEl.videoWidth || 720;
-        canvas.height = videoEl.videoHeight || 1280;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
-          canvas.toBlob(blob => {
-            if (blob) {
-              setNewHighlightCoverBlob(blob);
-              setNewHighlightCoverPreview(URL.createObjectURL(blob));
+      // Otomatik kare yakalama (Canvas mobilde hata verirse akışı durdurmaz)
+      try {
+        videoEl.currentTime = Math.min(0.5, dur / 2);
+        videoEl.onseeked = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.min(videoEl.videoWidth || 720, 720);
+            canvas.height = Math.min(videoEl.videoHeight || 1280, 1280);
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+              canvas.toBlob(blob => {
+                if (blob) {
+                  setNewHighlightCoverBlob(blob);
+                  setNewHighlightCoverPreview(URL.createObjectURL(blob));
+                }
+              }, 'image/jpeg', 0.85);
             }
-          }, 'image/jpeg', 0.85);
-        }
-      };
+          } catch (cErr) {
+            console.warn('Canvas thumbnail yakalanamadı, video önizlemesi kullanılacak', cErr);
+          }
+        };
+      } catch (seekErr) {
+        console.warn('Seek hatası', seekErr);
+      }
     };
 
-    videoEl.src = URL.createObjectURL(file);
+    videoEl.onloadedmetadata = onMetadata;
+    videoEl.onerror = () => {
+      if (isHandled) return;
+      isHandled = true;
+      clearTimeout(fallbackTimer);
+      setNewHighlightDuration(15);
+    };
+
+    videoEl.src = previewUrl;
+    try {
+      videoEl.load();
+    } catch (e) {}
   };
 
   const handleSaveHighlight = async () => {
@@ -322,6 +374,8 @@ export default function StoryDetailAdminPage() {
       if (newHighlightCoverBlob) {
         const coverPath = `stories/${storyId}/highlights/cover_${timestamp}.jpg`;
         coverUrl = await uploadFile(newHighlightCoverBlob, coverPath);
+      } else if (story?.coverImage) {
+        coverUrl = story.coverImage;
       }
 
       setHighlightUploadProgress(95);
@@ -645,12 +699,12 @@ export default function StoryDetailAdminPage() {
         )}
       </div>
 
-      {/* ── 4. Sekme Barı (Bölümler vs. Kitap Bilgileri) ── */}
-      <div className="flex items-center gap-2 border-b border-border/60 mb-6 pb-2">
+      {/* ── 4. Sekme Barı (Bölümler vs. Kitap Bilgileri vs. Öne Çıkanlar) ── */}
+      <div className="flex items-center gap-2 border-b border-border/60 mb-6 pb-2 overflow-x-auto no-scrollbar w-full flex-nowrap scroll-smooth">
         <button
           type="button"
           onClick={() => setActiveTab('chapters')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer shrink-0 whitespace-nowrap ${
             activeTab === 'chapters'
               ? 'bg-primary text-black shadow-md shadow-primary/20'
               : 'text-muted hover:text-text hover:bg-muted/10'
@@ -668,7 +722,7 @@ export default function StoryDetailAdminPage() {
         <button
           type="button"
           onClick={() => setActiveTab('details')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer whitespace-nowrap ${
+          className={`flex items-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer shrink-0 whitespace-nowrap ${
             activeTab === 'details'
               ? 'bg-primary text-black shadow-md shadow-primary/20'
               : 'text-muted hover:text-text hover:bg-muted/10'
@@ -681,14 +735,14 @@ export default function StoryDetailAdminPage() {
         <button
           type="button"
           onClick={() => setActiveTab('highlights')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer whitespace-nowrap ${
+          className={`flex items-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer shrink-0 whitespace-nowrap ${
             activeTab === 'highlights'
               ? 'bg-primary text-black shadow-md shadow-primary/20'
               : 'text-muted hover:text-text hover:bg-muted/10'
           }`}
         >
-          <Sparkles size={16} />
-          <span>Öne Çıkanlar (Story / Dikey Teaser)</span>
+          <Sparkles size={16} className={activeTab === 'highlights' ? 'text-black' : 'text-amber-500'} />
+          <span>Öne Çıkanlar <span className="hidden sm:inline">(Story / Teaser)</span></span>
           {highlights.length > 0 && (
             <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
               activeTab === 'highlights' ? 'bg-black/20 text-black' : 'bg-muted/20 text-muted'
@@ -1193,7 +1247,7 @@ export default function StoryDetailAdminPage() {
                 variant="primary"
                 onPress={() => setIsAddHighlightOpen(true)}
                 disabled={highlights.length >= 6}
-                className="flex items-center justify-center gap-2 text-xs sm:text-sm py-2.5 px-4 cursor-pointer font-semibold shadow-md shadow-primary/20 shrink-0"
+                className="flex items-center justify-center gap-2 text-xs sm:text-sm py-3 sm:py-2.5 px-4 cursor-pointer font-bold shadow-md shadow-primary/20 shrink-0 w-full sm:w-auto"
               >
                 <PlusCircle size={16} />
                 <span>Yeni Öne Çıkan Ekle</span>
@@ -1202,7 +1256,7 @@ export default function StoryDetailAdminPage() {
 
             {/* Liste Boş Durumu */}
             {highlights.length === 0 ? (
-              <div className="text-center py-12 px-4 rounded-xl border border-dashed border-border/70 bg-muted/5 flex flex-col items-center">
+              <div className="text-center py-10 sm:py-12 px-4 rounded-xl border border-dashed border-border/70 bg-muted/5 flex flex-col items-center">
                 <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-primary/20 via-fuchsia-500/20 to-amber-500/20 border border-primary/30 flex items-center justify-center mb-4 text-primary shadow-inner">
                   <Film size={28} />
                 </div>
@@ -1213,30 +1267,30 @@ export default function StoryDetailAdminPage() {
                 <Button
                   variant="primary"
                   onPress={() => setIsAddHighlightOpen(true)}
-                  className="text-xs py-2 px-4 font-semibold cursor-pointer"
+                  className="text-xs py-2.5 px-5 font-bold cursor-pointer w-full sm:w-auto"
                 >
-                  <PlusCircle size={14} className="mr-1.5" />
+                  <PlusCircle size={15} className="mr-1.5" />
                   İlk Story'ni Yükle
                 </Button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {highlights.map((h, idx) => (
                   <div
                     key={h.id || idx}
-                    className="relative bg-muted/10 border border-border/60 hover:border-border rounded-2xl p-3.5 flex flex-col justify-between transition-all group"
+                    className="relative bg-muted/10 border border-border/60 hover:border-border rounded-2xl p-2.5 sm:p-3.5 flex flex-col justify-between transition-all group"
                   >
                     {/* Üst Bilgi: Sıra & Süre */}
-                    <div className="flex items-center justify-between mb-2.5">
-                      <div className="flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-card border border-border/60 flex items-center justify-center text-[10px] font-black text-text">
+                    <div className="flex items-center justify-between mb-2 gap-1">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-card border border-border/60 flex items-center justify-center text-[9px] sm:text-[10px] font-black text-text shrink-0">
                           #{idx + 1}
                         </span>
-                        <h4 className="font-bold text-xs sm:text-sm text-text truncate max-w-[150px]">
+                        <h4 className="font-bold text-xs sm:text-sm text-text truncate">
                           {h.title}
                         </h4>
                       </div>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500 font-bold border border-amber-500/30">
+                      <span className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500 font-bold border border-amber-500/30 shrink-0">
                         {h.duration ? `${Math.round(h.duration)} sn` : 'Story'}
                       </span>
                     </div>
@@ -1244,7 +1298,7 @@ export default function StoryDetailAdminPage() {
                     {/* 9:16 Video / Thumbnail Önizleme Konteyneri */}
                     <div
                       onClick={() => setPreviewModalIndex(idx)}
-                      className="relative w-full aspect-[9/14] bg-zinc-950 rounded-xl overflow-hidden border border-border/40 group-hover:border-primary/50 transition-colors cursor-pointer flex items-center justify-center mb-3"
+                      className="relative w-full aspect-[9/15] bg-zinc-950 rounded-xl overflow-hidden border border-border/40 group-hover:border-primary/50 transition-colors cursor-pointer flex items-center justify-center mb-2.5"
                     >
                       {h.coverUrl ? (
                         <img
@@ -1263,58 +1317,58 @@ export default function StoryDetailAdminPage() {
 
                       {/* Oynat Overlay */}
                       <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center gap-1.5 group-hover:bg-black/20 transition-all">
-                        <div className="w-12 h-12 rounded-full bg-black/60 backdrop-blur-md border border-white/20 flex items-center justify-center text-white group-hover:scale-110 transition-transform shadow-lg">
-                          <Play size={20} className="translate-x-0.5 fill-current" />
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/60 backdrop-blur-md border border-white/20 flex items-center justify-center text-white group-hover:scale-110 transition-transform shadow-lg">
+                          <Play size={18} className="translate-x-0.5 fill-current" />
                         </div>
-                        <span className="text-[10px] font-bold text-white/90 bg-black/50 px-2 py-0.5 rounded-full backdrop-blur-xs">
+                        <span className="text-[9px] sm:text-[10px] font-bold text-white/90 bg-black/50 px-2 py-0.5 rounded-full backdrop-blur-xs">
                           Önizle
                         </span>
                       </div>
                     </div>
 
                     {/* Eylemler: Sıralama & Silme */}
-                    <div className="flex items-center justify-between gap-1 pt-1 border-t border-border/40">
-                      <div className="flex items-center gap-1">
+                    <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-border/40">
+                      <div className="flex items-center gap-0.5">
                         <button
                           type="button"
                           onClick={() => handleMoveHighlight(idx, 'up')}
                           disabled={idx === 0}
-                          className={`p-1.5 rounded-lg text-muted hover:text-text hover:bg-muted/20 cursor-pointer ${
+                          className={`p-1 sm:p-1.5 rounded-lg text-muted hover:text-text hover:bg-muted/20 cursor-pointer ${
                             idx === 0 ? 'opacity-30 cursor-not-allowed' : ''
                           }`}
                           title="Yukarı Taşı"
                         >
-                          <ArrowUp size={15} />
+                          <ArrowUp size={14} />
                         </button>
                         <button
                           type="button"
                           onClick={() => handleMoveHighlight(idx, 'down')}
                           disabled={idx === highlights.length - 1}
-                          className={`p-1.5 rounded-lg text-muted hover:text-text hover:bg-muted/20 cursor-pointer ${
+                          className={`p-1 sm:p-1.5 rounded-lg text-muted hover:text-text hover:bg-muted/20 cursor-pointer ${
                             idx === highlights.length - 1 ? 'opacity-30 cursor-not-allowed' : ''
                           }`}
                           title="Aşağı Taşı"
                         >
-                          <ArrowDown size={15} />
+                          <ArrowDown size={14} />
                         </button>
                       </div>
 
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1">
                         <button
                           type="button"
                           onClick={() => setPreviewModalIndex(idx)}
-                          className="px-2.5 py-1 text-[11px] font-semibold text-primary hover:bg-primary/10 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                          className="px-2 py-1 text-[10px] sm:text-[11px] font-semibold text-primary hover:bg-primary/10 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
                         >
-                          <Play size={12} />
-                          Önizle
+                          <Play size={11} />
+                          <span className="hidden sm:inline">Önizle</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => handleDeleteHighlight(h.id)}
-                          className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                          className="p-1 sm:p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
                           title="Sil"
                         >
-                          <Trash2 size={15} />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </div>
@@ -1326,11 +1380,16 @@ export default function StoryDetailAdminPage() {
         </div>
       )}
 
-      {/* ── Yeni Öne Çıkan Ekleme Modalı ── */}
+      {/* ── Yeni Öne Çıkan Ekleme Modalı (Mobil Uyumlu Bottom-Sheet) ── */}
       {isAddHighlightOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in">
-          <div className="bg-card border border-border/60 rounded-3xl p-5 sm:p-7 max-w-md w-full shadow-2xl relative max-h-[90vh] overflow-y-auto">
-            
+        <div className="fixed inset-0 z-[100] flex flex-col justify-end sm:justify-center items-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-card border-t sm:border border-border/60 rounded-t-[28px] sm:rounded-3xl p-5 sm:p-7 max-w-lg w-full shadow-2xl relative max-h-[92dvh] sm:max-h-[90vh] overflow-y-auto pb-[calc(2.5rem+env(safe-area-inset-bottom,0px))] sm:pb-7 animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 duration-200"
+          >
+            {/* Mobil Çekmece Göstergesi */}
+            <div className="w-12 h-1.5 bg-muted/40 rounded-full mx-auto mb-4 sm:hidden shrink-0" />
+
             <button
               onClick={() => {
                 if (highlightUploading) return;
@@ -1339,10 +1398,11 @@ export default function StoryDetailAdminPage() {
                 setNewHighlightCoverBlob(null);
                 setNewHighlightCoverPreview('');
                 setNewHighlightTitle('');
+                if (highlightVideoInputRef.current) highlightVideoInputRef.current.value = '';
               }}
               className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted/20 text-muted transition-colors cursor-pointer"
             >
-              <X size={18} />
+              <X size={20} />
             </button>
 
             <div className="flex items-center gap-2 mb-1">
@@ -1351,7 +1411,7 @@ export default function StoryDetailAdminPage() {
                 Yeni Öne Çıkan Story Ekle
               </Typography>
             </div>
-            <p className="text-xs text-muted mb-4">
+            <p className="text-xs text-muted mb-4 leading-relaxed">
               Dikey formatlı (9:16) ve en fazla 20 saniyelik tanıtım videonuzu seçin.
             </p>
 
@@ -1359,13 +1419,13 @@ export default function StoryDetailAdminPage() {
               {/* Video Seçim Alanı */}
               <div>
                 <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">
-                  Dikey Video Dosyası (MP4/WebM, max 20sn, max 20MB)
+                  Dikey Video Dosyası (Maks. 20 sn, maks. 25MB)
                 </label>
                 
                 <input
                   ref={highlightVideoInputRef}
                   type="file"
-                  accept="video/mp4,video/webm,video/quicktime"
+                  accept="video/*"
                   onChange={handleSelectHighlightVideo}
                   disabled={highlightUploading}
                   className="hidden"
@@ -1373,24 +1433,32 @@ export default function StoryDetailAdminPage() {
                 />
 
                 {!newHighlightFile ? (
-                  <label
-                    htmlFor="highlight-video-picker"
-                    className="flex flex-col items-center justify-center gap-2.5 p-6 border-2 border-dashed border-border/80 hover:border-primary/80 rounded-2xl bg-muted/5 hover:bg-primary/5 transition-all cursor-pointer text-center"
+                  <button
+                    type="button"
+                    onClick={() => highlightVideoInputRef.current?.click()}
+                    className="w-full flex flex-col items-center justify-center gap-2.5 p-6 border-2 border-dashed border-border/80 hover:border-primary/80 rounded-2xl bg-muted/5 hover:bg-primary/5 transition-all cursor-pointer text-center group active:scale-[0.99]"
                   >
-                    <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
                       <Upload size={22} />
                     </div>
                     <div>
-                      <span className="text-xs font-bold text-text block">Dikey Video Seç</span>
-                      <span className="text-[11px] text-muted">9:16 dikey reels/tiktok formatı, maks 20 saniye</span>
+                      <span className="text-sm font-bold text-text block">Dikey Video Seç</span>
+                      <span className="text-xs text-muted">Galeriden veya dosyalardan seçin (Maks. 20 sn)</span>
                     </div>
-                  </label>
+                  </button>
                 ) : (
                   <div className="flex items-center gap-3 p-3 bg-muted/10 border border-border/60 rounded-2xl">
-                    {/* Thumbnail preview */}
-                    <div className="w-14 h-20 bg-zinc-900 rounded-xl overflow-hidden shrink-0 border border-border/60 flex items-center justify-center relative">
+                    {/* Canlı Video Önizleme */}
+                    <div className="w-14 h-20 bg-zinc-950 rounded-xl overflow-hidden shrink-0 border border-border/60 flex items-center justify-center relative">
                       {newHighlightCoverPreview ? (
-                        <img src={newHighlightCoverPreview} alt="Thumb" className="w-full h-full object-cover" />
+                        <video
+                          src={newHighlightCoverPreview}
+                          playsInline
+                          muted
+                          autoPlay
+                          loop
+                          className="w-full h-full object-cover pointer-events-none"
+                        />
                       ) : (
                         <Film size={20} className="text-muted" />
                       )}
@@ -1398,7 +1466,7 @@ export default function StoryDetailAdminPage() {
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-bold text-text truncate">{newHighlightFile.name}</p>
                       <p className="text-[11px] text-emerald-400 font-semibold mt-0.5">
-                        Süre: {Math.round(newHighlightDuration * 10) / 10} sn (Uygun ✓)
+                        Süre: {newHighlightDuration > 0 ? `${Math.round(newHighlightDuration * 10) / 10} sn` : 'Hesaplanıyor...'} (Uygun ✓)
                       </p>
                       <p className="text-[10px] text-muted">
                         Boyut: {(newHighlightFile.size / (1024 * 1024)).toFixed(1)} MB
@@ -1414,10 +1482,10 @@ export default function StoryDetailAdminPage() {
                         if (highlightVideoInputRef.current) highlightVideoInputRef.current.value = '';
                       }}
                       disabled={highlightUploading}
-                      className="p-1.5 text-muted hover:text-red-400 cursor-pointer"
+                      className="p-2 text-muted hover:text-red-400 cursor-pointer active:scale-95"
                       title="Değiştir"
                     >
-                      <X size={16} />
+                      <X size={18} />
                     </button>
                   </div>
                 )}
@@ -1458,13 +1526,20 @@ export default function StoryDetailAdminPage() {
                 </div>
               )}
 
-              {/* Aksiyon Butonları */}
-              <div className="flex items-center justify-end gap-2 pt-2">
+              {/* Aksiyon Butonları (Mobilde Alt Alta, Kolay Dokunma) */}
+              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-3">
                 <Button
                   variant="ghost"
-                  onPress={() => setIsAddHighlightOpen(false)}
+                  onPress={() => {
+                    setIsAddHighlightOpen(false);
+                    setNewHighlightFile(null);
+                    setNewHighlightCoverBlob(null);
+                    setNewHighlightCoverPreview('');
+                    setNewHighlightTitle('');
+                    if (highlightVideoInputRef.current) highlightVideoInputRef.current.value = '';
+                  }}
                   disabled={highlightUploading}
-                  className="text-xs font-semibold px-4 py-2"
+                  className="text-xs font-semibold py-3 sm:py-2 px-4 w-full sm:w-auto"
                 >
                   Vazgeç
                 </Button>
@@ -1472,16 +1547,16 @@ export default function StoryDetailAdminPage() {
                   variant="primary"
                   onPress={handleSaveHighlight}
                   disabled={highlightUploading || !newHighlightFile || !newHighlightTitle.trim()}
-                  className="text-xs font-bold px-5 py-2 cursor-pointer shadow-md shadow-primary/20 flex items-center gap-1.5"
+                  className="text-xs font-bold py-3.5 sm:py-2 px-6 cursor-pointer shadow-lg shadow-primary/25 flex items-center justify-center gap-1.5 w-full sm:w-auto"
                 >
                   {highlightUploading ? (
                     <>
-                      <Loader2 size={14} className="animate-spin" />
-                      <span>Kaydediliyor...</span>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>Yükleniyor ({highlightUploadProgress}%)...</span>
                     </>
                   ) : (
                     <>
-                      <Sparkles size={14} />
+                      <Sparkles size={16} />
                       <span>Öne Çıkaranlara Ekle</span>
                     </>
                   )}
