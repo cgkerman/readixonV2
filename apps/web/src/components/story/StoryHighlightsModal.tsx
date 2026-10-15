@@ -420,8 +420,8 @@ export function StoryHighlightsModal({
             )}
           </div>
 
-          {/* Oku / Bölümleri Gör CTA */}
-          {onReadStory && (
+          {/* Yalnızca belirli bir bölüme iliştirilmişse "Bölümü Oku" CTA butonu göster (Genel tanıtımlarda buton çıkmaz) */}
+          {onReadStory && currentHighlight.chapterId && (
             <button
               type="button"
               onPointerDown={(e) => e.stopPropagation()}
@@ -437,9 +437,7 @@ export function StoryHighlightsModal({
               <span className="truncate max-w-[280px]">
                 {currentHighlight.chapterTitle 
                   ? `${currentHighlight.chapterTitle} Bölümünü Oku` 
-                  : currentHighlight.chapterId 
-                    ? 'İlişkili Bölümü Oku' 
-                    : 'Kitaba Başla / Bölümleri Oku'}
+                  : 'İlgili Bölümü Oku'}
               </span>
             </button>
           )}

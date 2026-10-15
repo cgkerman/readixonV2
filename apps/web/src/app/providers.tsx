@@ -6,6 +6,7 @@ import { useAuthListener, useThemeStore, isDarkTheme } from "@readixon/core";
 import { usePathname } from "next/navigation";
 import UsernameSetupModal from "../components/UsernameSetupModal";
 import { MobileAppBackHandler } from "../components/navigation/MobileAppBackHandler";
+import { MobilePullToRefresh } from "../components/navigation/MobilePullToRefresh";
 import { MobileInAppNotificationManager } from "../components/notifications/MobileInAppNotificationManager";
 import { AppUpdateChecker } from "../components/app/AppUpdateChecker";
 import { Toaster } from "sonner";
@@ -84,6 +85,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <MobileAppBackHandler />
+      <MobilePullToRefresh />
       <MobileInAppNotificationManager />
       <AppUpdateChecker />
       {children}

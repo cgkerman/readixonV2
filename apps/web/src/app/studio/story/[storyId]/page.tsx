@@ -28,7 +28,8 @@ import {
   X,
   ArrowUp,
   ArrowDown,
-  Film
+  Film,
+  Pencil
 } from 'lucide-react';
 import {
   getStoryById,
@@ -97,6 +98,12 @@ export default function StoryDetailAdminPage() {
   const [highlightUploadProgress, setHighlightUploadProgress] = useState(0);
   const [previewModalIndex, setPreviewModalIndex] = useState<number | null>(null);
   const highlightVideoInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Öne Çıkan Düzenleme Durumları
+  const [editingHighlight, setEditingHighlight] = useState<StoryHighlight | null>(null);
+  const [editHighlightTitle, setEditHighlightTitle] = useState('');
+  const [editHighlightChapterId, setEditHighlightChapterId] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   // Seri & Evren Bağlantıları
   const [authorSeriesList, setAuthorSeriesList] = useState<Series[]>([]);
@@ -435,6 +442,55 @@ export default function StoryDetailAdminPage() {
     } catch (err) {
       console.error(err);
       toast.error('Silinirken hata oluştu.');
+    }
+  };
+
+  const handleOpenEditHighlight = (h: StoryHighlight) => {
+    setEditingHighlight(h);
+    setEditHighlightTitle(h.title);
+    setEditHighlightChapterId(h.chapterId || '');
+  };
+
+  const handleSaveEditHighlight = async () => {
+    if (!editingHighlight) return;
+    if (!editHighlightTitle.trim()) {
+      toast.error('Lütfen öne çıkan için bir başlık girin.');
+      return;
+    }
+
+    setIsSavingEdit(true);
+    try {
+      const selectedChap = chapters.find(c => c.chapterId === editHighlightChapterId);
+      const updatedHighlights = highlights.map(h => {
+        if (h.id === editingHighlight.id) {
+          const updated: StoryHighlight = {
+            ...h,
+            title: editHighlightTitle.trim(),
+          };
+          if (editHighlightChapterId) {
+            updated.chapterId = editHighlightChapterId;
+            updated.chapterTitle = selectedChap ? (selectedChap.title || `Bölüm ${chapters.indexOf(selectedChap) + 1}`) : undefined;
+          } else {
+            delete updated.chapterId;
+            delete updated.chapterTitle;
+          }
+          return updated;
+        }
+        return h;
+      });
+
+      setHighlights(updatedHighlights);
+      await updateStory(storyId, {
+        highlights: updatedHighlights
+      });
+
+      toast.success('Öne çıkan başarıyla güncellendi!');
+      setEditingHighlight(null);
+    } catch (err) {
+      console.error(err);
+      toast.error('Öne çıkan güncellenirken bir hata oluştu.');
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -1396,6 +1452,14 @@ export default function StoryDetailAdminPage() {
                         </button>
                         <button
                           type="button"
+                          onClick={() => handleOpenEditHighlight(h)}
+                          className="p-1 sm:p-1.5 text-muted hover:text-text hover:bg-muted/20 rounded-lg transition-colors cursor-pointer"
+                          title="Başlık ve Bölümü Düzenle"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handleDeleteHighlight(h.id)}
                           className="p-1 sm:p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
                           title="Sil"
@@ -1622,6 +1686,149 @@ export default function StoryDetailAdminPage() {
                     <>
                       <Sparkles size={16} />
                       <span>Öne Çıkaranlara Ekle</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Öne Çıkan Düzenleme Modalı ── */}
+      {editingHighlight && (
+        <div className="fixed inset-0 z-[100] flex flex-col justify-end sm:justify-center items-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-card border-t sm:border border-border/60 rounded-t-[28px] sm:rounded-3xl p-5 sm:p-7 max-w-lg w-full shadow-2xl relative max-h-[92dvh] sm:max-h-[90vh] overflow-y-auto pb-[calc(2.5rem+env(safe-area-inset-bottom,0px))] sm:pb-7 animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 duration-200"
+          >
+            {/* Mobil Çekmece Göstergesi */}
+            <div className="w-12 h-1.5 bg-muted/40 rounded-full mx-auto mb-4 sm:hidden shrink-0" />
+
+            <button
+              onClick={() => {
+                if (isSavingEdit) return;
+                setEditingHighlight(null);
+              }}
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted/20 text-muted transition-colors cursor-pointer"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="flex items-center gap-2 mb-1">
+              <Pencil size={20} className="text-primary" />
+              <Typography variant="h3" className="text-base sm:text-lg font-bold text-text">
+                Öne Çıkanı Düzenle
+              </Typography>
+            </div>
+            <p className="text-xs text-muted mb-4 leading-relaxed">
+              Öne çıkan başlığını veya iliştirilen bölümü dilediğiniz gibi güncelleyin.
+            </p>
+
+            <div className="space-y-4">
+              {/* Mevcut Video Önizleme */}
+              <div className="flex items-center gap-3 p-3 bg-muted/10 border border-border/60 rounded-2xl">
+                <div className="w-14 h-20 bg-zinc-950 rounded-xl overflow-hidden shrink-0 border border-border/60 flex items-center justify-center relative">
+                  {editingHighlight.coverUrl ? (
+                    <img
+                      src={editingHighlight.coverUrl}
+                      alt={editingHighlight.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <video
+                      src={editingHighlight.videoUrl}
+                      playsInline
+                      muted
+                      className="w-full h-full object-cover pointer-events-none"
+                    />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-text truncate">{editingHighlight.title}</p>
+                  <p className="text-[11px] text-muted font-semibold mt-0.5">
+                    Süre: {editingHighlight.duration ? `${Math.round(editingHighlight.duration)} sn` : 'Story'}
+                  </p>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold inline-block mt-1">
+                    #{editingHighlight.order}. Sıradaki Öne Çıkan
+                  </span>
+                </div>
+              </div>
+
+              {/* Başlık Alanı */}
+              <div>
+                <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">
+                  Öne Çıkan Başlığı
+                </label>
+                <input
+                  type="text"
+                  maxLength={30}
+                  value={editHighlightTitle}
+                  onChange={(e) => setEditHighlightTitle(e.target.value)}
+                  placeholder="Örn: Fragman, Karakterler, Bölüm 1..."
+                  disabled={isSavingEdit}
+                  className="w-full bg-card border border-border/60 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-text focus:outline-none focus:border-primary"
+                />
+                <span className="text-[10px] text-muted block text-right mt-1">
+                  {editHighlightTitle.length} / 30
+                </span>
+              </div>
+
+              {/* İlişkili Bölüm Seçimi (Opsiyonel) */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-muted uppercase tracking-wider">
+                    İlişkili Bölüm (Opsiyonel)
+                  </label>
+                  <span className="text-[10px] text-primary font-medium">
+                    Story butonuna basınca bu bölüme yönlendirir
+                  </span>
+                </div>
+                <select
+                  value={editHighlightChapterId}
+                  onChange={(e) => setEditHighlightChapterId(e.target.value)}
+                  disabled={isSavingEdit}
+                  className="w-full bg-card border border-border/60 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-text focus:outline-none focus:border-primary cursor-pointer transition-colors"
+                >
+                  <option value="">-- Genel Tanıtım (Bölüme Bağlama / Buton Çıkmaz) --</option>
+                  {chapters.map((chap, i) => (
+                    <option key={chap.chapterId} value={chap.chapterId}>
+                      {chap.title ? `Bölüm ${i + 1}: ${chap.title}` : `Bölüm ${i + 1}`}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-muted mt-1">
+                  {editHighlightChapterId 
+                    ? `Okuyucu bu story'yi izlerken alttaki buton "${chapters.find(c => c.chapterId === editHighlightChapterId)?.title || 'Bu'} Bölümünü Oku" olarak görünecektir.` 
+                    : 'Genel Tanıtım seçildiğinde story izlenirken alttaki bölüm oku butonu görünmeyecektir.'}
+                </p>
+              </div>
+
+              {/* Aksiyon Butonları */}
+              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-3">
+                <Button
+                  variant="ghost"
+                  onPress={() => setEditingHighlight(null)}
+                  disabled={isSavingEdit}
+                  className="text-xs font-semibold py-3 sm:py-2 px-4 w-full sm:w-auto"
+                >
+                  Vazgeç
+                </Button>
+                <Button
+                  variant="primary"
+                  onPress={handleSaveEditHighlight}
+                  disabled={isSavingEdit || !editHighlightTitle.trim()}
+                  className="text-xs font-bold py-3.5 sm:py-2 px-6 cursor-pointer shadow-lg shadow-primary/25 flex items-center justify-center gap-1.5 w-full sm:w-auto"
+                >
+                  {isSavingEdit ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>Kaydediliyor...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle size={16} />
+                      <span>Değişiklikleri Kaydet</span>
                     </>
                   )}
                 </Button>
