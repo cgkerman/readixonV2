@@ -22,6 +22,13 @@ export const ALLOWED_AUDIO_TYPES = [
   'audio/x-m4a',
 ] as const;
 
+export const ALLOWED_VIDEO_TYPES = [
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
+  'video/ogg',
+] as const;
+
 export const FORBIDDEN_EXTENSIONS = [
   '.html',
   '.htm',
@@ -42,11 +49,13 @@ export const FORBIDDEN_EXTENSIONS = [
 
 export const DEFAULT_MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10 MB
 export const DEFAULT_MAX_AUDIO_SIZE = 15 * 1024 * 1024; // 15 MB
+export const DEFAULT_MAX_VIDEO_SIZE = 25 * 1024 * 1024; // 25 MB
 
 export interface UploadOptions {
   maxSizeBytes?: number;
   allowedTypes?: readonly string[] | string[];
   allowAudio?: boolean;
+  allowVideo?: boolean;
   onProgress?: (progress: number) => void;
 }
 
@@ -98,12 +107,15 @@ export const validateUpload = (
     if (lowerPath.endsWith('.jpg') || lowerPath.endsWith('.jpeg')) mimeType = 'image/jpeg';
     else if (lowerPath.endsWith('.png')) mimeType = 'image/png';
     else if (lowerPath.endsWith('.webp')) mimeType = 'image/webp';
-    else if (lowerPath.endsWith('.webm')) mimeType = 'audio/webm';
+    else if (lowerPath.endsWith('.webm')) mimeType = lowerPath.includes('/video/') || lowerPath.includes('/highlights/') ? 'video/webm' : 'audio/webm';
     else if (lowerPath.endsWith('.mp3')) mimeType = 'audio/mpeg';
+    else if (lowerPath.endsWith('.mp4')) mimeType = 'video/mp4';
+    else if (lowerPath.endsWith('.mov')) mimeType = 'video/quicktime';
+    else if (lowerPath.endsWith('.ogv')) mimeType = 'video/ogg';
     else {
       return {
         valid: false,
-        error: 'Dosya türü (MIME) tespit edilemedi. Lütfen geçerli bir görsel veya ses dosyası seçin.',
+        error: 'Dosya türü (MIME) tespit edilemedi. Lütfen geçerli bir görsel, ses veya video dosyası seçin.',
         mimeType: ''
       };
     }
@@ -119,12 +131,14 @@ export const validateUpload = (
   }
 
   // İzin verilen tür listesini belirle
+  const isVideoAllowed = options?.allowVideo ?? (lowerPath.includes('/video/') || lowerPath.includes('/highlights/'));
   const isAudioAllowed = options?.allowAudio ?? lowerPath.includes('/audio/');
-  const allowedTypes: readonly string[] = options?.allowedTypes ?? (
-    isAudioAllowed 
-      ? [...ALLOWED_IMAGE_TYPES, ...ALLOWED_AUDIO_TYPES] 
-      : ALLOWED_IMAGE_TYPES
-  );
+  
+  let defaultAllowed: string[] = [...ALLOWED_IMAGE_TYPES];
+  if (isAudioAllowed) defaultAllowed = [...defaultAllowed, ...ALLOWED_AUDIO_TYPES];
+  if (isVideoAllowed) defaultAllowed = [...defaultAllowed, ...ALLOWED_VIDEO_TYPES];
+
+  const allowedTypes: readonly string[] = options?.allowedTypes ?? defaultAllowed;
 
   const isTypeAllowed = allowedTypes.some(allowed => 
     mimeType === allowed || (allowed.endsWith('/*') && mimeType.startsWith(allowed.replace('/*', '/')))
@@ -133,13 +147,16 @@ export const validateUpload = (
   if (!isTypeAllowed) {
     return {
       valid: false,
-      error: `Desteklenmeyen dosya türü (${mimeType}). İzin verilen formatlar: JPEG, PNG, WebP, GIF, AVIF${isAudioAllowed ? ', WEBM, MP3' : ''}.`,
+      error: `Desteklenmeyen dosya türü (${mimeType}). İzin verilen formatlar: JPEG, PNG, WebP, GIF, AVIF${isAudioAllowed ? ', WEBM, MP3' : ''}${isVideoAllowed ? ', MP4, WEBM, MOV' : ''}.`,
       mimeType
     };
   }
 
   // 4. Dosya Boyut Sınırı kontrolü
-  const maxLimit = options?.maxSizeBytes ?? (isAudioAllowed ? DEFAULT_MAX_AUDIO_SIZE : DEFAULT_MAX_IMAGE_SIZE);
+  const maxLimit = options?.maxSizeBytes ?? (
+    isVideoAllowed ? DEFAULT_MAX_VIDEO_SIZE :
+    (isAudioAllowed ? DEFAULT_MAX_AUDIO_SIZE : DEFAULT_MAX_IMAGE_SIZE)
+  );
   if (file.size > maxLimit) {
     const sizeInMb = (file.size / (1024 * 1024)).toFixed(2);
     const limitInMb = (maxLimit / (1024 * 1024)).toFixed(0);

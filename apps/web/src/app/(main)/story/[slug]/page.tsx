@@ -13,6 +13,9 @@ import {
   toggleSaveStory,
   getSavedStories,
   getReviews,
+  subscribeToReviews,
+  replyToReview,
+  deleteReviewReply,
   addReview,
   checkStoryLiked,
   toggleStoryLike,
@@ -36,11 +39,12 @@ import {
   BookOpen, Heart, Eye, List, Play, BookmarkPlus, BookmarkCheck, 
   ArrowLeft, Loader2, Star, MessageSquare, Users, Hash,
   Lock, Calendar, Bell, Info, X, Sparkles, ChevronRight, Bookmark, Check,
-  ListPlus, Share2, ArrowUpDown, Layers, Globe
+  ListPlus, Share2, ArrowUpDown, Layers, Globe, Reply, Trash2, Send
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from "sonner";
 import { AddToReadingListModal } from '@/components/reading-list/AddToReadingListModal';
+import { StoryHighlightsBar } from '@/components/story';
 
 type ActiveTab = 'about' | 'chapters' | 'reviews' | 'characters';
 
@@ -61,6 +65,11 @@ export default function StoryDetailPage() {
   const [editorialReview, setEditorialReview] = useState<EditorialReview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Yazarın İncelemeye Yanıt Verme Durumu
+  const [replyingReviewId, setReplyingReviewId] = useState<string | null>(null);
+  const [authorReviewReplyText, setAuthorReviewReplyText] = useState('');
+  const [submittingAuthorReviewReply, setSubmittingAuthorReviewReply] = useState(false);
   
   // Seri & Evren Durumları
   const [series, setSeries] = useState<Series | null>(null);
@@ -281,6 +290,15 @@ export default function StoryDetailPage() {
     fetchStoryData();
   }, [storyId]);
 
+  // İncelemeleri Gerçek Zamanlı Dinle (Yazar yanıtı eklenince anında güncellensin)
+  useEffect(() => {
+    if (!storyId) return;
+    const unsubscribe = subscribeToReviews(storyId, (realtimeReviews) => {
+      setReviews(realtimeReviews);
+    });
+    return () => unsubscribe();
+  }, [storyId]);
+
   useEffect(() => {
     const checkUserStates = async () => {
       if (isInitialized && firebaseUser && storyId) {
@@ -416,6 +434,37 @@ export default function StoryDetailPage() {
       toast.error("İnceleme gönderilemedi.");
     } finally {
       setSubmittingReview(false);
+    }
+  };
+
+  // Yazarın İncelemeye Doğrudan Kitap Sayfasından Yanıt Vermesi
+  const handleAuthorReplyReview = async (reviewId: string) => {
+    if (!firebaseUser || !authorReviewReplyText.trim() || !story) return;
+    setSubmittingAuthorReviewReply(true);
+    try {
+      await replyToReview(story.storyId, reviewId, firebaseUser.uid, authorReviewReplyText.trim());
+      setReplyingReviewId(null);
+      setAuthorReviewReplyText('');
+      toast.success('Yazar yanıtınız başarıyla yayınlandı!');
+    } catch (e) {
+      console.error("Yazar yanıtı gönderilemedi:", e);
+      toast.error('Yanıt gönderilirken bir hata oluştu.');
+    } finally {
+      setSubmittingAuthorReviewReply(false);
+    }
+  };
+
+  // Yazarın İncelemeye Verdiği Yanıtı Silmesi
+  const handleAuthorDeleteReviewReply = async (reviewId: string) => {
+    if (!firebaseUser || !story) return;
+    const ok = window.confirm("Yazar yanıtınızı silmek istediğinizden emin misiniz?");
+    if (!ok) return;
+    try {
+      await deleteReviewReply(story.storyId, reviewId);
+      toast.success('Yazar yanıtı silindi.');
+    } catch (e) {
+      console.error("Yazar yanıtı silinemedi:", e);
+      toast.error('Yanıt silinirken hata oluştu.');
     }
   };
 
@@ -868,6 +917,21 @@ export default function StoryDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* ── 1.2. Instagram Tarzı Öne Çıkanlar (Story / Dikey Teaser) ── */}
+      {story.highlights && story.highlights.length > 0 && (
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 my-2 sm:my-3 w-full">
+          <div className="bg-card/40 backdrop-blur-md border border-border/50 rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 shadow-xs">
+            <StoryHighlightsBar
+              highlights={story.highlights}
+              storyTitle={story.title}
+              authorName={author?.displayName || story.authorName}
+              authorAvatar={author?.avatarUrl || story.authorAvatarUrl}
+              onReadStory={handleStartReading}
+            />
+          </div>
+        </div>
+      )}
 
       {/* ── 1.5. Birleşik Kurgusal Dünya & Seri Hub'ı ── */}
       {(universe || (series && seriesBooks.length > 0)) && (
@@ -1602,6 +1666,97 @@ export default function StoryDetailPage() {
                           <Typography variant="body" className="text-muted leading-relaxed whitespace-pre-line text-xs sm:text-sm">
                             {review.text}
                           </Typography>
+
+                          {/* Yazar Yanıtı */}
+                          {review.authorReply && (
+                            <div className="mt-3.5 p-3 sm:p-3.5 rounded-xl bg-primary/5 border border-primary/20 flex gap-2.5 items-start">
+                              <div className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                                👑
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-1">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-xs font-bold text-primary">
+                                      {review.authorReply.authorName || 'Yazar'}
+                                    </span>
+                                    <span className="text-[9px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-md font-extrabold uppercase">
+                                      Yazar Yanıtı
+                                    </span>
+                                  </div>
+                                  {story && firebaseUser?.uid === story.authorId && (
+                                    <button
+                                      onClick={() => handleAuthorDeleteReviewReply(review.reviewId)}
+                                      className="text-muted/50 hover:text-red-400 p-0.5 transition-colors cursor-pointer"
+                                      title="Yanıtı Sil"
+                                    >
+                                      <Trash2 size={12} />
+                                    </button>
+                                  )}
+                                </div>
+                                <p className="text-xs text-foreground/90 leading-relaxed whitespace-pre-line">
+                                  {review.authorReply.text}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Yazar Henüz Yanıt Vermemişse ve Kullanıcı Yazar İse "Yanıtla" Butonu */}
+                          {story && firebaseUser?.uid === story.authorId && !review.authorReply && replyingReviewId !== review.reviewId && (
+                            <div className="mt-2.5 pt-2 border-t border-border/20">
+                              <button
+                                onClick={() => {
+                                  setReplyingReviewId(review.reviewId);
+                                  setAuthorReviewReplyText('');
+                                }}
+                                className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/15 border border-primary/25 px-2.5 py-1 rounded-lg transition-all active:scale-95 cursor-pointer"
+                              >
+                                <Reply size={12} />
+                                <span>Yazar Olarak Yanıtla</span>
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Yazar Yanıt Editörü */}
+                          {replyingReviewId === review.reviewId && (
+                            <div className="mt-3 pt-3 border-t border-primary/20 animate-fade-in">
+                              <div className="flex items-center gap-1.5 mb-2 text-xs font-bold text-primary">
+                                <span>👑 İncelemeye Yanıtınız:</span>
+                              </div>
+                              <textarea
+                                value={authorReviewReplyText}
+                                onChange={(e) => setAuthorReviewReplyText(e.target.value)}
+                                placeholder="Okuyucunuza incelemesi için teşekkür edin veya düşüncelerinizi paylaşın..."
+                                rows={2}
+                                className="w-full bg-background/80 border border-primary/30 rounded-xl p-3 text-xs sm:text-sm text-foreground focus:outline-none focus:border-primary resize-y transition-all"
+                                autoFocus
+                              />
+                              <div className="flex items-center justify-end gap-2 mt-2">
+                                <button
+                                  onClick={() => setReplyingReviewId(null)}
+                                  className="px-3 py-1 rounded-lg text-xs font-semibold text-muted hover:text-text border border-border/30 hover:bg-card transition-all cursor-pointer"
+                                >
+                                  İptal
+                                </button>
+                                <button
+                                  onClick={() => handleAuthorReplyReview(review.reviewId)}
+                                  disabled={submittingAuthorReviewReply || !authorReviewReplyText.trim()}
+                                  className="px-3.5 py-1 rounded-lg text-xs font-bold bg-primary text-black hover:bg-primary/90 transition-all flex items-center gap-1.5 shadow-md shadow-primary/20 disabled:opacity-40 cursor-pointer active:scale-95"
+                                >
+                                  {submittingAuthorReviewReply ? (
+                                    <>
+                                      <Loader2 size={12} className="animate-spin" />
+                                      <span>Kaydediliyor...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Send size={12} />
+                                      <span>Yanıtı Yayınla</span>
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))

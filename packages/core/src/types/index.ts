@@ -150,6 +150,16 @@ export interface EditorialReview {
   updatedAt: Timestamp;
 }
 
+export interface StoryHighlight {
+  id: string;
+  title: string;
+  videoUrl: string;
+  coverUrl?: string;
+  duration?: number; // Saniye cinsinden (<= 20)
+  order: number;
+  createdAt?: Timestamp | string;
+}
+
 export interface Story {
   storyId: string;
   authorId: string;
@@ -160,6 +170,7 @@ export interface Story {
   summary: string;
   coverImage: string;
   trailerVideoUrl?: string;
+  highlights?: StoryHighlight[]; // Instagram tarzı 9:16 dikey teaser öne çıkanlar (max 20sn)
   tags: string[];
   isAdultContent?: boolean;
   stats: StoryStats;
@@ -282,6 +293,15 @@ export interface Comment {
 // KitabÄ±n geneline yapÄ±lan deÄŸerlendirmeler ve 10 Ã¼zerinden puanlama.
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+export interface ReviewAuthorReply {
+  text: string;
+  authorId: string;
+  authorName?: string;
+  authorUsername?: string;
+  authorAvatarUrl?: string;
+  createdAt: Timestamp;
+}
+
 export interface Review {
   reviewId: string;
   storyId: string;
@@ -289,10 +309,11 @@ export interface Review {
   authorName?: string;
   authorUsername?: string;
   authorAvatarUrl?: string;
-  rating: number; // 1-10 arasÄ±
+  rating: number; // 1-10 arası
   text: string;
   createdAt: Timestamp;
   updatedAt?: Timestamp;
+  authorReply?: ReviewAuthorReply;
 }
 
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

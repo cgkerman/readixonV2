@@ -1,7 +1,8 @@
-import { collection, query, orderBy, limit, startAfter, getDocs, DocumentSnapshot, doc, setDoc, updateDoc, serverTimestamp, where, getDoc, onSnapshot, deleteDoc, documentId, getCountFromServer } from 'firebase/firestore';
+import { collection, query, orderBy, limit, startAfter, getDocs, DocumentSnapshot, doc, setDoc, updateDoc, serverTimestamp, where, getDoc, onSnapshot, deleteDoc, documentId, getCountFromServer, deleteField } from 'firebase/firestore';
 import { db } from '../firebase';
-import type { Story, StoryWithLatestChapter, Chapter, ReadingProgress, Review } from '../types';
+import type { Story, StoryWithLatestChapter, Chapter, ReadingProgress, Review, ReviewAuthorReply } from '../types';
 import { getUserProfile } from './userService';
+import { createNotification } from './notificationService';
 
 
 /**
@@ -401,6 +402,48 @@ export const updateStory = async (storyId: string, data: Partial<Story>) => {
 };
 
 /**
+ * Bir hikayenin gerçek bölüm sayısını Firestore'dan hesaplar ve story.stats.chapterCount alanını senkronize eder.
+ */
+export const syncStoryChapterCount = async (storyId: string): Promise<number> => {
+  try {
+    const chaptersRef = collection(db, 'stories', storyId, 'chapters');
+    const snap = await getDocs(chaptersRef);
+    
+    // Yayında olan veya status alanı belirtilmemiş (varsayılan yayında) bölümleri say
+    let publishedCount = 0;
+    snap.forEach((docSnap) => {
+      const data = docSnap.data();
+      // 'draft' veya 'archived' değilse, ve scheduled ise yayın tarihi geldiyse yayında kabul edilir
+      if (data.status === 'published' || !data.status) {
+        publishedCount++;
+      } else if (data.status === 'scheduled' && data.publishDate) {
+        const pubDate = data.publishDate.toDate ? data.publishDate.toDate() : new Date(data.publishDate as any);
+        if (pubDate <= new Date()) {
+          publishedCount++;
+        }
+      }
+    });
+
+    const storyRef = doc(db, 'stories', storyId);
+    const storySnap = await getDoc(storyRef);
+    if (storySnap.exists()) {
+      const currentStats = storySnap.data().stats;
+      if (currentStats?.chapterCount !== publishedCount) {
+        await updateDoc(storyRef, {
+          'stats.chapterCount': publishedCount,
+          updatedAt: serverTimestamp()
+        });
+      }
+    }
+
+    return publishedCount;
+  } catch (error) {
+    console.error("syncStoryChapterCount hatası:", error);
+    return 0;
+  }
+};
+
+/**
  * Yeni bölüm oluşturur.
  */
 export const createChapter = async (storyId: string, data: Partial<Chapter>) => {
@@ -413,18 +456,8 @@ export const createChapter = async (storyId: string, data: Partial<Chapter>) => 
     };
     await setDoc(newChapterRef, newChapter);
     
-    // Yalnızca yayınlanan (published) bölümleri say
-    if (data.status === 'published') {
-      const storyRef = doc(db, 'stories', storyId);
-      const storySnap = await getDoc(storyRef);
-      if (storySnap.exists()) {
-        const stats = storySnap.data().stats;
-        await updateDoc(storyRef, {
-          'stats.chapterCount': (stats?.chapterCount || 0) + 1,
-          updatedAt: serverTimestamp()
-        });
-      }
-    }
+    // Bölüm sayısını otomatik senkronize et
+    await syncStoryChapterCount(storyId);
 
     return newChapterRef.id;
   } catch (error) {
@@ -440,43 +473,17 @@ export const updateChapter = async (storyId: string, chapterId: string, data: Pa
   try {
     const chapterRef = doc(db, 'stories', storyId, 'chapters', chapterId);
     
-    // Eğer status değişiyorsa chapterCount'u güncelle
-    if (data.status) {
-      const chapterSnap = await getDoc(chapterRef);
-      if (chapterSnap.exists()) {
-        const oldStatus = chapterSnap.data().status;
-        
-        if (oldStatus !== 'published' && data.status === 'published') {
-          // Taslaktan yayına geçti
-          const storyRef = doc(db, 'stories', storyId);
-          const storySnap = await getDoc(storyRef);
-          if (storySnap.exists()) {
-            const stats = storySnap.data().stats;
-            await updateDoc(storyRef, { 
-              'stats.chapterCount': (stats?.chapterCount || 0) + 1,
-              updatedAt: serverTimestamp()
-            });
-          }
-        } else if (oldStatus === 'published' && data.status !== 'published') {
-          // Yayından kalktı
-          const storyRef = doc(db, 'stories', storyId);
-          const storySnap = await getDoc(storyRef);
-          if (storySnap.exists()) {
-            const stats = storySnap.data().stats;
-            await updateDoc(storyRef, { 
-              'stats.chapterCount': Math.max(0, (stats?.chapterCount || 0) - 1),
-              updatedAt: serverTimestamp()
-            });
-          }
-        }
-      }
-    }
     // Undefined alanları null'a çevir, Firestore undefined desteklemez
     const sanitizedData = Object.fromEntries(
       Object.entries(data).map(([key, val]) => [key, val === undefined ? null : val])
     );
 
     await updateDoc(chapterRef, sanitizedData);
+
+    // Eğer status alanı güncelleniyorsa chapterCount'u senkronize et
+    if (data.status !== undefined) {
+      await syncStoryChapterCount(storyId);
+    }
   } catch (error) {
     console.error("Bölüm güncellenirken hata:", error);
     throw error;
@@ -484,30 +491,15 @@ export const updateChapter = async (storyId: string, chapterId: string, data: Pa
 };
 
 /**
- * Bölümü tamamen siler.
+ * Bölümü tamamen siler ve bölüm sayısını doğrudan Firestore'daki gerçek sayıyla senkronize eder.
  */
 export const deleteChapter = async (storyId: string, chapterId: string) => {
   try {
     const chapterRef = doc(db, 'stories', storyId, 'chapters', chapterId);
-    
-    // Silinmeden önce yayında olup olmadığını kontrol et
-    const chapterSnap = await getDoc(chapterRef);
-    const wasPublished = chapterSnap.exists() && chapterSnap.data().status === 'published';
-    
     await deleteDoc(chapterRef);
     
-    // Eğer yayınlanmış bir bölüm silindiyse chapterCount değerini düşür
-    if (wasPublished) {
-      const storyRef = doc(db, 'stories', storyId);
-      const storySnap = await getDoc(storyRef);
-      if (storySnap.exists()) {
-        const stats = storySnap.data().stats;
-        await updateDoc(storyRef, {
-          'stats.chapterCount': Math.max(0, (stats?.chapterCount || 0) - 1),
-          updatedAt: serverTimestamp()
-        });
-      }
-    }
+    // Bölüm silindikten sonra Firestore'daki güncel gerçek bölüm sayısını sayıp senkronize et
+    await syncStoryChapterCount(storyId);
   } catch (error) {
     console.error("Bölüm silinirken hata:", error);
     throw error;
@@ -1191,6 +1183,101 @@ export const getReviews = async (storyId: string): Promise<Review[]> => {
   } catch (error) {
     console.error("İncelemeler çekilirken hata:", error);
     return [];
+  }
+};
+
+/**
+ * Kitabın tüm incelemelerini gerçek zamanlı olarak dinler.
+ */
+export const subscribeToReviews = (
+  storyId: string, 
+  callback: (reviews: Review[]) => void
+) => {
+  const q = query(
+    collection(db, 'stories', storyId, 'reviews'),
+    orderBy('createdAt', 'desc')
+  );
+  return onSnapshot(q, (snap) => {
+    const reviews: Review[] = [];
+    snap.forEach((docSnap) => {
+      reviews.push({ ...docSnap.data(), reviewId: docSnap.id } as Review);
+    });
+    callback(reviews);
+  }, (error) => {
+    console.error("İncelemeler dinlenirken hata:", error);
+  });
+};
+
+/**
+ * Yazarın bir kitap incelemesine yanıt vermesini sağlar.
+ */
+export const replyToReview = async (
+  storyId: string,
+  reviewId: string,
+  authorId: string,
+  replyText: string
+): Promise<ReviewAuthorReply> => {
+  try {
+    const userProfile = await getUserProfile(authorId);
+    const replyData: ReviewAuthorReply = {
+      authorId,
+      authorName: userProfile?.displayName || 'Yazar',
+      authorUsername: userProfile?.username || '',
+      authorAvatarUrl: userProfile?.avatarUrl || '',
+      text: replyText.trim(),
+      createdAt: serverTimestamp() as any
+    };
+
+    const reviewRef = doc(db, 'stories', storyId, 'reviews', reviewId);
+    await setDoc(reviewRef, {
+      authorReply: replyData,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+
+    // İnceleme sahibine bildirim gönder
+    try {
+      const reviewSnap = await getDoc(reviewRef);
+      const storySnap = await getDoc(doc(db, 'stories', storyId));
+      if (reviewSnap.exists() && storySnap.exists()) {
+        const reviewData = reviewSnap.data();
+        const storyData = storySnap.data();
+        if (reviewData.userId && reviewData.userId !== authorId) {
+          await createNotification({
+            userId: reviewData.userId,
+            actorId: authorId,
+            actorName: userProfile?.displayName || 'Yazar',
+            actorAvatar: userProfile?.avatarUrl,
+            actorUsername: userProfile?.username,
+            type: 'story_comment',
+            entityId: storyId,
+            entityTitle: `Yazar "${storyData.title}" incelemenize yanıt verdi: "${replyText.substring(0, 35)}${replyText.length > 35 ? '...' : ''}"`
+          });
+        }
+      }
+    } catch (notifErr) {
+      console.error("İnceleme yanıt bildirimi gönderilemedi:", notifErr);
+    }
+
+    return replyData;
+  } catch (error) {
+    console.error("İncelemeye yanıt eklenirken hata:", error);
+    throw error;
+  }
+};
+
+/**
+ * Yazarın incelemeye verdiği yanıtı siler.
+ */
+export const deleteReviewReply = async (storyId: string, reviewId: string): Promise<void> => {
+  try {
+    const reviewRef = doc(db, 'stories', storyId, 'reviews', reviewId);
+    await updateDoc(reviewRef, {
+      authorReply: deleteField(),
+      updatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error("İnceleme yanıtı silinirken hata:", error);
+    throw error;
   }
 };
 

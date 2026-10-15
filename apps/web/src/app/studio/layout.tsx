@@ -103,7 +103,7 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto flex flex-col pb-28 xl:pb-8">
+      <main className="flex-1 overflow-y-auto flex flex-col">
         {/* ── Mobile Top Header (Çentik & Safe-Area Uyumlu) ── */}
         <header className="xl:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-3 bg-background/85 backdrop-blur-xl border-b border-border/40 shrink-0 select-none pt-[calc(0.75rem+env(safe-area-inset-top,0px))] transition-all">
           <Link href="/studio" className="flex items-center gap-2.5 active:scale-95 transition-transform">
@@ -131,7 +131,14 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
           </Link>
         </header>
 
-        {children}
+        <div className="flex-1 flex flex-col">
+          {children}
+        </div>
+
+        {/* ── Mobil Yüzen Alt Menü (Dock) İçin Kesin Boşluk ── */}
+        {!isDeepEditor && (
+          <div className="h-28 sm:h-32 xl:hidden shrink-0 pointer-events-none" aria-hidden="true" />
+        )}
       </main>
 
       {/* ── Floating Modern Bottom Dock (Mobile) ── */}

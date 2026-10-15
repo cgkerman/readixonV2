@@ -21,13 +21,22 @@ import {
   Eye,
   Heart,
   Layers,
-  Sparkles
+  Sparkles,
+  Trash2,
+  Play,
+  Upload,
+  X,
+  ArrowUp,
+  ArrowDown,
+  Film
 } from 'lucide-react';
 import {
   getStoryById,
   updateStory,
   createChapter,
+  deleteChapter,
   fetchChapters,
+  syncStoryChapterCount,
   getSeriesByAuthorId,
   getUniversesByAuthorId,
   addStoryToSeries,
@@ -35,6 +44,7 @@ import {
   linkStoryToUniverse,
   unlinkStoryFromUniverse,
   type Story,
+  type StoryHighlight,
   type Chapter,
   type StoryStatus,
   type Contributor,
@@ -43,6 +53,7 @@ import {
   compressImage
 } from '@readixon/core';
 import { uploadFile } from '@readixon/core/src/services/storageService';
+import { StoryHighlightsModal } from '@/components/story/StoryHighlightsModal';
 import { toast } from "sonner";
 
 export default function StoryDetailAdminPage() {
@@ -58,7 +69,7 @@ export default function StoryDetailAdminPage() {
   const isInitialLoad = React.useRef(true);
 
   // Tab & UI state
-  const [activeTab, setActiveTab] = useState<'chapters' | 'details'>('chapters');
+  const [activeTab, setActiveTab] = useState<'chapters' | 'details' | 'highlights'>('chapters');
   const [infoExpanded, setInfoExpanded] = useState(false);
 
   // Form states
@@ -72,6 +83,19 @@ export default function StoryDetailAdminPage() {
   const [trailerVideoUrl, setTrailerVideoUrl] = useState('');
   const [videoUploading, setVideoUploading] = useState(false);
   const videoInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Öne Çıkanlar (Story / Dikey Teaser) Durumları
+  const [highlights, setHighlights] = useState<StoryHighlight[]>([]);
+  const [isAddHighlightOpen, setIsAddHighlightOpen] = useState(false);
+  const [newHighlightTitle, setNewHighlightTitle] = useState('');
+  const [newHighlightFile, setNewHighlightFile] = useState<File | null>(null);
+  const [newHighlightDuration, setNewHighlightDuration] = useState<number>(0);
+  const [newHighlightCoverBlob, setNewHighlightCoverBlob] = useState<Blob | null>(null);
+  const [newHighlightCoverPreview, setNewHighlightCoverPreview] = useState<string>('');
+  const [highlightUploading, setHighlightUploading] = useState(false);
+  const [highlightUploadProgress, setHighlightUploadProgress] = useState(0);
+  const [previewModalIndex, setPreviewModalIndex] = useState<number | null>(null);
+  const highlightVideoInputRef = React.useRef<HTMLInputElement>(null);
 
   // Seri & Evren Bağlantıları
   const [authorSeriesList, setAuthorSeriesList] = useState<Series[]>([]);
@@ -101,9 +125,13 @@ export default function StoryDetailAdminPage() {
         setForeword(realStory.foreword || '');
         setBackCover(realStory.backCover || '');
         setTrailerVideoUrl(realStory.trailerVideoUrl || '');
+        setHighlights(realStory.highlights || []);
         setSelectedSeriesId(realStory.seriesId || '');
         setSelectedUniverseId(realStory.universeId || '');
         setSeriesLabel(realStory.seriesLabel || '');
+
+        // Bölüm sayacını gerçek veritabanı durumuyla senkronize et (Self-Healing)
+        syncStoryChapterCount(storyId).catch(() => {});
 
         if (realStory.authorId) {
           try {
@@ -168,6 +196,7 @@ export default function StoryDetailAdminPage() {
         foreword,
         backCover,
         trailerVideoUrl,
+        highlights,
         contributors: validContributors,
         seriesLabel: seriesLabel.trim() || undefined
       });
@@ -191,6 +220,7 @@ export default function StoryDetailAdminPage() {
         foreword,
         backCover,
         trailerVideoUrl,
+        highlights,
         contributors: validContributors
       });
       setAutoSaveStatus('saved');
@@ -214,7 +244,163 @@ export default function StoryDetailAdminPage() {
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [title, summary, coverImage, status, foreword, backCover, contributors, trailerVideoUrl, loading, story]);
+  }, [title, summary, coverImage, status, foreword, backCover, contributors, trailerVideoUrl, highlights, loading, story]);
+
+  // ── Öne Çıkanlar (Story / Dikey Teaser) Metotları ──
+  const handleSelectHighlightVideo = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error('Öne çıkan video boyutu en fazla 20MB olabilir.');
+      return;
+    }
+
+    const videoEl = document.createElement('video');
+    videoEl.preload = 'metadata';
+    videoEl.playsInline = true;
+    videoEl.muted = true;
+    
+    videoEl.onloadedmetadata = () => {
+      if (videoEl.duration > 20.5) {
+        toast.error(`Video en fazla 20 saniye olmalıdır. Seçtiğiniz video: ${Math.round(videoEl.duration)} saniye.`);
+        if (highlightVideoInputRef.current) highlightVideoInputRef.current.value = '';
+        return;
+      }
+
+      setNewHighlightDuration(videoEl.duration);
+      setNewHighlightFile(file);
+
+      // Otomatik 0.5s karesinden kapak görseli (thumbnail) üret
+      videoEl.currentTime = Math.min(0.5, videoEl.duration / 2);
+      videoEl.onseeked = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = videoEl.videoWidth || 720;
+        canvas.height = videoEl.videoHeight || 1280;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob(blob => {
+            if (blob) {
+              setNewHighlightCoverBlob(blob);
+              setNewHighlightCoverPreview(URL.createObjectURL(blob));
+            }
+          }, 'image/jpeg', 0.85);
+        }
+      };
+    };
+
+    videoEl.src = URL.createObjectURL(file);
+  };
+
+  const handleSaveHighlight = async () => {
+    if (!newHighlightFile) {
+      toast.error('Lütfen dikey bir video dosyası seçin.');
+      return;
+    }
+    if (!newHighlightTitle.trim()) {
+      toast.error('Lütfen öne çıkan için bir başlık girin.');
+      return;
+    }
+    if (highlights.length >= 6) {
+      toast.error('Bir hikaye için en fazla 6 adet öne çıkan story ekleyebilirsiniz.');
+      return;
+    }
+
+    setHighlightUploading(true);
+    setHighlightUploadProgress(15);
+
+    try {
+      const timestamp = Date.now();
+      const videoPath = `stories/${storyId}/highlights/video_${timestamp}.mp4`;
+      const videoUrl = await uploadFile(newHighlightFile, videoPath, {
+        allowVideo: true,
+        onProgress: (p) => setHighlightUploadProgress(Math.min(85, Math.round(p * 0.85)))
+      });
+
+      let coverUrl: string | undefined = undefined;
+      if (newHighlightCoverBlob) {
+        const coverPath = `stories/${storyId}/highlights/cover_${timestamp}.jpg`;
+        coverUrl = await uploadFile(newHighlightCoverBlob, coverPath);
+      }
+
+      setHighlightUploadProgress(95);
+
+      const newHighlight: StoryHighlight = {
+        id: `hl_${timestamp}`,
+        title: newHighlightTitle.trim(),
+        videoUrl,
+        coverUrl,
+        duration: Math.round(newHighlightDuration * 10) / 10,
+        order: highlights.length + 1,
+        createdAt: new Date().toISOString()
+      };
+
+      const updatedHighlights = [...highlights, newHighlight];
+      setHighlights(updatedHighlights);
+
+      await updateStory(storyId, {
+        highlights: updatedHighlights
+      });
+
+      toast.success('Öne çıkan story başarıyla eklendi!');
+      setIsAddHighlightOpen(false);
+      setNewHighlightFile(null);
+      setNewHighlightTitle('');
+      setNewHighlightCoverBlob(null);
+      setNewHighlightCoverPreview('');
+      setNewHighlightDuration(0);
+      if (highlightVideoInputRef.current) highlightVideoInputRef.current.value = '';
+    } catch (err) {
+      console.error(err);
+      toast.error('Öne çıkan kaydedilirken bir hata oluştu.');
+    } finally {
+      setHighlightUploading(false);
+      setHighlightUploadProgress(0);
+    }
+  };
+
+  const handleDeleteHighlight = async (id: string) => {
+    if (!window.confirm('Bu öne çıkanı silmek istediğinize emin misiniz?')) return;
+
+    try {
+      const updatedHighlights = highlights
+        .filter(h => h.id !== id)
+        .map((h, idx) => ({ ...h, order: idx + 1 }));
+      setHighlights(updatedHighlights);
+
+      await updateStory(storyId, {
+        highlights: updatedHighlights
+      });
+      toast.success('Öne çıkan silindi.');
+    } catch (err) {
+      console.error(err);
+      toast.error('Silinirken hata oluştu.');
+    }
+  };
+
+  const handleMoveHighlight = async (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= highlights.length) return;
+
+    const list = [...highlights];
+    const item = list[index];
+    list[index] = list[targetIndex];
+    list[targetIndex] = item;
+
+    const reordered = list.map((h, idx) => ({ ...h, order: idx + 1 }));
+    setHighlights(reordered);
+
+    try {
+      await updateStory(storyId, {
+        highlights: reordered
+      });
+      toast.success('Sıralama güncellendi.');
+    } catch (err) {
+      console.error(err);
+      toast.error('Sıralama kaydedilemedi.');
+    }
+  };
 
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -482,7 +668,7 @@ export default function StoryDetailAdminPage() {
         <button
           type="button"
           onClick={() => setActiveTab('details')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'details'
               ? 'bg-primary text-black shadow-md shadow-primary/20'
               : 'text-muted hover:text-text hover:bg-muted/10'
@@ -490,6 +676,26 @@ export default function StoryDetailAdminPage() {
         >
           <Settings size={16} />
           <span>Kitap Bilgileri & Vitrin</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('highlights')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === 'highlights'
+              ? 'bg-primary text-black shadow-md shadow-primary/20'
+              : 'text-muted hover:text-text hover:bg-muted/10'
+          }`}
+        >
+          <Sparkles size={16} />
+          <span>Öne Çıkanlar (Story / Dikey Teaser)</span>
+          {highlights.length > 0 && (
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+              activeTab === 'highlights' ? 'bg-black/20 text-black' : 'bg-muted/20 text-muted'
+            }`}>
+              {highlights.length}
+            </span>
+          )}
         </button>
       </div>
 
@@ -567,6 +773,24 @@ export default function StoryDetailAdminPage() {
                       </div>
                       <p className="text-xs text-muted mt-0.5">Düzenlemek için dokunun</p>
                     </div>
+                    <button
+                      type="button"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (!window.confirm(`"${chap.title}" başlıklı bölümü kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`)) return;
+                        try {
+                          await deleteChapter(storyId, chap.chapterId);
+                          setChapters(prev => prev.filter(c => c.chapterId !== chap.chapterId));
+                          toast.success("Bölüm başarıyla silindi.");
+                        } catch {
+                          toast.error("Bölüm silinemedi.");
+                        }
+                      }}
+                      className="w-8 h-8 rounded-lg text-muted/50 hover:text-red-500 hover:bg-red-500/10 flex items-center justify-center transition-colors shrink-0"
+                      title="Bölümü Sil"
+                    >
+                      <Trash2 size={15} />
+                    </button>
                     <ChevronRight size={18} className="text-muted group-hover:text-primary transition-colors shrink-0" />
                   </div>
                 ))}
@@ -942,6 +1166,343 @@ export default function StoryDetailAdminPage() {
             </Button>
           </div>
         </div>
+      )}
+
+      {/* ── 6. Sekme: Öne Çıkanlar (Story / Dikey Teaser) ── */}
+      {activeTab === 'highlights' && (
+        <div className="space-y-6">
+          {/* Tanıtım & Bilgilendirme Kartı */}
+          <div className="bg-card p-4 sm:p-6 rounded-2xl border border-border/60 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="text-amber-500" size={20} />
+                  <Typography variant="h3" className="font-bold text-base sm:text-lg">
+                    Öne Çıkanlar (Story / Dikey Teaser)
+                  </Typography>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
+                    {highlights.length} / 6
+                  </span>
+                </div>
+                <p className="text-xs text-muted mt-1 max-w-2xl leading-relaxed">
+                  Instagram Story Highlights gibi; kitabınızın tanıtımı, karakterleri veya duyuruları için <strong>9:16 dikey</strong> ve <strong>en fazla 20 saniyelik</strong> kısa video hikayeleri yayınlayın. Okurlar kitap detay sayfanızda parıltılı dairelere dokunarak bunları izleyebilir.
+                </p>
+              </div>
+
+              <Button
+                variant="primary"
+                onPress={() => setIsAddHighlightOpen(true)}
+                disabled={highlights.length >= 6}
+                className="flex items-center justify-center gap-2 text-xs sm:text-sm py-2.5 px-4 cursor-pointer font-semibold shadow-md shadow-primary/20 shrink-0"
+              >
+                <PlusCircle size={16} />
+                <span>Yeni Öne Çıkan Ekle</span>
+              </Button>
+            </div>
+
+            {/* Liste Boş Durumu */}
+            {highlights.length === 0 ? (
+              <div className="text-center py-12 px-4 rounded-xl border border-dashed border-border/70 bg-muted/5 flex flex-col items-center">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-primary/20 via-fuchsia-500/20 to-amber-500/20 border border-primary/30 flex items-center justify-center mb-4 text-primary shadow-inner">
+                  <Film size={28} />
+                </div>
+                <h4 className="text-sm font-bold text-text mb-1">Henüz öne çıkan story eklenmedi</h4>
+                <p className="text-xs text-muted max-w-md mb-5 leading-relaxed">
+                  Kitabınızı okuyuculara daha çekici kılmak için dikey video teaser'ları (max 20 saniye) yükleyin.
+                </p>
+                <Button
+                  variant="primary"
+                  onPress={() => setIsAddHighlightOpen(true)}
+                  className="text-xs py-2 px-4 font-semibold cursor-pointer"
+                >
+                  <PlusCircle size={14} className="mr-1.5" />
+                  İlk Story'ni Yükle
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {highlights.map((h, idx) => (
+                  <div
+                    key={h.id || idx}
+                    className="relative bg-muted/10 border border-border/60 hover:border-border rounded-2xl p-3.5 flex flex-col justify-between transition-all group"
+                  >
+                    {/* Üst Bilgi: Sıra & Süre */}
+                    <div className="flex items-center justify-between mb-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-card border border-border/60 flex items-center justify-center text-[10px] font-black text-text">
+                          #{idx + 1}
+                        </span>
+                        <h4 className="font-bold text-xs sm:text-sm text-text truncate max-w-[150px]">
+                          {h.title}
+                        </h4>
+                      </div>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500 font-bold border border-amber-500/30">
+                        {h.duration ? `${Math.round(h.duration)} sn` : 'Story'}
+                      </span>
+                    </div>
+
+                    {/* 9:16 Video / Thumbnail Önizleme Konteyneri */}
+                    <div
+                      onClick={() => setPreviewModalIndex(idx)}
+                      className="relative w-full aspect-[9/14] bg-zinc-950 rounded-xl overflow-hidden border border-border/40 group-hover:border-primary/50 transition-colors cursor-pointer flex items-center justify-center mb-3"
+                    >
+                      {h.coverUrl ? (
+                        <img
+                          src={h.coverUrl}
+                          alt={h.title}
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                      ) : (
+                        <video
+                          src={h.videoUrl}
+                          playsInline
+                          muted
+                          className="w-full h-full object-cover pointer-events-none"
+                        />
+                      )}
+
+                      {/* Oynat Overlay */}
+                      <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center gap-1.5 group-hover:bg-black/20 transition-all">
+                        <div className="w-12 h-12 rounded-full bg-black/60 backdrop-blur-md border border-white/20 flex items-center justify-center text-white group-hover:scale-110 transition-transform shadow-lg">
+                          <Play size={20} className="translate-x-0.5 fill-current" />
+                        </div>
+                        <span className="text-[10px] font-bold text-white/90 bg-black/50 px-2 py-0.5 rounded-full backdrop-blur-xs">
+                          Önizle
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Eylemler: Sıralama & Silme */}
+                    <div className="flex items-center justify-between gap-1 pt-1 border-t border-border/40">
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleMoveHighlight(idx, 'up')}
+                          disabled={idx === 0}
+                          className={`p-1.5 rounded-lg text-muted hover:text-text hover:bg-muted/20 cursor-pointer ${
+                            idx === 0 ? 'opacity-30 cursor-not-allowed' : ''
+                          }`}
+                          title="Yukarı Taşı"
+                        >
+                          <ArrowUp size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleMoveHighlight(idx, 'down')}
+                          disabled={idx === highlights.length - 1}
+                          className={`p-1.5 rounded-lg text-muted hover:text-text hover:bg-muted/20 cursor-pointer ${
+                            idx === highlights.length - 1 ? 'opacity-30 cursor-not-allowed' : ''
+                          }`}
+                          title="Aşağı Taşı"
+                        >
+                          <ArrowDown size={15} />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setPreviewModalIndex(idx)}
+                          className="px-2.5 py-1 text-[11px] font-semibold text-primary hover:bg-primary/10 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                        >
+                          <Play size={12} />
+                          Önizle
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteHighlight(h.id)}
+                          className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                          title="Sil"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Yeni Öne Çıkan Ekleme Modalı ── */}
+      {isAddHighlightOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in">
+          <div className="bg-card border border-border/60 rounded-3xl p-5 sm:p-7 max-w-md w-full shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            
+            <button
+              onClick={() => {
+                if (highlightUploading) return;
+                setIsAddHighlightOpen(false);
+                setNewHighlightFile(null);
+                setNewHighlightCoverBlob(null);
+                setNewHighlightCoverPreview('');
+                setNewHighlightTitle('');
+              }}
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted/20 text-muted transition-colors cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles size={20} className="text-amber-500" />
+              <Typography variant="h3" className="text-base sm:text-lg font-bold text-text">
+                Yeni Öne Çıkan Story Ekle
+              </Typography>
+            </div>
+            <p className="text-xs text-muted mb-4">
+              Dikey formatlı (9:16) ve en fazla 20 saniyelik tanıtım videonuzu seçin.
+            </p>
+
+            <div className="space-y-4">
+              {/* Video Seçim Alanı */}
+              <div>
+                <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">
+                  Dikey Video Dosyası (MP4/WebM, max 20sn, max 20MB)
+                </label>
+                
+                <input
+                  ref={highlightVideoInputRef}
+                  type="file"
+                  accept="video/mp4,video/webm,video/quicktime"
+                  onChange={handleSelectHighlightVideo}
+                  disabled={highlightUploading}
+                  className="hidden"
+                  id="highlight-video-picker"
+                />
+
+                {!newHighlightFile ? (
+                  <label
+                    htmlFor="highlight-video-picker"
+                    className="flex flex-col items-center justify-center gap-2.5 p-6 border-2 border-dashed border-border/80 hover:border-primary/80 rounded-2xl bg-muted/5 hover:bg-primary/5 transition-all cursor-pointer text-center"
+                  >
+                    <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+                      <Upload size={22} />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-text block">Dikey Video Seç</span>
+                      <span className="text-[11px] text-muted">9:16 dikey reels/tiktok formatı, maks 20 saniye</span>
+                    </div>
+                  </label>
+                ) : (
+                  <div className="flex items-center gap-3 p-3 bg-muted/10 border border-border/60 rounded-2xl">
+                    {/* Thumbnail preview */}
+                    <div className="w-14 h-20 bg-zinc-900 rounded-xl overflow-hidden shrink-0 border border-border/60 flex items-center justify-center relative">
+                      {newHighlightCoverPreview ? (
+                        <img src={newHighlightCoverPreview} alt="Thumb" className="w-full h-full object-cover" />
+                      ) : (
+                        <Film size={20} className="text-muted" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-text truncate">{newHighlightFile.name}</p>
+                      <p className="text-[11px] text-emerald-400 font-semibold mt-0.5">
+                        Süre: {Math.round(newHighlightDuration * 10) / 10} sn (Uygun ✓)
+                      </p>
+                      <p className="text-[10px] text-muted">
+                        Boyut: {(newHighlightFile.size / (1024 * 1024)).toFixed(1)} MB
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewHighlightFile(null);
+                        setNewHighlightCoverBlob(null);
+                        setNewHighlightCoverPreview('');
+                        setNewHighlightDuration(0);
+                        if (highlightVideoInputRef.current) highlightVideoInputRef.current.value = '';
+                      }}
+                      disabled={highlightUploading}
+                      className="p-1.5 text-muted hover:text-red-400 cursor-pointer"
+                      title="Değiştir"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Başlık Alanı */}
+              <div>
+                <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">
+                  Öne Çıkan Başlığı (Daire Altında Görünür)
+                </label>
+                <input
+                  type="text"
+                  maxLength={30}
+                  value={newHighlightTitle}
+                  onChange={(e) => setNewHighlightTitle(e.target.value)}
+                  placeholder="Örn: Fragman, Karakterler, Bölüm 1..."
+                  disabled={highlightUploading}
+                  className="w-full bg-card border border-border/60 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-text focus:outline-none focus:border-primary"
+                />
+                <span className="text-[10px] text-muted block text-right mt-1">
+                  {newHighlightTitle.length} / 30
+                </span>
+              </div>
+
+              {/* Yükleme İlerlemesi */}
+              {highlightUploading && (
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-xs font-semibold text-muted">
+                    <span>Yükleniyor ve işleniyor...</span>
+                    <span>{highlightUploadProgress}%</span>
+                  </div>
+                  <div className="w-full h-2 bg-muted/20 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-primary to-amber-500 rounded-full transition-all duration-300"
+                      style={{ width: `${highlightUploadProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Aksiyon Butonları */}
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <Button
+                  variant="ghost"
+                  onPress={() => setIsAddHighlightOpen(false)}
+                  disabled={highlightUploading}
+                  className="text-xs font-semibold px-4 py-2"
+                >
+                  Vazgeç
+                </Button>
+                <Button
+                  variant="primary"
+                  onPress={handleSaveHighlight}
+                  disabled={highlightUploading || !newHighlightFile || !newHighlightTitle.trim()}
+                  className="text-xs font-bold px-5 py-2 cursor-pointer shadow-md shadow-primary/20 flex items-center gap-1.5"
+                >
+                  {highlightUploading ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      <span>Kaydediliyor...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={14} />
+                      <span>Öne Çıkaranlara Ekle</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Stüdyo İçi Önizleme Modalı ── */}
+      {previewModalIndex !== null && highlights[previewModalIndex] && (
+        <StoryHighlightsModal
+          isOpen={previewModalIndex !== null}
+          onClose={() => setPreviewModalIndex(null)}
+          highlights={highlights}
+          initialIndex={previewModalIndex}
+          storyTitle={title || 'Hikaye Tanıtımı'}
+          authorName={story?.authorName || 'Yazar'}
+          authorAvatar={story?.authorAvatarUrl}
+        />
       )}
     </div>
   );

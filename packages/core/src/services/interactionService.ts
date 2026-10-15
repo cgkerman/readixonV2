@@ -395,3 +395,59 @@ export const toggleChapterCommentLike = async (userId: string, storyId: string, 
     throw error;
   }
 };
+
+/**
+ * Kullanıcının belirtilen yorumu beğenip beğenmediğini kontrol eder.
+ */
+export const checkChapterCommentLiked = async (
+  userId: string,
+  storyId: string,
+  chapterId: string,
+  commentId: string
+): Promise<boolean> => {
+  try {
+    const likeRef = doc(db, 'stories', storyId, 'chapters', chapterId, 'comments', commentId, 'likes', userId);
+    const snap = await getDoc(likeRef);
+    return snap.exists();
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Bölüm yorumunu veya yazar yanıtını siler.
+ */
+export const deleteChapterComment = async (
+  storyId: string,
+  chapterId: string,
+  commentId: string
+): Promise<void> => {
+  try {
+    const commentRef = doc(db, 'stories', storyId, 'chapters', chapterId, 'comments', commentId);
+    await deleteDoc(commentRef);
+
+    // Bölüm yorum sayısını düşür
+    try {
+      const chapterRef = doc(db, 'stories', storyId, 'chapters', chapterId);
+      await updateDoc(chapterRef, {
+        'stats.commentCount': increment(-1)
+      });
+    } catch (e) {
+      // ignore count update error
+    }
+
+    // Hikaye genel yorum sayısını düşür
+    try {
+      const storyRef = doc(db, 'stories', storyId);
+      await updateDoc(storyRef, {
+        'stats.commentCount': increment(-1)
+      });
+    } catch (e) {
+      // ignore count update error
+    }
+  } catch (error) {
+    console.error("Yorum silme başarısız:", error);
+    throw error;
+  }
+};
+

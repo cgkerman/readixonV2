@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Typography, Button } from '@readixon/ui';
 import { PlusCircle, Image as ImageIcon, GalleryVertical } from 'lucide-react';
-import { subscribeToAuthorStories, useAuthStore, type Story } from '@readixon/core';
+import { subscribeToAuthorStories, useAuthStore, syncStoryChapterCount, type Story } from '@readixon/core';
 
 export default function StudioWebtoonsDashboard() {
   const router = useRouter();
@@ -21,6 +21,11 @@ export default function StudioWebtoonsDashboard() {
       const webtoonStories = updatedStories.filter(s => s.format === 'webtoon');
       setWebtoons(webtoonStories);
       setLoading(false);
+
+      // Veritabanındaki silinmiş veya sapmış bölüm sayaçlarını arka planda otomatik onar (Self-Healing)
+      webtoonStories.forEach(story => {
+        syncStoryChapterCount(story.storyId).catch(() => {});
+      });
     });
 
     return () => unsubscribe();

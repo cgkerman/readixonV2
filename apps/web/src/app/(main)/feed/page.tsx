@@ -305,6 +305,10 @@ export default function FeedPage() {
   const [isHeroHovered, setIsHeroHovered] = useState(false);
   const [isCategoriesExpanded, setIsCategoriesExpanded] = useState(false);
 
+  // Dokunmatik Swipe (Kaydırma) Desteği
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchMoveX, setTouchMoveX] = useState<number | null>(null);
+
   // Genel akış için kategoriler (Yetişkin hariç tüm popüler türler)
   const feedCategories = useMemo(() => {
     return POPULAR_TAGS.filter(tag => tag.id !== 'adult');
@@ -318,6 +322,32 @@ export default function FeedPage() {
   const handlePrevSlide = () => {
     if (slides.length <= 1) return;
     setCurrentSlideIndex((prev) => (prev - 1 + slides.length) % slides.length);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.targetTouches.length === 1) {
+      setTouchStartX(e.targetTouches[0].clientX);
+      setTouchMoveX(null);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.targetTouches.length === 1) {
+      setTouchMoveX(e.targetTouches[0].clientX);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStartX === null || touchMoveX === null) return;
+    const distance = touchStartX - touchMoveX;
+    const minSwipeDistance = 45; // 45px eşik değeri
+    if (distance > minSwipeDistance) {
+      handleNextSlide();
+    } else if (distance < -minSwipeDistance) {
+      handlePrevSlide();
+    }
+    setTouchStartX(null);
+    setTouchMoveX(null);
   };
 
   const [currentAnnouncementIndex, setCurrentAnnouncementIndex] = useState(0);
@@ -430,14 +460,17 @@ export default function FeedPage() {
   return (
     <div className="flex flex-col w-full pb-24 md:pb-10 bg-background overflow-x-hidden">
 
-      {/* ── 1. Hero Showcase (Lüks & Minimal Carousel - Sabit Boyut) ── */}
-      <section className="relative w-full px-6 md:px-16 pt-3 md:pt-6 mb-8 md:mb-12">
+      {/* ── 1. Hero Showcase (Lüks & Sinematik Carousel) ── */}
+      <section className="relative w-full px-4 sm:px-6 md:px-16 pt-2 sm:pt-3 md:pt-6 mb-8 md:mb-12">
         <div
-          className="relative w-full rounded-3xl overflow-hidden border border-border/70 bg-card/50 backdrop-blur-xl shadow-xl transition-all duration-500 group"
+          className="relative w-full rounded-3xl overflow-hidden border border-border/70 bg-card/60 backdrop-blur-2xl shadow-2xl transition-all duration-500 group touch-pan-y"
           onMouseEnter={() => setIsHeroHovered(true)}
           onMouseLeave={() => setIsHeroHovered(false)}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
         >
-          {/* Ambient Arka Plan Görseli & Gradyan Perde */}
+          {/* Ambient Arka Plan Görseli & Sinematik Gradyan Perdesi */}
           {activeSlide?.image ? (
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
               <img
@@ -445,9 +478,11 @@ export default function FeedPage() {
                 src={activeSlide.image}
                 alt=""
                 aria-hidden="true"
-                className="w-full h-full object-cover opacity-20 dark:opacity-15 blur-3xl scale-125 transition-all duration-1000"
+                className="w-full h-full object-cover opacity-35 dark:opacity-25 blur-2xl md:blur-3xl scale-110 md:scale-125 transition-all duration-1000"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-card/95 via-card/60 to-transparent dark:from-background dark:via-background/70" />
+              {/* Mobil için alttan & üstten sinematik karartma perdeleri */}
+              <div className="md:hidden absolute inset-0 bg-gradient-to-b from-background/60 via-transparent to-background/95 dark:from-background/60 dark:to-background/95" />
+              <div className="absolute inset-0 bg-gradient-to-t from-card/95 via-card/60 to-transparent dark:from-background dark:via-background/80" />
               <div className="hidden md:block absolute inset-0 bg-gradient-to-r from-card/90 via-card/60 to-transparent dark:from-background dark:via-background/70" />
             </div>
           ) : (
@@ -543,74 +578,113 @@ export default function FeedPage() {
           </div>
 
           {/* ─────────────────────────────────────────────────────────────
-              MOBILE LAYOUT (< 768px): Sabit Yükseklikli (215px), Sıfır Zıplama
+              MOBILE LAYOUT (< 768px): Sinematik Poster & Vitrin (Webtoon / Netflix Stili)
               ───────────────────────────────────────────────────────────── */}
-          <div className="flex md:hidden relative z-10 p-4 sm:p-5 flex-col justify-between h-[215px] overflow-hidden">
-            {/* Üst Satır: Kapak + Başlık & Özet Yan Yana (Sabit Yükseklik) */}
-            <div className="flex items-start gap-3.5 h-[125px] overflow-hidden">
-              <div
-                className={`shrink-0 rounded-xl overflow-hidden shadow-md border border-white/10 flex items-center justify-center bg-card/40 ${
-                  activeSlide?.type === 'author'
-                    ? 'w-[75px] h-[105px]'
-                    : activeSlide?.type === 'announcement'
-                      ? 'w-[85px] h-[105px]'
-                      : 'w-[75px] h-[105px]'
-                }`}
-              >
-                {activeSlide?.image ? (
-                  <img
-                    src={activeSlide.image}
-                    alt={activeSlide.title}
-                    className={`object-cover ${
-                      activeSlide?.type === 'author'
-                        ? 'w-16 h-16 rounded-full ring-2 ring-primary/30'
-                        : 'w-full h-full'
-                    }`}
-                  />
-                ) : (
-                  <div className="w-full h-full bg-muted/20 flex items-center justify-center">
-                    <span className="text-[10px] text-muted">Yok</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex-1 min-w-0 flex flex-col justify-start h-[105px] overflow-hidden py-0.5">
-                {activeSlide?.badge && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/15 text-primary border border-primary/25 w-fit mb-1 shrink-0">
-                    {activeSlide.badgeIcon && <activeSlide.badgeIcon size={11} className="shrink-0" />}
-                    <span className="truncate max-w-[170px]">{activeSlide.badge}</span>
-                  </span>
-                )}
-                <h2 className="text-sm font-bold text-text leading-snug line-clamp-2 h-[36px] flex items-center">
-                  {activeSlide?.title || "Öne Çıkan Eser"}
-                </h2>
-                <p className="text-[11px] text-muted/90 line-clamp-2 leading-snug mt-1 h-[28px] overflow-hidden">
-                  {activeSlide?.summary || "Readixon'da keşfedilecek yeni bir serüven."}
-                </p>
-              </div>
+          <div className="flex md:hidden relative z-10 flex-col justify-between h-[385px] sm:h-[415px] p-4.5 sm:p-5 pb-6 select-none overflow-hidden">
+            {/* Üst Kısım: Rozet (Sol) & Slayt Sayacı (Sağ) */}
+            <div className="flex items-center justify-between w-full z-10">
+              {activeSlide?.badge ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-background/80 dark:bg-card/85 text-primary border border-primary/25 backdrop-blur-md shadow-sm">
+                  {activeSlide.badgeIcon && <activeSlide.badgeIcon size={12} className="shrink-0 text-primary" />}
+                  <span className="truncate max-w-[190px]">{activeSlide.badge}</span>
+                </span>
+              ) : (
+                <div />
+              )}
+              {slides.length > 1 && (
+                <span className="text-[10px] font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-background/70 dark:bg-card/75 text-text/80 backdrop-blur-md border border-border/60 shadow-sm">
+                  {currentSlideIndex + 1} / {slides.length}
+                </span>
+              )}
             </div>
 
-            {/* Alt Satır: Sabit Yükseklikli Yan Yana Aksiyon Butonları */}
-            <div className="flex items-center gap-2 h-9 shrink-0">
-              {activeSlide?.primaryLabel && (
-                <Button
-                  variant="primary"
-                  className="rounded-full flex-1 h-9 text-xs font-semibold shadow-md shadow-primary/25 flex items-center justify-center gap-1.5"
-                  onPress={activeSlide.primaryAction}
-                >
-                  {activeSlide.type === 'story' && <Play size={12} className="fill-current" />}
-                  <span className="truncate">{activeSlide.primaryLabel}</span>
-                </Button>
+            {/* Orta Kısım: 3D Derinlikli Öne Çıkan Görsel (Story / Author / Banner) */}
+            <div className="my-auto py-1 flex items-center justify-center z-10">
+              {activeSlide?.type === 'author' ? (
+                <div className="relative group cursor-pointer" onClick={activeSlide.primaryAction}>
+                  <div className="absolute -inset-2 bg-primary/25 rounded-full blur-xl opacity-75" />
+                  <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full ring-4 ring-primary/40 overflow-hidden shadow-2xl border-2 border-white/20">
+                    {activeSlide.image ? (
+                      <img
+                        key={`img-${activeSlide.id}`}
+                        src={activeSlide.image}
+                        alt={activeSlide.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-muted/20 flex items-center justify-center text-xs text-muted">Avatar</div>
+                    )}
+                  </div>
+                </div>
+              ) : activeSlide?.type === 'announcement' ? (
+                <div className="relative group cursor-pointer" onClick={activeSlide.primaryAction}>
+                  <div className="absolute -inset-2 bg-primary/20 rounded-2xl blur-xl opacity-60" />
+                  <div className="relative w-44 sm:w-52 h-28 sm:h-32 rounded-2xl overflow-hidden shadow-2xl border border-white/15">
+                    {activeSlide.image ? (
+                      <img
+                        key={`img-${activeSlide.id}`}
+                        src={activeSlide.image}
+                        alt={activeSlide.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-muted/20 flex items-center justify-center text-xs text-muted">Duyuru</div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="relative group cursor-pointer" onClick={activeSlide?.primaryAction}>
+                  {/* Kapak arkası renkli ortam ışıması */}
+                  <div className="absolute -inset-2 bg-primary/30 rounded-2xl blur-xl opacity-70 transform scale-95" />
+                  {/* 3D Hafif Açılı Kitap Kapağı */}
+                  <div className="relative w-[115px] sm:w-[130px] h-[165px] sm:h-[185px] rounded-xl overflow-hidden shadow-[0_18px_35px_-8px_rgba(0,0,0,0.65)] border border-white/20 transform -rotate-1 hover:rotate-0 transition-transform duration-300">
+                    {activeSlide?.image ? (
+                      <img
+                        key={`img-${activeSlide.id}`}
+                        src={activeSlide.image}
+                        alt={activeSlide.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-muted/20 flex items-center justify-center text-xs text-muted">Kapak Yok</div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-tr from-white/10 via-transparent to-transparent pointer-events-none" />
+                  </div>
+                </div>
               )}
-              {activeSlide?.secondaryLabel && (
-                <Button
-                  variant="secondary"
-                  className="rounded-full flex-1 h-9 text-xs font-medium bg-background/60 hover:bg-background text-text border border-border"
-                  onPress={activeSlide.secondaryAction}
-                >
-                  <span className="truncate">{activeSlide.secondaryLabel}</span>
-                </Button>
-              )}
+            </div>
+
+            {/* Alt Kısım: Başlık, Özet ve Aksiyon Butonları */}
+            <div className="flex flex-col items-center text-center w-full z-10">
+              <h2 className="text-lg sm:text-xl font-extrabold text-text tracking-tight line-clamp-1 drop-shadow-sm mb-1 px-2">
+                {activeSlide?.title || "Öne Çıkan Eser"}
+              </h2>
+              <p className="text-xs sm:text-sm text-muted/90 line-clamp-2 leading-relaxed max-w-sm mb-3 px-3">
+                {activeSlide?.summary || "Readixon'da keşfedilecek yeni bir serüven."}
+              </p>
+
+              {/* Butonlar */}
+              <div className="flex items-center gap-2.5 w-full max-w-xs justify-center">
+                {activeSlide?.primaryLabel && (
+                  <Button
+                    variant="primary"
+                    className="rounded-full flex-1 h-10 text-xs font-bold shadow-lg shadow-primary/25 hover:shadow-primary/40 flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                    onPress={activeSlide.primaryAction}
+                  >
+                    {activeSlide.type === 'story' && <Play size={13} className="fill-current" />}
+                    <span className="truncate">{activeSlide.primaryLabel}</span>
+                  </Button>
+                )}
+                {activeSlide?.secondaryLabel && (
+                  <Button
+                    variant="secondary"
+                    className="rounded-full flex-1 h-10 text-xs font-semibold bg-background/80 hover:bg-background text-text border border-border/80 backdrop-blur-md active:scale-95 transition-all"
+                    onPress={activeSlide.secondaryAction}
+                  >
+                    <span className="truncate">{activeSlide.secondaryLabel}</span>
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -643,7 +717,7 @@ export default function FeedPage() {
                 <button
                   key={idx}
                   onClick={() => setCurrentSlideIndex(idx)}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                  className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
                     currentSlideIndex === idx
                       ? 'w-7 bg-primary'
                       : 'w-2 bg-text/25 hover:bg-text/50'
@@ -657,57 +731,55 @@ export default function FeedPage() {
       </section>
 
       {/* ── 2. Hızlı Kategori Filtreleri ("Neler Okumak İstersin?" - Geniş Açı) ── */}
-      <section className="relative w-full px-6 md:px-16 mb-10 md:mb-14">
+      <section className="relative w-full px-4 sm:px-6 md:px-16 mb-8 md:mb-12">
         {/* Başlık ve Gezinme Kontrolleri */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-sm shrink-0">
-              <Compass size={19} />
+        <div className="flex items-center justify-between mb-3.5 gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-xs shrink-0">
+              <Compass size={18} />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <Typography variant="h3" className="font-bold text-lg md:text-xl text-text leading-tight">
+                <h3 className="font-bold text-base sm:text-lg md:text-xl text-text leading-tight truncate">
                   Neler Okumak İstersin?
-                </Typography>
-                <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-primary/10 text-primary border border-primary/20">
+                </h3>
+                <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-primary/10 text-primary border border-primary/20 shrink-0">
                   {feedCategories.length} Tür
                 </span>
               </div>
-              <Typography variant="caption" className="text-xs text-muted">
-                İlgi alanına uygun türü seç, anında keşfetmeye başla
-              </Typography>
+              <p className="text-[11px] sm:text-xs text-muted truncate mt-0.5">
+                İlgi alanına uygun türü seç ve hemen keşfet
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setIsCategoriesExpanded(!isCategoriesExpanded)}
-              className="text-xs md:text-sm font-semibold text-primary hover:underline flex items-center gap-1 transition-all mr-1 cursor-pointer"
-            >
-              <span>{isCategoriesExpanded ? 'Daha Az Göster' : 'Tümünü Gör'}</span>
-              <ChevronRight size={15} className={`transition-transform duration-200 ${isCategoriesExpanded ? 'rotate-90' : ''}`} />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setIsCategoriesExpanded(!isCategoriesExpanded)}
+            className="shrink-0 px-3 py-1.5 rounded-full bg-card hover:bg-card/80 border border-border/70 text-xs font-semibold text-primary hover:text-primary flex items-center gap-1.5 transition-all shadow-2xs active:scale-95 cursor-pointer select-none"
+          >
+            <span>{isCategoriesExpanded ? 'Daralt' : 'Tümü'}</span>
+            <ChevronRight size={13} className={`transition-transform duration-200 ${isCategoriesExpanded ? 'rotate-90' : ''}`} />
+          </button>
         </div>
 
-        {/* ── MOBİL GÖRÜNÜM: Kapalıyken 1 Sıra Yatay Kaydırma, Açıkken Tümünü Gösteren Grid (sm:hidden) ── */}
+        {/* ── MOBİL GÖRÜNÜM: Kapalıyken 1 Sıra Yatay Kaydırma (Pill Chips), Açıkken Flex Wrap Bulutu (sm:hidden) ── */}
         <div className="sm:hidden">
           {!isCategoriesExpanded ? (
-            <div className="overflow-x-auto pb-1 scrollbar-hide snap-x scroll-smooth -mx-6 px-6">
-              <div className="flex items-center gap-2 w-max py-1">
+            <div className="overflow-x-auto pb-1 scrollbar-hide snap-x scroll-smooth -mx-4 px-4">
+              <div className="flex items-center gap-2 w-max py-0.5">
                 {feedCategories.map(tag => {
                   const IconComponent = TAG_ICONS[tag.id] || BookOpen;
                   return (
                     <button
                       key={`mob-${tag.id}`}
                       onClick={() => router.push(`/search?tag=${tag.id}`)}
-                      className="group snap-start w-[148px] h-[50px] shrink-0 flex items-center gap-2.5 px-3 rounded-2xl bg-card/75 hover:bg-card border border-border/80 hover:border-primary/50 text-text transition-all duration-200 shadow-sm cursor-pointer select-none text-left"
+                      className="group snap-start h-9 shrink-0 flex items-center gap-2 px-3.5 rounded-full bg-card/85 hover:bg-card border border-border/80 hover:border-primary/50 text-text transition-all duration-200 shadow-2xs active:scale-95 cursor-pointer select-none"
                     >
-                      <span className="w-7 h-7 rounded-xl bg-primary/10 group-hover:bg-primary text-primary group-hover:text-white flex items-center justify-center transition-colors shrink-0">
-                        <IconComponent size={14} />
+                      <span className="w-5 h-5 rounded-full bg-primary/10 group-hover:bg-primary text-primary group-hover:text-white flex items-center justify-center transition-colors shrink-0">
+                        <IconComponent size={12} />
                       </span>
-                      <span className="text-xs font-semibold text-text truncate group-hover:text-primary transition-colors flex-1 min-w-0">
+                      <span className="text-xs font-semibold text-text group-hover:text-primary transition-colors whitespace-nowrap">
                         {tag.label}
                       </span>
                     </button>
@@ -716,19 +788,19 @@ export default function FeedPage() {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-2 py-1">
+            <div className="flex flex-wrap gap-2 py-1">
               {feedCategories.map(tag => {
                 const IconComponent = TAG_ICONS[tag.id] || BookOpen;
                 return (
                   <button
                     key={`mob-exp-${tag.id}`}
                     onClick={() => router.push(`/search?tag=${tag.id}`)}
-                    className="group w-full h-[50px] flex items-center gap-2.5 px-3 rounded-2xl bg-card/75 hover:bg-card border border-border/80 hover:border-primary/50 text-text transition-all duration-200 shadow-sm cursor-pointer select-none text-left"
+                    className="group h-9 flex items-center gap-2 px-3.5 rounded-full bg-card/85 hover:bg-card border border-border/80 hover:border-primary/50 text-text transition-all duration-200 shadow-2xs active:scale-95 cursor-pointer select-none"
                   >
-                    <span className="w-7 h-7 rounded-xl bg-primary/10 group-hover:bg-primary text-primary group-hover:text-white flex items-center justify-center transition-colors shrink-0">
-                      <IconComponent size={14} />
+                    <span className="w-5 h-5 rounded-full bg-primary/10 group-hover:bg-primary text-primary group-hover:text-white flex items-center justify-center transition-colors shrink-0">
+                      <IconComponent size={12} />
                     </span>
-                    <span className="text-xs font-semibold text-text truncate group-hover:text-primary transition-colors flex-1 min-w-0">
+                    <span className="text-xs font-semibold text-text group-hover:text-primary transition-colors whitespace-nowrap">
                       {tag.label}
                     </span>
                   </button>
@@ -740,8 +812,8 @@ export default function FeedPage() {
 
         {/* ── MASAÜSTÜ / TABLET GÖRÜNÜM: İlk Sıra / Genişletilebilir Grid (hidden sm:grid) ── */}
         <div
-          className={`hidden sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-8 gap-3 overflow-hidden transition-all duration-500 ease-in-out ${
-            isCategoriesExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-[52px]'
+          className={`hidden sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-8 gap-2.5 overflow-hidden transition-all duration-500 ease-in-out ${
+            isCategoriesExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-[46px]'
           }`}
         >
           {feedCategories.map(tag => {
@@ -750,10 +822,10 @@ export default function FeedPage() {
               <button
                 key={`desk-${tag.id}`}
                 onClick={() => router.push(`/search?tag=${tag.id}`)}
-                className="group w-full h-[52px] flex items-center gap-2.5 px-3 rounded-2xl bg-card/60 hover:bg-card border border-border/70 hover:border-primary/50 text-text transition-all duration-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 cursor-pointer text-left shrink-0"
+                className="group w-full h-[44px] flex items-center gap-2.5 px-3 rounded-full bg-card/60 hover:bg-card border border-border/70 hover:border-primary/50 text-text transition-all duration-200 shadow-2xs hover:shadow-xs hover:-translate-y-0.5 cursor-pointer text-left shrink-0"
               >
-                <span className="w-8 h-8 rounded-xl bg-primary/10 group-hover:bg-primary text-primary group-hover:text-white flex items-center justify-center transition-colors shrink-0">
-                  <IconComponent size={15} />
+                <span className="w-6 h-6 rounded-full bg-primary/10 group-hover:bg-primary text-primary group-hover:text-white flex items-center justify-center transition-colors shrink-0">
+                  <IconComponent size={13} />
                 </span>
                 <span className="text-xs lg:text-[13px] font-semibold text-text group-hover:text-primary transition-colors truncate flex-1 min-w-0">
                   {tag.label}
@@ -764,18 +836,18 @@ export default function FeedPage() {
         </div>
 
         {/* Şık Açılır / Kapanır Aşağı Oku Butonu */}
-        <div className="flex justify-center mt-3.5">
+        <div className="flex justify-center mt-3">
           <button
             type="button"
             onClick={() => setIsCategoriesExpanded(!isCategoriesExpanded)}
-            className="group inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-card/80 hover:bg-card border border-border/80 hover:border-primary/40 text-muted hover:text-primary transition-all duration-200 shadow-sm hover:shadow text-xs font-semibold cursor-pointer select-none"
+            className="group inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-card/80 hover:bg-card border border-border/80 hover:border-primary/40 text-muted hover:text-primary transition-all duration-200 shadow-xs hover:shadow text-xs font-semibold cursor-pointer select-none"
             aria-label={isCategoriesExpanded ? "Daha az göster" : "Tüm kategorileri göster"}
           >
-            <span>{isCategoriesExpanded ? 'Daha Az Göster' : `Tüm Kategorileri Göster (${feedCategories.length})`}</span>
-            <span className={`w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center transition-transform duration-300 ${
+            <span>{isCategoriesExpanded ? 'Daha Az Göster' : `Tüm Kategorileri Gör (${feedCategories.length})`}</span>
+            <span className={`w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center transition-transform duration-300 ${
               isCategoriesExpanded ? 'rotate-180 bg-primary text-white' : 'group-hover:translate-y-0.5'
             }`}>
-              <ChevronDown size={13} />
+              <ChevronDown size={11} />
             </span>
           </button>
         </div>

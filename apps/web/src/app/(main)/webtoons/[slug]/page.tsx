@@ -11,6 +11,9 @@ import {
   toggleSaveStory,
   getSavedStories,
   getReviews,
+  subscribeToReviews,
+  replyToReview,
+  deleteReviewReply,
   addReview,
   checkStoryLiked,
   toggleStoryLike,
@@ -24,10 +27,11 @@ import type { Story, User, Chapter, Review } from '@readixon/core';
 import { 
   BookOpen, Heart, Eye, List, Play, BookmarkPlus, BookmarkCheck, 
   ArrowLeft, Loader2, Star, MessageSquare, Users, Award, PenTool, Hash,
-  Lock, Calendar, Bell, Info
+  Lock, Calendar, Bell, Info, Reply, Trash2, Send
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from "sonner";
+import { StoryHighlightsBar } from '@/components/story';
 
 export default function WebtoonDetailPage() {
   const params = useParams();
@@ -58,6 +62,11 @@ export default function WebtoonDetailPage() {
   const [reviewRating, setReviewRating] = useState<number>(10);
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reminders, setReminders] = useState<string[]>([]);
+
+  // Yazarın İncelemeye Yanıt Verme Durumu
+  const [replyingReviewId, setReplyingReviewId] = useState<string | null>(null);
+  const [authorReviewReplyText, setAuthorReviewReplyText] = useState('');
+  const [submittingAuthorReviewReply, setSubmittingAuthorReviewReply] = useState(false);
   const [isAboutExpanded, setIsAboutExpanded] = useState(false);
 
   useEffect(() => {
@@ -115,6 +124,15 @@ export default function WebtoonDetailPage() {
     };
 
     fetchStoryData();
+  }, [storyId]);
+
+  // İncelemeleri Gerçek Zamanlı Dinle
+  useEffect(() => {
+    if (!storyId) return;
+    const unsubscribe = subscribeToReviews(storyId, (realtimeReviews) => {
+      setReviews(realtimeReviews);
+    });
+    return () => unsubscribe();
   }, [storyId]);
 
   useEffect(() => {
@@ -216,6 +234,37 @@ export default function WebtoonDetailPage() {
       console.error("İnceleme gönderilirken hata:", error);
     } finally {
       setSubmittingReview(false);
+    }
+  };
+
+  // Yazarın İncelemeye Doğrudan Webtoon Sayfasından Yanıt Vermesi
+  const handleAuthorReplyReview = async (reviewId: string) => {
+    if (!firebaseUser || !authorReviewReplyText.trim() || !story) return;
+    setSubmittingAuthorReviewReply(true);
+    try {
+      await replyToReview(story.storyId, reviewId, firebaseUser.uid, authorReviewReplyText.trim());
+      setReplyingReviewId(null);
+      setAuthorReviewReplyText('');
+      toast.success('Yazar yanıtınız başarıyla yayınlandı!');
+    } catch (e) {
+      console.error("Yazar yanıtı gönderilemedi:", e);
+      toast.error('Yanıt gönderilirken bir hata oluştu.');
+    } finally {
+      setSubmittingAuthorReviewReply(false);
+    }
+  };
+
+  // Yazarın İncelemeye Verdiği Yanıtı Silmesi
+  const handleAuthorDeleteReviewReply = async (reviewId: string) => {
+    if (!firebaseUser || !story) return;
+    const ok = window.confirm("Yazar yanıtınızı silmek istediğinizden emin misiniz?");
+    if (!ok) return;
+    try {
+      await deleteReviewReply(story.storyId, reviewId);
+      toast.success('Yazar yanıtı silindi.');
+    } catch (e) {
+      console.error("Yazar yanıtı silinemedi:", e);
+      toast.error('Yanıt silinirken hata oluştu.');
     }
   };
 
@@ -387,6 +436,21 @@ export default function WebtoonDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Instagram Tarzı Öne Çıkanlar (Story / Dikey Teaser) ── */}
+      {story.highlights && story.highlights.length > 0 && (
+        <div className="max-w-6xl mx-auto px-4 md:px-8 mt-4 mb-2 w-full">
+          <div className="bg-card/40 backdrop-blur-md border border-border/50 rounded-2xl md:rounded-3xl p-4 shadow-xs">
+            <StoryHighlightsBar
+              highlights={story.highlights}
+              storyTitle={story.title}
+              authorName={author?.displayName || story.authorName}
+              authorAvatar={author?.avatarUrl || story.authorAvatarUrl}
+              onReadStory={() => chapters.length > 0 && router.push(`/read/${storyId}/${chapters[0].chapterId}`)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Main Content Layout */}
       <div className="w-full max-w-6xl mx-auto px-4 md:px-8 py-12 flex flex-col xl:flex-row gap-12">
@@ -581,6 +645,95 @@ export default function WebtoonDetailPage() {
                       </span>
                     </div>
                     <Typography variant="caption" className="text-muted line-clamp-4 leading-relaxed">{review.text}</Typography>
+
+                    {/* Yazar Yanıtı */}
+                    {review.authorReply && (
+                      <div className="mt-2.5 p-2.5 rounded-xl bg-primary/5 border border-primary/20 flex gap-2 items-start">
+                        <div className="w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[9px] font-bold shrink-0 mt-0.5">
+                          👑
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-[11px] font-bold text-primary flex items-center gap-1">
+                              <span>{review.authorReply.authorName || 'Yazar'}</span>
+                              <span className="text-[8px] bg-primary/15 text-primary px-1 py-0.2 rounded font-extrabold uppercase">
+                                Yazar Yanıtı
+                              </span>
+                            </span>
+                            {story && firebaseUser?.uid === story.authorId && (
+                              <button
+                                onClick={() => handleAuthorDeleteReviewReply(review.reviewId)}
+                                className="text-muted/50 hover:text-red-400 p-0.5 transition-colors cursor-pointer"
+                                title="Yanıtı Sil"
+                              >
+                                <Trash2 size={11} />
+                              </button>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-foreground/90 leading-relaxed whitespace-pre-line">
+                            {review.authorReply.text}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Yazar Henüz Yanıt Vermemişse ve Kullanıcı Yazar İse "Yanıtla" Butonu */}
+                    {story && firebaseUser?.uid === story.authorId && !review.authorReply && replyingReviewId !== review.reviewId && (
+                      <div className="mt-2 pt-1.5 border-t border-border/10">
+                        <button
+                          onClick={() => {
+                            setReplyingReviewId(review.reviewId);
+                            setAuthorReviewReplyText('');
+                          }}
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/15 border border-primary/25 px-2 py-0.5 rounded-lg transition-all active:scale-95 cursor-pointer"
+                        >
+                          <Reply size={11} />
+                          <span>Yazar Olarak Yanıtla</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Yazar Yanıt Editörü */}
+                    {replyingReviewId === review.reviewId && (
+                      <div className="mt-2 pt-2 border-t border-primary/20 animate-fade-in">
+                        <div className="flex items-center gap-1 mb-1.5 text-[11px] font-bold text-primary">
+                          <span>👑 İncelemeye Yanıtınız:</span>
+                        </div>
+                        <textarea
+                          value={authorReviewReplyText}
+                          onChange={(e) => setAuthorReviewReplyText(e.target.value)}
+                          placeholder="Okuyucunuza incelemesi için yanıt yazın..."
+                          rows={2}
+                          className="w-full bg-background/80 border border-primary/30 rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:border-primary resize-y transition-all"
+                          autoFocus
+                        />
+                        <div className="flex items-center justify-end gap-1.5 mt-1.5">
+                          <button
+                            onClick={() => setReplyingReviewId(null)}
+                            className="px-2.5 py-0.5 rounded-lg text-[11px] font-semibold text-muted hover:text-text border border-border/30 hover:bg-card transition-all cursor-pointer"
+                          >
+                            İptal
+                          </button>
+                          <button
+                            onClick={() => handleAuthorReplyReview(review.reviewId)}
+                            disabled={submittingAuthorReviewReply || !authorReviewReplyText.trim()}
+                            className="px-3 py-0.5 rounded-lg text-[11px] font-bold bg-primary text-black hover:bg-primary/90 transition-all flex items-center gap-1 shadow-md shadow-primary/20 disabled:opacity-40 cursor-pointer active:scale-95"
+                          >
+                            {submittingAuthorReviewReply ? (
+                              <>
+                                <Loader2 size={11} className="animate-spin" />
+                                <span>Kaydediliyor...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Send size={11} />
+                                <span>Yanıtı Yayınla</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))
               )}

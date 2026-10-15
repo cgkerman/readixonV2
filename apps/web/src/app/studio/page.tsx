@@ -21,7 +21,7 @@ import {
   Check,
   PenTool
 } from 'lucide-react';
-import { subscribeToAuthorStories, createStory, useAuthStore, POPULAR_TAGS, type Story } from '@readixon/core';
+import { subscribeToAuthorStories, createStory, useAuthStore, POPULAR_TAGS, syncStoryChapterCount, type Story } from '@readixon/core';
 import { toast } from "sonner";
 
 export default function StudioDashboard() {
@@ -50,6 +50,11 @@ export default function StudioDashboard() {
       const novels = updatedStories.filter(s => s.format !== 'webtoon');
       setStories(novels);
       setLoading(false);
+
+      // Veritabanındaki silinmiş veya sapmış bölüm sayaçlarını arka planda otomatik onar (Self-Healing)
+      novels.forEach(novel => {
+        syncStoryChapterCount(novel.storyId).catch(() => {});
+      });
     });
 
     return () => unsubscribe();
