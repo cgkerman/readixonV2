@@ -157,6 +157,8 @@ export interface StoryHighlight {
   coverUrl?: string;
   duration?: number; // Saniye cinsinden (<= 20)
   order: number;
+  chapterId?: string; // İlişkili bölüm ID'si (opsiyonel: butona basıldığında doğrudan bu bölüme yönlendirir)
+  chapterTitle?: string; // İlişkili bölüm başlığı / numarası
   createdAt?: Timestamp | string;
 }
 

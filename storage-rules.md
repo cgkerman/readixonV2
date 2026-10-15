@@ -15,7 +15,18 @@ service firebase.storage {
       allow delete: if request.auth != null;
     }
 
-    // 3. Platform Görselleri (Kapaklar, Avatarlar, Webtoonlar, Duyurular, Çizimler):
+    // 3. Hikaye Medyaları (Fragmanlar & Öne Çıkan Dikey Story Videoları ve Kapakları):
+    // Giriş yapmış kullanıcı, Videolar için Max 25MB (video/*), Görseller için Max 10MB
+    match /stories/{storyId}/{allStoryFiles=**} {
+      allow create, update: if request.auth != null 
+        && (
+          (request.resource.contentType.matches('video/.*') && request.resource.size <= 25 * 1024 * 1024) ||
+          (request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'] && request.resource.size <= 10 * 1024 * 1024)
+        );
+      allow delete: if request.auth != null;
+    }
+
+    // 4. Platform Görselleri (Kapaklar, Avatarlar, Webtoonlar, Duyurular, Çizimler):
     // Giriş yapmış kullanıcı, Max 10MB ve yalnızca güvenli görsel formatları (SVG / HTML XSS engelli)
     match /{allPaths=**} {
       allow create, update: if request.auth != null 

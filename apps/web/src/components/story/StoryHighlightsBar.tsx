@@ -10,7 +10,7 @@ interface StoryHighlightsBarProps {
   storyTitle: string;
   authorName?: string;
   authorAvatar?: string;
-  onReadStory?: () => void;
+  onReadStory?: (chapterId?: string) => void;
   className?: string;
 }
 

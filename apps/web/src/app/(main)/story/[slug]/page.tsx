@@ -597,9 +597,10 @@ export default function StoryDetailPage() {
     ? (Object.values(editorialReview.scores).reduce((a, b) => a + b, 0) / Object.values(editorialReview.scores).length).toFixed(1)
     : '9.0';
 
-  const handleStartReading = () => {
-    if (targetChapterId) {
-      router.push(`/read/${storyId}/${targetChapterId}`);
+  const handleStartReading = (specificChapterId?: string) => {
+    const chapterToOpen = specificChapterId || targetChapterId;
+    if (chapterToOpen) {
+      router.push(`/read/${storyId}/${chapterToOpen}`);
     }
   };
 

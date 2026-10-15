@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Volume2, VolumeX, Play, ChevronLeft, ChevronRight, BookOpen, Sparkles } from 'lucide-react';
 import type { StoryHighlight } from '@readixon/core';
 
@@ -12,7 +13,7 @@ interface StoryHighlightsModalProps {
   storyTitle: string;
   authorName?: string;
   authorAvatar?: string;
-  onReadStory?: () => void;
+  onReadStory?: (chapterId?: string) => void;
 }
 
 export function StoryHighlightsModal({
@@ -25,6 +26,7 @@ export function StoryHighlightsModal({
   authorAvatar,
   onReadStory
 }: StoryHighlightsModalProps) {
+  const [mounted, setMounted] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [isPaused, setIsPaused] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -35,6 +37,22 @@ export function StoryHighlightsModal({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const holdTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isHoldingRef = useRef(false);
+
+  // Portal için istemci tarafı bağlama kontrolü
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Modal açıkken arka plandaki sayfanın kaydırılmasını (scroll) engelle
+  useEffect(() => {
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
 
   // Sync index when opened with a specific highlight
   useEffect(() => {
@@ -84,6 +102,13 @@ export function StoryHighlightsModal({
       } else if (e.key === ' ' || e.key === 'Spacebar') {
         e.preventDefault();
         setIsPaused(prev => !prev);
+      } else if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault();
+        if (videoRef.current) {
+          const next = !videoRef.current.muted;
+          videoRef.current.muted = next;
+          setIsMuted(next);
+        }
       }
     };
 
@@ -98,7 +123,7 @@ export function StoryHighlightsModal({
       videoRef.current.pause();
     } else {
       videoRef.current.play().catch(() => {
-        // Autoplay policy fallback: if sound autoplay fails, mute and play
+        // Autoplay policy fallback: if unmuted autoplay fails, mute and play
         if (videoRef.current) {
           videoRef.current.muted = true;
           setIsMuted(true);
@@ -107,6 +132,13 @@ export function StoryHighlightsModal({
       });
     }
   }, [isPaused, currentIndex]);
+
+  // Sync mute state whenever video volume/mute changes
+  const handleVolumeChange = () => {
+    if (videoRef.current) {
+      setIsMuted(videoRef.current.muted);
+    }
+  };
 
   // Time update handler
   const handleTimeUpdate = () => {
@@ -157,23 +189,37 @@ export function StoryHighlightsModal({
     }
   };
 
-  const toggleMute = (e: React.MouseEvent) => {
+  const toggleMute = (e: React.SyntheticEvent) => {
     e.stopPropagation();
     if (videoRef.current) {
-      const nextMuted = !isMuted;
-      videoRef.current.muted = nextMuted;
-      setIsMuted(nextMuted);
+      const targetMuted = !videoRef.current.muted;
+      videoRef.current.muted = targetMuted;
+      setIsMuted(targetMuted);
     }
   };
 
-  if (!isOpen || !currentHighlight) return null;
+  if (!mounted || !isOpen || !currentHighlight) return null;
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 sm:backdrop-blur-2xl animate-in fade-in duration-200 select-none">
-      
+  return createPortal(
+    <div 
+      className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/95 backdrop-blur-2xl animate-in fade-in duration-200 select-none"
+      onClick={onClose}
+    >
+      {/* Desktop Sağ Üst Hızlı Kapat Butonu */}
+      <button
+        onClick={onClose}
+        aria-label="Kapat"
+        className="hidden md:flex items-center justify-center absolute top-6 right-8 z-30 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all backdrop-blur-md cursor-pointer"
+      >
+        <X size={24} />
+      </button>
+
       {/* Desktop Geri / İleri Yan Butonları */}
       <button
-        onClick={handlePrev}
+        onClick={(e) => {
+          e.stopPropagation();
+          handlePrev();
+        }}
         disabled={currentIndex === 0}
         aria-label="Önceki Story"
         className={`hidden md:flex items-center justify-center absolute left-6 lg:left-16 z-20 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all backdrop-blur-md cursor-pointer ${
@@ -184,7 +230,10 @@ export function StoryHighlightsModal({
       </button>
 
       <button
-        onClick={handleNext}
+        onClick={(e) => {
+          e.stopPropagation();
+          handleNext();
+        }}
         disabled={currentIndex === highlights.length - 1}
         aria-label="Sonraki Story"
         className={`hidden md:flex items-center justify-center absolute right-6 lg:right-16 z-20 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all backdrop-blur-md cursor-pointer ${
@@ -197,6 +246,7 @@ export function StoryHighlightsModal({
       {/* Ana 9:16 Story Kartı */}
       <div 
         ref={containerRef}
+        onClick={(e) => e.stopPropagation()}
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
         onPointerCancel={() => {
@@ -215,6 +265,7 @@ export function StoryHighlightsModal({
           playsInline
           autoPlay
           muted={isMuted}
+          onVolumeChange={handleVolumeChange}
           onLoadedData={() => setIsVideoLoading(false)}
           onWaiting={() => setIsVideoLoading(true)}
           onPlaying={() => setIsVideoLoading(false)}
@@ -244,7 +295,12 @@ export function StoryHighlightsModal({
         )}
 
         {/* ── ÜST BAR: İlerleme Çubukları & Başlık ── */}
-        <div className="relative z-20 p-3 sm:p-4 pt-4 sm:pt-5 space-y-3 pointer-events-auto">
+        <div 
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+          className="relative z-20 p-3 sm:p-4 pt-4 sm:pt-5 space-y-3 pointer-events-auto"
+        >
           
           {/* Segmentli İlerleme Çubukları */}
           <div className="flex items-center gap-1.5 w-full">
@@ -299,19 +355,36 @@ export function StoryHighlightsModal({
             </div>
 
             {/* Sağ Kontroller: Ses & Kapat */}
-            <div className="flex items-center gap-1.5 shrink-0" onClick={e => e.stopPropagation()}>
+            <div 
+              className="flex items-center gap-1.5 shrink-0 z-30" 
+              onPointerDown={(e) => e.stopPropagation()}
+              onPointerUp={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
               <button
+                type="button"
                 onClick={toggleMute}
-                className="p-2 rounded-full bg-black/40 hover:bg-black/60 text-white backdrop-blur-md transition-colors cursor-pointer"
-                title={isMuted ? 'Sesi Aç' : 'Sesi Kapat'}
+                onPointerDown={(e) => e.stopPropagation()}
+                onPointerUp={(e) => e.stopPropagation()}
+                className={`p-2.5 rounded-full backdrop-blur-md transition-all cursor-pointer active:scale-90 ${
+                  isMuted 
+                    ? 'bg-black/60 hover:bg-black/80 text-white/80' 
+                    : 'bg-primary/25 border border-primary/40 hover:bg-primary/35 text-amber-300 shadow-sm'
+                }`}
+                title={isMuted ? 'Sesi Aç (M)' : 'Sesi Kapat (M)'}
+                aria-label={isMuted ? 'Sesi Aç' : 'Sesi Kapat'}
               >
-                {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                {isMuted ? <VolumeX size={19} /> : <Volume2 size={19} />}
               </button>
 
               <button
+                type="button"
                 onClick={onClose}
-                className="p-2 rounded-full bg-black/40 hover:bg-black/60 text-white backdrop-blur-md transition-colors cursor-pointer"
+                onPointerDown={(e) => e.stopPropagation()}
+                onPointerUp={(e) => e.stopPropagation()}
+                className="p-2.5 rounded-full bg-black/60 hover:bg-black/80 active:scale-90 text-white backdrop-blur-md transition-all cursor-pointer"
                 title="Kapat (ESC)"
+                aria-label="Kapat"
               >
                 <X size={20} />
               </button>
@@ -321,8 +394,10 @@ export function StoryHighlightsModal({
 
         {/* ── ALT BAR: Highlight Başlığı & Kitap Aksiyonu (CTA) ── */}
         <div 
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
           className="relative z-20 p-4 sm:p-5 pb-6 sm:pb-6 space-y-3 pointer-events-auto"
-          onClick={e => e.stopPropagation()}
         >
           {/* Highlight Başlığı / Notu */}
           <div className="bg-black/50 backdrop-blur-md border border-white/10 rounded-2xl p-3 shadow-lg">
@@ -335,25 +410,44 @@ export function StoryHighlightsModal({
             <p className="text-[11px] text-white/70">
               Dokunarak duraklatabilir, sağa/sola dokunarak diğer tanıtımlara geçebilirsiniz.
             </p>
+            {currentHighlight.chapterTitle && (
+              <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-white/10 text-primary">
+                <BookOpen size={12} className="shrink-0" />
+                <span className="text-[11px] font-bold truncate">
+                  İlişkili Bölüm: {currentHighlight.chapterTitle}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Oku / Bölümleri Gör CTA */}
           {onReadStory && (
             <button
-              onClick={() => {
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onPointerUp={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
                 onClose();
-                onReadStory();
+                onReadStory(currentHighlight.chapterId);
               }}
-              className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-primary via-fuchsia-600 to-amber-500 hover:opacity-95 active:scale-[0.98] text-white font-extrabold text-xs sm:text-sm shadow-xl shadow-primary/30 flex items-center justify-center gap-2 cursor-pointer transition-all"
+              className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-primary via-fuchsia-600 to-amber-500 hover:opacity-95 active:scale-[0.98] text-white font-extrabold text-xs sm:text-sm shadow-xl shadow-primary/30 flex items-center justify-center gap-2 cursor-pointer transition-all"
             >
-              <BookOpen size={16} />
-              <span>Kitaba Başla / Bölümleri Oku</span>
+              <BookOpen size={17} className="shrink-0" />
+              <span className="truncate max-w-[280px]">
+                {currentHighlight.chapterTitle 
+                  ? `${currentHighlight.chapterTitle} Bölümünü Oku` 
+                  : currentHighlight.chapterId 
+                    ? 'İlişkili Bölümü Oku' 
+                    : 'Kitaba Başla / Bölümleri Oku'}
+              </span>
             </button>
           )}
         </div>
 
       </div>
 
-    </div>
+    </div>,
+    document.body
   );
 }

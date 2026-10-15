@@ -446,7 +446,10 @@ export default function WebtoonDetailPage() {
               storyTitle={story.title}
               authorName={author?.displayName || story.authorName}
               authorAvatar={author?.avatarUrl || story.authorAvatarUrl}
-              onReadStory={() => chapters.length > 0 && router.push(`/read/${storyId}/${chapters[0].chapterId}`)}
+              onReadStory={(specificChapterId) => {
+                const targetId = specificChapterId || (chapters.length > 0 ? chapters[0].chapterId : null);
+                if (targetId) router.push(`/read/${storyId}/${targetId}`);
+              }}
             />
           </div>
         </div>

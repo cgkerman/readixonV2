@@ -88,6 +88,7 @@ export default function StoryDetailAdminPage() {
   const [highlights, setHighlights] = useState<StoryHighlight[]>([]);
   const [isAddHighlightOpen, setIsAddHighlightOpen] = useState(false);
   const [newHighlightTitle, setNewHighlightTitle] = useState('');
+  const [newHighlightChapterId, setNewHighlightChapterId] = useState<string>('');
   const [newHighlightFile, setNewHighlightFile] = useState<File | null>(null);
   const [newHighlightDuration, setNewHighlightDuration] = useState<number>(0);
   const [newHighlightCoverBlob, setNewHighlightCoverBlob] = useState<Blob | null>(null);
@@ -380,6 +381,7 @@ export default function StoryDetailAdminPage() {
 
       setHighlightUploadProgress(95);
 
+      const selectedChap = chapters.find(c => c.chapterId === newHighlightChapterId);
       const newHighlight: StoryHighlight = {
         id: `hl_${timestamp}`,
         title: newHighlightTitle.trim(),
@@ -387,6 +389,8 @@ export default function StoryDetailAdminPage() {
         coverUrl,
         duration: Math.round(newHighlightDuration * 10) / 10,
         order: highlights.length + 1,
+        chapterId: newHighlightChapterId || undefined,
+        chapterTitle: selectedChap ? (selectedChap.title || `Bölüm ${chapters.indexOf(selectedChap) + 1}`) : undefined,
         createdAt: new Date().toISOString()
       };
 
@@ -401,6 +405,7 @@ export default function StoryDetailAdminPage() {
       setIsAddHighlightOpen(false);
       setNewHighlightFile(null);
       setNewHighlightTitle('');
+      setNewHighlightChapterId('');
       setNewHighlightCoverBlob(null);
       setNewHighlightCoverPreview('');
       setNewHighlightDuration(0);
@@ -1293,7 +1298,7 @@ export default function StoryDetailAdminPage() {
                     className="relative bg-muted/10 border border-border/60 hover:border-border rounded-2xl p-2.5 sm:p-3.5 flex flex-col justify-between transition-all group"
                   >
                     {/* Üst Bilgi: Sıra & Süre */}
-                    <div className="flex items-center justify-between mb-2 gap-1">
+                    <div className="flex items-center justify-between mb-1 gap-1">
                       <div className="flex items-center gap-1.5 min-w-0">
                         <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-card border border-border/60 flex items-center justify-center text-[9px] sm:text-[10px] font-black text-text shrink-0">
                           #{idx + 1}
@@ -1305,6 +1310,21 @@ export default function StoryDetailAdminPage() {
                       <span className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500 font-bold border border-amber-500/30 shrink-0">
                         {h.duration ? `${Math.round(h.duration)} sn` : 'Story'}
                       </span>
+                    </div>
+
+                    {/* İlişkili Bölüm Rozeti */}
+                    <div className="flex items-center gap-1 text-[10px] font-medium truncate mb-2">
+                      {h.chapterTitle ? (
+                        <span className="inline-flex items-center gap-1 text-primary truncate">
+                          <BookOpen size={11} className="shrink-0" />
+                          <span className="truncate">{h.chapterTitle}</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-muted/80 truncate">
+                          <Sparkles size={11} className="shrink-0 text-amber-500/70" />
+                          <span>Genel Tanıtım</span>
+                        </span>
+                      )}
                     </div>
 
                     {/* 9:16 Video / Thumbnail Önizleme Konteyneri */}
@@ -1410,6 +1430,7 @@ export default function StoryDetailAdminPage() {
                 setNewHighlightCoverBlob(null);
                 setNewHighlightCoverPreview('');
                 setNewHighlightTitle('');
+                setNewHighlightChapterId('');
                 if (highlightVideoInputRef.current) highlightVideoInputRef.current.value = '';
               }}
               className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted/20 text-muted transition-colors cursor-pointer"
@@ -1424,7 +1445,7 @@ export default function StoryDetailAdminPage() {
               </Typography>
             </div>
             <p className="text-xs text-muted mb-4 leading-relaxed">
-              Dikey formatlı (9:16) ve en fazla 20 saniyelik tanıtım videonuzu seçin.
+              Dikey formatlı (9:16) ve en fazla 20 saniyelik tanıtım videonuzu seçin. Dilerseniz bu tanıtımı belirli bir bölüme bağlayabilirsiniz.
             </p>
 
             <div className="space-y-4">
@@ -1522,6 +1543,36 @@ export default function StoryDetailAdminPage() {
                 </span>
               </div>
 
+              {/* İlişkili Bölüm Seçimi (Opsiyonel) */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-muted uppercase tracking-wider">
+                    İlişkili Bölüm (Opsiyonel)
+                  </label>
+                  <span className="text-[10px] text-primary font-medium">
+                    Story butonuna basınca bu bölüme yönlendirir
+                  </span>
+                </div>
+                <select
+                  value={newHighlightChapterId}
+                  onChange={(e) => setNewHighlightChapterId(e.target.value)}
+                  disabled={highlightUploading}
+                  className="w-full bg-card border border-border/60 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-text focus:outline-none focus:border-primary cursor-pointer transition-colors"
+                >
+                  <option value="">-- Kitap Başı / Genel Tanıtım (Bölüme Bağlama) --</option>
+                  {chapters.map((chap, i) => (
+                    <option key={chap.chapterId} value={chap.chapterId}>
+                      {chap.title ? `Bölüm ${i + 1}: ${chap.title}` : `Bölüm ${i + 1}`}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-muted mt-1">
+                  {newHighlightChapterId 
+                    ? `Okuyucu bu story'yi izlerken alttaki buton "${chapters.find(c => c.chapterId === newHighlightChapterId)?.title || 'Bu'} Bölümünü Oku" olarak değişecek.` 
+                    : 'Bölüm seçmezseniz buton okuyucunun kaldığı yere veya ilk bölüme yönlendirir.'}
+                </p>
+              </div>
+
               {/* Yükleme İlerlemesi */}
               {highlightUploading && (
                 <div className="space-y-1.5">
@@ -1548,6 +1599,7 @@ export default function StoryDetailAdminPage() {
                     setNewHighlightCoverBlob(null);
                     setNewHighlightCoverPreview('');
                     setNewHighlightTitle('');
+                    setNewHighlightChapterId('');
                     if (highlightVideoInputRef.current) highlightVideoInputRef.current.value = '';
                   }}
                   disabled={highlightUploading}
@@ -1588,7 +1640,15 @@ export default function StoryDetailAdminPage() {
           initialIndex={previewModalIndex}
           storyTitle={title || 'Hikaye Tanıtımı'}
           authorName={story?.authorName || 'Yazar'}
-          authorAvatar={story?.authorAvatarUrl}
+          authorAvatar={story?.coverImage || story?.authorAvatarUrl}
+          onReadStory={(chapterId) => {
+            const targetId = chapterId || (chapters.length > 0 ? chapters[0].chapterId : null);
+            if (targetId) {
+              window.open(`/read/${storyId}/${targetId}`, '_blank');
+            } else {
+              toast.info('Önizleme modu: Henüz bir bölüm bulunmuyor.');
+            }
+          }}
         />
       )}
     </div>
