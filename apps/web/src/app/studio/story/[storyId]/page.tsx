@@ -699,55 +699,67 @@ export default function StoryDetailAdminPage() {
         )}
       </div>
 
-      {/* ── 4. Sekme Barı (Bölümler vs. Kitap Bilgileri vs. Öne Çıkanlar) ── */}
-      <div className="flex items-center gap-2 border-b border-border/60 mb-6 pb-2 overflow-x-auto no-scrollbar w-full flex-nowrap scroll-smooth">
+      {/* ── 4. Sekme Barı: Mobilde 2 Üst + 1 Alt (Story), Masaüstünde 3 Yan Yana ── */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-1.5 sm:p-2 bg-muted/15 border border-border/50 rounded-2xl mb-6 select-none shadow-xs">
+        {/* Sekme 1: Bölümler & Kurgu */}
         <button
           type="button"
           onClick={() => setActiveTab('chapters')}
-          className={`flex items-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer shrink-0 whitespace-nowrap ${
+          className={`col-span-1 flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer text-center ${
             activeTab === 'chapters'
-              ? 'bg-primary text-black shadow-md shadow-primary/20'
+              ? 'bg-primary text-black shadow-md shadow-primary/20 scale-[1.01]'
               : 'text-muted hover:text-text hover:bg-muted/10'
           }`}
         >
-          <BookOpen size={16} />
-          <span>{story?.format === 'webtoon' ? 'Episodlar & Kurgu' : 'Bölümler & Kurgu'}</span>
-          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+          <BookOpen size={16} className="shrink-0" />
+          <span className="leading-tight">
+            {story?.format === 'webtoon' ? 'Episodlar & Kurgu' : 'Bölümler & Kurgu'}
+          </span>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold shrink-0 ${
             activeTab === 'chapters' ? 'bg-black/20 text-black' : 'bg-muted/20 text-muted'
           }`}>
             {chapters.length}
           </span>
         </button>
 
+        {/* Sekme 2: Kitap Bilgileri & Vitrin */}
         <button
           type="button"
           onClick={() => setActiveTab('details')}
-          className={`flex items-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer shrink-0 whitespace-nowrap ${
+          className={`col-span-1 flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer text-center ${
             activeTab === 'details'
-              ? 'bg-primary text-black shadow-md shadow-primary/20'
+              ? 'bg-primary text-black shadow-md shadow-primary/20 scale-[1.01]'
               : 'text-muted hover:text-text hover:bg-muted/10'
           }`}
         >
-          <Settings size={16} />
-          <span>Kitap Bilgileri & Vitrin</span>
+          <Settings size={16} className="shrink-0" />
+          <span className="leading-tight">Kitap Bilgileri & Vitrin</span>
         </button>
 
+        {/* Sekme 3: Öne Çıkanlar (Story / Teaser) - Mobilde Altta Tam Genişlik */}
         <button
           type="button"
           onClick={() => setActiveTab('highlights')}
-          className={`flex items-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer shrink-0 whitespace-nowrap ${
+          className={`col-span-2 md:col-span-1 relative flex items-center justify-center gap-2 py-2.5 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer text-center ${
             activeTab === 'highlights'
-              ? 'bg-primary text-black shadow-md shadow-primary/20'
-              : 'text-muted hover:text-text hover:bg-muted/10'
+              ? 'bg-gradient-to-r from-amber-400 via-primary to-amber-500 text-black shadow-md shadow-amber-500/20 scale-[1.01]'
+              : 'text-muted hover:text-text bg-amber-500/5 hover:bg-amber-500/10 border border-amber-500/20'
           }`}
         >
-          <Sparkles size={16} className={activeTab === 'highlights' ? 'text-black' : 'text-amber-500'} />
-          <span>Öne Çıkanlar <span className="hidden sm:inline">(Story / Teaser)</span></span>
-          {highlights.length > 0 && (
-            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-              activeTab === 'highlights' ? 'bg-black/20 text-black' : 'bg-muted/20 text-muted'
+          <Sparkles size={16} className={`shrink-0 ${activeTab === 'highlights' ? 'text-black' : 'text-amber-500 animate-pulse'}`} />
+          <span>Öne Çıkanlar (Story / Teaser)</span>
+
+          {highlights.length > 0 ? (
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold shrink-0 ${
+              activeTab === 'highlights' ? 'bg-black/20 text-black' : 'bg-primary/20 text-primary'
             }`}>
               {highlights.length}
+            </span>
+          ) : (
+            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold shrink-0 uppercase tracking-wider ${
+              activeTab === 'highlights' ? 'bg-black/20 text-black' : 'bg-amber-500/20 text-amber-500 border border-amber-500/30'
+            }`}>
+              YENİ
             </span>
           )}
         </button>
