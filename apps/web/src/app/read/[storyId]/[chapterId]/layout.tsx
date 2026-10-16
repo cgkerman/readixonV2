@@ -114,6 +114,8 @@ export default async function ChapterLayout({
     ]
   };
 
+  const description = `${story?.title || 'Hikaye'} adlı eserin "${chapterTitle}" bölümünü Readixon'da kesintisiz okuyun.`;
+
   return (
     <>
       {chapterJsonLd && (
@@ -126,6 +128,17 @@ export default async function ChapterLayout({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
+      {/* SSR Semantic SEO Content for Web Crawlers */}
+      {story && (
+        <article className="sr-only" aria-label="Bölüm ve Eser Bilgisi">
+          <h1>{story.title} - {chapterTitle}</h1>
+          <p>{description}</p>
+          <p>
+            Eser: <a href={`https://readixon.com/story/${generateStorySlug(story.title, params.storyId)}`}>{story.title}</a>
+          </p>
+          <p>Readixon&apos;da çevrimiçi ücretsiz oku.</p>
+        </article>
+      )}
       {children}
     </>
   );

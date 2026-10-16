@@ -1,7 +1,6 @@
-
 import { MetadataRoute } from 'next';
-import { collection, getDocs, query, where, limit } from 'firebase/firestore';
-import { db, generateStorySlug, slugify, POPULAR_TAGS } from '@readixon/core';
+import { collection, getDocs, query, limit } from 'firebase/firestore';
+import { db, generateStorySlug, generateUniverseSlug, generateSeriesSlug, slugify, POPULAR_TAGS } from '@readixon/core';
 
 export const revalidate = 3600; // Cache sitemap for 1 hour (ISR)
 
@@ -110,7 +109,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${baseUrl}/about`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
-      priority: 0.8,
+      priority: 0.85,
     },
     {
       url: `${baseUrl}/sitemap`,
@@ -172,23 +171,32 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   const dynamicStoryPages: MetadataRoute.Sitemap = [];
+  const dynamicChapterPages: MetadataRoute.Sitemap = [];
+  const dynamicUniversePages: MetadataRoute.Sitemap = [];
+  const dynamicSeriesPages: MetadataRoute.Sitemap = [];
   const dynamicUserPages: MetadataRoute.Sitemap = [];
   const dynamicNewsPages: MetadataRoute.Sitemap = [];
   const dynamicReviewPages: MetadataRoute.Sitemap = [];
 
+  // 2. Yayınlanmış Hikayeler ve Bölümler
   try {
-    // 2. Yayınlanmış Hikayeler ve Webtoonlar
     const storiesRef = collection(db, 'stories');
-    const storiesQuery = query(
-      storiesRef,
-      where('status', 'in', ['ongoing', 'completed', 'published']),
-      limit(2000)
-    );
+    const storiesQuery = query(storiesRef, limit(2000));
     const storiesSnap = await getDocs(storiesQuery);
+
+    const publicStories: { storyId: string; data: any }[] = [];
 
     storiesSnap.forEach(docSnap => {
       const data = docSnap.data();
       const storyId = docSnap.id;
+
+      // Taslak ve hiç bölümü olmayanları hariç tut; bölümü olan veya ongoing/completed/published olanları ekle
+      const hasChapters = (data.stats?.chapterCount || 0) > 0;
+      const isExplicitDraft = data.status === 'draft' && !hasChapters;
+      const isPrivate = data.visibility === 'private' || data.isArchived === true;
+
+      if (isExplicitDraft || isPrivate) return;
+
       const title = data.title || 'hikaye';
       const slug = generateStorySlug(title, storyId);
       const isWebtoon = data.format === 'webtoon';
@@ -198,15 +206,87 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         url: `${baseUrl}${path}`,
         lastModified: toDate(data.updatedAt || data.createdAt),
         changeFrequency: 'weekly',
-        priority: 0.8,
+        priority: 0.85,
       });
+
+      publicStories.push({ storyId, data });
     });
+
+    // Her hikayenin yayınlanmış bölümlerini sitemap'e dahil et
+    const chapterPromises = publicStories.map(async ({ storyId, data }) => {
+      try {
+        const chaptersRef = collection(db, 'stories', storyId, 'chapters');
+        const chaptersSnap = await getDocs(query(chaptersRef, limit(300)));
+        chaptersSnap.forEach(cSnap => {
+          const cData = cSnap.data();
+          // Taslak olmayan ve yayın tarihi gelmiş bölümler
+          if (!cData.status || cData.status === 'published') {
+            dynamicChapterPages.push({
+              url: `${baseUrl}/read/${storyId}/${cSnap.id}`,
+              lastModified: toDate(cData.publishDate || cData.updatedAt || cData.createdAt || data.updatedAt),
+              changeFrequency: 'weekly',
+              priority: 0.75,
+            });
+          }
+        });
+      } catch (err) {
+        // Alt koleksiyon okuma hatası olursa atla
+      }
+    });
+
+    await Promise.all(chapterPromises);
   } catch (error) {
     console.error('Sitemap stories query error:', error);
   }
 
+  // 3. Kurgusal Evrenler
   try {
-    // 3. Aktif Yazar / Kullanıcı Profilleri
+    const universesRef = collection(db, 'universes');
+    const universesQuery = query(universesRef, limit(500));
+    const universesSnap = await getDocs(universesQuery);
+
+    universesSnap.forEach(docSnap => {
+      const data = docSnap.data();
+      if (data.visibility === 'private') return;
+
+      const title = data.title || 'evren';
+      const slug = generateUniverseSlug(title, docSnap.id);
+
+      dynamicUniversePages.push({
+        url: `${baseUrl}/universe/${slug}`,
+        lastModified: toDate(data.updatedAt || data.createdAt),
+        changeFrequency: 'weekly',
+        priority: 0.8,
+      });
+    });
+  } catch (error) {
+    console.error('Sitemap universes query error:', error);
+  }
+
+  // 4. Kitap Serileri
+  try {
+    const seriesRef = collection(db, 'series');
+    const seriesQuery = query(seriesRef, limit(500));
+    const seriesSnap = await getDocs(seriesQuery);
+
+    seriesSnap.forEach(docSnap => {
+      const data = docSnap.data();
+      const title = data.title || 'seri';
+      const slug = generateSeriesSlug(title, docSnap.id);
+
+      dynamicSeriesPages.push({
+        url: `${baseUrl}/series/${slug}`,
+        lastModified: toDate(data.updatedAt || data.createdAt),
+        changeFrequency: 'weekly',
+        priority: 0.8,
+      });
+    });
+  } catch (error) {
+    console.error('Sitemap series query error:', error);
+  }
+
+  // 5. Aktif Yazar / Kullanıcı Profilleri
+  try {
     const usersRef = collection(db, 'users');
     const usersQuery = query(usersRef, limit(1000));
     const usersSnap = await getDocs(usersQuery);
@@ -226,8 +306,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error('Sitemap users query error:', error);
   }
 
+  // 6. Haberler ve Duyurular
   try {
-    // 4. Haberler ve Duyurular
     const newsRef = collection(db, 'announcements');
     const newsQuery = query(newsRef, limit(200));
     const newsSnap = await getDocs(newsQuery);
@@ -246,8 +326,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error('Sitemap news query error:', error);
   }
 
+  // 7. Editoryal İncelemeler
   try {
-    // 5. Editoryal İncelemeler
     const reviewsRef = collection(db, 'editorialReviews');
     const reviewsQuery = query(reviewsRef, limit(200));
     const reviewsSnap = await getDocs(reviewsQuery);
@@ -269,6 +349,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...staticPages,
     ...categoryPages,
     ...dynamicStoryPages,
+    ...dynamicChapterPages,
+    ...dynamicUniversePages,
+    ...dynamicSeriesPages,
     ...dynamicUserPages,
     ...dynamicNewsPages,
     ...dynamicReviewPages,

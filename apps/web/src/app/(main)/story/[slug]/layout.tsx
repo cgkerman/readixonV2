@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { getStoryById, getUserProfile, extractStoryIdFromSlug } from '@readixon/core';
+import { getStoryById, getUserProfile, getPublishedChapters, extractStoryIdFromSlug, generateStorySlug } from '@readixon/core';
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const storyId = extractStoryIdFromSlug(params.slug);
@@ -14,9 +14,10 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       return { title: 'Hikaye Bulunamadı' };
     }
 
-    const title = story.title;
-    const description = story.summary || `${story.title} hikayesini Readixon'da ücretsiz okuyun. Bölümler, karakterler ve okur yorumları.`;
-    const canonicalUrl = `https://readixon.com/story/${params.slug}`;
+    const title = `${story.title} - Oku | Readixon`;
+    const description = story.summary || `${story.title} hikayesini Readixon'da ücretsiz oku. Bölümler, karakterler, evren detayları ve okur yorumları.`;
+    const canonicalSlug = generateStorySlug(story.title, story.storyId);
+    const canonicalUrl = `https://readixon.com/story/${canonicalSlug}`;
 
     return {
       title,
@@ -53,17 +54,25 @@ export default async function StoryLayout({
   const storyId = extractStoryIdFromSlug(params.slug);
   let story = null;
   let author = null;
+  let chapters: any[] = [];
 
   if (storyId) {
     try {
-      story = await getStoryById(storyId);
+      const [fetchedStory, fetchedChapters] = await Promise.all([
+        getStoryById(storyId),
+        getPublishedChapters(storyId).catch(() => []),
+      ]);
+      story = fetchedStory;
+      chapters = fetchedChapters || [];
       if (story?.authorId) {
-        author = await getUserProfile(story.authorId);
+        author = await getUserProfile(story.authorId).catch(() => null);
       }
     } catch (e) {
       console.error("StoryLayout error fetching details:", e);
     }
   }
+
+  const canonicalSlug = story ? generateStorySlug(story.title, story.storyId) : params.slug;
 
   // 1. Book Schema (Google Rich Snippet)
   const bookJsonLd = story ? {
@@ -71,7 +80,7 @@ export default async function StoryLayout({
     "@type": "Book",
     "name": story.title,
     "description": story.summary || `${story.title} hikayesini Readixon'da okuyun.`,
-    "url": `https://readixon.com/story/${params.slug}`,
+    "url": `https://readixon.com/story/${canonicalSlug}`,
     ...(story.coverImage ? { "image": story.coverImage } : {}),
     "inLanguage": "tr-TR",
     ...(author ? {
@@ -91,6 +100,14 @@ export default async function StoryLayout({
       }
     },
     ...(story.tags && story.tags.length > 0 ? { "genre": story.tags } : {}),
+    ...(chapters && chapters.length > 0 ? {
+      "hasPart": chapters.map((c, idx) => ({
+        "@type": "Chapter",
+        "position": idx + 1,
+        "name": c.title || `Bölüm ${idx + 1}`,
+        "url": `https://readixon.com/read/${story!.storyId}/${c.chapterId}`
+      }))
+    } : {}),
     ...(story.stats?.rating && story.stats.rating > 0 ? {
       "aggregateRating": {
         "@type": "AggregateRating",
@@ -124,7 +141,7 @@ export default async function StoryLayout({
         "@type": "ListItem",
         "position": 3,
         "name": story.title,
-        "item": `https://readixon.com/story/${params.slug}`
+        "item": `https://readixon.com/story/${canonicalSlug}`
       }] : [])
     ]
   };
@@ -141,6 +158,35 @@ export default async function StoryLayout({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
+      {/* SSR Semantic SEO Content for Googlebot & Web Crawlers */}
+      {story && (
+        <article className="sr-only" aria-label="Kitap Bilgileri ve Bölümler">
+          <h1>{story.title}</h1>
+          <p>{story.summary}</p>
+          {author && (
+            <p>
+              Yazar: <a href={`https://readixon.com/profile/@${author.username || ''}`}>{author.displayName || author.username}</a>
+            </p>
+          )}
+          {story.tags && story.tags.length > 0 && (
+            <p>Kategoriler: {story.tags.join(', ')}</p>
+          )}
+          {chapters.length > 0 && (
+            <nav aria-label="Yayınlanmış Bölümler Listesi">
+              <h2>Bölümler</h2>
+              <ul>
+                {chapters.map((c, i) => (
+                  <li key={c.chapterId}>
+                    <a href={`https://readixon.com/read/${story!.storyId}/${c.chapterId}`}>
+                      {c.title || `${i + 1}. Bölüm`}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          )}
+        </article>
+      )}
       {children}
     </>
   );

@@ -45,6 +45,7 @@ import { toast } from "sonner";
 import { AppDownloadBanner } from '@/components/AppDownloadBanner';
 import { UniverseCard } from '@/components/UniverseCard';
 import { SeriesCard } from '@/components/SeriesCard';
+import { SiteFooter } from '@/components/SiteFooter';
 
 // Tür ikonları eşleştirmesi (Tüm kategoriler için özel ikonlar)
 const TAG_ICONS: Record<string, React.ElementType> = {
@@ -1195,6 +1196,9 @@ export default function FeedPage() {
           <AppDownloadBanner />
 
         </div>
+
+      {/* 8. Alt Bilgi (Footer) */}
+      <SiteFooter />
     </div>
   );
 }

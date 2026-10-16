@@ -79,6 +79,14 @@ const jsonLd = {
       "@type": "ImageObject",
       "url": "https://readixon.com/icon.png"
     }
+  },
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": {
+      "@type": "EntryPoint",
+      "urlTemplate": "https://readixon.com/search?q={search_term_string}"
+    },
+    "query-input": "required name=search_term_string"
   }
 };
 
