@@ -19,11 +19,12 @@ import {
   BellRing,
   WifiOff,
   Layers,
-  FileDown
+  FileDown,
+  Monitor
 } from 'lucide-react';
 import { Typography } from '@readixon/ui';
 
-type TabType = 'android' | 'ios' | 'guide';
+type TabType = 'android' | 'ios' | 'desktop' | 'guide';
 
 export function AppDownloadBanner() {
   const [activeTab, setActiveTab] = useState<TabType>('android');
@@ -90,6 +91,23 @@ export function AppDownloadBanner() {
 
               <button
                 type="button"
+                onClick={() => setActiveTab('desktop')}
+                className={`relative flex flex-col items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                  activeTab === 'desktop'
+                    ? 'text-primary bg-primary/10 shadow-sm'
+                    : 'text-muted hover:text-foreground hover:bg-background/60'
+                }`}
+                title="Windows & Mac Masaüstü"
+              >
+                <Monitor size={18} />
+                <span className="text-[11px]">Masaüstü</span>
+                {activeTab === 'desktop' && (
+                  <span className="hidden lg:block absolute -left-3 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-full shadow-[0_0_10px_var(--color-primary)]" />
+                )}
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setActiveTab('guide')}
                 className={`relative flex flex-col items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                   activeTab === 'guide'
@@ -127,18 +145,20 @@ export function AppDownloadBanner() {
             <div className="relative z-10 space-y-3 text-white">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 backdrop-blur-md text-white text-[11px] font-semibold tracking-wide border border-primary/30 w-fit">
                 <Sparkles size={12} className="text-primary animate-pulse" />
-                <span>Readixon Mobil Evreni</span>
+                <span>Readixon Çoklu Platform</span>
               </div>
 
               <h3 className="text-xl sm:text-2xl font-bold leading-tight">
                 {activeTab === 'android' && 'Hikayeler Artık Cebinde!'}
                 {activeTab === 'ios' && 'iPhone İçin Tam Ekran Keyfi'}
+                {activeTab === 'desktop' && 'PC & Mac Masaüstü Gücü'}
                 {activeTab === 'guide' && 'Kolay ve Güvenli Kurulum'}
               </h3>
 
               <p className="text-xs text-white/80 leading-relaxed">
                 {activeTab === 'android' && 'Webtoonlar, romanlar ve yazarların tek tıkla elinin altında.'}
                 {activeTab === 'ios' && 'Safari üzerinden ana ekrana ekleyerek uygulama gibi kullan.'}
+                {activeTab === 'desktop' && 'Tauri 2.0 ile ~12 MB ultra hafif ve hızlı masaüstü çalışma alanı.'}
                 {activeTab === 'guide' && 'Bilinmeyen kaynak iznini açarak saniyeler içinde yükle.'}
               </p>
 
@@ -297,6 +317,86 @@ export function AppDownloadBanner() {
                 <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-xs text-primary font-medium flex items-center gap-2">
                   <Sparkles size={16} />
                   <span>Resmi App Store sürümümüz onay aşamasındadır, yakında yayında!</span>
+                </div>
+              </div>
+            )}
+
+            {/* SEKME: MASAÜSTÜ (WINDOWS & MAC) */}
+            {activeTab === 'desktop' && (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-semibold text-primary uppercase tracking-wider mb-1">
+                    <Monitor size={14} /> Tauri 2.0 Native Motoru
+                  </div>
+                  <Typography variant="h2" className="text-2xl sm:text-3xl font-extrabold text-foreground">
+                    Windows & Mac İçin İndir
+                  </Typography>
+                  <Typography variant="body" className="text-muted text-sm mt-1">
+                    Tarayıcı sekmelerinden bağımsız, sadece ~12 MB boyutunda ultra hafif masaüstü programı ile kesintisiz yazma ve okuma deneyimi.
+                  </Typography>
+                </div>
+
+                {/* Masaüstü Avantajları */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-background/60 border border-border/60 hover:border-primary/40 transition-colors">
+                    <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                      <Zap size={18} />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-foreground">Ultra Hafif & Hızlı</h4>
+                      <p className="text-[11px] text-muted">Sadece ~12 MB, minimum RAM tüketimi</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-background/60 border border-border/60 hover:border-primary/40 transition-colors">
+                    <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                      <Layers size={18} />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-foreground">Canlı Senkronizasyon</h4>
+                      <p className="text-[11px] text-muted">Web güncellemeleri anında masaüstünde</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* İndirme Butonları (Windows & Mac) */}
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  <a
+                    href="https://github.com/cgkerman/readixonV2/releases"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs transition-all shadow-md group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Download size={18} className="shrink-0 group-hover:translate-y-0.5 transition-transform" />
+                      <div className="text-left">
+                        <div className="text-sm font-extrabold leading-tight">Windows İndir</div>
+                        <div className="text-[10px] opacity-80 font-normal">.exe / .msi (64-bit)</div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-mono bg-white/20 px-2 py-0.5 rounded-full">v0.1.0</span>
+                  </a>
+
+                  <a
+                    href="https://github.com/cgkerman/readixonV2/releases"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-card hover:bg-card/80 text-foreground border border-border/80 hover:border-primary/50 font-bold text-xs transition-all shadow-sm group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Apple size={18} className="shrink-0 text-foreground group-hover:scale-105 transition-transform" />
+                      <div className="text-left">
+                        <div className="text-sm font-extrabold leading-tight">Apple Mac İndir</div>
+                        <div className="text-[10px] text-muted font-normal">.dmg (M1-M4 & Intel)</div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-mono bg-primary/10 text-primary px-2 py-0.5 rounded-full">v0.1.0</span>
+                  </a>
+                </div>
+
+                <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-xs text-primary font-medium flex items-center gap-2">
+                  <Sparkles size={16} />
+                  <span>Tauri masaüstü sürümleri GitHub Releases üzerinden güvenle indirilebilir.</span>
                 </div>
               </div>
             )}
