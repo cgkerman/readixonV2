@@ -260,7 +260,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                     const commentCount = paragraphCommentCounts[currentIndex] || 0;
                     
                     return (
-                      <div key={currentIndex} className="relative group pr-9 sm:pr-0">
+                      <div key={currentIndex} className="relative group pr-9 sm:pr-10">
                         <Typography 
                           variant="body" 
                           className={textAlignClass}
@@ -273,18 +273,18 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                         />
                         
                         {onParagraphCommentClick && (
-                          <div className="absolute top-0 right-0 sm:-right-9 flex items-center">
+                          <div className="absolute top-0.5 right-0 flex items-center">
                             <button 
                               type="button"
                               onClick={() => onParagraphCommentClick(currentIndex, rawText)}
                               className={`transition-all flex items-center justify-center active:scale-90 ${
                                 commentCount > 0
-                                  ? 'h-7 px-2.5 rounded-full bg-primary/20 hover:bg-primary/30 text-primary border border-primary/40 shadow-sm gap-1.5 opacity-100'
-                                  : 'w-7 h-7 rounded-full bg-muted/25 hover:bg-primary/20 text-muted-foreground/80 hover:text-primary border border-border/50 opacity-45 sm:opacity-0 group-hover:opacity-100'
+                                  ? 'h-7 px-2.5 rounded-full bg-primary/20 hover:bg-primary/30 text-primary border border-primary/40 shadow-sm gap-1.5 opacity-100 scale-100'
+                                  : 'w-7 h-7 rounded-full bg-muted/20 hover:bg-primary/20 text-muted-foreground/80 hover:text-primary border border-border/50 opacity-40 hover:opacity-100 sm:opacity-25 sm:group-hover:opacity-100'
                               }`}
                               title="Satır arası yorum"
                             >
-                              <MessageSquare size={16} className={commentCount > 0 ? "fill-primary/30" : ""} />
+                              <MessageSquare size={15} className={commentCount > 0 ? "fill-primary/30 text-primary" : ""} />
                               {commentCount > 0 && <span className="text-xs font-extrabold leading-none">{commentCount}</span>}
                             </button>
                           </div>
@@ -300,7 +300,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
             const currentIndex = globalParagraphIndex++;
             const commentCount = paragraphCommentCounts[currentIndex] || 0;
             return (
-              <div key={blockIndex} className="relative group pr-9 sm:pr-0">
+              <div key={blockIndex} className="relative group pr-9 sm:pr-10">
                 <Typography 
                   variant="body" 
                   className={textAlignClass}
@@ -313,18 +313,18 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                 />
                 
                 {onParagraphCommentClick && (
-                  <div className="absolute top-0 right-0 sm:-right-9 flex items-center">
+                  <div className="absolute top-0.5 right-0 flex items-center">
                     <button 
                       type="button"
                       onClick={() => onParagraphCommentClick(currentIndex, block.text || '')}
                       className={`transition-all flex items-center justify-center active:scale-90 ${
                         commentCount > 0
-                          ? 'h-7 px-2.5 rounded-full bg-primary/20 hover:bg-primary/30 text-primary border border-primary/40 shadow-sm gap-1.5 opacity-100'
-                          : 'w-7 h-7 rounded-full bg-muted/25 hover:bg-primary/20 text-muted-foreground/80 hover:text-primary border border-border/50 opacity-45 sm:opacity-0 group-hover:opacity-100'
+                          ? 'h-7 px-2.5 rounded-full bg-primary/20 hover:bg-primary/30 text-primary border border-primary/40 shadow-sm gap-1.5 opacity-100 scale-100'
+                          : 'w-7 h-7 rounded-full bg-muted/20 hover:bg-primary/20 text-muted-foreground/80 hover:text-primary border border-border/50 opacity-40 hover:opacity-100 sm:opacity-25 sm:group-hover:opacity-100'
                       }`}
                       title="Satır arası yorum"
                     >
-                      <MessageSquare size={16} className={commentCount > 0 ? "fill-primary/30" : ""} />
+                      <MessageSquare size={15} className={commentCount > 0 ? "fill-primary/30 text-primary" : ""} />
                       {commentCount > 0 && <span className="text-xs font-extrabold leading-none">{commentCount}</span>}
                     </button>
                   </div>

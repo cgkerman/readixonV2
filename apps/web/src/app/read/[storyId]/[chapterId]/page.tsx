@@ -951,7 +951,7 @@ export default function ReadPage() {
             : `max-w-2xl ${
                 paddingX === 'compact' ? 'px-3 sm:px-4' : paddingX === 'wide' ? 'px-6 sm:px-10' : 'px-4 sm:px-6'
               } pt-[calc(6rem+env(safe-area-inset-top,0px))] sm:pt-[calc(6.5rem+env(safe-area-inset-top,0px))] pb-32`
-        } mx-auto overflow-x-hidden cursor-pointer`}
+        } mx-auto relative cursor-pointer`}
       >
         {/* Bölüm Başlığı & Okuma Süresi Rozeti (Webtoon olmayan romanlar için) */}
         {story?.format !== 'webtoon' && (
