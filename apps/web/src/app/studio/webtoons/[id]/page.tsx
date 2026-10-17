@@ -17,6 +17,7 @@ import {
   type Contributor
 } from '@readixon/core';
 import { uploadFile } from '@readixon/core/src/services/storageService';
+import { GenreSelector } from '@/components/story/GenreSelector';
 import { toast } from "sonner";
 
 export default function WebtoonDetailAdminPage() {
@@ -34,6 +35,8 @@ export default function WebtoonDetailAdminPage() {
   // Form states
   const [title, setTitle] = useState('');
   const [summary, setSummary] = useState('');
+  const [mainGenre, setMainGenre] = useState<string | undefined>(undefined);
+  const [subGenres, setSubGenres] = useState<string[]>([]);
   const [coverImage, setCoverImage] = useState('');
   const [status, setStatus] = useState<StoryStatus>('draft');
   const [contributors, setContributors] = useState<Contributor[]>([]);
@@ -56,6 +59,8 @@ export default function WebtoonDetailAdminPage() {
         setStory(realStory);
         setTitle(realStory.title || '');
         setSummary(realStory.summary || '');
+        setMainGenre(realStory.mainGenre);
+        setSubGenres(realStory.subGenres || []);
         setCoverImage(realStory.coverImage || '');
         setStatus(realStory.status || 'draft');
 
@@ -83,9 +88,13 @@ export default function WebtoonDetailAdminPage() {
     setSaving(true);
     try {
       const validContributors = contributors.filter(c => c.name.trim().length > 0);
+      const combinedTags = Array.from(new Set([mainGenre, ...(subGenres || [])])).filter(Boolean) as string[];
       await updateStory(storyId, {
         title,
         summary,
+        mainGenre,
+        subGenres,
+        tags: combinedTags,
         coverImage,
         status,
         contributors: validContributors
@@ -102,9 +111,13 @@ export default function WebtoonDetailAdminPage() {
     setAutoSaveStatus('saving');
     try {
       const validContributors = contributors.filter(c => c.name.trim().length > 0);
+      const combinedTags = Array.from(new Set([mainGenre, ...(subGenres || [])])).filter(Boolean) as string[];
       await updateStory(storyId, {
         title,
         summary,
+        mainGenre,
+        subGenres,
+        tags: combinedTags,
         coverImage,
         status,
         contributors: validContributors
@@ -130,7 +143,7 @@ export default function WebtoonDetailAdminPage() {
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [title, summary, coverImage, status, contributors, loading, story]);
+  }, [title, summary, mainGenre, subGenres, coverImage, status, contributors, loading, story]);
 
   const handleAddChapter = async () => {
     try {
@@ -292,6 +305,18 @@ export default function WebtoonDetailAdminPage() {
               placeholder="Webtoon Özeti (Genel tanıtım)"
               className="w-full bg-background border border-border/50 rounded-xl p-4 text-text focus:outline-none focus:border-primary resize-y min-h-[120px]"
             />
+
+            {/* Readixon Tür Defteri: 1 Ana Tür + Sınırsız Alt Tür */}
+            <div className="pt-2 border-t border-border/40">
+              <GenreSelector
+                selectedMainGenre={mainGenre}
+                selectedSubGenres={subGenres}
+                onChange={(m, s) => {
+                  setMainGenre(m);
+                  setSubGenres(s);
+                }}
+              />
+            </div>
 
             <div className="flex flex-col gap-3 mt-4">
               <div className="flex items-center justify-between">

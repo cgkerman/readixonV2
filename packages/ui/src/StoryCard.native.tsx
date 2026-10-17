@@ -10,6 +10,7 @@ export interface StoryCardProps {
   views: number;
   likes: number;
   tags: string[];
+  badgeText?: string;
   onPress?: () => void;
   className?: string;
   testID?: string;
@@ -22,6 +23,7 @@ export const StoryCard: React.FC<StoryCardProps> = ({
   views,
   likes,
   tags,
+  badgeText,
   onPress,
   className = '',
   testID,
@@ -68,6 +70,11 @@ export const StoryCard: React.FC<StoryCardProps> = ({
 
       {/* İçerik Alanı */}
       <View className="p-3 gap-1">
+        {badgeText ? (
+          <Typography variant="caption" className="text-primary text-[10px] uppercase font-bold tracking-wider">
+            {badgeText}
+          </Typography>
+        ) : null}
         <Typography variant="body" className="font-semibold text-text" numberOfLines={1}>
           {title}
         </Typography>

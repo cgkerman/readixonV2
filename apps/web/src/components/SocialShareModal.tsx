@@ -755,7 +755,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                     </span>
 
                     {/* Resim veya Çember */}
-                    <div className="w-24 h-24 rounded-2xl bg-card/80 border border-white/20 mx-auto overflow-hidden shadow-lg flex items-center justify-center">
+                    <div className="w-24 h-24 rounded-2xl bg-card/80 border border-border/60 mx-auto overflow-hidden shadow-lg flex items-center justify-center">
                       {selectedCharacter.pngGallery?.transparentPngUrl || selectedCharacter.avatarUrl ? (
                         <img
                           src={selectedCharacter.pngGallery?.transparentPngUrl || selectedCharacter.avatarUrl}
@@ -813,7 +813,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
               </div>
 
               {/* Footer */}
-              <div className="relative z-10 pt-2 border-t border-white/10 text-center">
+              <div className="relative z-10 pt-2 border-t border-border/60 text-center">
                 <span className={`text-[10px] font-black block tracking-wider ${currentTheme.accentText}`}>
                   readixon.com/universe
                 </span>

@@ -22,6 +22,10 @@ import {
   getPublicUniverses,
   getPublicSeries,
   POPULAR_TAGS, 
+  MAIN_GENRES,
+  getMainGenreName,
+  getMainGenreById,
+  type MainGenreItem,
   generateStorySlug, 
   toggleStoryLike, 
   followUser, 
@@ -46,6 +50,7 @@ import { AppDownloadBanner } from '@/components/AppDownloadBanner';
 import { UniverseCard } from '@/components/UniverseCard';
 import { SeriesCard } from '@/components/SeriesCard';
 import { SiteFooter } from '@/components/SiteFooter';
+import { getGenreIcon } from '@/components/story/genreIcons';
 
 // Tür ikonları eşleştirmesi (Tüm kategoriler için özel ikonlar)
 const TAG_ICONS: Record<string, React.ElementType> = {
@@ -310,10 +315,8 @@ export default function FeedPage() {
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [touchMoveX, setTouchMoveX] = useState<number | null>(null);
 
-  // Genel akış için kategoriler (Yetişkin hariç tüm popüler türler)
-  const feedCategories = useMemo(() => {
-    return POPULAR_TAGS.filter(tag => tag.id !== 'adult');
-  }, []);
+  // Genel akış için 30 Ana Tür (Yeni Taksonomi)
+  const feedCategories = MAIN_GENRES;
 
   const handleNextSlide = () => {
     if (slides.length <= 1) return;
@@ -379,6 +382,17 @@ export default function FeedPage() {
     }, 10000); // 10 saniyede bir dön
     return () => clearInterval(interval);
   }, [announcements.length]);
+
+  // Pull-to-refresh listener
+  useEffect(() => {
+    const handlePullRefresh = () => {
+      queryClient.resetQueries({ queryKey: ['stories', 'recent'] });
+      queryClient.resetQueries({ queryKey: ['stories', 'top'] });
+      queryClient.refetchQueries({ type: 'active' });
+    };
+    window.addEventListener('readixon:refresh', handlePullRefresh);
+    return () => window.removeEventListener('readixon:refresh', handlePullRefresh);
+  }, [queryClient]);
 
   const activeSlide = slides[currentSlideIndex] || null;
 
@@ -554,7 +568,7 @@ export default function FeedPage() {
             {/* Sağ: 3D Taşan / Gölgeli Kapak (Sabit Boyutlu Konteynır) */}
             <div className="shrink-0 flex items-center justify-center h-full w-52 lg:w-60">
               <div
-                className={`relative group/cover transform hover:scale-[1.02] transition-transform duration-500 shadow-[0_22px_45px_-10px_rgba(0,0,0,0.45)] border border-white/15 overflow-hidden flex items-center justify-center ${
+                className={`relative group/cover transform hover:scale-[1.02] transition-transform duration-500 shadow-[0_22px_45px_-10px_rgba(0,0,0,0.45)] border border-border/50 overflow-hidden flex items-center justify-center ${
                   activeSlide?.type === 'author'
                     ? 'w-48 h-48 lg:w-52 lg:h-52 rounded-full ring-4 ring-primary/20'
                     : activeSlide?.type === 'announcement'
@@ -604,7 +618,7 @@ export default function FeedPage() {
               {activeSlide?.type === 'author' ? (
                 <div className="relative group cursor-pointer" onClick={activeSlide.primaryAction}>
                   <div className="absolute -inset-2 bg-primary/25 rounded-full blur-xl opacity-75" />
-                  <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full ring-4 ring-primary/40 overflow-hidden shadow-2xl border-2 border-white/20">
+                  <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full ring-4 ring-primary/40 overflow-hidden shadow-2xl border-2 border-primary/40">
                     {activeSlide.image ? (
                       <img
                         key={`img-${activeSlide.id}`}
@@ -620,7 +634,7 @@ export default function FeedPage() {
               ) : activeSlide?.type === 'announcement' ? (
                 <div className="relative group cursor-pointer" onClick={activeSlide.primaryAction}>
                   <div className="absolute -inset-2 bg-primary/20 rounded-2xl blur-xl opacity-60" />
-                  <div className="relative w-44 sm:w-52 h-28 sm:h-32 rounded-2xl overflow-hidden shadow-2xl border border-white/15">
+                  <div className="relative w-44 sm:w-52 h-28 sm:h-32 rounded-2xl overflow-hidden shadow-2xl border border-border/50">
                     {activeSlide.image ? (
                       <img
                         key={`img-${activeSlide.id}`}
@@ -638,7 +652,7 @@ export default function FeedPage() {
                   {/* Kapak arkası renkli ortam ışıması */}
                   <div className="absolute -inset-2 bg-primary/30 rounded-2xl blur-xl opacity-70 transform scale-95" />
                   {/* 3D Hafif Açılı Kitap Kapağı */}
-                  <div className="relative w-[115px] sm:w-[130px] h-[165px] sm:h-[185px] rounded-xl overflow-hidden shadow-[0_18px_35px_-8px_rgba(0,0,0,0.65)] border border-white/20 transform -rotate-1 hover:rotate-0 transition-transform duration-300">
+                  <div className="relative w-[115px] sm:w-[130px] h-[165px] sm:h-[185px] rounded-xl overflow-hidden shadow-[0_18px_35px_-8px_rgba(0,0,0,0.65)] border border-border/50 transform -rotate-1 hover:rotate-0 transition-transform duration-300">
                     {activeSlide?.image ? (
                       <img
                         key={`img-${activeSlide.id}`}
@@ -734,6 +748,7 @@ export default function FeedPage() {
       {/* ── 2. Hızlı Kategori Filtreleri ("Neler Okumak İstersin?" - Geniş Açı) ── */}
       <section className="relative w-full px-4 sm:px-6 md:px-16 mb-8 md:mb-12">
         {/* Başlık ve Gezinme Kontrolleri */}
+        {/* Başlık ve Gezinme Kontrolleri */}
         <div className="flex items-center justify-between mb-3.5 gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-xs shrink-0">
@@ -745,11 +760,11 @@ export default function FeedPage() {
                   Neler Okumak İstersin?
                 </h3>
                 <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-primary/10 text-primary border border-primary/20 shrink-0">
-                  {feedCategories.length} Tür
+                  {MAIN_GENRES.length} Ana Tür
                 </span>
               </div>
               <p className="text-[11px] sm:text-xs text-muted truncate mt-0.5">
-                İlgi alanına uygun türü seç ve hemen keşfet
+                İlgi alanına uygun ana türü seç ve hemen keşfet
               </p>
             </div>
           </div>
@@ -764,24 +779,25 @@ export default function FeedPage() {
           </button>
         </div>
 
-        {/* ── MOBİL GÖRÜNÜM: Kapalıyken 1 Sıra Yatay Kaydırma (Pill Chips), Açıkken Flex Wrap Bulutu (sm:hidden) ── */}
+        {/* ── MOBİL GÖRÜNÜM: Kapalıyken 1 Sıra Yatay Kaydırma (Pill Chips), Açıkken Grid (sm:hidden) ── */}
         <div className="sm:hidden">
           {!isCategoriesExpanded ? (
             <div className="overflow-x-auto pb-1 scrollbar-hide snap-x scroll-smooth -mx-4 px-4">
               <div className="flex items-center gap-2 w-max py-0.5">
-                {feedCategories.map(tag => {
-                  const IconComponent = TAG_ICONS[tag.id] || BookOpen;
+                {MAIN_GENRES.map((genre) => {
+                  const GenreIcon = getGenreIcon(genre.id);
                   return (
                     <button
-                      key={`mob-${tag.id}`}
-                      onClick={() => router.push(`/search?tag=${tag.id}`)}
-                      className="group snap-start h-9 shrink-0 flex items-center gap-2 px-3.5 rounded-full bg-card/85 hover:bg-card border border-border/80 hover:border-primary/50 text-text transition-all duration-200 shadow-2xs active:scale-95 cursor-pointer select-none"
+                      key={`mob-${genre.id}`}
+                      onClick={() => router.push(`/search?genre=${genre.id}`)}
+                      className="group snap-start h-9 shrink-0 flex items-center gap-2 px-3.5 rounded-xl bg-card/85 hover:bg-card border border-border/80 hover:border-primary/50 text-text transition-all duration-200 shadow-2xs active:scale-95 cursor-pointer select-none"
+                      title={genre.description}
                     >
-                      <span className="w-5 h-5 rounded-full bg-primary/10 group-hover:bg-primary text-primary group-hover:text-white flex items-center justify-center transition-colors shrink-0">
-                        <IconComponent size={12} />
+                      <span className="w-5 h-5 rounded-md bg-primary/10 group-hover:bg-primary text-primary group-hover:text-white flex items-center justify-center transition-colors shrink-0">
+                        <GenreIcon size={12} strokeWidth={2} />
                       </span>
                       <span className="text-xs font-semibold text-text group-hover:text-primary transition-colors whitespace-nowrap">
-                        {tag.label}
+                        {genre.name}
                       </span>
                     </button>
                   );
@@ -789,20 +805,21 @@ export default function FeedPage() {
               </div>
             </div>
           ) : (
-            <div className="flex flex-wrap gap-2 py-1">
-              {feedCategories.map(tag => {
-                const IconComponent = TAG_ICONS[tag.id] || BookOpen;
+            <div className="grid grid-cols-2 gap-2 py-1">
+              {MAIN_GENRES.map((genre) => {
+                const GenreIcon = getGenreIcon(genre.id);
                 return (
                   <button
-                    key={`mob-exp-${tag.id}`}
-                    onClick={() => router.push(`/search?tag=${tag.id}`)}
-                    className="group h-9 flex items-center gap-2 px-3.5 rounded-full bg-card/85 hover:bg-card border border-border/80 hover:border-primary/50 text-text transition-all duration-200 shadow-2xs active:scale-95 cursor-pointer select-none"
+                    key={`mob-exp-${genre.id}`}
+                    onClick={() => router.push(`/search?genre=${genre.id}`)}
+                    className="group h-10 flex items-center gap-2.5 px-3 rounded-xl bg-card/85 hover:bg-card border border-border/80 hover:border-primary/50 text-text transition-all duration-200 shadow-2xs active:scale-95 cursor-pointer select-none text-left"
+                    title={genre.description}
                   >
-                    <span className="w-5 h-5 rounded-full bg-primary/10 group-hover:bg-primary text-primary group-hover:text-white flex items-center justify-center transition-colors shrink-0">
-                      <IconComponent size={12} />
+                    <span className="w-6 h-6 rounded-md bg-primary/10 group-hover:bg-primary text-primary group-hover:text-white flex items-center justify-center transition-colors shrink-0">
+                      <GenreIcon size={13} strokeWidth={2} />
                     </span>
-                    <span className="text-xs font-semibold text-text group-hover:text-primary transition-colors whitespace-nowrap">
-                      {tag.label}
+                    <span className="text-xs font-semibold text-text group-hover:text-primary transition-colors truncate flex-1">
+                      {genre.name}
                     </span>
                   </button>
                 );
@@ -813,23 +830,24 @@ export default function FeedPage() {
 
         {/* ── MASAÜSTÜ / TABLET GÖRÜNÜM: İlk Sıra / Genişletilebilir Grid (hidden sm:grid) ── */}
         <div
-          className={`hidden sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-8 gap-2.5 overflow-hidden transition-all duration-500 ease-in-out ${
-            isCategoriesExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-[46px]'
+          className={`hidden sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 overflow-hidden transition-all duration-300 ease-in-out ${
+            isCategoriesExpanded ? 'max-h-[900px] opacity-100' : 'max-h-[46px]'
           }`}
         >
-          {feedCategories.map(tag => {
-            const IconComponent = TAG_ICONS[tag.id] || BookOpen;
+          {MAIN_GENRES.map((genre) => {
+            const GenreIcon = getGenreIcon(genre.id);
             return (
               <button
-                key={`desk-${tag.id}`}
-                onClick={() => router.push(`/search?tag=${tag.id}`)}
-                className="group w-full h-[44px] flex items-center gap-2.5 px-3 rounded-full bg-card/60 hover:bg-card border border-border/70 hover:border-primary/50 text-text transition-all duration-200 shadow-2xs hover:shadow-xs hover:-translate-y-0.5 cursor-pointer text-left shrink-0"
+                key={`desk-${genre.id}`}
+                onClick={() => router.push(`/search?genre=${genre.id}`)}
+                className="group w-full h-[44px] flex items-center gap-2.5 px-3 rounded-xl bg-card/60 hover:bg-card border border-border/70 hover:border-primary/50 text-text transition-all duration-200 shadow-2xs hover:shadow-xs hover:-translate-y-0.5 cursor-pointer text-left shrink-0"
+                title={genre.description}
               >
-                <span className="w-6 h-6 rounded-full bg-primary/10 group-hover:bg-primary text-primary group-hover:text-white flex items-center justify-center transition-colors shrink-0">
-                  <IconComponent size={13} />
+                <span className="w-6 h-6 rounded-md bg-primary/10 group-hover:bg-primary text-primary group-hover:text-white flex items-center justify-center transition-colors shrink-0">
+                  <GenreIcon size={13} strokeWidth={2} />
                 </span>
                 <span className="text-xs lg:text-[13px] font-semibold text-text group-hover:text-primary transition-colors truncate flex-1 min-w-0">
-                  {tag.label}
+                  {genre.name}
                 </span>
               </button>
             );
@@ -844,7 +862,7 @@ export default function FeedPage() {
             className="group inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-card/80 hover:bg-card border border-border/80 hover:border-primary/40 text-muted hover:text-primary transition-all duration-200 shadow-xs hover:shadow text-xs font-semibold cursor-pointer select-none"
             aria-label={isCategoriesExpanded ? "Daha az göster" : "Tüm kategorileri göster"}
           >
-            <span>{isCategoriesExpanded ? 'Daha Az Göster' : `Tüm Kategorileri Gör (${feedCategories.length})`}</span>
+            <span>{isCategoriesExpanded ? 'Daha Az Göster' : `Tüm Ana Türleri Gör (${MAIN_GENRES.length})`}</span>
             <span className={`w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center transition-transform duration-300 ${
               isCategoriesExpanded ? 'rotate-180 bg-primary text-white' : 'group-hover:translate-y-0.5'
             }`}>
@@ -1340,7 +1358,15 @@ function CarouselRow({ title, subtitle, icon, stories, progresses, seeAllHref, s
               chapterCount={story.stats?.chapterCount}
               onPress={() => onStoryClick?.(story)}
               onLikePress={(e) => onLikePress?.(e, story.storyId, !!userProfile?.likedStoryIds?.includes(story.storyId))}
-              badgeText={getBadgeText ? getBadgeText(story) : undefined}
+              badgeText={
+                getBadgeText
+                  ? getBadgeText(story)
+                  : story.mainGenre && getMainGenreById(story.mainGenre)
+                    ? getMainGenreById(story.mainGenre)!.name
+                    : story.tags?.find((t: string) => getMainGenreById(t))
+                      ? getMainGenreById(story.tags.find((t: string) => getMainGenreById(t))!)?.name
+                      : undefined
+              }
             />
           </div>
         ))}
@@ -1442,7 +1468,15 @@ function HorizontalCarouselRow({ title, subtitle, icon, stories, seeAllHref, onS
               likes={story.stats?.likes || 0}
               latestChapterTitle={story.latestChapter?.title}
               latestChapterExcerpt={story.latestChapter?.excerpt}
-              badgeText={getBadgeText ? getBadgeText(story) : undefined}
+              badgeText={
+                getBadgeText
+                  ? getBadgeText(story)
+                  : story.mainGenre && getMainGenreById(story.mainGenre)
+                    ? getMainGenreById(story.mainGenre)!.name
+                    : story.tags?.find((t: string) => getMainGenreById(t))
+                      ? getMainGenreById(story.tags.find((t: string) => getMainGenreById(t))!)?.name
+                      : undefined
+              }
               seriesTitle={story.seriesTitle}
               seriesOrder={story.seriesOrder}
               onPress={() => onStoryClick?.(story)}

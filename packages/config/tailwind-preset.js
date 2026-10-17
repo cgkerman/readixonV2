@@ -1,14 +1,26 @@
+function withOpacity(variableName) {
+  return ({ opacityValue }) => {
+    if (opacityValue !== undefined) {
+      return `color-mix(in srgb, var(${variableName}) calc(${opacityValue} * 100%), transparent)`;
+    }
+    return `var(${variableName})`;
+  };
+}
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: 'var(--color-primary)',
-        background: 'var(--color-background)',
-        card: 'var(--color-card)',
-        border: 'var(--color-border)',
-        text: 'var(--color-text)',
-        muted: 'var(--color-muted)',
+        primary: withOpacity('--color-primary'),
+        background: withOpacity('--color-background'),
+        card: withOpacity('--color-card'),
+        border: withOpacity('--color-border'),
+        text: withOpacity('--color-text'),
+        muted: withOpacity('--color-muted'),
+      },
+      borderColor: {
+        DEFAULT: 'var(--color-border)',
       },
       fontFamily: {
         sans: ['Plus Jakarta Sans', 'sans-serif'],

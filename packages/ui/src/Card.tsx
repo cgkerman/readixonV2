@@ -21,7 +21,7 @@ export const Card: React.FC<CardProps> = ({
   
   const variantClasses = {
     default: 'bg-card border border-border shadow-sm',
-    glass: 'bg-glass backdrop-blur-lg border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.12)]',
+    glass: 'bg-glass backdrop-blur-lg border border-border/50 shadow-[0_8px_32px_rgba(0,0,0,0.12)]',
     interactive: 'bg-card border border-border hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10 cursor-pointer active:scale-[0.98]',
   };
 

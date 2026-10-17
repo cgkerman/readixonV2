@@ -264,7 +264,7 @@ export default function EditorialReviewsPage() {
                     className="absolute -inset-3 bg-gradient-to-tr from-amber-500/25 via-primary/20 to-purple-500/20 blur-2xl rounded-3xl -z-10 opacity-70 group-hover:opacity-100 transition-opacity"
                   />
 
-                  <div className="w-48 sm:w-56 md:w-60 lg:w-64 aspect-[2/3] rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-card border border-white/15 dark:border-white/10 relative">
+                  <div className="w-48 sm:w-56 md:w-60 lg:w-64 aspect-[2/3] rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-card border border-border/60 relative">
                     {spotlightReview.storyCover ? (
                       <img
                         src={spotlightReview.storyCover}

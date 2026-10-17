@@ -254,7 +254,7 @@ export function StoryHighlightsModal({
           isHoldingRef.current = false;
           setIsPaused(false);
         }}
-        className="relative w-full h-[100dvh] sm:h-auto sm:max-h-[92vh] sm:w-[420px] aspect-[9/16] bg-zinc-950 sm:rounded-3xl overflow-hidden shadow-2xl border border-white/10 flex flex-col justify-between"
+        className="relative w-full h-[100dvh] sm:h-auto sm:max-h-[92vh] sm:w-[420px] aspect-[9/16] bg-zinc-950 sm:rounded-3xl overflow-hidden shadow-2xl border border-border/60 flex flex-col justify-between"
       >
         {/* Arka Plan Video */}
         <video
@@ -400,7 +400,7 @@ export function StoryHighlightsModal({
           className="relative z-20 p-4 sm:p-5 pb-6 sm:pb-6 space-y-3 pointer-events-auto"
         >
           {/* Highlight Başlığı / Notu */}
-          <div className="bg-black/50 backdrop-blur-md border border-white/10 rounded-2xl p-3 shadow-lg">
+          <div className="bg-black/50 backdrop-blur-md border border-border/60 rounded-2xl p-3 shadow-lg">
             <div className="flex items-center gap-2 mb-1">
               <Sparkles size={14} className="text-amber-400" />
               <h3 className="font-extrabold text-sm text-white line-clamp-1">
@@ -411,7 +411,7 @@ export function StoryHighlightsModal({
               Dokunarak duraklatabilir, sağa/sola dokunarak diğer tanıtımlara geçebilirsiniz.
             </p>
             {currentHighlight.chapterTitle && (
-              <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-white/10 text-primary">
+              <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-border/60 text-primary">
                 <BookOpen size={12} className="shrink-0" />
                 <span className="text-[11px] font-bold truncate">
                   İlişkili Bölüm: {currentHighlight.chapterTitle}

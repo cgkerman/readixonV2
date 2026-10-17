@@ -150,8 +150,23 @@ interface TimelineItem {
 
 const TIMELINE_DATA: TimelineItem[] = [
   {
-    version: 'v2.2',
+    version: 'v2.3',
     badge: 'En Son Güncelleme',
+    date: '17 Ekim 2026',
+    title: '30 Edebi Ana Tür, Akıllı Tür Keşif Motoru & Organik Koyu Mod',
+    desc: 'Readixon Kurgu & Edebiyat Taksonomisi 30 ana türe ve alt tür ağacına genişletildi. Yazarlar için interaktif Akıllı Tür Keşif Motoru, mobil pull-to-refresh yenileme mekaniği ve platform genelinde sert beyaz çerçevelerden arındırılmış organik koyu mod mimarisi tamamlandı.',
+    highlights: [
+      '30 Edebi Ana Tür & Alt Türler: Keşfet, arama filtreleri ve hikaye stüdyosuna tam entegre zengin taksonomi',
+      'Akıllı Tür Keşif Motoru (Genre Finder): 7 soruyla hikaye atmosferini analiz edip en uygun türleri yüzdelik oranla öneren yazar asistanı',
+      'Eser Kartı Rozet Optimizasyonu: Kitap kapaklarını kapatmayan hover rozetler ve mobil uyumlu kompakt görünüm',
+      'Mobil Pull-to-Refresh: Mobil web ve uygulamada akıcı dokunmatik ekran yenileme ve anlık veri senkronizasyonu',
+      'Organik Koyu Mod Yüzey Mimarisi: Platform genelindeki yapay beyaz tel çerçevelerin kaldırılması ve gözü yormayan derinlikli arduvaz kenarlıklar',
+    ],
+    icon: Sliders,
+  },
+  {
+    version: 'v2.2',
+    badge: 'Hikâye & Mekan Devrimi',
     date: 'Ekim 2026',
     title: 'Story Highlights & Mekan Defteri 2.0',
     desc: 'Yazarların eserlerini Instagram Story tarzı müzikli kesitlerle tanıtmasını sağlayan Story Highlights sistemi, gelişmiş Mekan Defteri 2.0 ve 3D evren kartları yayına alındı.',

@@ -3,9 +3,9 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Typography, Button } from '@readixon/ui';
-import { X, Phone, Mail, MapPin, BarChart2, MoreHorizontal, TrendingUp } from 'lucide-react';
+import { X, Phone, Mail, MapPin, BarChart2, MoreHorizontal, TrendingUp, Users, BadgeCheck } from 'lucide-react';
 import { collection, getDocs, limit, orderBy, query, where, onSnapshot } from 'firebase/firestore';
-import { db, getTopStories, getActiveAdminPoll, voteAdminPoll, AdminPoll, getActiveQuote, AdminQuote, useAuthStore, sanitizeHtml } from '@readixon/core';
+import { db, getTopStories, getActiveAdminPoll, voteAdminPoll, AdminPoll, getActiveQuote, AdminQuote, useAuthStore, sanitizeHtml, getFeaturedAuthors, followUser, unfollowUser, User } from '@readixon/core';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
@@ -14,13 +14,15 @@ export function ReadixSidebar() {
   const [trendingTags, setTrendingTags] = useState<{id: string, count: number}[]>([]);
   const [cultureNews, setCultureNews] = useState<any[]>([]);
   const [popularBooks, setPopularBooks] = useState<any[]>([]);
+  const [featuredAuthors, setFeaturedAuthors] = useState<User[]>([]);
+  const [followLoading, setFollowLoading] = useState<Record<string, boolean>>({});
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<any | null>(null);
   const [adminPoll, setAdminPoll] = useState<AdminPoll | null>(null);
   const [adminQuote, setAdminQuote] = useState<AdminQuote | null>(null);
   const [votingOptionIndex, setVotingOptionIndex] = useState<number | null>(null);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   
-  const { userProfile } = useAuthStore();
+  const { userProfile, firebaseUser, followingIds, toggleFollowingId } = useAuthStore();
 
   useEffect(() => {
     // Realtime listener for Top Tags
@@ -75,6 +77,12 @@ export function ReadixSidebar() {
         const quote = await getActiveQuote();
         setAdminQuote(quote);
 
+        // Fetch Featured Authors
+        const authors = await getFeaturedAuthors(6);
+        if (authors && authors.length > 0) {
+          setFeaturedAuthors(authors);
+        }
+
       } catch (err) {
         console.error("Sidebar data fetch error", err);
       }
@@ -108,6 +116,28 @@ export function ReadixSidebar() {
       toast.error(err.message || 'Oy verirken bir hata oluştu');
     } finally {
       setVotingOptionIndex(null);
+    }
+  };
+
+  const handleToggleFollow = async (targetUserId: string) => {
+    if (!firebaseUser) {
+      toast.error('Takip etmek için giriş yapmalısınız!');
+      return;
+    }
+    const isFollowing = followingIds.includes(targetUserId);
+    toggleFollowingId(targetUserId);
+    setFollowLoading(prev => ({ ...prev, [targetUserId]: true }));
+    try {
+      if (isFollowing) {
+        await unfollowUser(firebaseUser.uid, targetUserId);
+      } else {
+        await followUser(firebaseUser.uid, targetUserId);
+      }
+    } catch (err: any) {
+      toggleFollowingId(targetUserId); // Geri al
+      toast.error('İşlem sırasında bir hata oluştu');
+    } finally {
+      setFollowLoading(prev => ({ ...prev, [targetUserId]: false }));
     }
   };
 
@@ -165,6 +195,84 @@ export function ReadixSidebar() {
             )}
           </div>
         </div>
+
+        {/* Recommended Authors ("Kimi Takip Etmeli?") Widget */}
+        {(() => {
+          const authorsToDisplay = featuredAuthors.filter(a => a.uid !== firebaseUser?.uid).slice(0, 4);
+          if (authorsToDisplay.length === 0) return null;
+
+          return (
+            <div className="bg-card/40 rounded-3xl p-6 border border-border/60 flex flex-col gap-4 shadow-sm backdrop-blur-xl relative overflow-hidden group/authors">
+              <div className="flex items-center justify-between border-b border-border/50 pb-3">
+                <div className="flex items-center gap-2">
+                  <Users size={20} className="text-primary" />
+                  <Typography variant="body" className="font-extrabold text-text tracking-wide text-base">Kimi Takip Etmeli?</Typography>
+                </div>
+                <Link href="/explore/authors" className="text-xs font-semibold text-primary hover:underline">
+                  Tümü
+                </Link>
+              </div>
+
+              <div className="flex flex-col gap-3.5">
+                {authorsToDisplay.map((author) => {
+                  const isFollowing = followingIds.includes(author.uid);
+                  const isLoading = followLoading[author.uid];
+
+                  return (
+                    <div key={author.uid} className="flex items-center justify-between gap-3 group/item">
+                      <Link 
+                        href={`/profile/${author.username}`} 
+                        className="flex items-center gap-3 min-w-0 flex-1 hover:opacity-85 transition-opacity"
+                      >
+                        <div className="w-10 h-10 rounded-full bg-primary/10 overflow-hidden shrink-0 border border-border/60">
+                          {author.avatarUrl ? (
+                            <img src={author.avatarUrl} alt={author.displayName} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center font-bold text-primary text-sm">
+                              {(author.displayName || author.username || 'U')[0].toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="flex flex-col min-w-0">
+                          <div className="flex items-center gap-1">
+                            <span className="font-bold text-text text-sm truncate group-hover/item:text-primary transition-colors">
+                              {author.displayName || author.username}
+                            </span>
+                            {(author.isAuthor || author.isAdmin) && (
+                              <BadgeCheck size={14} className="text-primary fill-primary/20 shrink-0" />
+                            )}
+                          </div>
+                          <span className="text-xs text-muted truncate">
+                            @{author.username}
+                          </span>
+                        </div>
+                      </Link>
+
+                      <button
+                        onClick={() => handleToggleFollow(author.uid)}
+                        disabled={isLoading}
+                        className={`text-xs font-bold px-3 py-1.5 rounded-full transition-all shrink-0 ${
+                          isFollowing 
+                            ? 'border border-border/80 text-text hover:bg-rose-500/10 hover:text-rose-500 hover:border-rose-500/30' 
+                            : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm'
+                        }`}
+                      >
+                        {isLoading ? (
+                          <Loader2 size={12} className="animate-spin" />
+                        ) : isFollowing ? (
+                          'Takipte'
+                        ) : (
+                          'Takip Et'
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Popular Books Widget */}
         {popularBooks.length > 0 && (

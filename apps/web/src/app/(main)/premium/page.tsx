@@ -83,7 +83,7 @@ export default function PremiumPage() {
 
 function FeatureCard({ icon, title, description, gradient }: { icon: React.ReactNode, title: string, description: string, gradient: string }) {
   return (
-    <div className={`flex flex-col p-6 rounded-3xl bg-card border border-white/5 relative overflow-hidden group hover:border-white/10 transition-colors`}>
+    <div className={`flex flex-col p-6 rounded-3xl bg-card border border-border/60 relative overflow-hidden group hover:border-primary/40 transition-colors`}>
       <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
       <div className="mb-4">
         {icon}

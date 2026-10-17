@@ -369,7 +369,7 @@ export function InteractiveRelationshipGraph({
       {/* ── Üst Araç Çubuğu (Toolbar) ── */}
       <div className="absolute top-4 left-4 right-4 z-20 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
         {/* Başlık ve Filtreler */}
-        <div className="bg-slate-900/90 backdrop-blur-md px-3 py-2 rounded-2xl border border-white/10 shadow-lg pointer-events-auto flex items-center gap-3">
+        <div className="bg-slate-900/90 backdrop-blur-md px-3 py-2 rounded-2xl border border-border/60 shadow-lg pointer-events-auto flex items-center gap-3">
           <div className="flex items-center gap-2">
             <Share2 className="w-4 h-4 text-indigo-400" />
             <span className="text-xs font-bold text-white hidden sm:inline">Karakter İlişki Ağı</span>
@@ -381,7 +381,7 @@ export function InteractiveRelationshipGraph({
           <select
             value={selectedTypeFilter}
             onChange={(e) => setSelectedTypeFilter(e.target.value)}
-            className="bg-slate-950 border border-white/15 rounded-xl px-2.5 py-1 text-xs text-white focus:outline-none focus:border-indigo-500"
+            className="bg-slate-950 border border-border/60 rounded-xl px-2.5 py-1 text-xs text-white focus:outline-none focus:border-indigo-500"
           >
             <option value="all">Tüm İlişkiler ({edges.length})</option>
             <option value="dost">Dost & Müttefik</option>
@@ -408,7 +408,7 @@ export function InteractiveRelationshipGraph({
         </div>
 
         {/* Sağ Üst: Zoom & Ekleme Butonları */}
-        <div className="flex items-center gap-2 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 shadow-lg pointer-events-auto">
+        <div className="flex items-center gap-2 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-2xl border border-border/60 shadow-lg pointer-events-auto">
           {isEditable && (
             <button
               type="button"
@@ -457,7 +457,7 @@ export function InteractiveRelationshipGraph({
 
       {/* Alt Sol İpucu */}
       <div className="absolute bottom-4 left-4 z-20 pointer-events-none hidden sm:block">
-        <div className="bg-slate-900/80 backdrop-blur-md border border-white/10 text-slate-400 text-[11px] px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-2">
+        <div className="bg-slate-900/80 backdrop-blur-md border border-border/60 text-slate-400 text-[11px] px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-2">
           <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
           <span>Düğümleri sürükleyebilir, üzerlerine tıklayarak bağlarını öne çıkarabilirsiniz.</span>
         </div>
@@ -698,14 +698,14 @@ export function InteractiveRelationshipGraph({
 
       {/* ── Seçili Düğüm (Karakter) Detay Kartı ── */}
       {selectedNode && (
-        <div className="absolute bottom-4 right-4 max-w-sm w-full bg-slate-900/95 backdrop-blur-xl border border-white/15 rounded-2xl p-4 shadow-2xl z-40 animate-in slide-in-from-bottom-4 duration-200">
+        <div className="absolute bottom-4 right-4 max-w-sm w-full bg-slate-900/95 backdrop-blur-xl border border-border/60 rounded-2xl p-4 shadow-2xl z-40 animate-in slide-in-from-bottom-4 duration-200">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
               {selectedNode.avatarUrl ? (
                 <img
                   src={selectedNode.avatarUrl}
                   alt={selectedNode.name}
-                  className="w-11 h-11 rounded-2xl object-cover border border-white/20 shadow-md"
+                  className="w-11 h-11 rounded-2xl object-cover border border-border/60 shadow-md"
                 />
               ) : (
                 <div className="w-11 h-11 rounded-2xl bg-indigo-600/20 text-indigo-400 font-bold flex items-center justify-center border border-indigo-500/30">
@@ -741,7 +741,7 @@ export function InteractiveRelationshipGraph({
           </div>
 
           {/* İlişkiler Özeti */}
-          <div className="mt-3.5 space-y-2 border-t border-white/10 pt-3">
+          <div className="mt-3.5 space-y-2 border-t border-border/60 pt-3">
             <div className="flex items-center justify-between text-xs text-slate-400">
               <span className="font-semibold text-slate-300">Bağlantıları</span>
               <span>{(selectedNode.relationships || []).length} ilişki</span>
@@ -758,7 +758,7 @@ export function InteractiveRelationshipGraph({
                   return (
                     <div
                       key={i}
-                      className="flex items-center justify-between p-2 rounded-xl bg-slate-950/60 border border-white/5 text-xs"
+                      className="flex items-center justify-between p-2 rounded-xl bg-slate-950/60 border border-border/40 text-xs"
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <span
@@ -808,7 +808,7 @@ export function InteractiveRelationshipGraph({
 
       {/* ── Seçili Kenar (İlişki Bağı) Detay Kartı ── */}
       {selectedEdge && (
-        <div className="absolute bottom-4 right-4 max-w-sm w-full bg-slate-900/95 backdrop-blur-xl border border-white/15 rounded-2xl p-4 shadow-2xl z-40 animate-in slide-in-from-bottom-4 duration-200">
+        <div className="absolute bottom-4 right-4 max-w-sm w-full bg-slate-900/95 backdrop-blur-xl border border-border/60 rounded-2xl p-4 shadow-2xl z-40 animate-in slide-in-from-bottom-4 duration-200">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2">
               <div
@@ -852,7 +852,7 @@ export function InteractiveRelationshipGraph({
           </div>
 
           {selectedEdge.description && (
-            <p className="mt-3 text-xs text-slate-300 leading-relaxed bg-white/5 p-2.5 rounded-xl border border-white/5">
+            <p className="mt-3 text-xs text-slate-300 leading-relaxed bg-white/5 p-2.5 rounded-xl border border-border/40">
               {selectedEdge.description}
             </p>
           )}
@@ -876,8 +876,8 @@ export function InteractiveRelationshipGraph({
       {/* ── İlişki Ekleme Modalı ── */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+          <div className="bg-slate-900 border border-border/60 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-border/60 pb-3">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <Share2 className="w-5 h-5 text-indigo-400" />
                 <span>Karakterler Arası İlişki Kur</span>
@@ -900,7 +900,7 @@ export function InteractiveRelationshipGraph({
                 <select
                   value={modalSourceId}
                   onChange={(e) => setModalSourceId(e.target.value)}
-                  className="w-full bg-slate-950 border border-white/15 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-slate-950 border border-border/60 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
                 >
                   {characters.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -917,7 +917,7 @@ export function InteractiveRelationshipGraph({
                 <select
                   value={modalTargetId}
                   onChange={(e) => setModalTargetId(e.target.value)}
-                  className="w-full bg-slate-950 border border-white/15 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-slate-950 border border-border/60 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
                 >
                   {characters.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -942,7 +942,7 @@ export function InteractiveRelationshipGraph({
                     className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold border text-left transition-all flex items-center gap-1.5 ${
                       modalType === t.value
                         ? 'bg-indigo-600/20 border-indigo-500 text-white'
-                        : 'bg-slate-950 border-white/10 text-slate-400 hover:text-white'
+                        : 'bg-slate-950 border-border/60 text-slate-400 hover:text-white'
                     }`}
                   >
                     <span style={{ backgroundColor: t.color }} className="w-2.5 h-2.5 rounded-full shrink-0" />
@@ -962,18 +962,18 @@ export function InteractiveRelationshipGraph({
                 onChange={(e) => setModalDesc(e.target.value)}
                 placeholder="Örn: Çocukluktan beri ayrılmaz iki dost; ancak mühür olayından sonra araları açıldı..."
                 rows={2}
-                className="w-full bg-slate-950 border border-white/15 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 resize-none"
+                className="w-full bg-slate-950 border border-border/60 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 resize-none"
               />
             </div>
 
             {/* Seçenekler: Karşılıklı mı, Gizli mi, Spoiler mı? */}
-            <div className="bg-slate-950 p-3 rounded-xl border border-white/10 space-y-2.5">
+            <div className="bg-slate-950 p-3 rounded-xl border border-border/60 space-y-2.5">
               <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
                 <input
                   type="checkbox"
                   checked={modalIsReciprocal}
                   onChange={(e) => setModalIsReciprocal(e.target.checked)}
-                  className="rounded text-indigo-600 bg-slate-900 border-white/20"
+                  className="rounded text-indigo-600 bg-slate-900 border-border/60"
                 />
                 <span>Çift Yönlü İlişki (Her iki karakter için de geçerli)</span>
               </label>
@@ -983,7 +983,7 @@ export function InteractiveRelationshipGraph({
                   type="checkbox"
                   checked={modalIsSecret}
                   onChange={(e) => setModalIsSecret(e.target.checked)}
-                  className="rounded text-indigo-600 bg-slate-900 border-white/20"
+                  className="rounded text-indigo-600 bg-slate-900 border-border/60"
                 />
                 <span>Gizli İlişki (Okuyucu tarafında gösterilmez)</span>
               </label>
@@ -998,13 +998,13 @@ export function InteractiveRelationshipGraph({
                   value={modalSpoilerThreshold}
                   onChange={(e) => setModalSpoilerThreshold(e.target.value)}
                   placeholder="İsteğe bağlı, örn: 8"
-                  className="w-full bg-slate-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white"
+                  className="w-full bg-slate-900 border border-border/60 rounded-lg px-2.5 py-1.5 text-xs text-white"
                 />
               </div>
             </div>
 
             {/* Aksiyon Butonları */}
-            <div className="flex justify-end gap-2 pt-2 border-t border-white/10">
+            <div className="flex justify-end gap-2 pt-2 border-t border-border/60">
               <Button
                 variant="secondary"
                 onPress={() => setIsAddModalOpen(false)}

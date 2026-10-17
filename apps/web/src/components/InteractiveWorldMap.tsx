@@ -272,7 +272,7 @@ export function InteractiveWorldMap({
       {/* ── Üst Araç Çubuğu (Toolbar) ── */}
       <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
         {/* Harita Başlığı & Bilgisi */}
-        <div className="bg-slate-900/90 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-lg pointer-events-auto flex items-center gap-3">
+        <div className="bg-slate-900/90 backdrop-blur-md px-4 py-2 rounded-xl border border-border/60 shadow-lg pointer-events-auto flex items-center gap-3">
           <Layers className="w-5 h-5 text-indigo-400 shrink-0" />
           <div>
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
@@ -288,7 +288,7 @@ export function InteractiveWorldMap({
         </div>
 
         {/* Zoom & Görünüm Kontrolleri */}
-        <div className="flex items-center gap-2 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-xl border border-white/10 shadow-lg pointer-events-auto">
+        <div className="flex items-center gap-2 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-xl border border-border/60 shadow-lg pointer-events-auto">
           <button
             type="button"
             onClick={handleZoomIn}
@@ -423,7 +423,7 @@ export function InteractiveWorldMap({
 
                     {/* Tooltip */}
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center pointer-events-none whitespace-nowrap z-50 animate-in fade-in duration-150">
-                      <div className="bg-slate-900/95 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-white/20 shadow-2xl flex items-center gap-1.5">
+                      <div className="bg-slate-900/95 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-border/60 shadow-2xl flex items-center gap-1.5">
                         <span style={{ color: pinColor }}>●</span>
                         <span>{isSpoilerLocked ? 'Gizli Konum' : marker.title}</span>
                         {isSpoilerLocked && (
@@ -432,7 +432,7 @@ export function InteractiveWorldMap({
                           </span>
                         )}
                       </div>
-                      <div className="w-2 h-2 bg-slate-900 rotate-45 -mt-1 border-r border-b border-white/20" />
+                      <div className="w-2 h-2 bg-slate-900 rotate-45 -mt-1 border-r border-b border-border/60" />
                     </div>
                   </div>
                 )}
@@ -444,7 +444,7 @@ export function InteractiveWorldMap({
 
       {/* ── Seçili Marker Mini Kartı / Detay Paneli ── */}
       {activeMarker && (
-        <div className="absolute bottom-4 right-4 max-w-sm w-full bg-slate-900/95 backdrop-blur-xl border border-white/15 rounded-2xl p-4 shadow-2xl z-40 animate-in slide-in-from-bottom-4 duration-200">
+        <div className="absolute bottom-4 right-4 max-w-sm w-full bg-slate-900/95 backdrop-blur-xl border border-border/60 rounded-2xl p-4 shadow-2xl z-40 animate-in slide-in-from-bottom-4 duration-200">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <div
@@ -499,7 +499,7 @@ export function InteractiveWorldMap({
 
           {/* Açıklama */}
           {activeMarker.description && (
-            <p className="mt-3 text-xs text-slate-300 leading-relaxed bg-white/5 p-2.5 rounded-xl border border-white/5">
+            <p className="mt-3 text-xs text-slate-300 leading-relaxed bg-white/5 p-2.5 rounded-xl border border-border/40">
               {activeMarker.description}
             </p>
           )}
@@ -547,8 +547,8 @@ export function InteractiveWorldMap({
       {/* ── Marker Ekleme / Düzenleme Modalı ── */}
       {isMarkerModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-white/10 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+          <div className="bg-slate-900 border border-border/60 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-border/60 pb-3">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-indigo-400" />
                 {editingMarker ? 'İşaretçiyi Düzenle' : 'Haritaya İşaretçi Ekle'}
@@ -572,7 +572,7 @@ export function InteractiveWorldMap({
                 value={formTitle}
                 onChange={(e) => setFormTitle(e.target.value)}
                 placeholder="Örn: Aeryon Başkenti, Kuzey Geçidi"
-                className="w-full bg-slate-950 border border-white/15 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                className="w-full bg-slate-950 border border-border/60 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
               />
             </div>
 
@@ -586,7 +586,7 @@ export function InteractiveWorldMap({
                 onChange={(e) => setFormDesc(e.target.value)}
                 placeholder="Bu bölge veya nokta hakkında kısa bilgi..."
                 rows={2}
-                className="w-full bg-slate-950 border border-white/15 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 resize-none"
+                className="w-full bg-slate-950 border border-border/60 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 resize-none"
               />
             </div>
 
@@ -650,7 +650,7 @@ export function InteractiveWorldMap({
                 <select
                   value={formLocationId}
                   onChange={(e) => setFormLocationId(e.target.value)}
-                  className="w-full bg-slate-950 border border-white/15 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-slate-950 border border-border/60 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
                 >
                   <option value="">Bağlantı Yok</option>
                   {locations.map((loc) => (
@@ -668,7 +668,7 @@ export function InteractiveWorldMap({
                 <select
                   value={formEventId}
                   onChange={(e) => setFormEventId(e.target.value)}
-                  className="w-full bg-slate-950 border border-white/15 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-slate-950 border border-border/60 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
                 >
                   <option value="">Bağlantı Yok</option>
                   {events.map((ev) => (
@@ -681,13 +681,13 @@ export function InteractiveWorldMap({
             </div>
 
             {/* Spoiler & Sis Perdesi (Fog of War) */}
-            <div className="bg-slate-950 p-3.5 rounded-xl border border-white/10 space-y-3">
+            <div className="bg-slate-950 p-3.5 rounded-xl border border-border/60 space-y-3">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={formIsSpoiler}
                   onChange={(e) => setFormIsSpoiler(e.target.checked)}
-                  className="rounded text-indigo-600 focus:ring-indigo-500 bg-slate-900 border-white/20"
+                  className="rounded text-indigo-600 focus:ring-indigo-500 bg-slate-900 border-border/60"
                 />
                 <span className="text-xs font-semibold text-white">Spoiler İçeriyor</span>
               </label>
@@ -704,7 +704,7 @@ export function InteractiveWorldMap({
                       value={formSpoilerThreshold}
                       onChange={(e) => setFormSpoilerThreshold(e.target.value)}
                       placeholder="Örn: 5"
-                      className="w-full bg-slate-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white"
+                      className="w-full bg-slate-900 border border-border/60 rounded-lg px-2.5 py-1.5 text-xs text-white"
                     />
                   </div>
                   <div className="flex items-center pt-4">
@@ -713,7 +713,7 @@ export function InteractiveWorldMap({
                         type="checkbox"
                         checked={formFogOfWar}
                         onChange={(e) => setFormFogOfWar(e.target.checked)}
-                        className="rounded text-indigo-600 bg-slate-900 border-white/20"
+                        className="rounded text-indigo-600 bg-slate-900 border-border/60"
                       />
                       <span>Sis Perdesi (Gizle)</span>
                     </label>
@@ -723,7 +723,7 @@ export function InteractiveWorldMap({
             </div>
 
             {/* Aksiyon Butonları */}
-            <div className="flex justify-end gap-2 pt-2 border-t border-white/10">
+            <div className="flex justify-end gap-2 pt-2 border-t border-border/60">
               <Button
                 variant="secondary"
                 onPress={() => setIsMarkerModalOpen(false)}

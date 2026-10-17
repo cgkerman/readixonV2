@@ -5,8 +5,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { RefreshCw, Check } from 'lucide-react';
 
-const PULL_THRESHOLD = 68; // Yenilemenin tetikleneceği çekme mesafesi (px)
-const MAX_PULL = 96; // Maksimum esneme mesafesi (px)
+const PULL_THRESHOLD = 50; // Yenilemenin tetikleneceği çekme mesafesi (px)
+const MAX_PULL = 82; // Maksimum esneme mesafesi (px)
 
 export function MobilePullToRefresh() {
   const pathname = usePathname();
@@ -20,6 +20,7 @@ export function MobilePullToRefresh() {
 
   const startYRef = useRef<number>(0);
   const startXRef = useRef<number>(0);
+  const pullDistanceRef = useRef<number>(0);
   const isPullingRef = useRef<boolean>(false);
   const isRefreshingRef = useRef<boolean>(false);
   const hasTriggeredHapticRef = useRef<boolean>(false);
@@ -31,25 +32,30 @@ export function MobilePullToRefresh() {
     if (isRefreshingRef.current) return;
     isRefreshingRef.current = true;
     setIsRefreshing(true);
-    setPullDistance(52); // Yenileme sırasında sabit duracağı yükseklik
+    pullDistanceRef.current = 48;
+    setPullDistance(48); // Yenileme sırasında sabit duracağı yükseklik
 
     // Haptik titreşim
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
       try {
-        navigator.vibrate(20);
+        navigator.vibrate(25);
       } catch (e) {}
     }
 
     const startTime = Date.now();
 
     try {
-      // 1. TanStack React Query önbelleğini tazele (aktif verileri yeniden çek)
-      await queryClient.invalidateQueries();
+      // 1. TanStack React Query önbelleğini zorla tazele (tüm aktif verileri ve listeleri yenile)
+      await Promise.allSettled([
+        queryClient.invalidateQueries({ refetchType: 'all' }),
+        queryClient.refetchQueries({ type: 'active' }),
+        queryClient.resetQueries(),
+      ]);
 
       // 2. Next.js App Router sayfa sunucu bileşenlerini tazele
       router.refresh();
 
-      // 3. Özel Readixon yenileme event'i fırlat (sayfalar özel state'lerini tazeleyebilir)
+      // 3. Özel Readixon yenileme event'i fırlat (React Query kullanmayan sayfalar anında yenilensin)
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('readixon:refresh'));
       }
@@ -58,16 +64,17 @@ export function MobilePullToRefresh() {
     } finally {
       // Kullanıcıya tatmin edici bir görsel deneyim için en az 600ms bekle
       const elapsedTime = Date.now() - startTime;
-      const remainingTime = Math.max(0, 650 - elapsedTime);
+      const remainingTime = Math.max(0, 600 - elapsedTime);
 
       setTimeout(() => {
         setIsCompleted(true);
         setTimeout(() => {
           setIsRefreshing(false);
           setIsCompleted(false);
+          pullDistanceRef.current = 0;
           setPullDistance(0);
           isRefreshingRef.current = false;
-        }, 350);
+        }, 300);
       }, remainingTime);
     }
   }, [queryClient, router]);
@@ -75,11 +82,14 @@ export function MobilePullToRefresh() {
   useEffect(() => {
     if (isReaderPage) return;
 
+    const getScrollY = () =>
+      window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+
     const handleTouchStart = (e: TouchEvent) => {
       // Zaten yenileniyorsa, modal açıksa (body overflow hidden) veya sayfa en tepede değilse dinleme
       if (
         isRefreshingRef.current ||
-        window.scrollY > 5 ||
+        getScrollY() > 5 ||
         document.body.style.overflow === 'hidden'
       ) {
         return;
@@ -98,18 +108,21 @@ export function MobilePullToRefresh() {
       startYRef.current = e.touches[0].clientY;
       startXRef.current = e.touches[0].clientX;
       isPullingRef.current = false;
+      pullDistanceRef.current = 0;
       hasTriggeredHapticRef.current = false;
     };
 
     const handleTouchMove = (e: TouchEvent) => {
+      const scrollY = getScrollY();
       if (
         isRefreshingRef.current ||
-        window.scrollY > 5 ||
+        scrollY > 5 ||
         document.body.style.overflow === 'hidden'
       ) {
         if (isPullingRef.current) {
           isPullingRef.current = false;
           setIsPulling(false);
+          pullDistanceRef.current = 0;
           setPullDistance(0);
         }
         return;
@@ -122,7 +135,7 @@ export function MobilePullToRefresh() {
 
       // Yalnızca aşağı doğru ve belirgin dikey kaydırmalarda tetikle (yatay kaydırmayı engelleme)
       if (!isPullingRef.current) {
-        if (diffY > 8 && diffY > Math.abs(diffX) * 1.5 && window.scrollY <= 0) {
+        if (diffY > 6 && diffY > Math.abs(diffX) * 1.2 && scrollY <= 0) {
           isPullingRef.current = true;
           setIsPulling(true);
         } else {
@@ -131,11 +144,12 @@ export function MobilePullToRefresh() {
       }
 
       if (isPullingRef.current && diffY > 0) {
-        // Esneme direnci formülü (diminishing return)
+        // Esneme direnci formülü
         const resistanceDistance = Math.min(
           MAX_PULL,
-          diffY * 0.42
+          diffY * 0.48
         );
+        pullDistanceRef.current = resistanceDistance;
         setPullDistance(resistanceDistance);
 
         // Eşik aşıldığında bir defalık hafif haptik dokunuş
@@ -144,14 +158,14 @@ export function MobilePullToRefresh() {
           if (typeof window !== 'undefined' && 'vibrate' in navigator) {
             try {
               navigator.vibrate(12);
-            } catch (e) {}
+            } catch (err) {}
           }
         } else if (resistanceDistance < PULL_THRESHOLD) {
           hasTriggeredHapticRef.current = false;
         }
 
         // Sayfanın garip zıplamasını önle
-        if (e.cancelable && diffY > 15) {
+        if (e.cancelable && diffY > 10) {
           e.preventDefault();
         }
       }
@@ -162,10 +176,12 @@ export function MobilePullToRefresh() {
       isPullingRef.current = false;
       setIsPulling(false);
 
-      if (pullDistance >= PULL_THRESHOLD && !isRefreshingRef.current) {
+      // Doğrudan ref üzerinden kontrol edilerek React re-render gecikmesi ve race condition önlenir
+      if (pullDistanceRef.current >= PULL_THRESHOLD && !isRefreshingRef.current) {
         handleRefresh();
       } else {
         // Eşik aşılmadıysa tatlıca geri yaylan
+        pullDistanceRef.current = 0;
         setPullDistance(0);
       }
     };
@@ -181,14 +197,14 @@ export function MobilePullToRefresh() {
       window.removeEventListener('touchend', handleTouchEnd);
       window.removeEventListener('touchcancel', handleTouchEnd);
     };
-  }, [isReaderPage, pullDistance, handleRefresh]);
+  }, [isReaderPage, handleRefresh]);
 
   if (isReaderPage) return null;
 
   // Görünürlük ve dönüş açıları
   const isReady = pullDistance >= PULL_THRESHOLD;
   const rotationDegrees = Math.min(360, (pullDistance / PULL_THRESHOLD) * 360);
-  const opacity = Math.min(1, Math.max(0, (pullDistance - 10) / 35));
+  const opacity = Math.min(1, Math.max(0, (pullDistance - 8) / 30));
 
   // Eğer çekilmiyorsa ve yenilenmiyorsa render etme
   if (pullDistance === 0 && !isRefreshing) return null;
@@ -210,7 +226,7 @@ export function MobilePullToRefresh() {
             : isRefreshing
             ? 'bg-card/95 text-primary border-primary/40 shadow-primary/20 scale-100'
             : isReady
-            ? 'bg-primary text-black border-primary shadow-primary/30 scale-105'
+            ? 'bg-primary text-white border-primary shadow-primary/30 scale-105'
             : 'bg-card/90 text-text border-border/70 shadow-black/20'
         }`}
       >

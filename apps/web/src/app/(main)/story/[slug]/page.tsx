@@ -1316,7 +1316,7 @@ export default function StoryDetailPage() {
                 {/* Fragman Videosu */}
                 {story.trailerVideoUrl && (
                   <div className="bg-black/90 rounded-2xl overflow-hidden shadow-md border border-border/50 relative group">
-                    <div className="absolute top-3 left-3 z-10 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 pointer-events-none">
+                    <div className="absolute top-3 left-3 z-10 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-full border border-border/60 pointer-events-none">
                       <Typography variant="caption" className="font-bold text-white flex items-center gap-1.5 uppercase tracking-wider text-[9px]">
                         <Play size={10} className="text-primary fill-current" /> Fragman
                       </Typography>

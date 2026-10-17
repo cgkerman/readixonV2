@@ -746,7 +746,8 @@ export const getSavedStories = async (userId: string): Promise<string[]> => {
 export const searchStories = async (
   searchTerm: string = '', 
   selectedTags: string[] = [],
-  maxLimit: number = 60
+  maxLimit: number = 60,
+  mainGenre?: string
 ): Promise<Story[]> => {
   try {
     const storiesRef = collection(db, 'stories');
@@ -758,10 +759,15 @@ export const searchStories = async (
       limit(maxLimit)
     );
 
-    // Etiket seçildiyse array-contains-any kullan
-    if (selectedTags.length > 0) {
+    // Etiket ve tür filtrelerini birleştir
+    const searchFilterTags = [...selectedTags];
+    if (mainGenre && !searchFilterTags.includes(mainGenre)) {
+      searchFilterTags.unshift(mainGenre);
+    }
+
+    if (searchFilterTags.length > 0) {
       // Firebase array-contains-any en fazla 10 eleman destekler
-      const tagsToSearch = selectedTags.slice(0, 10);
+      const tagsToSearch = searchFilterTags.slice(0, 10);
       q = query(
         storiesRef,
         where('status', 'in', ['ongoing', 'completed']),
@@ -771,7 +777,24 @@ export const searchStories = async (
     }
 
     const querySnapshot = await getDocs(q);
-    const stories: Story[] = await enrichStories(querySnapshot.docs);
+    let stories: Story[] = await enrichStories(querySnapshot.docs);
+
+    // Ana tür filtresi varsa kesin eşleşme kontrolü
+    if (mainGenre) {
+      stories = stories.filter(story => 
+        story.mainGenre === mainGenre || 
+        story.tags?.includes(mainGenre)
+      );
+    }
+
+    // Seçilen alt türler / etiketler varsa filtrele
+    if (selectedTags.length > 0) {
+      stories = stories.filter(story => 
+        selectedTags.some(tag => 
+          story.subGenres?.includes(tag) || story.tags?.includes(tag)
+        )
+      );
+    }
 
     // Metin araması varsa lokal olarak filtrele
     const term = searchTerm.trim().toLowerCase();

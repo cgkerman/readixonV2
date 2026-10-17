@@ -7,13 +7,16 @@ import {
   Sparkles, TrendingUp, ChevronRight, ChevronDown, GalleryVertical, Wand2, Rocket, Swords,
   Heart, RotateCcw, Cpu, Flame, Zap, Eye, Ghost, ShieldAlert, Smile, Feather,
   Theater, Laugh, Moon, Skull, Brain, PenTool, Hourglass, GraduationCap,
-  Coffee, Crown, Fingerprint, FileText
+  Coffee, Crown, Fingerprint, FileText, Check
 } from 'lucide-react';
 import { Typography, Button, StoryCard, AuthorCard } from '@readixon/ui';
 import {
   searchStories, searchUsers, POPULAR_TAGS, generateStorySlug,
-  followUser, unfollowUser, toggleStoryLike, useAuthStore, type Story, type User
+  followUser, unfollowUser, toggleStoryLike, useAuthStore,
+  MAIN_GENRES, getMainGenreById, getMainGenreName,
+  type Story, type User, type MainGenreItem
 } from '@readixon/core';
+import { getGenreIcon } from '@/components/story/genreIcons';
 import { toast } from "sonner";
 
 // Tür ikonları eşleştirmesi
@@ -53,19 +56,27 @@ const TAG_ICONS: Record<string, React.ElementType> = {
   'adult': Flame,
 };
 
-// Hızlı keşif için önerilen öne çıkan türler
-const FEATURED_EXPLORE_TAGS = [
-  'webtoon', 'fantasy', 'isekai', 'system',
-  'action', 'romance', 'sci-fi', 'mystery'
+// Hızlı keşif için önerilen öne çıkan ana türler
+const FEATURED_EXPLORE_GENRES = [
+  'fantastik',
+  'macera-fantastigi-ve-oyunlasmis-kurgu',
+  'dogu-ve-asya-kurgu',
+  'romantik',
+  'bilim-kurgu',
+  'aksiyon-ve-macera',
+  'gizem-ve-polisiye',
+  'korku',
 ];
 
 function SearchContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const urlTag = searchParams.get('tag');
+  const urlGenre = searchParams.get('genre') || searchParams.get('tag');
+  const urlSub = searchParams.get('sub');
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTag, setSelectedTag] = useState<string | null>(urlTag);
+  const [selectedGenre, setSelectedGenre] = useState<string | null>(urlGenre);
+  const [selectedSubGenre, setSelectedSubGenre] = useState<string | null>(urlSub);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<Story[]>([]);
   const [userResults, setUserResults] = useState<User[]>([]);
@@ -93,11 +104,13 @@ function SearchContent() {
     }
   };
 
-  // URL parametresi değiştiğinde etiketi senkronize et
+  // URL parametresi değiştiğinde tür ve alt türü senkronize et
   useEffect(() => {
-    const tag = searchParams.get('tag');
-    if (tag) {
-      setSelectedTag(tag);
+    const g = searchParams.get('genre') || searchParams.get('tag');
+    const s = searchParams.get('sub');
+    if (g || s) {
+      if (g) setSelectedGenre(g);
+      if (s) setSelectedSubGenre(s);
       setSearchType('stories');
     }
   }, [searchParams]);
@@ -105,8 +118,8 @@ function SearchContent() {
   // Debounced Arama
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      if (searchTerm.trim() || selectedTag) {
-        performSearch(searchTerm, selectedTag, searchType);
+      if (searchTerm.trim() || selectedGenre || selectedSubGenre) {
+        performSearch(searchTerm, selectedGenre, selectedSubGenre, searchType);
       } else {
         setResults([]);
         setUserResults([]);
@@ -115,15 +128,20 @@ function SearchContent() {
     }, 400);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchTerm, selectedTag, searchType]);
+  }, [searchTerm, selectedGenre, selectedSubGenre, searchType]);
 
-  const performSearch = async (term: string, tag: string | null, type: 'stories' | 'users') => {
+  const performSearch = async (
+    term: string, 
+    genre: string | null, 
+    sub: string | null, 
+    type: 'stories' | 'users'
+  ) => {
     setLoading(true);
     setHasSearched(true);
     try {
       if (type === 'stories') {
-        const tagsToSearch = tag ? [tag] : [];
-        const stories = await searchStories(term, tagsToSearch);
+        const tagsToSearch = sub ? [sub] : (genre ? [genre] : []);
+        const stories = await searchStories(term, tagsToSearch, 60, genre || undefined);
         setResults(stories);
         setUserResults([]);
       } else {
@@ -140,34 +158,57 @@ function SearchContent() {
     }
   };
 
-  const handleTagToggle = (tagId: string) => {
-    if (selectedTag === tagId) {
-      setSelectedTag(null);
+  // Pull-to-refresh listener
+  useEffect(() => {
+    const handlePullRefresh = () => {
+      if (searchTerm.trim() || selectedGenre || selectedSubGenre) {
+        performSearch(searchTerm, selectedGenre, selectedSubGenre, searchType);
+      }
+    };
+    window.addEventListener('readixon:refresh', handlePullRefresh);
+    return () => window.removeEventListener('readixon:refresh', handlePullRefresh);
+  }, [searchTerm, selectedGenre, selectedSubGenre, searchType]);
+
+  const handleGenreToggle = (genreId: string) => {
+    if (selectedGenre === genreId) {
+      setSelectedGenre(null);
+      setSelectedSubGenre(null);
     } else {
-      setSelectedTag(tagId);
+      setSelectedGenre(genreId);
+      setSelectedSubGenre(null);
       if (searchType !== 'stories') {
         setSearchType('stories');
       }
     }
   };
 
+  const handleSubGenreToggle = (subId: string) => {
+    if (selectedSubGenre === subId) {
+      setSelectedSubGenre(null);
+    } else {
+      setSelectedSubGenre(subId);
+    }
+  };
+
   const handleClearAll = () => {
     setSearchTerm('');
-    setSelectedTag(null);
+    setSelectedGenre(null);
+    setSelectedSubGenre(null);
     setHasSearched(false);
     setResults([]);
     setUserResults([]);
   };
 
-  // Seçili etiketin insan tarafından okunur etiketi
-  const activeTagObj = useMemo(() => {
-    return POPULAR_TAGS.find(t => t.id === selectedTag);
-  }, [selectedTag]);
+  // Seçili Ana Tür Nesnesi
+  const activeMainGenre = useMemo(() => {
+    return getMainGenreById(selectedGenre);
+  }, [selectedGenre]);
 
-  // Filtreler (Yetişkin hariç)
-  const displayTags = useMemo(() => {
-    return POPULAR_TAGS.filter(t => t.id !== 'adult');
-  }, []);
+  // Seçili Alt Tür Nesnesi
+  const activeSubGenreObj = useMemo(() => {
+    if (!activeMainGenre || !selectedSubGenre) return undefined;
+    return activeMainGenre.subGenres.find((s) => s.id === selectedSubGenre);
+  }, [activeMainGenre, selectedSubGenre]);
 
   const renderContent = () => {
     // 1. Yükleniyor Durumu
@@ -222,25 +263,27 @@ function SearchContent() {
 
           {/* Hızlı Keşif Kartları Grid */}
           <div className="w-full max-w-4xl grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {FEATURED_EXPLORE_TAGS.map(tagId => {
-              const tag = POPULAR_TAGS.find(t => t.id === tagId);
-              if (!tag) return null;
-              const IconComp = TAG_ICONS[tag.id] || Sparkles;
+            {FEATURED_EXPLORE_GENRES.map((genreId) => {
+              const genre = getMainGenreById(genreId);
+              if (!genre) return null;
               return (
                 <button
-                  key={tag.id}
-                  onClick={() => handleTagToggle(tag.id)}
-                  className="group flex items-center gap-3 p-3.5 rounded-2xl bg-card/60 hover:bg-card border border-border/80 hover:border-primary/50 text-text transition-all duration-200 shadow-sm hover:shadow hover:-translate-y-0.5 text-left cursor-pointer"
+                  key={genre.id}
+                  onClick={() => handleGenreToggle(genre.id)}
+                  className="group flex items-center gap-3 p-3 rounded-xl bg-card/60 hover:bg-card border border-border/80 hover:border-primary/50 text-text transition-all duration-200 shadow-xs hover:shadow hover:-translate-y-0.5 text-left cursor-pointer"
                 >
-                  <span className="w-9 h-9 rounded-xl bg-primary/10 group-hover:bg-primary text-primary group-hover:text-primary-foreground flex items-center justify-center transition-colors shrink-0">
-                    <IconComp size={18} />
+                  <span className="w-8 h-8 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white flex items-center justify-center transition-colors shrink-0">
+                    {(() => {
+                      const FeatIcon = getGenreIcon(genre.id);
+                      return <FeatIcon size={15} strokeWidth={2} />;
+                    })()}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <span className="block text-xs md:text-sm font-bold text-text group-hover:text-primary transition-colors truncate">
-                      {tag.label}
+                    <span className="block text-xs md:text-sm font-semibold text-text group-hover:text-primary transition-colors truncate">
+                      {genre.name}
                     </span>
                     <span className="block text-[11px] text-muted truncate">
-                      Hemen Keşfet
+                      {genre.subGenres.length} alt tür
                     </span>
                   </div>
                   <ChevronRight size={14} className="text-muted group-hover:text-primary transition-colors shrink-0" />
@@ -257,16 +300,32 @@ function SearchContent() {
       return (
         <div className="mt-8">
           <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5 flex-wrap">
               <span className="text-base md:text-lg font-bold text-text">
                 {results.length} Eser Bulundu
               </span>
-              {activeTagObj && (
+              {activeMainGenre && (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-primary/15 text-primary border border-primary/25">
-                  <span>Tür: {activeTagObj.label}</span>
+                  {(() => {
+                    const ActiveIcon = getGenreIcon(activeMainGenre.id);
+                    return <ActiveIcon size={12} strokeWidth={2} className="shrink-0" />;
+                  })()}
+                  <span>{activeMainGenre.name}</span>
+                  {activeSubGenreObj && (
+                    <>
+                      <span className="opacity-40">/</span>
+                      <span>{activeSubGenreObj.name}</span>
+                    </>
+                  )}
                   <button
-                    onClick={() => setSelectedTag(null)}
-                    className="hover:opacity-75 transition-opacity"
+                    onClick={() => {
+                      if (selectedSubGenre) {
+                        setSelectedSubGenre(null);
+                      } else {
+                        setSelectedGenre(null);
+                      }
+                    }}
+                    className="hover:opacity-75 transition-opacity cursor-pointer ml-0.5"
                     aria-label="Filtreyi kaldır"
                   >
                     <X size={13} />
@@ -277,7 +336,7 @@ function SearchContent() {
 
             <button
               onClick={handleClearAll}
-              className="text-xs font-semibold text-muted hover:text-primary transition-colors"
+              className="text-xs font-semibold text-muted hover:text-primary transition-colors cursor-pointer"
             >
               Aramayı Sıfırla
             </button>
@@ -295,6 +354,15 @@ function SearchContent() {
                   views={story.stats?.views || 0}
                   likes={story.stats?.likes || 0}
                   tags={story.tags || []}
+                  badgeText={
+                    story.mainGenre && getMainGenreById(story.mainGenre)
+                      ? getMainGenreById(story.mainGenre)!.name
+                      : story.tags?.find((t) => getMainGenreById(t))
+                        ? getMainGenreById(story.tags.find((t) => getMainGenreById(t))!)?.name
+                        : selectedGenre && getMainGenreById(selectedGenre)
+                          ? getMainGenreById(selectedGenre)!.name
+                          : undefined
+                  }
                   isLiked={!!userProfile?.likedStoryIds?.includes(story.storyId)}
                   isWebtoon={story.format === 'webtoon'}
                   status={story.status}
@@ -442,7 +510,7 @@ function SearchContent() {
         </div>
       </div>
 
-      {/* ── 2. Kategori Çipleri (Feed Sayfasıyla Birebir Eşit Box Düzeni) ── */}
+      {/* ── 2. Kategori Çipleri (Readixon Tür Defteri: 30 Ana Tür & Alt Türler) ── */}
       {searchType === 'stories' && (
         <section className="relative w-full mb-10">
           {/* Başlık ve Gezinme Kontrolleri */}
@@ -457,18 +525,18 @@ function SearchContent() {
                     Neler Okumak İstersin?
                   </Typography>
                   <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-primary/10 text-primary border border-primary/20">
-                    {displayTags.length} Tür
+                    {MAIN_GENRES.length} Ana Tür
                   </span>
                 </div>
                 <Typography variant="caption" className="text-xs text-muted">
-                  İlgi alanına uygun türü seç, sonuçları anında filtrele
+                  İlgi alanına uygun ana türü seç, dilersen alt türlerle aramanı derinleştir
                 </Typography>
               </div>
             </div>
 
-            {selectedTag && (
+            {(selectedGenre || selectedSubGenre) && (
               <button
-                onClick={() => setSelectedTag(null)}
+                onClick={handleClearAll}
                 className="text-xs md:text-sm font-semibold text-primary hover:underline flex items-center gap-1.5 transition-all mr-1 cursor-pointer"
               >
                 <span>Filtreyi Temizle</span>
@@ -477,37 +545,32 @@ function SearchContent() {
             )}
           </div>
 
-          {/* ── MOBİL GÖRÜNÜM: Kapalıyken 1 Sıra Yatay Kaydırma, Açıkken Tümünü Gösteren Grid (sm:hidden) ── */}
+          {/* ── MOBİL GÖRÜNÜM: Kapalıyken 1 Sıra Yatay Kaydırma, Açıkken Grid (sm:hidden) ── */}
           <div className="sm:hidden">
             {!isCategoriesExpanded ? (
               <div className="overflow-x-auto pb-1 scrollbar-hide snap-x scroll-smooth -mx-6 px-6">
                 <div className="flex items-center gap-2 w-max py-1">
-                  {displayTags.map(tag => {
-                    const IconComponent = TAG_ICONS[tag.id] || BookOpen;
-                    const isSelected = selectedTag === tag.id;
+                  {MAIN_GENRES.map((genre) => {
+                    const isSelected = selectedGenre === genre.id;
+                    const GenreIcon = getGenreIcon(genre.id);
                     return (
                       <button
-                        key={`mob-${tag.id}`}
-                        onClick={() => handleTagToggle(tag.id)}
-                        className={`group snap-start w-[148px] h-[50px] shrink-0 flex items-center gap-2.5 px-3 rounded-2xl border transition-all duration-200 shadow-sm cursor-pointer select-none text-left ${
+                        key={`mob-${genre.id}`}
+                        onClick={() => handleGenreToggle(genre.id)}
+                        className={`group snap-start h-9 shrink-0 flex items-center gap-2 px-3 rounded-xl border transition-all duration-200 text-left cursor-pointer select-none ${
                           isSelected
-                            ? 'bg-primary text-white border-primary shadow-md shadow-primary/25'
+                            ? 'bg-primary text-white border-primary shadow-xs'
                             : 'bg-card/75 hover:bg-card border-border/80 hover:border-primary/50 text-text'
                         }`}
+                        title={genre.description}
                       >
-                        <span className={`w-7 h-7 rounded-xl flex items-center justify-center transition-colors shrink-0 ${
-                          isSelected
-                            ? 'bg-white/20 text-white'
-                            : 'bg-primary/10 group-hover:bg-primary text-primary group-hover:text-white'
-                        }`}>
-                          <IconComponent size={14} />
-                        </span>
-                        <span className={`text-xs truncate flex-1 min-w-0 ${
-                          isSelected
-                            ? 'font-bold text-white'
-                            : 'font-semibold text-text group-hover:text-primary transition-colors'
-                        }`}>
-                          {tag.label}
+                        <GenreIcon
+                          size={13}
+                          strokeWidth={isSelected ? 2.2 : 1.8}
+                          className={isSelected ? 'text-white' : 'text-primary/80'}
+                        />
+                        <span className="text-xs font-medium whitespace-nowrap">
+                          {genre.name}
                         </span>
                       </button>
                     );
@@ -516,32 +579,29 @@ function SearchContent() {
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-2 py-1">
-                {displayTags.map(tag => {
-                  const IconComponent = TAG_ICONS[tag.id] || BookOpen;
-                  const isSelected = selectedTag === tag.id;
+                {MAIN_GENRES.map((genre) => {
+                  const isSelected = selectedGenre === genre.id;
+                  const GenreIcon = getGenreIcon(genre.id);
                   return (
                     <button
-                      key={`mob-exp-${tag.id}`}
-                      onClick={() => handleTagToggle(tag.id)}
-                      className={`group w-full h-[50px] flex items-center gap-2.5 px-3 rounded-2xl border transition-all duration-200 shadow-sm cursor-pointer select-none text-left ${
+                      key={`mob-exp-${genre.id}`}
+                      onClick={() => handleGenreToggle(genre.id)}
+                      className={`group w-full h-10 flex items-center gap-2 px-2.5 rounded-xl border transition-all duration-200 text-left cursor-pointer select-none ${
                         isSelected
-                          ? 'bg-primary text-white border-primary shadow-md shadow-primary/25'
+                          ? 'bg-primary text-white border-primary shadow-xs'
                           : 'bg-card/75 hover:bg-card border-border/80 hover:border-primary/50 text-text'
                       }`}
+                      title={genre.description}
                     >
-                      <span className={`w-7 h-7 rounded-xl flex items-center justify-center transition-colors shrink-0 ${
-                        isSelected
-                          ? 'bg-white/20 text-white'
-                          : 'bg-primary/10 group-hover:bg-primary text-primary group-hover:text-white'
+                      <span className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-colors ${
+                        isSelected ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'
                       }`}>
-                        <IconComponent size={14} />
+                        <GenreIcon size={12} strokeWidth={2} />
                       </span>
-                      <span className={`text-xs truncate flex-1 min-w-0 ${
-                        isSelected
-                          ? 'font-bold text-white'
-                          : 'font-semibold text-text group-hover:text-primary transition-colors'
+                      <span className={`text-xs truncate block flex-1 ${
+                        isSelected ? 'font-bold text-white' : 'font-medium text-text'
                       }`}>
-                        {tag.label}
+                        {genre.name}
                       </span>
                     </button>
                   );
@@ -552,36 +612,33 @@ function SearchContent() {
 
           {/* ── MASAÜSTÜ / TABLET GÖRÜNÜM: İlk Sıra / Genişletilebilir Grid (hidden sm:grid) ── */}
           <div
-            className={`hidden sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-8 gap-3 overflow-hidden transition-all duration-500 ease-in-out ${
-              isCategoriesExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-[52px]'
+            className={`hidden sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 overflow-hidden transition-all duration-300 ease-in-out ${
+              isCategoriesExpanded ? 'max-h-[900px] opacity-100' : 'max-h-[44px]'
             }`}
           >
-            {displayTags.map(tag => {
-              const IconComponent = TAG_ICONS[tag.id] || BookOpen;
-              const isSelected = selectedTag === tag.id;
+            {MAIN_GENRES.map((genre) => {
+              const isSelected = selectedGenre === genre.id;
+              const GenreIcon = getGenreIcon(genre.id);
               return (
                 <button
-                  key={`desk-${tag.id}`}
-                  onClick={() => handleTagToggle(tag.id)}
-                  className={`group w-full h-[52px] flex items-center gap-2.5 px-3 rounded-2xl border transition-all duration-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 cursor-pointer text-left shrink-0 ${
+                  key={`desk-${genre.id}`}
+                  onClick={() => handleGenreToggle(genre.id)}
+                  className={`group w-full h-10 flex items-center gap-2.5 px-3 rounded-xl border transition-all duration-200 text-left shrink-0 cursor-pointer ${
                     isSelected
-                      ? 'bg-primary text-white border-primary shadow-md shadow-primary/25 scale-[1.02]'
-                      : 'bg-card/60 hover:bg-card border-border/70 hover:border-primary/50 text-text'
+                      ? 'bg-primary text-white border-primary shadow-xs scale-[1.01]'
+                      : 'bg-card/60 hover:bg-card border-border/70 hover:border-primary/40 text-text'
                   }`}
+                  title={genre.description}
                 >
-                  <span className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors shrink-0 ${
-                    isSelected
-                      ? 'bg-white/20 text-white'
-                      : 'bg-primary/10 group-hover:bg-primary text-primary group-hover:text-white'
+                  <span className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 transition-colors ${
+                    isSelected ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white'
                   }`}>
-                    <IconComponent size={15} />
+                    <GenreIcon size={13} strokeWidth={2} />
                   </span>
-                  <span className={`text-xs lg:text-[13px] truncate flex-1 min-w-0 ${
-                    isSelected
-                      ? 'font-bold text-white'
-                      : 'font-semibold text-text group-hover:text-primary transition-colors'
+                  <span className={`text-xs truncate flex-1 ${
+                    isSelected ? 'font-bold text-white' : 'font-medium text-text group-hover:text-primary transition-colors'
                   }`}>
-                    {tag.label}
+                    {genre.name}
                   </span>
                 </button>
               );
@@ -593,10 +650,10 @@ function SearchContent() {
             <button
               type="button"
               onClick={() => setIsCategoriesExpanded(!isCategoriesExpanded)}
-              className="group inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-card/80 hover:bg-card border border-border/80 hover:border-primary/40 text-muted hover:text-primary transition-all duration-200 shadow-sm hover:shadow text-xs font-semibold cursor-pointer select-none"
+              className="group inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-card/80 hover:bg-card border border-border/80 hover:border-primary/40 text-muted hover:text-primary transition-all duration-200 shadow-xs text-xs font-semibold cursor-pointer select-none"
               aria-label={isCategoriesExpanded ? "Daha az göster" : "Tüm kategorileri göster"}
             >
-              <span>{isCategoriesExpanded ? 'Daha Az Göster' : `Tüm Kategorileri Göster (${displayTags.length})`}</span>
+              <span>{isCategoriesExpanded ? 'Daha Az Göster' : `Tüm Ana Türleri Göster (${MAIN_GENRES.length})`}</span>
               <span className={`w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center transition-transform duration-300 ${
                 isCategoriesExpanded ? 'rotate-180 bg-primary text-white' : 'group-hover:translate-y-0.5'
               }`}>
@@ -604,6 +661,66 @@ function SearchContent() {
               </span>
             </button>
           </div>
+
+          {/* ── 2.B. Seçili Ana Türün Alt Türleri (Subgenres Filter Strip) ── */}
+          {activeMainGenre && (
+            <div className="mt-5 p-4 sm:p-5 rounded-2xl bg-card/90 border border-primary/30 shadow-md backdrop-blur-md space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/40 pb-2.5">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    {(() => {
+                      const ActiveIcon = getGenreIcon(activeMainGenre.id);
+                      return <ActiveIcon size={16} strokeWidth={2} />;
+                    })()}
+                  </span>
+                  <div>
+                    <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <span>{activeMainGenre.name} Alt Türleri</span>
+                      <span className="text-[11px] font-medium text-muted bg-muted/20 px-2 py-0.5 rounded-md">
+                        {activeMainGenre.subGenres.length} adet
+                      </span>
+                    </h4>
+                    <p className="text-[11px] text-muted line-clamp-1 mt-0.5">
+                      {activeMainGenre.description}
+                    </p>
+                  </div>
+                </div>
+
+                {selectedSubGenre && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSubGenre(null)}
+                    className="text-xs font-semibold text-primary hover:underline cursor-pointer self-start sm:self-center shrink-0"
+                  >
+                    Alt Tür Filtresini Kaldır
+                  </button>
+                )}
+              </div>
+
+              {/* Alt Tür Hapları */}
+              <div className="flex flex-wrap gap-1.5 sm:gap-2 max-h-44 overflow-y-auto pr-1">
+                {activeMainGenre.subGenres.map((sub) => {
+                  const isSubSelected = selectedSubGenre === sub.id;
+                  return (
+                    <button
+                      key={sub.id}
+                      type="button"
+                      onClick={() => handleSubGenreToggle(sub.id)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                        isSubSelected
+                          ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/30 scale-[1.02]'
+                          : 'bg-muted/15 hover:bg-muted/30 border border-border/50 text-foreground hover:border-primary/40'
+                      }`}
+                      title={sub.description}
+                    >
+                      {isSubSelected && <Check size={12} className="stroke-[3]" />}
+                      <span>{sub.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </section>
       )}
 

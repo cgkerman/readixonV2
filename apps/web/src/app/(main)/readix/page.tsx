@@ -287,6 +287,13 @@ function ReadixContent() {
 
   useEffect(() => {
     fetchFeed();
+
+    const handlePullRefresh = () => {
+      fetchFeed();
+      getActiveQuote().then(setDailyQuote).catch(console.error);
+    };
+    window.addEventListener('readixon:refresh', handlePullRefresh);
+    return () => window.removeEventListener('readixon:refresh', handlePullRefresh);
   }, [activeTab, firebaseUser]);
 
   const fetchFeed = async () => {
@@ -300,7 +307,7 @@ function ReadixContent() {
       } else if (activeTab === 'trending') {
         response = await getTrendingReadixes(20, undefined, userProfile?.blockedUsers);
       } else if (activeTab === 'webtoon') {
-        response = { readixes: [], lastDoc: null, hasMore: false };
+        response = await getReadixesByTag('webtoon', 20, undefined, userProfile?.blockedUsers);
       } else {
         response = await getForYouReadixes(20, undefined, userProfile?.blockedUsers);
       }
@@ -338,7 +345,7 @@ function ReadixContent() {
       } else if (activeTab === 'trending') {
         response = await getTrendingReadixes(20, lastDoc, userProfile?.blockedUsers);
       } else if (activeTab === 'webtoon') {
-        response = { readixes: [], lastDoc: null, hasMore: false };
+        response = await getReadixesByTag('webtoon', 20, lastDoc, userProfile?.blockedUsers);
       } else {
         response = await getForYouReadixes(20, lastDoc, userProfile?.blockedUsers);
       }
@@ -581,7 +588,7 @@ function ReadixContent() {
     <div className="flex-1 flex flex-col md:flex-row max-w-5xl mx-auto w-full p-0 md:p-6 lg:p-10">
       
       {/* Main Feed Column */}
-      <div className="flex-1 min-w-0 md:border-r border-white/10 md:pr-10 min-h-screen">
+      <div className="flex-1 min-w-0 md:border-r border-border/60 md:pr-10 min-h-screen">
         
         {/* Header & Tabs */}
         <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md pb-0 pt-6 px-4 md:px-0 border-b border-border mb-6">
@@ -707,7 +714,7 @@ function ReadixContent() {
               {previewUrls.length > 0 && (
                 <div className="relative mb-4 rounded-xl overflow-x-auto flex gap-2 pb-2 snap-x">
                   {previewUrls.map((url, idx) => (
-                    <div key={idx} className="relative flex-shrink-0 w-48 h-48 rounded-xl overflow-hidden border border-white/10 snap-center">
+                    <div key={idx} className="relative flex-shrink-0 w-48 h-48 rounded-xl overflow-hidden border border-border/60 snap-center">
                       <img src={url} alt={`Preview ${idx}`} className="w-full h-full object-cover bg-black/50" />
                       <button 
                         onClick={() => {
@@ -972,29 +979,6 @@ function ReadixContent() {
                       </div>
                     )}
 
-                    {/* Editörün Seçimi (Placeholder Interstitial) */}
-                    {index === 3 && activeTab !== 'hashtag' && (
-                      <div className="relative group/section opacity-80 mt-2 mb-4">
-                        <div className="flex items-center justify-between mb-4">
-                          <div>
-                            <div className="flex items-center gap-3">
-                              <Award className="text-primary" size={24} />
-                              <Typography variant="h2" className="text-xl font-bold flex items-center gap-2">
-                                Editörün Seçimi
-                                <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ml-1">Yakında</span>
-                              </Typography>
-                            </div>
-                            <Typography variant="body" className="text-muted text-sm mt-1">Editörlerimiz tarafından özenle seçilmiş ve mutlaka okumanız gereken başyapıtlar.</Typography>
-                          </div>
-                        </div>
-                        <div className="h-32 border-2 border-dashed border-border/40 rounded-2xl flex flex-col items-center justify-center bg-card/10 gap-2">
-                          <Typography variant="body" className="text-muted font-medium flex items-center gap-2">
-                            <Sparkles size={16} />
-                            Burası yakında çok şenlenecek!
-                          </Typography>
-                        </div>
-                      </div>
-                    )}
                   </React.Fragment>
                 );
               })}

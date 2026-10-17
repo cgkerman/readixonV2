@@ -21,7 +21,8 @@ import {
   Check,
   PenTool
 } from 'lucide-react';
-import { subscribeToAuthorStories, createStory, useAuthStore, POPULAR_TAGS, syncStoryChapterCount, type Story } from '@readixon/core';
+import { subscribeToAuthorStories, createStory, useAuthStore, syncStoryChapterCount, type Story } from '@readixon/core';
+import { GenreSelector } from '@/components/story/GenreSelector';
 import { toast } from "sonner";
 
 export default function StudioDashboard() {
@@ -36,8 +37,8 @@ export default function StudioDashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPaywallOpen, setIsPaywallOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
-  const [newTags, setNewTags] = useState<string[]>([]);
-  const [tagSearch, setTagSearch] = useState('');
+  const [newMainGenre, setNewMainGenre] = useState<string | undefined>(undefined);
+  const [newSubGenres, setNewSubGenres] = useState<string[]>([]);
   const [isAdultContent, setIsAdultContent] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [creationMode, setCreationMode] = useState<'wizard' | 'classic'>('wizard');
@@ -105,22 +106,6 @@ export default function StudioDashboard() {
     });
   }, [stories, filterStatus, searchQuery]);
 
-  const toggleTag = (tagId: string) => {
-    setNewTags(prev => 
-      prev.includes(tagId) ? prev.filter(t => t !== tagId) : [...prev, tagId]
-    );
-  };
-
-  const availableTags = useMemo(() => {
-    return POPULAR_TAGS.filter(t => t.id !== 'webtoon' && t.id !== 'adult');
-  }, []);
-
-  const filteredTags = useMemo(() => {
-    if (!tagSearch.trim()) return availableTags;
-    const q = tagSearch.toLowerCase().trim();
-    return availableTags.filter(t => t.label.toLowerCase().includes(q));
-  }, [availableTags, tagSearch]);
-
   const handleCreateNew = async (useWizard: boolean) => {
     if (!firebaseUser) {
       toast.error("Lütfen önce giriş yapın.");
@@ -129,6 +114,11 @@ export default function StudioDashboard() {
 
     if (!newTitle.trim()) {
       toast.error("Lütfen hikayenize bir isim/başlık verin.");
+      return;
+    }
+
+    if (!newMainGenre) {
+      toast.error("Lütfen hikayeniz için 1 Ana Tür seçin.");
       return;
     }
     
@@ -144,11 +134,14 @@ export default function StudioDashboard() {
 
     setIsCreating(true);
     try {
+      const combinedTags = Array.from(new Set([newMainGenre, ...newSubGenres]));
       const newStoryId = await createStory(firebaseUser.uid, {
         title: newTitle.trim(),
         summary: '',
         coverImage: '',
-        tags: newTags,
+        mainGenre: newMainGenre,
+        subGenres: newSubGenres,
+        tags: combinedTags,
         isAdultContent,
         status: 'draft'
       });
@@ -164,8 +157,8 @@ export default function StudioDashboard() {
 
       setIsModalOpen(false);
       setNewTitle('');
-      setNewTags([]);
-      setTagSearch('');
+      setNewMainGenre(undefined);
+      setNewSubGenres([]);
       
       if (useWizard) {
         router.push(`/studio/story/${newStoryId}/planner`);
@@ -675,99 +668,15 @@ export default function StudioDashboard() {
                 />
               </div>
               
-              {/* Türler / Kategoriler (Yapılandırılmış, Aranabilir & Seçim Hapları) */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-muted uppercase tracking-wider">
-                    Türler / Kategoriler
-                  </label>
-                  <span className={`text-xs font-semibold ${newTags.length >= 3 ? 'text-amber-400' : 'text-muted'}`}>
-                    {newTags.length}/3 seçildi
-                  </span>
-                </div>
-
-                {/* Seçilen Türler Çipleri */}
-                {newTags.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-1.5 p-2 rounded-xl bg-primary/10 border border-primary/20">
-                    <span className="text-[11px] font-medium text-muted mr-1">Seçilenler:</span>
-                    {newTags.map(tagId => {
-                      const tag = POPULAR_TAGS.find(t => t.id === tagId);
-                      if (!tag) return null;
-                      return (
-                        <span
-                          key={tag.id}
-                          className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary text-black shadow-xs animate-in zoom-in-95 duration-150"
-                        >
-                          {tag.label}
-                          <button
-                            type="button"
-                            onClick={() => toggleTag(tag.id)}
-                            className="hover:bg-black/20 rounded-full p-0.5 transition-colors cursor-pointer"
-                            aria-label={`${tag.label} kaldır`}
-                          >
-                            <X size={12} strokeWidth={2.5} />
-                          </button>
-                        </span>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Arama ve Düzenli Grid Kutusu */}
-                <div className="rounded-xl border border-border/70 bg-card/50 overflow-hidden shadow-inner">
-                  {/* Mini Tür Arama */}
-                  <div className="relative border-b border-border/40 p-2 bg-muted/10">
-                    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
-                    <input
-                      type="text"
-                      placeholder="Tür ara (örn: Fantastik, Gerilim, Bilim Kurgu)..."
-                      value={tagSearch}
-                      onChange={(e) => setTagSearch(e.target.value)}
-                      className="w-full bg-transparent pl-7 pr-7 py-0.5 text-xs text-text placeholder:text-muted focus:outline-none"
-                    />
-                    {tagSearch && (
-                      <button
-                        type="button"
-                        onClick={() => setTagSearch('')}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-text cursor-pointer"
-                      >
-                        <X size={12} />
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Kaydırılabilir Düzenli Grid */}
-                  <div className="max-h-36 overflow-y-auto p-2 scrollbar-thin">
-                    {filteredTags.length === 0 ? (
-                      <div className="py-4 text-center text-xs text-muted">
-                        Aradığınız tür bulunamadı.
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                        {filteredTags.map(tag => {
-                          const isSelected = newTags.includes(tag.id);
-                          return (
-                            <button
-                              key={tag.id}
-                              type="button"
-                              onClick={() => toggleTag(tag.id)}
-                              disabled={!isSelected && newTags.length >= 3}
-                              className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all text-left border cursor-pointer ${
-                                isSelected 
-                                  ? 'border-primary bg-primary/20 text-primary font-semibold shadow-xs' 
-                                  : 'border-border/40 bg-card/60 text-muted hover:text-text hover:border-border hover:bg-muted/10 disabled:opacity-30 disabled:cursor-not-allowed'
-                              }`}
-                            >
-                              <span className="truncate">{tag.label}</span>
-                              {isSelected && <Check size={12} className="shrink-0 text-primary ml-1" />}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+              {/* Readixon Tür Defteri: 1 Ana Tür + Sınırsız Alt Tür */}
+              <GenreSelector
+                selectedMainGenre={newMainGenre}
+                selectedSubGenres={newSubGenres}
+                onChange={(main, subs) => {
+                  setNewMainGenre(main);
+                  setNewSubGenres(subs);
+                }}
+              />
 
               {/* +18 Yetişkin İçerik */}
               <div 

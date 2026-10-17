@@ -188,6 +188,10 @@ export interface Story {
   updatedAt: Timestamp;
   format?: 'novel' | 'webtoon';
 
+  // Readixon Tür Defteri (1 Ana Tür + Sınırsız Alt Tür)
+  mainGenre?: string;
+  subGenres?: string[];
+
   // Evren & Seri Entegrasyonu (Geriye dönük uyumlu / Opsiyonel)
   universeId?: string;
   universeTitle?: string;

@@ -326,7 +326,7 @@ export default function WebtoonDetailPage() {
         <div className="absolute top-4 md:top-8 left-4 md:left-8 z-50 flex pointer-events-none">
           <button 
             onClick={() => router.push('/feed')}
-            className="pointer-events-auto p-2.5 md:p-3 rounded-full bg-black/30 hover:bg-black/50 backdrop-blur-md border border-white/20 text-white transition-all shadow-lg"
+            className="pointer-events-auto p-2.5 md:p-3 rounded-full bg-black/30 hover:bg-black/50 backdrop-blur-md border border-border/60 text-white transition-all shadow-lg"
           >
             <ArrowLeft size={24} />
           </button>

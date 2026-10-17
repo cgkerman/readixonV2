@@ -1,0 +1,73 @@
+import React from 'react';
+import {
+  Sparkles,
+  Orbit,
+  Heart,
+  Search,
+  Zap,
+  Ghost,
+  Compass,
+  Landmark,
+  Theater,
+  Feather,
+  Brain,
+  BookMarked,
+  Smile,
+  Moon,
+  ShieldAlert,
+  Crown,
+  Scroll,
+  Coffee,
+  Crosshair,
+  Sun,
+  Trophy,
+  BookOpen,
+  PenTool,
+  Layers,
+  Scale,
+  Key,
+  Flame,
+  PawPrint,
+  Skull,
+  Gamepad2,
+  Book
+} from 'lucide-react';
+
+export const GENRE_ICONS: Record<string, React.ElementType> = {
+  'fantastik': Sparkles,
+  'bilim-kurgu': Orbit,
+  'romantik': Heart,
+  'gizem-ve-polisiye': Search,
+  'gerilim': Zap,
+  'korku': Ghost,
+  'aksiyon-ve-macera': Compass,
+  'tarihi-kurgu': Landmark,
+  'dram': Theater,
+  'edebi-kurgu': Feather,
+  'psikolojik-kurgu': Brain,
+  'genc-kurgu': BookMarked,
+  'komedi-ve-mizah': Smile,
+  'paranormal-ve-dogaustu': Moon,
+  'distopya-ve-spekulatif-kurgu': ShieldAlert,
+  'mitolojik-kurgu': Crown,
+  'dogu-ve-asya-kurgu': Scroll,
+  'gunluk-yasam': Coffee,
+  'savas-ve-askeri-kurgu': Crosshair,
+  'western': Sun,
+  'spor-kurgusu': Trophy,
+  'cocuk-ve-orta-yas-grubu-kurgu': BookOpen,
+  'siir': PenTool,
+  'deneysel-ve-hibrit-kurgu': Layers,
+  'toplumsal-ve-politik-kurgu': Scale,
+  'gizli-tarih-ve-akademik-kurgu': Key,
+  'manevi-ve-metafizik-kurgu': Flame,
+  'hayvan-kurgusu': PawPrint,
+  'karanlik-kurgu': Skull,
+  'macera-fantastigi-ve-oyunlasmis-kurgu': Gamepad2,
+};
+
+export function getGenreIcon(genreId?: string | null): React.ElementType {
+  if (!genreId) return Book;
+  return GENRE_ICONS[genreId] || Book;
+}
+

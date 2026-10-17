@@ -55,6 +55,7 @@ import {
 } from '@readixon/core';
 import { uploadFile } from '@readixon/core/src/services/storageService';
 import { StoryHighlightsModal } from '@/components/story/StoryHighlightsModal';
+import { GenreSelector } from '@/components/story/GenreSelector';
 import { toast } from "sonner";
 
 export default function StoryDetailAdminPage() {
@@ -76,6 +77,8 @@ export default function StoryDetailAdminPage() {
   // Form states
   const [title, setTitle] = useState('');
   const [summary, setSummary] = useState('');
+  const [mainGenre, setMainGenre] = useState<string | undefined>(undefined);
+  const [subGenres, setSubGenres] = useState<string[]>([]);
   const [coverImage, setCoverImage] = useState('');
   const [status, setStatus] = useState<StoryStatus>('draft');
   const [foreword, setForeword] = useState('');
@@ -128,6 +131,8 @@ export default function StoryDetailAdminPage() {
         setStory(realStory);
         setTitle(realStory.title || '');
         setSummary(realStory.summary || '');
+        setMainGenre(realStory.mainGenre);
+        setSubGenres(realStory.subGenres || []);
         setCoverImage(realStory.coverImage || '');
         setStatus(realStory.status || 'draft');
         setForeword(realStory.foreword || '');
@@ -196,9 +201,13 @@ export default function StoryDetailAdminPage() {
       }
 
       const validContributors = contributors.filter(c => c.name.trim().length > 0);
+      const combinedTags = Array.from(new Set([mainGenre, ...(subGenres || [])])).filter(Boolean) as string[];
       await updateStory(storyId, {
         title,
         summary,
+        mainGenre,
+        subGenres,
+        tags: combinedTags,
         coverImage,
         status,
         foreword,
@@ -220,9 +229,13 @@ export default function StoryDetailAdminPage() {
     setAutoSaveStatus('saving');
     try {
       const validContributors = contributors.filter(c => c.name.trim().length > 0);
+      const combinedTags = Array.from(new Set([mainGenre, ...(subGenres || [])])).filter(Boolean) as string[];
       await updateStory(storyId, {
         title,
         summary,
+        mainGenre,
+        subGenres,
+        tags: combinedTags,
         coverImage,
         status,
         foreword,
@@ -252,7 +265,7 @@ export default function StoryDetailAdminPage() {
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [title, summary, coverImage, status, foreword, backCover, contributors, trailerVideoUrl, highlights, loading, story]);
+  }, [title, summary, mainGenre, subGenres, coverImage, status, foreword, backCover, contributors, trailerVideoUrl, highlights, loading, story]);
 
   // ── Öne Çıkanlar (Story / Dikey Teaser) Metotları ──
   const handleSelectHighlightVideo = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1176,6 +1189,18 @@ export default function StoryDetailAdminPage() {
                     onChange={(e) => setSummary(e.target.value)}
                     placeholder="Hikaye Özeti (Kitabın okurlara hitap eden genel tanıtımı)"
                     className="w-full bg-muted/5 border border-border/60 rounded-xl p-3.5 text-xs sm:text-sm text-text focus:outline-none focus:border-primary resize-y min-h-[120px]"
+                  />
+                </div>
+
+                {/* Readixon Tür Defteri: 1 Ana Tür + Sınırsız Alt Tür */}
+                <div className="pt-2 border-t border-border/40">
+                  <GenreSelector
+                    selectedMainGenre={mainGenre}
+                    selectedSubGenres={subGenres}
+                    onChange={(m, s) => {
+                      setMainGenre(m);
+                      setSubGenres(s);
+                    }}
                   />
                 </div>
 

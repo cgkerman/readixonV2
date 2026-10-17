@@ -165,6 +165,12 @@ export default function LibraryPage() {
     };
     
     fetchLibraryData();
+
+    const handlePullRefresh = () => {
+      fetchLibraryData();
+    };
+    window.addEventListener('readixon:refresh', handlePullRefresh);
+    return () => window.removeEventListener('readixon:refresh', handlePullRefresh);
   }, [firebaseUser, activeTab]);
 
   if (!firebaseUser) {

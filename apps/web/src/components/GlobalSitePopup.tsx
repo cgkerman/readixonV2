@@ -103,7 +103,7 @@ export default function GlobalSitePopup() {
         {/* Close (X) Button */}
         <button
           onClick={handleClose}
-          className="absolute top-3.5 right-3.5 z-30 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black/60 hover:bg-black/90 backdrop-blur-md text-white flex items-center justify-center border border-white/20 transition-all hover:scale-105 active:scale-95 shadow-xl cursor-pointer"
+          className="absolute top-3.5 right-3.5 z-30 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black/60 hover:bg-black/90 backdrop-blur-md text-white flex items-center justify-center border border-border/60 transition-all hover:scale-105 active:scale-95 shadow-xl cursor-pointer"
           aria-label="Kapat"
         >
           <X size={18} />

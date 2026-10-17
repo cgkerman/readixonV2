@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Typography, Button, Input } from '@readixon/ui';
 import { ArrowLeft, X, GalleryVertical } from 'lucide-react';
-import { createStory, useAuthStore, POPULAR_TAGS } from '@readixon/core';
+import { createStory, useAuthStore } from '@readixon/core';
+import { GenreSelector } from '@/components/story/GenreSelector';
 import { toast } from "sonner";
 import Link from 'next/link';
 
@@ -12,26 +13,37 @@ export default function CreateWebtoonPage() {
   const router = useRouter();
   const { firebaseUser } = useAuthStore();
   const [newTitle, setNewTitle] = useState('');
-  const [newTags, setNewTags] = useState<string[]>([]);
+  const [mainGenre, setMainGenre] = useState<string | undefined>(undefined);
+  const [subGenres, setSubGenres] = useState<string[]>([]);
   const [isAdultContent, setIsAdultContent] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
-  const toggleTag = (tagId: string) => {
-    setNewTags(prev => 
-      prev.includes(tagId) ? prev.filter(t => t !== tagId) : [...prev, tagId]
-    );
-  };
-
   const handleCreate = async () => {
-    if (!firebaseUser || !newTitle.trim()) return;
+    if (!firebaseUser) {
+      toast.error("Lütfen önce giriş yapın.");
+      return;
+    }
+
+    if (!newTitle.trim()) {
+      toast.error("Lütfen serinize bir başlık verin.");
+      return;
+    }
+
+    if (!mainGenre) {
+      toast.error("Lütfen webtoon seriniz için 1 Ana Tür seçin.");
+      return;
+    }
 
     setIsCreating(true);
     try {
+      const combinedTags = Array.from(new Set([mainGenre, ...subGenres]));
       const newStoryId = await createStory(firebaseUser.uid, {
         title: newTitle.trim(),
         summary: '',
         coverImage: '',
-        tags: newTags,
+        mainGenre,
+        subGenres,
+        tags: combinedTags,
         isAdultContent,
         status: 'draft',
         format: 'webtoon' // Explicitly set format as webtoon
@@ -76,27 +88,16 @@ export default function CreateWebtoonPage() {
             />
           </div>
 
-          <div>
-            <Typography variant="body" className="font-medium text-text ml-1 mb-3">Kategoriler (En fazla 3 adet)</Typography>
-            <div className="flex flex-wrap gap-2">
-              {POPULAR_TAGS.map(tag => {
-                const isSelected = newTags.includes(tag.id);
-                return (
-                  <button
-                    key={tag.id}
-                    onClick={() => toggleTag(tag.id)}
-                    disabled={!isSelected && newTags.length >= 3}
-                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-                      isSelected 
-                        ? 'bg-primary text-primary-foreground border-transparent shadow-lg shadow-primary/20 scale-105' 
-                        : 'bg-background text-muted hover:text-text border border-border/50 hover:border-primary/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100'
-                    }`}
-                  >
-                    {tag.label}
-                  </button>
-                );
-              })}
-            </div>
+          {/* Readixon Tür Defteri: 1 Ana Tür + Sınırsız Alt Tür */}
+          <div className="pt-2">
+            <GenreSelector
+              selectedMainGenre={mainGenre}
+              selectedSubGenres={subGenres}
+              onChange={(m, s) => {
+                setMainGenre(m);
+                setSubGenres(s);
+              }}
+            />
           </div>
 
           <div className="pt-6 border-t border-border/50">

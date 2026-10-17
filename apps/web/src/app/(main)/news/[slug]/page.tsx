@@ -163,7 +163,7 @@ export default async function NewsDetailPage({ params }: Props) {
             [&>h3]:text-xl [&>h3]:font-bold [&>h3]:mb-3 [&>h3]:text-text
             [&>ul]:list-disc [&>ul]:ml-6 [&>ul]:mb-6 
             [&>ol]:list-decimal [&>ol]:ml-6 [&>ol]:mb-6
-            [&_img]:rounded-2xl [&_img]:my-8 [&_img]:max-w-full [&_img]:border [&_img]:border-white/10 [&_img]:shadow-xl
+            [&_img]:rounded-2xl [&_img]:my-8 [&_img]:max-w-full [&_img]:border [&_img]:border-border/60 [&_img]:shadow-xl
             [&_a]:text-primary [&_a]:hover:underline"
           dangerouslySetInnerHTML={{ __html: sanitizeHtml(news.content || '') }}
         />

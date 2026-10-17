@@ -77,7 +77,11 @@ export const StoryCard: React.FC<StoryCardProps> = ({
               {chapterCount} Bölüm
             </div>
           )}
-          {badgeText && <div className="bg-background/90 backdrop-blur-sm text-text text-[10px] font-bold px-2 py-0.5 rounded shadow w-max">{badgeText}</div>}
+          {badgeText && (
+            <div className="bg-background/90 backdrop-blur-sm text-text text-[10px] font-bold px-2 py-0.5 rounded shadow w-max opacity-0 -translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 pointer-events-none">
+              {badgeText}
+            </div>
+          )}
         </div>
 
         {/* Stats overlay top right */}
@@ -106,7 +110,7 @@ export const StoryCard: React.FC<StoryCardProps> = ({
             {title}
           </Typography>
           <div className="flex items-center gap-1.5 opacity-90">
-             <div className="w-5 h-5 rounded-full overflow-hidden border border-white/30 bg-muted flex items-center justify-center shrink-0">
+             <div className="w-5 h-5 rounded-full overflow-hidden border border-border/50 bg-muted flex items-center justify-center shrink-0">
                {authorAvatarUrl ? <img src={authorAvatarUrl} className="w-full h-full object-cover" loading="lazy" decoding="async"/> : <User size={12} className="text-white"/>}
              </div>
              <Typography variant="caption" className="text-white/80 font-medium text-[11px] line-clamp-1 drop-shadow">
@@ -117,7 +121,7 @@ export const StoryCard: React.FC<StoryCardProps> = ({
 
         {/* Progress Bar */}
         {progress !== undefined && (
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 z-20">
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/40 z-20">
             <div className="h-full bg-primary" style={{ width: `${Math.max(0, Math.min(100, progress))}%` }} />
           </div>
         )}
@@ -141,14 +145,11 @@ export const StoryCard: React.FC<StoryCardProps> = ({
           </div>
         )}
 
-        {/* Badge (Opsiyonel) */}
+        {/* Badge (Opsiyonel - Masaüstünde Hover ile zarifçe belirir, mobilde kapağı kapatmaz) */}
         {badgeText && (
-          <div className="absolute top-2 right-2 z-20 bg-primary text-primary-foreground text-[10px] md:text-xs font-bold px-2 py-1 rounded-md shadow-lg flex items-center gap-1 animate-in zoom-in duration-300">
-            <span className="relative flex h-2 w-2 mr-1">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
-            </span>
-            {badgeText}
+          <div className="hidden md:flex absolute top-2 right-2 z-20 bg-primary text-white text-[10px] md:text-xs font-bold px-2.5 py-1 rounded-full shadow-lg items-center gap-1.5 opacity-0 -translate-y-1.5 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 pointer-events-none border border-primary-foreground/20">
+            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+            <span>{badgeText}</span>
           </div>
         )}
         
@@ -204,10 +205,17 @@ export const StoryCard: React.FC<StoryCardProps> = ({
       </div>
 
       {/* Book Information */}
-      <div className="pt-3 flex flex-col flex-1 justify-between">
-        <Typography variant="h4" className="font-semibold group-hover:text-primary transition-colors leading-snug line-clamp-2 tracking-tight mb-1">
-          {title}
-        </Typography>
+      <div className="pt-2 md:pt-3 flex flex-col flex-1 justify-between">
+        <div>
+          {badgeText && (
+            <span className="text-[10px] font-bold tracking-wider text-primary uppercase block truncate mb-1 md:hidden">
+              {badgeText}
+            </span>
+          )}
+          <Typography variant="h4" className="font-semibold group-hover:text-primary transition-colors leading-snug line-clamp-2 tracking-tight mb-1">
+            {title}
+          </Typography>
+        </div>
         
         <div className="flex items-center gap-2 mt-auto">
           {authorAvatarUrl && authorAvatarUrl.trim() !== '' ? (

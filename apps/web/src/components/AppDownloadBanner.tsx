@@ -115,7 +115,7 @@ export function AppDownloadBanner() {
           </div>
 
           {/* 2. ORTA FLOATING HERO PANELİ (Login11 Hero Tasarımı) */}
-          <div className="relative lg:w-[320px] lg:flex-shrink-0 m-4 lg:m-5 rounded-2xl overflow-hidden shadow-2xl border border-white/10 flex flex-col justify-end p-6 min-h-[260px] lg:min-h-auto">
+          <div className="relative lg:w-[320px] lg:flex-shrink-0 m-4 lg:m-5 rounded-2xl overflow-hidden shadow-2xl border border-border/60 flex flex-col justify-end p-6 min-h-[260px] lg:min-h-auto">
             {/* Arka Plan Görseli & Gradyan */}
             <div 
               className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-105"
@@ -125,7 +125,7 @@ export function AppDownloadBanner() {
             
             {/* Hero İçeriği */}
             <div className="relative z-10 space-y-3 text-white">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-white text-[11px] font-semibold tracking-wide border border-white/20 w-fit">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 backdrop-blur-md text-white text-[11px] font-semibold tracking-wide border border-primary/30 w-fit">
                 <Sparkles size={12} className="text-primary animate-pulse" />
                 <span>Readixon Mobil Evreni</span>
               </div>

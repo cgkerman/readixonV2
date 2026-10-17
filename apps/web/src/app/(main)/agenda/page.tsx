@@ -215,14 +215,14 @@ export default function AgendaPage() {
           <div className="w-full md:w-2/5 shrink-0 flex flex-col gap-6">
             {/* Quote of the Day in Hero */}
             {quoteLoading ? (
-              <div className="bg-card/40 border border-white/10 rounded-[2rem] p-8 animate-pulse shadow-lg">
+              <div className="bg-card/40 border border-border/50 rounded-[2rem] p-8 animate-pulse shadow-lg">
                 <div className="h-3 w-24 bg-primary/20 rounded mb-4" />
                 <div className="h-4 w-full bg-card/60 rounded mb-2" />
                 <div className="h-4 w-3/4 bg-card/60 rounded mb-4" />
                 <div className="h-3 w-20 bg-card/40 rounded ml-auto" />
               </div>
             ) : adminQuote ? (
-              <div className="bg-card/60 backdrop-blur-xl border border-white/10 rounded-[2rem] p-6 sm:p-8 shadow-2xl relative overflow-hidden group">
+              <div className="bg-card/60 backdrop-blur-xl border border-border/60 rounded-[2rem] p-6 sm:p-8 shadow-2xl relative overflow-hidden group">
                 {/* Top Header */}
                 <div className="flex items-center justify-between mb-4 relative z-10">
                   <div className="flex items-center gap-1.5">
@@ -320,11 +320,11 @@ export default function AgendaPage() {
                         <span className="bg-primary text-primary-foreground text-xs md:text-sm font-bold px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl shadow-md">
                           Günün Öne Çıkanı
                         </span>
-                        <span className="bg-black/40 backdrop-blur-md text-white/90 text-xs font-medium px-3 py-1.5 rounded-xl border border-white/10 flex items-center gap-1.5">
+                        <span className="bg-black/40 backdrop-blur-md text-white/90 text-xs font-medium px-3 py-1.5 rounded-xl border border-border/40 flex items-center gap-1.5">
                           <Clock size={12} className="text-primary" />
                           {getEstimatedReadTime(cultureNews[0].content)}
                         </span>
-                        <span className="bg-black/40 backdrop-blur-md text-white/90 text-xs font-medium px-3 py-1.5 rounded-xl border border-white/10 hidden sm:flex items-center gap-1.5">
+                        <span className="bg-black/40 backdrop-blur-md text-white/90 text-xs font-medium px-3 py-1.5 rounded-xl border border-border/40 hidden sm:flex items-center gap-1.5">
                           <Calendar size={12} className="text-white/70" />
                           {formatNewsDate(cultureNews[0].createdAt)}
                         </span>
@@ -385,11 +385,11 @@ export default function AgendaPage() {
 
                         {/* Top Badge: Okuma süresi ve zaman */}
                         <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10 pointer-events-none">
-                          <span className="bg-black/40 backdrop-blur-md text-white/90 text-[11px] font-medium px-2.5 py-1 rounded-lg border border-white/10 flex items-center gap-1">
+                          <span className="bg-black/40 backdrop-blur-md text-white/90 text-[11px] font-medium px-2.5 py-1 rounded-lg border border-border/40 flex items-center gap-1">
                             <Clock size={11} className="text-primary" />
                             {getEstimatedReadTime(news.content)}
                           </span>
-                          <span className="bg-black/40 backdrop-blur-md text-white/80 text-[11px] font-medium px-2.5 py-1 rounded-lg border border-white/10 flex items-center gap-1">
+                          <span className="bg-black/40 backdrop-blur-md text-white/80 text-[11px] font-medium px-2.5 py-1 rounded-lg border border-border/40 flex items-center gap-1">
                             {formatNewsDate(news.createdAt)}
                           </span>
                         </div>

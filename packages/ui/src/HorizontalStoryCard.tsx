@@ -45,7 +45,7 @@ export const HorizontalStoryCard: React.FC<HorizontalStoryCardProps> = ({
       {/* Sol: Kapak Resmi (Fixed Width) */}
       <div className="relative w-28 md:w-32 shrink-0 bg-muted/20 overflow-hidden">
         {badgeText && (
-          <div className="absolute top-2 left-2 z-20 bg-primary text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 rounded shadow-lg">
+          <div className="hidden md:block absolute top-2 left-2 z-20 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-lg opacity-0 -translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 pointer-events-none border border-primary-foreground/20">
             {badgeText}
           </div>
         )}
@@ -71,11 +71,18 @@ export const HorizontalStoryCard: React.FC<HorizontalStoryCardProps> = ({
         {/* Kitap & Yazar Bilgisi */}
         <div className="flex items-start justify-between mb-2 shrink-0">
           <div className="flex flex-col min-w-0">
-            {seriesTitle && (
-              <span className="text-[10px] font-black text-amber-500 uppercase tracking-wider mb-0.5 truncate">
-                📚 {seriesOrder ? `${seriesTitle} #${seriesOrder}` : seriesTitle}
-              </span>
-            )}
+            <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+              {seriesTitle && (
+                <span className="text-[10px] font-black text-amber-500 uppercase tracking-wider truncate">
+                  📚 {seriesOrder ? `${seriesTitle} #${seriesOrder}` : seriesTitle}
+                </span>
+              )}
+              {badgeText && (
+                <span className="text-[9px] font-bold text-primary uppercase tracking-wider md:hidden">
+                  {seriesTitle ? `• ${badgeText}` : badgeText}
+                </span>
+              )}
+            </div>
             <Typography variant="h4" className="font-bold text-text truncate pr-2">
               {title}
             </Typography>

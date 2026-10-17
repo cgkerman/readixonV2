@@ -210,6 +210,8 @@ export * from './utils/imageUtils';
 export * from './utils/cropImageUtils';
 export * from './utils/audioUtils';
 export * from './constants/tags';
+export * from './constants/genres';
+export * from './services/genreFinder';
 export * from './utils/slug';
 export * from './utils/sanitize';
 export * from './utils/loreAnnotation';
