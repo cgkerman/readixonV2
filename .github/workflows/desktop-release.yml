@@ -24,15 +24,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 9
+          cache: 'pnpm'
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -47,10 +48,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          projectPath: './apps/desktop'
-          tagName: readixon-desktop-v__VERSION__
+          projectPath: 'apps/desktop'
+          tagName: v__VERSION__
           releaseName: 'Readixon Desktop v__VERSION__'
-          releaseBody: 'Readixon Masaüstü Uygulaması (Windows .exe/.msi ve Apple macOS .dmg kurulum dosyaları).'
+          releaseBody: 'Readixon Masaüstü Uygulaması (Windows .exe ve Apple macOS .dmg kurulum paketleri).'
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}

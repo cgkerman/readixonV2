@@ -10,6 +10,7 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "Readixon - Canlı Edebiyat Ağı",
         "width": 1440,
         "height": 920,

@@ -67,6 +67,30 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
+    const platform = req.nextUrl.searchParams.get('platform');
+    if (platform === 'windows' || platform === 'mac') {
+      try {
+        const res = await fetch('https://api.github.com/repos/cgkerman/readixonV2/releases/latest', {
+          next: { revalidate: 300 },
+          headers: {
+            'User-Agent': 'Readixon-Desktop-Downloader',
+            Accept: 'application/vnd.github.v3+json',
+          },
+        });
+        if (res.ok) {
+          const release = await res.json();
+          const targetExt = platform === 'windows' ? '.exe' : '.dmg';
+          const asset = release.assets?.find((a: any) => a.name.toLowerCase().endsWith(targetExt));
+          if (asset?.browser_download_url) {
+            return NextResponse.redirect(asset.browser_download_url, { status: 302 });
+          }
+        }
+      } catch (e) {
+        console.error('Failed to resolve release asset:', e);
+      }
+      return NextResponse.redirect('https://github.com/cgkerman/readixonV2/releases/latest', { status: 302 });
+    }
+
     cleanExpired();
     const id = req.nextUrl.searchParams.get('id');
     if (!id || !downloadCache.has(id)) {
