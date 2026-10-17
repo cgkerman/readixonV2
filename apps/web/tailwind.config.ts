@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: "class",
   presets: [require("../../packages/config/tailwind-preset.js")],
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",

@@ -717,11 +717,11 @@ export default function StoryDetailPage() {
                 {story.seriesId && (
                   <Link
                     href={`/series/${series?.slug || story.seriesId}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 dark:bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-900 dark:text-amber-200 text-[11px] font-extrabold shadow-xs transition-all backdrop-blur-md group"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 hover:bg-amber-200/80 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 border border-amber-300 dark:border-amber-700/50 text-amber-950 dark:text-amber-200 text-[11px] font-extrabold shadow-xs transition-all backdrop-blur-md group"
                   >
-                    <Layers size={12} className="text-amber-700 dark:text-amber-400 group-hover:scale-110 transition-transform" />
-                    <span className="truncate max-w-[220px]">{story.seriesTitle || series?.title || 'Kitap Serisi'}</span>
-                    <span className="px-1.5 py-0.5 bg-amber-500/30 dark:bg-amber-400/20 rounded text-[10px] font-black text-amber-950 dark:text-amber-200">
+                    <Layers size={12} className="text-amber-800 dark:text-amber-400 group-hover:scale-110 transition-transform" />
+                    <span className="truncate max-w-[220px] font-bold text-amber-950 dark:text-amber-200">{story.seriesTitle || series?.title || 'Kitap Serisi'}</span>
+                    <span className="px-1.5 py-0.5 bg-amber-200 dark:bg-amber-800/50 rounded text-[10px] font-black text-amber-950 dark:text-amber-100">
                       #{story.seriesOrder || 1}
                     </span>
                   </Link>
@@ -729,10 +729,10 @@ export default function StoryDetailPage() {
                 {story.universeId && (
                   <Link
                     href={`/universe/${universe?.slug || story.universeId}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/15 hover:bg-primary/25 border border-primary/35 text-indigo-950 dark:text-indigo-200 text-[11px] font-extrabold shadow-xs transition-all backdrop-blur-md group"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-100 hover:bg-indigo-200/80 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 border border-indigo-300 dark:border-indigo-700/50 text-indigo-950 dark:text-indigo-200 text-[11px] font-extrabold shadow-xs transition-all backdrop-blur-md group"
                   >
-                    <Sparkles size={12} className="text-primary group-hover:rotate-12 transition-transform" />
-                    <span>🌌 {story.universeTitle || universe?.title || 'Evren'}</span>
+                    <Sparkles size={12} className="text-indigo-700 dark:text-indigo-400 group-hover:rotate-12 transition-transform" />
+                    <span className="font-bold text-indigo-950 dark:text-indigo-200">🌌 {story.universeTitle || universe?.title || 'Evren'}</span>
                   </Link>
                 )}
               </div>
@@ -751,9 +751,9 @@ export default function StoryDetailPage() {
 
               {editorialReview && (
                 <Link href={`/reviews/${editorialReview.id}`} className="group inline-flex items-center">
-                  <span className="px-3 py-1 bg-amber-500/20 dark:bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 dark:text-amber-200 text-[11px] font-bold rounded-full border border-amber-500/40 shadow-xs flex items-center gap-1.5 transition-all backdrop-blur-md">
-                    <Sparkles size={12} className="text-amber-600 dark:text-amber-400 animate-pulse" />
-                    <span>Editör Puanı: <strong className="font-black text-amber-950 dark:text-amber-100">{editorialAverageScore}/10</strong></span>
+                  <span className="px-3 py-1 bg-amber-100 hover:bg-amber-200/80 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 text-amber-950 dark:text-amber-200 text-[11px] font-bold rounded-full border border-amber-300 dark:border-amber-700/50 shadow-xs flex items-center gap-1.5 transition-all backdrop-blur-md">
+                    <Sparkles size={12} className="text-amber-800 dark:text-amber-400 animate-pulse" />
+                    <span className="text-amber-950 dark:text-amber-200">Editör Puanı: <strong className="font-black text-amber-950 dark:text-amber-100">{editorialAverageScore}/10</strong></span>
                   </span>
                 </Link>
               )}
@@ -1010,12 +1010,12 @@ export default function StoryDetailPage() {
                 }`}>
                   <div className="flex items-start justify-between gap-3 mb-2.5">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center shrink-0 shadow-xs">
+                      <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0 shadow-xs">
                         <Layers size={20} />
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500 uppercase tracking-wider">
+                          <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/50 text-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700/50 uppercase tracking-wider">
                             Kitap Serisi
                           </span>
                           <span className="text-[11px] text-muted font-semibold">
@@ -1026,7 +1026,7 @@ export default function StoryDetailPage() {
                           href={`/series/${series.slug || story.seriesId}`}
                           className="group inline-flex items-center gap-1.5 max-w-full"
                         >
-                          <Typography variant="h3" className="font-extrabold text-sm sm:text-base text-foreground group-hover:text-amber-500 transition-colors truncate">
+                          <Typography variant="h3" className="font-extrabold text-sm sm:text-base text-foreground group-hover:text-amber-700 dark:group-hover:text-amber-400 transition-colors truncate">
                             {series.title}
                           </Typography>
                         </Link>
@@ -1035,7 +1035,7 @@ export default function StoryDetailPage() {
 
                     <Link
                       href={`/series/${series.slug || story.seriesId}`}
-                      className="inline-flex items-center gap-1 text-xs font-bold text-amber-500 hover:underline shrink-0"
+                      className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-300 hover:underline shrink-0"
                     >
                       <span>Tümü</span>
                       <ChevronRight size={13} />
@@ -1070,7 +1070,7 @@ export default function StoryDetailPage() {
                             </div>
                             <div className="min-w-0 max-w-[120px]">
                               <div className="flex items-center gap-1">
-                                <span className="text-[9px] font-black text-amber-500">#{idx + 1}</span>
+                                <span className="text-[9px] font-black text-amber-700 dark:text-amber-400">#{idx + 1}</span>
                                 {isCurrent && (
                                   <span className="text-[8px] font-bold px-1 rounded bg-amber-500 text-black">
                                     Mevcut
@@ -1285,10 +1285,10 @@ export default function StoryDetailPage() {
                 {/* Editör Değerlendirmesi Kartı */}
                 {editorialReview && (
                   <Link href={`/reviews/${editorialReview.id}`} className="block group">
-                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-950/30 via-card to-card border border-amber-500/30 hover:border-amber-500/60 p-5 transition-all duration-300 shadow-md hover:shadow-amber-500/10 hover:-translate-y-0.5">
+                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500/10 dark:from-amber-950/30 via-card to-card border border-amber-500/30 hover:border-amber-500/60 p-5 transition-all duration-300 shadow-md hover:shadow-amber-500/10 hover:-translate-y-0.5">
                       <div className="flex items-center justify-between gap-3 mb-2.5">
-                        <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-500 text-[10px] font-bold uppercase tracking-wider">
-                          <Sparkles size={11} className="animate-pulse" />
+                        <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-700/50 text-amber-950 dark:text-amber-300 text-[10px] font-bold uppercase tracking-wider">
+                          <Sparkles size={11} className="animate-pulse text-amber-800 dark:text-amber-400" />
                           Editör Notu
                         </div>
                         <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500 text-black text-xs font-black shadow-xs">
@@ -1305,7 +1305,7 @@ export default function StoryDetailPage() {
                         <span className="text-muted text-[11px] font-medium truncate max-w-[150px]">
                           Editör: <strong className="text-text">{editorialReview.editorName}</strong>
                         </span>
-                        <span className="text-amber-500 font-bold flex items-center gap-1 group-hover:translate-x-1 transition-transform text-xs">
+                        <span className="text-amber-700 dark:text-amber-400 font-bold flex items-center gap-1 group-hover:translate-x-1 transition-transform text-xs">
                           İncele <ChevronRight size={13} />
                         </span>
                       </div>
@@ -1660,8 +1660,8 @@ export default function StoryDetailPage() {
                             <span className="font-bold text-xs sm:text-sm text-text">
                               {review.authorName || `Kullanıcı ${review.userId.substring(0,6)}`}
                             </span>
-                            <div className="flex items-center gap-1 text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-md text-xs font-bold">
-                              <Star size={11} className="fill-current" /> {review.rating}/10
+                            <div className="flex items-center gap-1 text-amber-900 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-md text-xs font-bold">
+                              <Star size={11} className="fill-current text-amber-600 dark:text-amber-400" /> {review.rating}/10
                             </div>
                           </div>
                           <Typography variant="body" className="text-muted leading-relaxed whitespace-pre-line text-xs sm:text-sm">
