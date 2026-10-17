@@ -28,6 +28,28 @@ type TabType = 'android' | 'ios' | 'desktop' | 'guide';
 
 export function AppDownloadBanner() {
   const [activeTab, setActiveTab] = useState<TabType>('android');
+  const [desktopStatus, setDesktopStatus] = useState<string | null>(null);
+  const [checkingPlatform, setCheckingPlatform] = useState<string | null>(null);
+
+  const handleDesktopDownload = async (e: React.MouseEvent, platform: 'windows' | 'mac') => {
+    e.preventDefault();
+    setCheckingPlatform(platform);
+    setDesktopStatus('Kurulum paketi kontrol ediliyor...');
+    try {
+      const res = await fetch(`/api/download?platform=${platform}&check=1`);
+      const data = await res.json();
+      if (data.available && data.url) {
+        setDesktopStatus('İndirme doğrudan başlatılıyor...');
+        window.location.href = data.url;
+      } else {
+        setDesktopStatus('⏳ Kurulum paketi bulut derleme sunucusunda hazırlanıyor. Derleme tamamlandığında doğrudan buradan inecektir (harici bir sayfaya gitmenize gerek yoktur).');
+      }
+    } catch {
+      window.location.href = `/api/download?platform=${platform}`;
+    } finally {
+      setCheckingPlatform(null);
+    }
+  };
 
   return (
     <section className="relative my-12 w-full">
@@ -361,39 +383,50 @@ export function AppDownloadBanner() {
 
                 {/* İndirme Butonları (Windows & Mac) */}
                 <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                  <a
-                    href="/api/download?platform=windows"
-                    className="flex-1 flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs transition-all shadow-md group cursor-pointer"
+                  <button
+                    type="button"
+                    onClick={(e) => handleDesktopDownload(e, 'windows')}
+                    disabled={checkingPlatform === 'windows'}
+                    className="flex-1 flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs transition-all shadow-md group cursor-pointer disabled:opacity-75"
                   >
                     <div className="flex items-center gap-2.5">
                       <Download size={18} className="shrink-0 group-hover:translate-y-0.5 transition-transform" />
                       <div className="text-left">
                         <div className="text-sm font-extrabold leading-tight">Windows İndir</div>
-                        <div className="text-[10px] opacity-80 font-normal">.exe (Doğrudan İndirme)</div>
+                        <div className="text-[10px] opacity-80 font-normal">.exe Kurulum Dosyası</div>
                       </div>
                     </div>
                     <span className="text-[10px] font-mono bg-white/20 px-2 py-0.5 rounded-full">v0.1.0</span>
-                  </a>
+                  </button>
 
-                  <a
-                    href="/api/download?platform=mac"
-                    className="flex-1 flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-card hover:bg-card/80 text-foreground border border-border/80 hover:border-primary/50 font-bold text-xs transition-all shadow-sm group cursor-pointer"
+                  <button
+                    type="button"
+                    onClick={(e) => handleDesktopDownload(e, 'mac')}
+                    disabled={checkingPlatform === 'mac'}
+                    className="flex-1 flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-card hover:bg-card/80 text-foreground border border-border/80 hover:border-primary/50 font-bold text-xs transition-all shadow-sm group cursor-pointer disabled:opacity-75"
                   >
                     <div className="flex items-center gap-2.5">
                       <Apple size={18} className="shrink-0 text-foreground group-hover:scale-105 transition-transform" />
                       <div className="text-left">
                         <div className="text-sm font-extrabold leading-tight">Apple Mac İndir</div>
-                        <div className="text-[10px] text-muted font-normal">.dmg (Doğrudan İndirme)</div>
+                        <div className="text-[10px] text-muted font-normal">.dmg Kurulum Dosyası</div>
                       </div>
                     </div>
                     <span className="text-[10px] font-mono bg-primary/10 text-primary px-2 py-0.5 rounded-full">v0.1.0</span>
-                  </a>
+                  </button>
                 </div>
 
-                <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-xs text-primary font-medium flex items-center gap-2">
-                  <Sparkles size={16} />
-                  <span>Tıklandığında kurulum dosyası doğrudan tarayıcınıza iner; harici sayfaya gitmez.</span>
-                </div>
+                {desktopStatus ? (
+                  <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-xs text-primary font-medium flex items-center gap-2 animate-in fade-in">
+                    <Sparkles size={16} className="shrink-0" />
+                    <span>{desktopStatus}</span>
+                  </div>
+                ) : (
+                  <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-xs text-primary font-medium flex items-center gap-2">
+                    <Sparkles size={16} className="shrink-0" />
+                    <span>Tıklandığında kurulum dosyası doğrudan tarayıcınıza iner; harici bir sayfaya gitmez.</span>
+                  </div>
+                )}
               </div>
             )}
 

@@ -68,10 +68,12 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const platform = req.nextUrl.searchParams.get('platform');
+    const isCheck = req.nextUrl.searchParams.get('check') === '1';
+
     if (platform === 'windows' || platform === 'mac') {
       try {
         const res = await fetch('https://api.github.com/repos/cgkerman/readixonV2/releases/latest', {
-          next: { revalidate: 300 },
+          next: { revalidate: 30 },
           headers: {
             'User-Agent': 'Readixon-Desktop-Downloader',
             Accept: 'application/vnd.github.v3+json',
@@ -82,13 +84,19 @@ export async function GET(req: NextRequest) {
           const targetExt = platform === 'windows' ? '.exe' : '.dmg';
           const asset = release.assets?.find((a: any) => a.name.toLowerCase().endsWith(targetExt));
           if (asset?.browser_download_url) {
+            if (isCheck) {
+              return NextResponse.json({ available: true, url: asset.browser_download_url, name: asset.name });
+            }
             return NextResponse.redirect(asset.browser_download_url, { status: 302 });
           }
         }
       } catch (e) {
         console.error('Failed to resolve release asset:', e);
       }
-      return NextResponse.redirect('https://github.com/cgkerman/readixonV2/releases/latest', { status: 302 });
+      if (isCheck) {
+        return NextResponse.json({ available: false, message: 'Derleme devam ediyor veya dosya henüz hazır değil.' });
+      }
+      return NextResponse.redirect('https://github.com/cgkerman/readixonV2/releases', { status: 302 });
     }
 
     cleanExpired();
