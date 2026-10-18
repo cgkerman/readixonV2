@@ -103,6 +103,8 @@ export interface StoryStats {
   rating?: number;       // 10 üzerinden ortalama puan (Örn: 8.5)
   reviewCount?: number;  // Toplam inceleme sayısı
   commentCount?: number; // Toplam bölüm ve satır arası yorum sayısı
+  endingCount?: number;  // İnteraktif hikayeler için toplam son sayısı
+  choiceCount?: number;  // İnteraktif hikayeler için toplam karar noktası sayısı
 }
 
 export interface Contributor {
@@ -186,7 +188,7 @@ export interface Story {
   status: StoryStatus;
   createdAt: Timestamp;
   updatedAt: Timestamp;
-  format?: 'novel' | 'webtoon';
+  format?: 'novel' | 'webtoon' | 'interactive';
 
   // Readixon Tür Defteri (1 Ana Tür + Sınırsız Alt Tür)
   mainGenre?: string;
@@ -216,13 +218,14 @@ export type StoryWithLatestChapter = Story & {
 export type ContentBlockType = 'paragraph' | 'quote' | 'image' | 'divider' | 'end_of_chapter' | 'end_of_story';
 
 /**
- * BÃ¶lÃ¼m iÃ§eriÄŸi JSON blok formatÄ±nda tutulur.
- * React Native'de kolay render edilebilir; HTML baÄŸÄ±mlÄ±lÄ±ÄŸÄ± yoktur.
+ * Bölüm içeriği JSON blok formatında tutulur.
+ * React Native'de kolay render edilebilir; HTML bağımlılığı yoktur.
  */
 export interface ContentBlock {
+  id?: string; // Benzersiz blok kimliği (satır arası yorumların metin değişikliklerinde kaymasını önler)
   type: ContentBlockType;
   text?: string;
-  url?: string; // image bloklarÄ± iÃ§in
+  url?: string; // image blokları için
   textStyle?: 'normal' | 'bold' | 'italic';
 }
 
@@ -270,13 +273,34 @@ export interface Chapter {
   reactionCounts?: Record<string, number>;
   endActivity?: ChapterActivity;
   audioTrack?: ChapterAudioTrack;
+  // Revizyon ve Şeffaflık Alanları
+  isRevised?: boolean;
+  revisedAt?: Timestamp;
+  revisionNote?: string;
+  revisionCount?: number;
+  // İnteraktif Hikaye (Branching / Choose Your Own Adventure)
+  isEnding?: boolean;
+  endingType?: ChapterEndingType;
+  endingTitle?: string;
+  choices?: ChapterChoice[];
+  parentChapterIds?: string[];
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+export type ChapterEndingType = 'good' | 'bad' | 'secret' | 'neutral';
+
+export interface ChapterChoice {
+  id: string; // nanoid/uuid
+  text: string; // Seçenek butonu metni (Örn: "Ormanın derinliklerine kaç")
+  targetChapterId: string; // Bağlanacağı bölüm ID'si
+  description?: string; // İsteğe bağlı açıklama veya alt metin
+  badge?: string; // Örn: "Cesur Karar", "Riskli", "Gizli Yol"
+}
+
+// ─────────────────────────────────────────────
 // 3.4. Yorumlar (/comments)
-// SatÄ±r-arasÄ± (inline) yorum desteÄŸi: paragraphIndex ile hangi
-// paragrafa ait olduÄŸu tutulur.
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Satır-arası (inline) yorum desteği: paragraphIndex ile hangi
+// paragrafa ait olduğu tutulur.
+// ─────────────────────────────────────────────
 
 export interface Comment {
   commentId: string;
@@ -284,6 +308,9 @@ export interface Comment {
   chapterId: string;
   type?: 'chapter' | 'paragraph';
   paragraphIndex: number; // -1 for chapter level
+  blockId?: string; // Eşleştiği ContentBlock ID'si (blok sıralaması değiştiğinde yorumun kaymasını önler)
+  isOutdated?: boolean; // Paragraf sonradan düzenlendiyse true
+  targetSnippet?: string; // Yorum yapıldığı andaki ilk 50-60 karakter (bağlam kaybını önlemek için)
   userId: string;
   authorName?: string;
   authorUsername?: string;
@@ -331,8 +358,10 @@ export interface ReadingProgress {
   storyId: string;
   currentChapterId: string;
   scrollPercentage: number; // 0-100
-  completedChapters: string[]; // Tamamlanan bÃ¶lÃ¼m ID'leri
-  isAdultContentAccepted?: boolean; // YetiÅŸkin iÃ§erik okuma onayÄ±
+  completedChapters: string[]; // Tamamlanan bölüm ID'leri
+  pathHistory?: string[]; // İnteraktif hikayede izlenen karar rotası (bölüm ID listesi)
+  discoveredEndings?: string[]; // Okuyucunun ulaştığı sonların bölüm ID'leri
+  isAdultContentAccepted?: boolean; // Yetişkin içerik okuma onayı
   updatedAt: Timestamp;
 }
 
@@ -462,6 +491,7 @@ export type NotificationType =
   | 'readix_comment' 
   | 'readix_mention'
   | 'new_chapter'
+  | 'chapter_revised'
   | 'duel_challenge'
   | 'duel_accepted'
   | 'duel_rejected'

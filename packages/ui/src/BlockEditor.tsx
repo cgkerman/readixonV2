@@ -29,10 +29,20 @@ export interface BlockEditorProps {
   onUploadImage?: (file: File) => Promise<string>;
 }
 
+const generateBlockId = () => `blk_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 7)}`;
+
+const ensureBlockId = (b: ContentBlock): ContentBlock => {
+  if (b.id) return b;
+  return { ...b, id: generateBlockId() };
+};
+
 export function BlockEditor({ initialBlocks = [], onChange, onUploadImage }: BlockEditorProps) {
-  // We need unique IDs for sortable items, since ContentBlock doesn't have an ID
+  // Ensure each ContentBlock has a persistent unique ID
   const [items, setItems] = useState<{ id: string; block: ContentBlock }[]>(() => 
-    initialBlocks.map((b, i) => ({ id: `block-${Date.now()}-${i}`, block: b }))
+    initialBlocks.map((b) => {
+      const blockWithId = ensureBlockId(b);
+      return { id: blockWithId.id!, block: blockWithId };
+    })
   );
 
   const sensors = useSensors(
@@ -59,12 +69,13 @@ export function BlockEditor({ initialBlocks = [], onChange, onUploadImage }: Blo
   };
 
   const addBlock = (type: ContentBlockType) => {
-    const newBlock: ContentBlock = { type, text: '', url: '' };
-    updateParent([...items, { id: `block-${Date.now()}`, block: newBlock }]);
+    const newBlock: ContentBlock = ensureBlockId({ type, text: '', url: '' });
+    updateParent([...items, { id: newBlock.id!, block: newBlock }]);
   };
 
   const updateBlock = (id: string, updatedBlock: ContentBlock) => {
-    updateParent(items.map(item => item.id === id ? { ...item, block: updatedBlock } : item));
+    const withId = updatedBlock.id ? updatedBlock : { ...updatedBlock, id };
+    updateParent(items.map(item => item.id === id ? { ...item, block: withId } : item));
   };
 
   const deleteBlock = (id: string) => {
@@ -89,7 +100,7 @@ export function BlockEditor({ initialBlocks = [], onChange, onUploadImage }: Blo
           if (!content || content === '<br>' || content === '<span></span>') return;
           
           if (tagName === 'blockquote') {
-            newBlocks.push({ type: 'quote', text: el.textContent || '', url: '' });
+            newBlocks.push(ensureBlockId({ type: 'quote', text: el.textContent || '', url: '' }));
           } else {
             let finalHtml = content;
             if (tagName.startsWith('h')) {
@@ -97,7 +108,7 @@ export function BlockEditor({ initialBlocks = [], onChange, onUploadImage }: Blo
             } else if (tagName === 'li') {
               finalHtml = `• ${content}`;
             }
-            newBlocks.push({ type: 'paragraph', text: finalHtml, url: '' });
+            newBlocks.push(ensureBlockId({ type: 'paragraph', text: finalHtml, url: '' }));
           }
         });
       } else {
@@ -107,14 +118,14 @@ export function BlockEditor({ initialBlocks = [], onChange, onUploadImage }: Blo
             const el = node as HTMLElement;
             if (el.tagName.toLowerCase() === 'img') {
               const src = (el as HTMLImageElement).src;
-              if (src) newBlocks.push({ type: 'image', text: '', url: src });
+              if (src) newBlocks.push(ensureBlockId({ type: 'image', text: '', url: src }));
             } else if (el.innerHTML.trim() && el.innerHTML.trim() !== '<br>') {
-              newBlocks.push({ type: 'paragraph', text: el.innerHTML.trim(), url: '' });
+              newBlocks.push(ensureBlockId({ type: 'paragraph', text: el.innerHTML.trim(), url: '' }));
             }
           } else if (node.nodeType === Node.TEXT_NODE) {
             const content = node.textContent?.trim();
             if (content) {
-              newBlocks.push({ type: 'paragraph', text: content, url: '' });
+              newBlocks.push(ensureBlockId({ type: 'paragraph', text: content, url: '' }));
             }
           }
         });
@@ -122,7 +133,7 @@ export function BlockEditor({ initialBlocks = [], onChange, onUploadImage }: Blo
     } else if (text) {
       const paragraphs = text.split(/\r?\n/).filter(p => p.trim());
       paragraphs.forEach(p => {
-        newBlocks.push({ type: 'paragraph', text: p.replace(/\n/g, '<br/>'), url: '' });
+        newBlocks.push(ensureBlockId({ type: 'paragraph', text: p.replace(/\n/g, '<br/>'), url: '' }));
       });
     }
 
@@ -136,8 +147,8 @@ export function BlockEditor({ initialBlocks = [], onChange, onUploadImage }: Blo
     const targetIndex = items.findIndex(item => item.id === targetId);
     if (targetIndex === -1) return;
 
-    const newItems = newBlocks.map((block, i) => ({
-      id: `block-${Date.now()}-${i}`,
+    const newItems = newBlocks.map((block) => ({
+      id: block.id!,
       block
     }));
 

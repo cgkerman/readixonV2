@@ -1,7 +1,7 @@
 import { collection, query, orderBy, limit, startAfter, getDocs, DocumentSnapshot, doc, setDoc, updateDoc, serverTimestamp, where, getDoc, onSnapshot, deleteDoc, documentId, getCountFromServer, deleteField } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { Story, StoryWithLatestChapter, Chapter, ReadingProgress, Review, ReviewAuthorReply } from '../types';
-import { getUserProfile } from './userService';
+import { getUserProfile, getUserFollowerIds } from './userService';
 import { createNotification } from './notificationService';
 
 
@@ -89,6 +89,43 @@ export const getWebtoonsPaginated = async (limitCount: number = 10, lastDoc?: Do
     return { stories, lastDoc: lastVisible };
   } catch (error: any) {
     console.error("getWebtoonsPaginated Firebase error:", error.message);
+    return { stories: [], lastDoc: undefined };
+  }
+};
+
+/**
+ * İnteraktif Hikayeleri (Kaderini Sen Seç / Bandersnatch) Firestore'dan çeker.
+ */
+export const getInteractiveStoriesPaginated = async (limitCount: number = 10, lastDoc?: DocumentSnapshot) => {
+  const storiesRef = collection(db, 'stories');
+  
+  let q = query(
+    storiesRef,
+    where('format', '==', 'interactive'),
+    limit(50)
+  );
+
+  if (lastDoc) {
+    q = query(q, startAfter(lastDoc));
+  }
+
+  try {
+    const querySnapshot = await getDocs(q);
+    let allStories = await enrichStories(querySnapshot.docs);
+    let stories = allStories.filter(s => s.status === 'ongoing' || s.status === 'completed');
+
+    stories.sort((a, b) => {
+      const aTime = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+      const bTime = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+      return bTime - aTime;
+    });
+
+    stories = stories.slice(0, limitCount);
+
+    const lastVisible = querySnapshot.docs.length > 0 ? querySnapshot.docs[querySnapshot.docs.length - 1] : undefined;
+    return { stories, lastDoc: lastVisible };
+  } catch (error: any) {
+    console.error("getInteractiveStoriesPaginated Firebase error:", error.message);
     return { stories: [], lastDoc: undefined };
   }
 };
@@ -372,8 +409,9 @@ export const createStory = async (authorId: string, data: Partial<Story>) => {
       ...data,
       storyId: newStoryRef.id,
       authorId,
+      format: data.format || 'novel',
       status: data.status || 'draft',
-      stats: { views: 0, likes: 0, chapterCount: 0 },
+      stats: { views: 0, likes: 0, chapterCount: 0, endingCount: 0, choiceCount: 0 },
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
@@ -411,6 +449,9 @@ export const syncStoryChapterCount = async (storyId: string): Promise<number> =>
     
     // Yayında olan veya status alanı belirtilmemiş (varsayılan yayında) bölümleri say
     let publishedCount = 0;
+    let endingCount = 0;
+    let choiceCount = 0;
+
     snap.forEach((docSnap) => {
       const data = docSnap.data();
       // 'draft' veya 'archived' değilse, ve scheduled ise yayın tarihi geldiyse yayında kabul edilir
@@ -422,17 +463,29 @@ export const syncStoryChapterCount = async (storyId: string): Promise<number> =>
           publishedCount++;
         }
       }
+
+      if (data.isEnding) endingCount++;
+      if (Array.isArray(data.choices)) choiceCount += data.choices.length;
     });
 
     const storyRef = doc(db, 'stories', storyId);
     const storySnap = await getDoc(storyRef);
     if (storySnap.exists()) {
       const currentStats = storySnap.data().stats;
+      const updates: any = {};
       if (currentStats?.chapterCount !== publishedCount) {
-        await updateDoc(storyRef, {
-          'stats.chapterCount': publishedCount,
-          updatedAt: serverTimestamp()
-        });
+        updates['stats.chapterCount'] = publishedCount;
+      }
+      if (currentStats?.endingCount !== endingCount) {
+        updates['stats.endingCount'] = endingCount;
+      }
+      if (currentStats?.choiceCount !== choiceCount) {
+        updates['stats.choiceCount'] = choiceCount;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        updates.updatedAt = serverTimestamp();
+        await updateDoc(storyRef, updates);
       }
     }
 
@@ -480,13 +533,81 @@ export const updateChapter = async (storyId: string, chapterId: string, data: Pa
 
     await updateDoc(chapterRef, sanitizedData);
 
-    // Eğer status alanı güncelleniyorsa chapterCount'u senkronize et
-    if (data.status !== undefined) {
+    // Eğer status, isEnding veya choices alanı güncelleniyorsa sayaçları senkronize et
+    if (data.status !== undefined || data.isEnding !== undefined || data.choices !== undefined) {
       await syncStoryChapterCount(storyId);
     }
   } catch (error) {
     console.error("Bölüm güncellenirken hata:", error);
     throw error;
+  }
+};
+
+/**
+ * Yazar bir bölümü güncellediğinde (majör revizyon),
+ * bu bölümü okuyanlara ve takipçilere bildirim gönderir.
+ */
+export const notifyChapterRevision = async (params: {
+  storyId: string;
+  chapterId: string;
+  storyTitle: string;
+  chapterTitle: string;
+  authorId: string;
+  authorName: string;
+  authorAvatarUrl?: string;
+  authorUsername?: string;
+  revisionNote?: string;
+}): Promise<number> => {
+  try {
+    const {
+      storyId,
+      chapterId,
+      storyTitle,
+      chapterTitle,
+      authorId,
+      authorName,
+      authorAvatarUrl,
+      authorUsername,
+      revisionNote
+    } = params;
+
+    // 1. Hedef kullanıcı listesi
+    const targetUserIds = new Set<string>();
+
+    // 2. Takipçileri al
+    try {
+      const followerIds = await getUserFollowerIds(authorId);
+      followerIds.forEach(id => {
+        if (id && id !== authorId) targetUserIds.add(id);
+      });
+    } catch (e) {
+      console.warn("Follower IDs couldn't be loaded for revision notice:", e);
+    }
+
+    if (targetUserIds.size === 0) return 0;
+
+    // 3. Bildirimleri toplu olarak ilet
+    const notificationPromises = Array.from(targetUserIds).map(userId => 
+      createNotification({
+        userId,
+        actorId: authorId,
+        actorName: authorName,
+        actorAvatar: authorAvatarUrl,
+        actorUsername: authorUsername,
+        type: 'chapter_revised',
+        entityId: storyId,
+        entityTitle: storyTitle,
+        subEntityId: chapterId,
+        subEntityTitle: chapterTitle,
+        message: revisionNote || undefined
+      }).catch(err => console.error("notifyChapterRevision send error:", err))
+    );
+
+    await Promise.all(notificationPromises);
+    return targetUserIds.size;
+  } catch (err) {
+    console.error("notifyChapterRevision error:", err);
+    return 0;
   }
 };
 
@@ -560,16 +681,26 @@ export const syncReadingProgress = async (
   storyId: string,
   currentChapterId: string,
   scrollPercentage: number,
-  isChapterCompleted: boolean
+  isChapterCompleted: boolean,
+  interactiveData?: {
+    pathHistoryStep?: string;
+    discoveredEndingId?: string;
+    resetPathHistory?: string[];
+  }
 ) => {
   try {
     const progressRef = doc(db, 'users', userId, 'readingProgress', storyId);
     const snap = await getDoc(progressRef);
     
     let completedChapters: string[] = [];
+    let pathHistory: string[] = [];
+    let discoveredEndings: string[] = [];
+
     if (snap.exists()) {
       const data = snap.data() as ReadingProgress;
       completedChapters = data.completedChapters || [];
+      pathHistory = data.pathHistory || [];
+      discoveredEndings = data.discoveredEndings || [];
     }
     
     if (isChapterCompleted && !completedChapters.includes(currentChapterId)) {
@@ -578,6 +709,21 @@ export const syncReadingProgress = async (
         module.trackRead(userId).catch(err => console.error("trackRead error:", err));
       });
     }
+
+    if (interactiveData) {
+      if (interactiveData.resetPathHistory) {
+        pathHistory = interactiveData.resetPathHistory;
+      } else if (interactiveData.pathHistoryStep) {
+        // En son adıma ekle (eğer son adım zaten o değilse)
+        if (pathHistory[pathHistory.length - 1] !== interactiveData.pathHistoryStep) {
+          pathHistory.push(interactiveData.pathHistoryStep);
+        }
+      }
+
+      if (interactiveData.discoveredEndingId && !discoveredEndings.includes(interactiveData.discoveredEndingId)) {
+        discoveredEndings.push(interactiveData.discoveredEndingId);
+      }
+    }
     
     const progressData: ReadingProgress = {
       userId,
@@ -585,6 +731,8 @@ export const syncReadingProgress = async (
       currentChapterId,
       scrollPercentage,
       completedChapters,
+      ...(pathHistory.length > 0 ? { pathHistory } : {}),
+      ...(discoveredEndings.length > 0 ? { discoveredEndings } : {}),
       updatedAt: serverTimestamp() as any,
     };
     

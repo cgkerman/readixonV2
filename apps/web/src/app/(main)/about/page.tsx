@@ -52,7 +52,8 @@ import {
   Headphones,
   FileCheck,
   Send,
-  EyeOff
+  EyeOff,
+  Gamepad2
 } from 'lucide-react';
 import { Typography } from '@readixon/ui';
 import { toast } from 'sonner';
@@ -150,8 +151,25 @@ interface TimelineItem {
 
 const TIMELINE_DATA: TimelineItem[] = [
   {
-    version: 'v2.3',
+    version: 'v2.3.1',
     badge: 'En Son Güncelleme',
+    date: '18 Ekim 2026',
+    title: 'Kaderini Sen Seç: İnteraktif Hikayeler (CYOA) & Bölüm Revizyon Şeffaflığı',
+    desc: 'Readixon çok kollu dallanan kurgu (Bandersnatch / CYOA) motoruna kavuştu! Okuyucu kararlarıyla şekillenen alternatif yollar, çoklu sonlar, son karara geri dönme (rewind) mekaniği, bölüm revizyon şeffaflığı ve satır arası yorum koruma mimarisi tamamlandı.',
+    highlights: [
+      'İnteraktif Hikayeler ("Kaderini Sen Seç"): Bölüm sonlarında okuyucunun kaderini belirleyen dallanma noktaları ve çoklu sonlar',
+      'Bandersnatch Okuma Deneyimi & Rewind: Karar kartları, tematik son ekranları (Zafer, Trajik, Gizli, Nötr) ve "Son Karara Geri Dön" akışı',
+      'Keşfedilen Sonlar Takibi: Kitap detay sayfasında kaç sonun keşfedildiğini gösteren koleksiyon ve ilerleme motoru',
+      'Stüdyo Hızlı Dal Oluşturma: Yazarın bölüm düzenlerken sayfadan ayrılmadan tek tıkla yeni dal bölümleri üretip bağlayabilmesi',
+      'Bölüm Revizyon & Şeffaflık Sistemi: Yazar güncellemelerinde "Düzenlendi" rozetleri, yazar revizyon notu ve okuyuculara anlık bildirimler',
+      'Satır Arası Yorum Koruma: Bölüm güncellendiğinde kayan paragraflara ve eski metinlere ait yorumların "[ Önceki sürüme ait ]" şeklinde korunması',
+      'Keşfet & Akış Vitrini: Ana sayfada "Kaderini Sen Seç: İnteraktif Hikayeler" özel vitrin bloğu',
+    ],
+    icon: Gamepad2,
+  },
+  {
+    version: 'v2.3',
+    badge: 'Tür & Tasarım Devrimi',
     date: '17 Ekim 2026',
     title: '30 Edebi Ana Tür, Akıllı Tür Keşif Motoru & Organik Koyu Mod',
     desc: 'Readixon Kurgu & Edebiyat Taksonomisi 30 ana türe ve alt tür ağacına genişletildi. Yazarlar için interaktif Akıllı Tür Keşif Motoru, mobil pull-to-refresh yenileme mekaniği ve platform genelinde sert beyaz çerçevelerden arındırılmış organik koyu mod mimarisi tamamlandı.',

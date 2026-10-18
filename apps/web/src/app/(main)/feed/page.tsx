@@ -18,6 +18,7 @@ import {
   getStoriesByIds, 
   getTrendingDiscussions, 
   getWebtoonsPaginated, 
+  getInteractiveStoriesPaginated,
   getEditorialReviews, 
   getPublicUniverses,
   getPublicSeries,
@@ -42,7 +43,7 @@ import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-quer
 import {
   Flame, Sparkles, TrendingUp, Clock, ChevronRight, ChevronLeft, ChevronDown, Play, Users, Heart, CheckCircle, BellRing, BookOpen, MessageCircle, RotateCcw, Gem, Award, GalleryVertical,
   Rocket, Wand2, Eye, Ghost, Compass, ShieldAlert, Smile, Feather, Swords, Theater, Laugh, Moon, Skull, Brain, PenTool, Zap, Hourglass,
-  GraduationCap, Coffee, Cpu, Crown, Fingerprint, FileText, Globe, Layers
+  GraduationCap, Coffee, Cpu, Crown, Fingerprint, FileText, Globe, Layers, Gamepad2
 } from 'lucide-react';
 import { AuthorCard } from '@readixon/ui';
 import { toast } from "sonner";
@@ -144,6 +145,12 @@ export default function FeedPage() {
     queryFn: () => getWebtoonsPaginated(10),
   });
   const webtoons = webtoonsData?.stories || [];
+
+  const { data: interactiveData, isLoading: interactiveLoading } = useQuery({
+    queryKey: ['stories', 'interactive', 'feed'],
+    queryFn: () => getInteractiveStoriesPaginated(10),
+  });
+  const interactiveStories = interactiveData?.stories || [];
 
   const { data: recentlyUpdatedStories = [], isLoading: recentlyUpdatedLoading } = useQuery({
     queryKey: ['stories', 'recentlyUpdated'],
@@ -1112,6 +1119,21 @@ export default function FeedPage() {
               icon={<GalleryVertical className="text-primary" size={24} />}
               stories={webtoons}
               seeAllHref="/webtoons"
+              onStoryClick={(story) => {
+                const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
+                router.push(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
+              }}
+              onLikePress={handleLikePress}
+            />
+          )}
+
+          {/* İnteraktif Hikayeler / Kaderini Sen Seç (Bandersnatch) */}
+          {interactiveStories.length > 0 && (
+            <CarouselRow
+              title="Kaderini Sen Seç: İnteraktif Hikayeler"
+              subtitle="Kararlarınla dallanan kurgular, alternatif yollar ve çoklu sonlar! Hikayenin sonunu sen belirle."
+              icon={<Gamepad2 className="text-indigo-400" size={24} />}
+              stories={interactiveStories}
               onStoryClick={(story) => {
                 const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
                 router.push(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);

@@ -359,6 +359,12 @@ export function MobileInAppNotificationManager() {
               body = notif.subEntityTitle ? `${actor} yeni bir bölüm yayınladı: "${notif.subEntityTitle}"` : `${actor} yeni bir bölüm yayınladı.`;
               route = notif.entityId && notif.subEntityId ? `/read/${notif.entityId}/${notif.subEntityId}` : '/notifications';
               break;
+            case 'chapter_revised':
+              body = notif.subEntityTitle 
+                ? `${actor} "${notif.subEntityTitle}" bölümünü güncelledi: ${notif.message || 'Kurgusal düzenlemeler yapıldı.'}`
+                : `${actor} bir bölümü güncelledi.`;
+              route = notif.entityId && notif.subEntityId ? `/read/${notif.entityId}/${notif.subEntityId}` : '/notifications';
+              break;
             case 'duel_challenge':
               body = `${actor} seni bir yazarlık düellosuna davet etti!`;
               route = '/duels';

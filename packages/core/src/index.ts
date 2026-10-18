@@ -23,6 +23,8 @@ export type {
   StoryStats,
   StoryStatus,
   Chapter,
+  ChapterChoice,
+  ChapterEndingType,
   ContentBlock,
   ContentBlockType,
   Comment,

@@ -3,8 +3,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Typography, Button, BlockEditor, Input, ContentRenderer } from '@readixon/ui';
-import { ArrowLeft, Save, PlusCircle, CheckCircle, FileText, Globe, Calendar, GripVertical, Trash2, Sparkles, Wand2, Eye, EyeOff, Info, X, HelpCircle, BarChart2, Plus, Music, Volume2, ExternalLink, ChevronDown, ChevronRight, BookOpen, Layers } from 'lucide-react';
-import { fetchChapter, updateChapter, compressImage, fetchChapters, createChapter, deleteChapter, createNotification, getUserFollowerIds, getStoryById, updateStory, useAuthStore, trackWordCount, trackInteraction, parseAudioTrack, getAudioPlatformLabel, type Chapter, type ChapterAudioTrack, type Story } from '@readixon/core';
+import { ArrowLeft, Save, PlusCircle, CheckCircle, CheckCircle2, FileText, Globe, Calendar, GripVertical, Trash2, Sparkles, Wand2, Eye, EyeOff, Info, X, HelpCircle, BarChart2, Plus, Music, Volume2, ExternalLink, ChevronDown, ChevronRight, BookOpen, Layers, PencilLine, Bell, AlertCircle, GitFork, Trophy, Skull, Compass, Gamepad2, Check } from 'lucide-react';
+import { fetchChapter, updateChapter, compressImage, fetchChapters, createChapter, deleteChapter, createNotification, getUserFollowerIds, getStoryById, updateStory, useAuthStore, trackWordCount, trackInteraction, parseAudioTrack, getAudioPlatformLabel, notifyChapterRevision, type Chapter, type ChapterAudioTrack, type Story, type ChapterChoice, type ChapterEndingType } from '@readixon/core';
 import { ReadixonAIAssistant } from '@/components/ReadixonAIAssistant';
 import { uploadFile } from '@readixon/core/src/services/storageService';
 import { toast } from "sonner";
@@ -33,6 +33,12 @@ export default function ChapterEditorPage() {
   const [isAudioSectionOpen, setIsAudioSectionOpen] = useState(false);
   const [previewAudio, setPreviewAudio] = useState(false);
   const [isChapterDrawerOpen, setIsChapterDrawerOpen] = useState(false);
+
+  // Revizyon & Düzenleme Yönetimi
+  const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
+  const [revisionType, setRevisionType] = useState<'minor' | 'major'>('minor');
+  const [revisionNote, setRevisionNote] = useState('');
+  const [notifyReaders, setNotifyReaders] = useState(true);
   
   const isInitialLoad = useRef(true);
   const publishedRef = useRef(false);
@@ -171,6 +177,69 @@ export default function ChapterEditorPage() {
       else setAutoSaveStatus('idle');
     } finally {
       if (manual) setSaving(false);
+    }
+  };
+
+  const handleSaveClick = () => {
+    if (!chapter) return;
+    // Eğer bölüm daha önceden zaten yayınlanmışsa, revizyon seçeneklerini sor
+    if (chapter.status === 'published' && publishedRef.current) {
+      setRevisionNote(chapter.revisionNote || '');
+      setRevisionType('minor');
+      setIsRevisionModalOpen(true);
+      return;
+    }
+    // Taslak veya ilk defa yayınlama durumu
+    handleSave(true);
+  };
+
+  const handleConfirmRevision = async () => {
+    if (!chapter) return;
+    setIsRevisionModalOpen(false);
+    setSaving(true);
+
+    try {
+      const isMajor = revisionType === 'major';
+      const updatedChapter: Chapter = {
+        ...chapter,
+        isRevised: isMajor ? true : chapter.isRevised,
+        revisedAt: isMajor ? (new Date() as any) : chapter.revisedAt,
+        revisionNote: isMajor ? (revisionNote.trim() || undefined) : chapter.revisionNote,
+        revisionCount: isMajor ? ((chapter.revisionCount || 0) + 1) : chapter.revisionCount,
+      };
+
+      setChapter(updatedChapter);
+      await updateChapter(storyId, chapterId, updatedChapter);
+
+      if (isMajor && notifyReaders && userProfile) {
+        const storyData = story || await getStoryById(storyId);
+        const count = await notifyChapterRevision({
+          storyId,
+          chapterId,
+          storyTitle: storyData?.title || 'Hikaye',
+          chapterTitle: updatedChapter.title,
+          authorId: userProfile.uid,
+          authorName: userProfile.displayName || userProfile.username,
+          authorAvatarUrl: userProfile.avatarUrl,
+          authorUsername: userProfile.username,
+          revisionNote: revisionNote.trim() || undefined
+        });
+
+        if (count > 0) {
+          toast.success(`Revizyon kaydedildi ve ${count} takipçiye bildirim iletildi!`);
+        } else {
+          toast.success('Bölüm revizyonu başarıyla kaydedildi!');
+        }
+      } else {
+        toast.success(isMajor ? 'Bölüm revizyonu kaydedildi!' : 'Bölüm başarıyla kaydedildi (küçük düzeltme).');
+      }
+
+      setAllChapters(prev => prev.map(c => c.chapterId === chapterId ? { ...c, title: updatedChapter.title, status: updatedChapter.status } : c));
+    } catch (error) {
+      console.error("Revizyon kaydetme hatası:", error);
+      toast.error('Bölüm kaydedilemedi.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -369,6 +438,14 @@ export default function ChapterEditorPage() {
                 </button>
               </div>
 
+              {/* Revize Rozeti */}
+              {chapter.isRevised && (
+                <span className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/25">
+                  <PencilLine size={12} />
+                  <span>Revize (r{chapter.revisionCount || 1})</span>
+                </span>
+              )}
+
               {/* Sağ: Otomatik Kayıt Durumu + Kaydet Butonu + Silme */}
               <div className="flex items-center gap-2 ml-auto">
                 {/* Otomatik Kayıt Göstergesi */}
@@ -389,15 +466,24 @@ export default function ChapterEditorPage() {
                   )}
                 </div>
 
-                {/* Manuel Kaydet Butonu */}
+                {/* Manuel Kaydet / Güncelle Butonu */}
                 <Button 
                   variant="primary" 
-                  onPress={() => handleSave(true)} 
+                  onPress={handleSaveClick} 
                   disabled={saving || autoSaveStatus === 'saving'} 
                   className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-primary/20 cursor-pointer"
                 >
-                  <Save size={14} />
-                  <span>{saving ? 'Kaydediliyor...' : 'Kaydet'}</span>
+                  {chapter.status === 'published' && publishedRef.current ? (
+                    <>
+                      <Sparkles size={14} />
+                      <span>{saving ? 'Güncelleniyor...' : 'Güncelle'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save size={14} />
+                      <span>{saving ? 'Kaydediliyor...' : 'Kaydet'}</span>
+                    </>
+                  )}
                 </Button>
 
                 {/* Bölümü Sil Butonu */}
@@ -757,6 +843,313 @@ export default function ChapterEditorPage() {
             )}
           </div>
           
+          {/* ── İnteraktif Hikaye: Karar & Dallanma Yönetimi ── */}
+          {story?.format === 'interactive' && (
+            <div className="bg-card rounded-2xl border border-indigo-500/30 shadow-lg shadow-indigo-500/5 mb-8 md:mb-12 overflow-hidden">
+              {/* Header */}
+              <div className="p-4 sm:p-6 bg-gradient-to-r from-indigo-950/40 via-card to-card border-b border-border/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/30">
+                    <GitFork size={20} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Typography variant="h3" className="text-base md:text-lg font-bold text-foreground">
+                        Kader & Dallanma Noktası
+                      </Typography>
+                      <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                        Bandersnatch Engine
+                      </span>
+                    </div>
+                    <Typography variant="caption" className="text-muted text-xs">
+                      Okuyucu bu bölümün sonuna geldiğinde neyle karşılaşacak?
+                    </Typography>
+                  </div>
+                </div>
+
+                {/* Bölüm Türü Anahtarı (Son mu? vs Dallanma Seçenekleri mi?) */}
+                <div className="flex items-center bg-background/80 p-1 rounded-xl border border-border/40 shrink-0 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => setChapter({ ...chapter, isEnding: false })}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      !chapter.isEnding 
+                        ? 'bg-indigo-600 text-white shadow-sm' 
+                        : 'text-muted hover:text-foreground'
+                    }`}
+                  >
+                    <GitFork size={13} />
+                    <span>Karar Seçenekleri</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setChapter({ 
+                      ...chapter, 
+                      isEnding: true,
+                      endingType: chapter.endingType || 'good',
+                      endingTitle: chapter.endingTitle || ''
+                    })}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      chapter.isEnding 
+                        ? 'bg-amber-500 text-black shadow-sm font-bold' 
+                        : 'text-muted hover:text-foreground'
+                    }`}
+                  >
+                    <Trophy size={13} />
+                    <span>Final / Hikaye Sonu</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="p-4 sm:p-6">
+                {chapter.isEnding ? (
+                  /* Final Sonu Ayarları */
+                  <div className="space-y-5 animate-in fade-in duration-200">
+                    <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 leading-relaxed flex items-start gap-3">
+                      <Trophy size={18} className="text-amber-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-bold text-amber-200 mb-0.5">Bu Bölüm Bir Final / Son Noktasıdır</p>
+                        <p className="text-amber-300/80">
+                          Okuyucu bu bölüme ulaştığında bu sonu keşfetmiş sayılır ve profilinde kaydedilir.
+                          Bölümün sonunda bir son/zafer ekranı gösterilecek ve okuyucuya önceki bir karara dönme (&quot;Rewind&quot;) seçeneği sunulacaktır.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Son Türü Seçimi */}
+                    <div>
+                      <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2.5">
+                        Son Türü (Ending Type)
+                      </label>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                        {[
+                          { type: 'good', label: 'Zafer / Mutlu Son', icon: Trophy, activeCls: 'border-emerald-500 bg-emerald-500/15 ring-1 ring-emerald-500/40 text-emerald-400' },
+                          { type: 'bad', label: 'Trajik / Kötü Son', icon: Skull, activeCls: 'border-rose-500 bg-rose-500/15 ring-1 ring-rose-500/40 text-rose-400' },
+                          { type: 'secret', label: 'Gizli / Alternatif', icon: Sparkles, activeCls: 'border-purple-500 bg-purple-500/15 ring-1 ring-purple-500/40 text-purple-400' },
+                          { type: 'neutral', label: 'Nötr / Belirsiz', icon: Compass, activeCls: 'border-blue-500 bg-blue-500/15 ring-1 ring-blue-500/40 text-blue-400' },
+                        ].map(({ type, label, icon: Icon, activeCls }) => {
+                          const isSelected = (chapter.endingType || 'good') === type;
+                          return (
+                            <button
+                              key={type}
+                              type="button"
+                              onClick={() => setChapter({ ...chapter, endingType: type as ChapterEndingType })}
+                              className={`p-3 rounded-xl border text-left flex flex-col gap-2 transition-all cursor-pointer ${
+                                isSelected
+                                  ? `${activeCls} shadow-sm font-semibold`
+                                  : 'border-border/40 bg-muted/5 hover:border-border text-muted hover:text-foreground'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <Icon size={16} />
+                                {isSelected && <Check size={12} className="font-bold" />}
+                              </div>
+                              <span className="text-xs font-bold leading-tight">{label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Son Başlığı */}
+                    <div>
+                      <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">
+                        Son Başlığı / Ünvanı (Örn: &quot;Işığın Koruyucusu&quot;, &quot;Zindanda Kayboluş&quot;)
+                      </label>
+                      <Input
+                        value={chapter.endingTitle || ''}
+                        onChangeText={(endingTitle) => setChapter({ ...chapter, endingTitle })}
+                        placeholder="Örn: Gerçek Son: Gölgelerin Düşüşü"
+                        className="bg-background border-border/50 text-sm"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  /* Karar Seçenekleri Ayarları */
+                  <div className="space-y-4 animate-in fade-in duration-200">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-muted">
+                        Okuyucunun bölüm sonunda seçeceği alternatif yolları ekleyin ve her seçeneği bir hedef bölüme bağlayın.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newChoices = [...(chapter.choices || [])];
+                          newChoices.push({
+                            id: 'choice_' + Date.now(),
+                            text: '',
+                            targetChapterId: '',
+                            badge: '',
+                            description: ''
+                          });
+                          setChapter({ ...chapter, choices: newChoices });
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-400 font-bold text-xs border border-indigo-500/30 transition-colors cursor-pointer shrink-0"
+                      >
+                        <Plus size={14} />
+                        <span>Seçenek Ekle</span>
+                      </button>
+                    </div>
+
+                    {(!chapter.choices || chapter.choices.length === 0) ? (
+                      <div className="p-8 text-center border border-dashed border-border/50 rounded-xl bg-background/50">
+                        <GitFork size={28} className="mx-auto text-muted/40 mb-2" />
+                        <p className="text-sm font-semibold text-foreground mb-1">Henüz Karar Seçeneği Eklenmedi</p>
+                        <p className="text-xs text-muted max-w-md mx-auto mb-4">
+                          Bu bölümden sonra hikayenin dallanması için en az 1 karar seçeneği ekleyin veya bu bölümü bir &quot;Final / Son&quot; olarak işaretleyin.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setChapter({
+                              ...chapter,
+                              choices: [
+                                { id: 'choice_' + Date.now(), text: '1. Yolu Seç', targetChapterId: '', badge: '⚡ Cesur' },
+                                { id: 'choice_' + (Date.now() + 1), text: '2. Yolu Seç', targetChapterId: '', badge: '🛡️ Temkinli' }
+                              ]
+                            });
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary text-black font-bold text-xs shadow-md cursor-pointer hover:bg-primary/90 transition-all"
+                        >
+                          <Plus size={14} />
+                          <span>Örnek 2 Seçenek Ekle</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {chapter.choices.map((choice, index) => {
+                          return (
+                            <div 
+                              key={choice.id || index}
+                              className="p-4 rounded-xl border border-border/40 bg-background/70 hover:border-indigo-500/30 transition-all space-y-3"
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-6 h-6 rounded-lg bg-indigo-500/20 text-indigo-400 text-xs font-extrabold flex items-center justify-center">
+                                    {index + 1}
+                                  </span>
+                                  <span className="text-xs font-bold text-foreground">
+                                    {choice.text || `Seçenek #${index + 1}`}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newChoices = chapter.choices!.filter((_, i) => i !== index);
+                                    setChapter({ ...chapter, choices: newChoices });
+                                  }}
+                                  className="text-muted hover:text-red-400 p-1 rounded hover:bg-red-500/10 transition-colors cursor-pointer"
+                                  title="Seçeneği Kaldır"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                                {/* Seçenek Metni */}
+                                <div className="sm:col-span-6">
+                                  <label className="block text-[11px] font-bold text-muted uppercase tracking-wider mb-1">
+                                    Karar Metni (Okuyucunun Göreceği Buton)
+                                  </label>
+                                  <Input
+                                    value={choice.text}
+                                    onChangeText={(text) => {
+                                      const newChoices = [...chapter.choices!];
+                                      newChoices[index] = { ...newChoices[index], text };
+                                      setChapter({ ...chapter, choices: newChoices });
+                                    }}
+                                    placeholder="Örn: Mağaranın derinliklerine in"
+                                    className="bg-card border-border/50 text-xs py-2"
+                                  />
+                                </div>
+
+                                {/* Rozet / Etiket */}
+                                <div className="sm:col-span-2">
+                                  <label className="block text-[11px] font-bold text-muted uppercase tracking-wider mb-1">
+                                    Rozet (Opsiyonel)
+                                  </label>
+                                  <Input
+                                    value={choice.badge || ''}
+                                    onChangeText={(badge) => {
+                                      const newChoices = [...chapter.choices!];
+                                      newChoices[index] = { ...newChoices[index], badge };
+                                      setChapter({ ...chapter, choices: newChoices });
+                                    }}
+                                    placeholder="Örn: ⚡ Cesur"
+                                    className="bg-card border-border/50 text-xs py-2"
+                                  />
+                                </div>
+
+                                {/* Hedef Bölüm Seçici */}
+                                <div className="sm:col-span-4">
+                                  <label className="block text-[11px] font-bold text-muted uppercase tracking-wider mb-1">
+                                    Götüreceği Bölüm
+                                  </label>
+                                  <div className="flex items-center gap-1.5">
+                                    <select
+                                      value={choice.targetChapterId || ''}
+                                      onChange={(e) => {
+                                        const targetChapterId = e.target.value;
+                                        const newChoices = [...chapter.choices!];
+                                        newChoices[index] = { ...newChoices[index], targetChapterId };
+                                        setChapter({ ...chapter, choices: newChoices });
+                                      }}
+                                      className="flex-1 bg-card border border-border/50 text-foreground text-xs rounded-xl px-2.5 py-2.5 outline-none focus:border-indigo-500 cursor-pointer"
+                                    >
+                                      <option value="">-- Hedef Bölüm Seç --</option>
+                                      {allChapters
+                                        .filter(c => c.chapterId !== chapterId)
+                                        .map(c => (
+                                          <option key={c.chapterId} value={c.chapterId}>
+                                            #{c.order || '?'} {c.title} {c.isEnding ? `🏁 (${c.endingTitle || 'Son'})` : ''}
+                                          </option>
+                                        ))}
+                                    </select>
+
+                                    {/* Hızlı Yeni Bölüm Oluştur Butonu */}
+                                    <button
+                                      type="button"
+                                      onClick={async () => {
+                                        try {
+                                          const newTitle = choice.text ? `Dal: ${choice.text}` : `Bölüm ${allChapters.length + 1}`;
+                                          const newChapId = await createChapter(storyId, {
+                                            title: newTitle,
+                                            order: allChapters.length + 1,
+                                            contentBlocks: [],
+                                            status: 'draft',
+                                            publishDate: new Date().toISOString() as any
+                                          });
+                                          const updatedChaps = await fetchChapters(storyId);
+                                          setAllChapters(updatedChaps);
+                                          const newChoices = [...chapter.choices!];
+                                          newChoices[index] = { ...newChoices[index], targetChapterId: newChapId };
+                                          setChapter({ ...chapter, choices: newChoices });
+                                          toast.success(`"${newTitle}" oluşturuldu ve bu seçeneğe bağlandı!`);
+                                        } catch (err) {
+                                          console.error(err);
+                                          toast.error("Bölüm oluşturulamadı.");
+                                        }
+                                      }}
+                                      className="p-2.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 transition-colors shrink-0 cursor-pointer"
+                                      title="Yeni Bölüm Oluştur ve Bu Seçeneğe Bağla"
+                                    >
+                                      <Plus size={14} />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Bölüm Sonu Aktivitesi */}
           <div className="bg-card p-4 md:p-8 rounded-2xl border border-border/20 shadow-sm mb-12">
             <div className="flex items-center justify-between mb-4">
@@ -1114,6 +1507,148 @@ export default function ChapterEditorPage() {
           }}
           onClose={() => setIsUniverseOpen(false)} 
         />
+      )}
+
+      {/* ── BÖLÜM GÜNCELLEMESİ & REVİZYON MODALI ── */}
+      {isRevisionModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="max-w-lg w-full bg-card border border-border/50 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-6 relative">
+            {/* Kapat Butonu */}
+            <button
+              type="button"
+              onClick={() => setIsRevisionModalOpen(false)}
+              className="absolute top-5 right-5 w-8 h-8 rounded-full bg-muted/20 hover:bg-muted/40 text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors cursor-pointer"
+            >
+              <X size={16} />
+            </button>
+
+            {/* Başlık & İkon */}
+            <div className="flex items-start gap-3.5">
+              <div className="w-11 h-11 rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/25 flex items-center justify-center shrink-0">
+                <PencilLine size={22} />
+              </div>
+              <div className="pr-6">
+                <Typography variant="h3" className="text-lg sm:text-xl font-extrabold text-foreground">
+                  Bölüm Güncellemesi & Şeffaflık
+                </Typography>
+                <Typography variant="caption" className="text-muted-foreground mt-0.5 block leading-relaxed">
+                  Bu bölüm halihazırda yayında. Yapılan düzenlemenin türünü seçerek okuyucularınızın şeffaf şekilde bilgilendirilmesini sağlayabilirsiniz.
+                </Typography>
+              </div>
+            </div>
+
+            {/* Seçenek Kartları */}
+            <div className="grid grid-cols-1 gap-3">
+              {/* Seçenek 1: Küçük Düzeltme */}
+              <div
+                onClick={() => setRevisionType('minor')}
+                className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-start gap-3.5 ${
+                  revisionType === 'minor'
+                    ? 'border-primary bg-primary/10 shadow-sm'
+                    : 'border-border/40 bg-card/60 hover:bg-card/90 hover:border-border'
+                }`}
+              >
+                <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center shrink-0 ${
+                  revisionType === 'minor' ? 'border-primary' : 'border-muted'
+                }`}>
+                  {revisionType === 'minor' && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                </div>
+                <div>
+                  <div className="font-bold text-sm text-foreground flex items-center gap-2">
+                    <span>Küçük Düzeltme (Sessiz Kayıt)</span>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-muted/20 text-muted-foreground">İmla & Tipografi</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                    Yazım hataları, noktalama veya küçük biçimsel düzeltmeler. Okuyuculara bildirim gitmez, revizyon rozeti eklenmez.
+                  </p>
+                </div>
+              </div>
+
+              {/* Seçenek 2: Majör Revizyon */}
+              <div
+                onClick={() => setRevisionType('major')}
+                className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-start gap-3.5 ${
+                  revisionType === 'major'
+                    ? 'border-amber-500 bg-amber-500/10 shadow-sm'
+                    : 'border-border/40 bg-card/60 hover:bg-card/90 hover:border-border'
+                }`}
+              >
+                <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center shrink-0 ${
+                  revisionType === 'major' ? 'border-amber-500' : 'border-muted'
+                }`}>
+                  {revisionType === 'major' && <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />}
+                </div>
+                <div>
+                  <div className="font-bold text-sm text-foreground flex items-center gap-2">
+                    <span>Kurgusal / Majör Düzenleme</span>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400">Şeffaf Güncelleme</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                    Olay akışı, diyaloglar veya sahnelerde kurgusal değişiklik yapıldı. Bölüme <b>"Düzenlendi"</b> rozeti işlenir.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Majör Seçildiyse Ek Alanlar: Revizyon Notu & Bildirim Onayı */}
+            {revisionType === 'major' && (
+              <div className="space-y-4 pt-2 border-t border-border/30 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div>
+                  <label className="block text-xs font-bold text-foreground mb-1.5">
+                    Revizyon Notu <span className="text-muted-foreground font-normal">(Opsiyonel)</span>
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={revisionNote}
+                    onChange={(e) => setRevisionNote(e.target.value)}
+                    placeholder="Örn: 12. bölümün son sahnesi karakter motivasyonuna uygun olarak yeniden kurgulandı..."
+                    className="w-full text-xs p-3 rounded-xl bg-background border border-border/60 focus:border-amber-500 focus:outline-none transition-colors resize-none placeholder:text-muted/50"
+                  />
+                  <span className="text-[11px] text-muted-foreground mt-1 block">
+                    Bu not okuma ekranında bölüm başlığının altındaki revizyon rozetine tıklayan okuyuculara gösterilir.
+                  </span>
+                </div>
+
+                <label className="flex items-start gap-3 p-3 rounded-xl bg-background/60 border border-border/30 cursor-pointer hover:bg-background transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={notifyReaders}
+                    onChange={(e) => setNotifyReaders(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 rounded text-primary focus:ring-primary accent-primary"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                      <Bell size={13} className="text-amber-400" />
+                      Okuyuculara bildirim gönder
+                    </span>
+                    <span className="text-[11px] text-muted-foreground block mt-0.5 leading-normal">
+                      Bu bölümü daha önce okumuş olan kullanıcılara ve takipçilerinize bölüm güncellemesi bildirilir.
+                    </span>
+                  </div>
+                </label>
+              </div>
+            )}
+
+            {/* Butonlar */}
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-border/30">
+              <Button
+                variant="outline"
+                onPress={() => setIsRevisionModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold"
+              >
+                Vazgeç
+              </Button>
+              <Button
+                variant="primary"
+                onPress={handleConfirmRevision}
+                disabled={saving}
+                className="px-5 py-2 rounded-xl text-xs font-bold shadow-md shadow-primary/20"
+              >
+                {saving ? 'Kaydediliyor...' : revisionType === 'major' ? 'Revizyonu Kaydet' : 'Sessiz Kaydet'}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -83,6 +83,12 @@ export async function createNotification(
           bodyText = data.subEntityTitle ? `${actor} yeni bir bölüm yayınladı: "${data.subEntityTitle}"` : `${actor} yeni bir bölüm yayınladı.`;
           route = data.entityId && data.subEntityId ? `/read/${data.entityId}/${data.subEntityId}` : '/notifications';
           break;
+        case 'chapter_revised':
+          bodyText = data.subEntityTitle 
+            ? `${actor} "${data.subEntityTitle}" bölümünü güncelledi${data.message ? `: ${data.message}` : '.'}` 
+            : `${actor} bir bölümü güncelledi.`;
+          route = data.entityId && data.subEntityId ? `/read/${data.entityId}/${data.subEntityId}` : '/notifications';
+          break;
         case 'duel_challenge':
           bodyText = `${actor} seni bir edebi düelloya davet etti!`;
           route = data.entityId ? `/arena/duel/${data.entityId}` : '/arena';

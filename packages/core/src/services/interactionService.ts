@@ -196,7 +196,9 @@ export const addChapterComment = async (
   text: string,
   type: 'chapter' | 'paragraph' = 'chapter',
   paragraphIndex: number = -1,
-  replyToId?: string
+  replyToId?: string,
+  blockId?: string,
+  targetSnippet?: string
 ): Promise<Comment> => {
   try {
     const userProfile = await getUserProfile(userId);
@@ -212,6 +214,8 @@ export const addChapterComment = async (
       text,
       type,
       paragraphIndex,
+      blockId,
+      targetSnippet,
       likes: 0,
       createdAt: serverTimestamp() as any,
     };

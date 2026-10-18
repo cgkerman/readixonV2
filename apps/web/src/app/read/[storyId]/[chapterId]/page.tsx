@@ -13,6 +13,7 @@ import {
   addChapterComment, 
   getAllChapterComments, 
   getStoryById, 
+  getReadingProgress,
   saveQuote, 
   getUserProfile, 
   trackInteraction, 
@@ -30,10 +31,10 @@ import {
   type InlineUniverseEntity,
   type UniversePlotThread
 } from '@readixon/core';
-import type { Chapter, Comment, Story, User, Series } from '@readixon/core';
+import type { Chapter, Comment, Story, User, Series, ReadingProgress, ChapterChoice, ChapterEndingType } from '@readixon/core';
 import { useReaderStore, useAuthStore } from '@readixon/core';
 import { ContentRenderer, ReadingSettingsPanel, Button, Typography } from '@readixon/ui';
-import { ArrowLeft, Settings, List, ChevronLeft, ChevronRight, CheckCircle, X, Heart, MessageSquare, Eye, Reply, Clock, Sparkles, Star, Award, BookOpen, Layers, Globe } from 'lucide-react';
+import { ArrowLeft, Settings, List, ChevronLeft, ChevronRight, ChevronDown, CheckCircle, X, Heart, MessageSquare, Eye, Reply, Clock, Sparkles, Star, Award, BookOpen, Layers, Globe, PencilLine, GitFork, Trophy, Skull, Compass, Gamepad2, Undo2, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { ChapterEndActivity } from '@/components/ChapterEndActivity';
 import { ChapterReactions } from '@/components/ChapterReactions';
@@ -171,8 +172,14 @@ export default function ReadPage() {
   // Satır Arası Yorum (Side Panel) State
   const [selectedParagraphIndex, setSelectedParagraphIndex] = useState<number | null>(null);
   const [selectedParagraphText, setSelectedParagraphText] = useState('');
+  const [selectedBlockId, setSelectedBlockId] = useState<string | undefined>(undefined);
+  const [selectedParagraphSnippet, setSelectedParagraphSnippet] = useState<string>('');
   const [paragraphCommentText, setParagraphCommentText] = useState('');
   const [submittingParagraphComment, setSubmittingParagraphComment] = useState(false);
+
+  // Revizyon & Şeffaflık State'leri
+  const [showRevisionNoticeBanner, setShowRevisionNoticeBanner] = useState(false);
+  const [showRevisionDetails, setShowRevisionDetails] = useState(false);
 
   // Yanıt (Reply) State'leri
   const [replyingToComment, setReplyingToComment] = useState<Comment | null>(null);
@@ -186,6 +193,9 @@ export default function ReadPage() {
   const [drawerInitialTab, setDrawerInitialTab] = useState<ReaderUniverseTabType>('characters');
   const [drawerInitialSearch, setDrawerInitialSearch] = useState<string>('');
   const [enableLoreAnnotations, setEnableLoreAnnotations] = useState(true);
+
+  // İnteraktif Hikaye (CYOA / Bandersnatch) State'leri
+  const [readingProgressData, setReadingProgressData] = useState<ReadingProgress | null>(null);
 
   const {
     theme,
@@ -364,6 +374,96 @@ export default function ReadPage() {
     router.push(`/read/${storyId}/${targetChapterId}`);
   };
 
+  // İnteraktif Hikaye Karar ve Dallanma Eylemleri
+  const handleSelectChoice = async (choice: ChapterChoice) => {
+    if (firebaseUser) {
+      const currentHistory = readingProgressData?.pathHistory || [];
+      const updatedHistory = [...currentHistory];
+      if (updatedHistory[updatedHistory.length - 1] !== chapterId) {
+        updatedHistory.push(chapterId);
+      }
+      updatedHistory.push(choice.targetChapterId);
+
+      syncReadingProgress(
+        firebaseUser.uid,
+        storyId,
+        choice.targetChapterId,
+        0,
+        true,
+        {
+          pathHistoryStep: choice.targetChapterId
+        }
+      );
+      setReadingProgressData(prev => prev ? {
+        ...prev,
+        currentChapterId: choice.targetChapterId,
+        pathHistory: updatedHistory
+      } : null);
+    }
+    handleNavigateChapter(choice.targetChapterId);
+  };
+
+  const handleRewind = async () => {
+    const history = readingProgressData?.pathHistory || [];
+    if (history.length > 1) {
+      const newHistory = [...history];
+      newHistory.pop();
+      const prevStepChapterId = newHistory[newHistory.length - 1];
+      
+      if (firebaseUser) {
+        syncReadingProgress(
+          firebaseUser.uid,
+          storyId,
+          prevStepChapterId,
+          0,
+          false,
+          {
+            resetPathHistory: newHistory
+          }
+        );
+        setReadingProgressData(prev => prev ? {
+          ...prev,
+          currentChapterId: prevStepChapterId,
+          pathHistory: newHistory
+        } : null);
+      }
+      toast.info("Önceki karar noktasına dönüldü.");
+      handleNavigateChapter(prevStepChapterId);
+    } else {
+      const firstChap = chapters[0]?.chapterId;
+      if (firstChap && firstChap !== chapterId) {
+        toast.info("Hikayenin başına dönüldü.");
+        handleNavigateChapter(firstChap);
+      } else {
+        toast.info("Zaten ilk karar noktasındasınız.");
+      }
+    }
+  };
+
+  const handleRestartAdventure = async () => {
+    const firstChap = chapters[0]?.chapterId;
+    if (!firstChap) return;
+    if (firebaseUser) {
+      syncReadingProgress(
+        firebaseUser.uid,
+        storyId,
+        firstChap,
+        0,
+        false,
+        {
+          resetPathHistory: [firstChap]
+        }
+      );
+      setReadingProgressData(prev => prev ? {
+        ...prev,
+        currentChapterId: firstChap,
+        pathHistory: [firstChap]
+      } : null);
+    }
+    toast.success("Macera sıfırlandı, baştan başlıyorsun!");
+    handleNavigateChapter(firstChap);
+  };
+
   // Bölüm değiştiğinde sayfa başına dön
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -395,8 +495,15 @@ export default function ReadPage() {
       incrementChapterView(storyId, chapterId);
 
       if (firebaseUser) {
-        const liked = await checkChapterLiked(storyId, chapterId, firebaseUser.uid);
+        const [liked, userProgress] = await Promise.all([
+          checkChapterLiked(storyId, chapterId, firebaseUser.uid),
+          getReadingProgress(firebaseUser.uid, storyId)
+        ]);
         setIsLiked(liked);
+        setReadingProgressData(userProgress);
+        if (userProgress && chap?.isRevised && userProgress.completedChapters?.includes(chapterId)) {
+          setShowRevisionNoticeBanner(true);
+        }
       }
 
       setChapters(chaps);
@@ -444,9 +551,9 @@ export default function ReadPage() {
         }
       }
 
-      // Yorumları ayır
+      // Yorumları ayır ve akıllı blok/revizyon eşleştirmesi yap
       const chapComments = fetchedComments.filter(c => c.type === 'chapter' || !c.type);
-      const parComments = fetchedComments.filter(c => c.type === 'paragraph' && c.paragraphIndex >= 0);
+      const rawParComments = fetchedComments.filter(c => c.type === 'paragraph' && c.paragraphIndex >= 0);
 
       setChapterComments(chapComments);
       setComments(chapComments); // Geriye dönük uyumluluk için, tartışma kısmında chapter comments görünür
@@ -454,10 +561,42 @@ export default function ReadPage() {
       const counts: Record<number, number> = {};
       const groupedPar: Record<number, Comment[]> = {};
 
-      parComments.forEach(c => {
-        counts[c.paragraphIndex] = (counts[c.paragraphIndex] || 0) + 1;
-        if (!groupedPar[c.paragraphIndex]) groupedPar[c.paragraphIndex] = [];
-        groupedPar[c.paragraphIndex].push(c);
+      rawParComments.forEach(c => {
+        let targetIndex = c.paragraphIndex;
+        let isOutdated = Boolean(c.isOutdated);
+
+        // 1. Blok ID eşleştirmesi: Eğer yorumda blockId varsa, o bloğun güncel index'ini bul
+        if (c.blockId && chap?.contentBlocks) {
+          const foundBlockIdx = chap.contentBlocks.findIndex(b => b.id === c.blockId);
+          if (foundBlockIdx !== -1) {
+            targetIndex = foundBlockIdx;
+            // Eğer bloğun metni değiştiyse ve targetSnippet ile uyuşmuyorsa, eski sürüme ait olarak işaretle
+            const currentBlockText = (chap.contentBlocks[foundBlockIdx].text || '').replace(/<[^>]+>/g, '').trim();
+            if (c.targetSnippet && !currentBlockText.startsWith(c.targetSnippet.slice(0, 30))) {
+              isOutdated = true;
+            }
+          } else {
+            // Blok yazar tarafından tamamen silinmiş!
+            isOutdated = true;
+          }
+        } else if (chap?.isRevised && chap?.revisedAt && c.createdAt) {
+          // Legacy yorumlar için: Bölüm revizyon tarihinden önce atılmışsa
+          const commentTime = (c.createdAt as any).seconds ? (c.createdAt as any).seconds * 1000 : new Date(c.createdAt as any).getTime();
+          const revisedTime = (chap.revisedAt as any).seconds ? (chap.revisedAt as any).seconds * 1000 : new Date(chap.revisedAt as any).getTime();
+          if (commentTime < revisedTime) {
+            isOutdated = true;
+          }
+        }
+
+        const processedComment: Comment = {
+          ...c,
+          paragraphIndex: targetIndex,
+          isOutdated
+        };
+
+        counts[targetIndex] = (counts[targetIndex] || 0) + 1;
+        if (!groupedPar[targetIndex]) groupedPar[targetIndex] = [];
+        groupedPar[targetIndex].push(processedComment);
       });
 
       setParagraphCommentCounts(counts);
@@ -605,7 +744,9 @@ export default function ReadPage() {
         paragraphCommentText,
         'paragraph',
         selectedParagraphIndex,
-        replyingToParagraphComment?.commentId
+        replyingToParagraphComment?.commentId,
+        selectedBlockId,
+        selectedParagraphSnippet
       );
 
       setParagraphComments(prev => ({
@@ -683,7 +824,7 @@ export default function ReadPage() {
     }
   };
 
-  const openParagraphComments = (index: number, text: string) => {
+  const openParagraphComments = (index: number, text: string, blockId?: string) => {
     const cleanText = text.replace(/<[^>]+>/g, '').trim();
     let displayText = cleanText;
     if (displayText.length > 100) {
@@ -692,6 +833,8 @@ export default function ReadPage() {
 
     setSelectedParagraphIndex(index);
     setSelectedParagraphText(displayText);
+    setSelectedBlockId(blockId);
+    setSelectedParagraphSnippet(cleanText.slice(0, 60));
   };
 
   useEffect(() => {
@@ -720,18 +863,24 @@ export default function ReadPage() {
     if (!firebaseUser || loading || !chapter) return;
 
     const timeoutId = setTimeout(() => {
-      const isCompleted = scrollProgress > 95;
+      const isCompleted = scrollProgress > 90 || Boolean(chapter.isEnding);
       syncReadingProgress(
         firebaseUser.uid,
         storyId,
         chapterId,
         scrollProgress,
-        isCompleted
+        isCompleted,
+        story?.format === 'interactive'
+          ? {
+              pathHistoryStep: chapterId,
+              discoveredEndingId: chapter.isEnding ? chapterId : undefined
+            }
+          : undefined
       );
     }, 2000); // 2 saniye debounce
 
     return () => clearTimeout(timeoutId);
-  }, [scrollProgress, firebaseUser, loading, chapterId, storyId, chapter]);
+  }, [scrollProgress, firebaseUser, loading, chapterId, storyId, chapter, story?.format]);
 
   if (loading) {
     return (
@@ -796,11 +945,20 @@ export default function ReadPage() {
         )}
       </div>
       <div className="flex-1">
-        <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center gap-2 mb-1 flex-wrap">
           <span className="font-bold" style={{ color: currentThemeStyle.text }}>{comment.authorName || `Kullanıcı ${comment.userId.substring(0, 6)}`}</span>
           <span className="text-sm opacity-50" style={{ color: currentThemeStyle.text }}>
             {new Date(comment.createdAt?.seconds * 1000 || Date.now()).toLocaleDateString('tr-TR')}
           </span>
+          {comment.isOutdated && (
+            <span 
+              className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500 border border-amber-500/25 font-semibold flex items-center gap-1"
+              title="Bu yorum satır/bölüm düzenlenmeden önce yapılmıştır."
+            >
+              <PencilLine size={10} />
+              Önceki sürüme ait
+            </span>
+          )}
         </div>
         <Typography variant="body" style={{ color: currentThemeStyle.text }} className="whitespace-pre-line leading-relaxed mb-3">
           {comment.text}
@@ -953,6 +1111,33 @@ export default function ReadPage() {
               } pt-[calc(6rem+env(safe-area-inset-top,0px))] sm:pt-[calc(6.5rem+env(safe-area-inset-top,0px))] pb-32`
         } mx-auto relative cursor-pointer`}
       >
+        {/* Daha önce okumuş kullanıcılara özel güncelleme bildirimi banner'ı */}
+        {showRevisionNoticeBanner && (
+          <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-start justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300 no-zen-toggle cursor-auto">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0 mt-0.5">
+                <Sparkles size={16} />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm font-bold text-amber-500">
+                  Bu bölüm son okumanızdan sonra güncellendi
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                  Yazar kurguda bazı yenilikler yaptı. İsterseniz bölüme yeniden göz atabilir veya aşağıdaki yazar revizyon notunu inceleyebilirsiniz.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowRevisionNoticeBanner(false)}
+              className="p-1 rounded-lg text-muted hover:text-foreground hover:bg-black/10 transition-colors shrink-0 cursor-pointer"
+              title="Kapat"
+            >
+              <X size={15} />
+            </button>
+          </div>
+        )}
+
         {/* Bölüm Başlığı & Okuma Süresi Rozeti (Webtoon olmayan romanlar için) */}
         {story?.format !== 'webtoon' && (
           <div className="mb-8 pb-6 border-b border-border/15 no-zen-toggle cursor-auto">
@@ -976,6 +1161,39 @@ export default function ReadPage() {
             >
               {chapter.title}
             </Typography>
+
+            {/* Revizyon Rozeti ve Notu */}
+            {chapter.isRevised && (
+              <div className="mt-3 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setShowRevisionDetails(prev => !prev)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/30 transition-all hover:scale-105 active:scale-95 shadow-xs cursor-pointer"
+                  title="Yazar bu bölümde düzenleme yaptı. Detayları görmek için tıklayın."
+                >
+                  <PencilLine size={13} />
+                  <span>Yazar Tarafından Düzenlendi</span>
+                  {chapter.revisedAt && (
+                    <span className="opacity-75 font-normal">
+                      • {new Date((chapter.revisedAt as any).seconds ? (chapter.revisedAt as any).seconds * 1000 : chapter.revisedAt as any).toLocaleDateString('tr-TR')}
+                    </span>
+                  )}
+                  <ChevronDown size={12} className={`transition-transform duration-200 ${showRevisionDetails ? 'rotate-180' : ''}`} />
+                </button>
+
+                {showRevisionDetails && (
+                  <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-xs text-foreground/90 space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <div className="font-bold flex items-center gap-1.5 text-amber-500">
+                      <Sparkles size={13} />
+                      <span>Yazarın Revizyon Notu</span>
+                    </div>
+                    <p className="leading-relaxed opacity-90">
+                      {chapter.revisionNote || 'Yazar bu bölümün kurgusunda ve diyaloglarında okuma deneyimini güçlendiren güncellemeler yapmıştır.'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
             {story?.universeId && (
               <div className="mt-3 flex items-center">
                 <button
@@ -1086,6 +1304,196 @@ export default function ReadPage() {
           />
         </div>
 
+        {/* ── İnteraktif Hikaye Karar veya Final Alanı ── */}
+        {story?.format === 'interactive' && (
+          <div id="interactive-choices-section" className="my-10 no-zen-toggle cursor-auto">
+            {chapter.isEnding ? (
+              /* 🏁 Final / Son Ekranı */
+              <div className={`relative rounded-3xl p-6 sm:p-10 border overflow-hidden shadow-2xl bg-gradient-to-b text-center transition-all animate-fade-in ${
+                chapter.endingType === 'good'
+                  ? 'from-emerald-950/40 via-card to-card border-emerald-500/40 shadow-emerald-500/10'
+                  : chapter.endingType === 'bad'
+                    ? 'from-rose-950/40 via-card to-card border-rose-500/40 shadow-rose-500/10'
+                    : chapter.endingType === 'secret'
+                      ? 'from-purple-950/40 via-card to-card border-purple-500/40 shadow-purple-500/10'
+                      : 'from-blue-950/40 via-card to-card border-blue-500/40 shadow-blue-500/10'
+              }`}>
+                {/* Glow ambient background effect */}
+                <div className={`absolute -top-24 left-1/2 -translate-x-1/2 w-72 h-72 rounded-full blur-3xl pointer-events-none opacity-25 ${
+                  chapter.endingType === 'good'
+                    ? 'bg-emerald-500'
+                    : chapter.endingType === 'bad'
+                      ? 'bg-rose-500'
+                      : chapter.endingType === 'secret'
+                        ? 'bg-purple-500'
+                        : 'bg-blue-500'
+                }`} />
+
+                {/* Ending Pill */}
+                <div className="relative inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider mb-4 border shadow-sm">
+                  {chapter.endingType === 'good' && (
+                    <span className="text-emerald-400 border-emerald-500/30 bg-emerald-500/15 flex items-center gap-1.5 px-3 py-1 rounded-full">
+                      <Trophy size={14} /> Zafer / Mutlu Son
+                    </span>
+                  )}
+                  {chapter.endingType === 'bad' && (
+                    <span className="text-rose-400 border-rose-500/30 bg-rose-500/15 flex items-center gap-1.5 px-3 py-1 rounded-full">
+                      <Skull size={14} /> Trajik / Kötü Son
+                    </span>
+                  )}
+                  {chapter.endingType === 'secret' && (
+                    <span className="text-purple-400 border-purple-500/30 bg-purple-500/15 flex items-center gap-1.5 px-3 py-1 rounded-full">
+                      <Sparkles size={14} /> Gizli / Alternatif Son
+                    </span>
+                  )}
+                  {(!chapter.endingType || chapter.endingType === 'neutral') && (
+                    <span className="text-blue-400 border-blue-500/30 bg-blue-500/15 flex items-center gap-1.5 px-3 py-1 rounded-full">
+                      <Compass size={14} /> Nötr / Belirsiz Son
+                    </span>
+                  )}
+                </div>
+
+                {/* Ending Title */}
+                <h3 className="relative text-2xl sm:text-3xl font-black text-foreground mb-3 tracking-tight">
+                  {chapter.endingTitle || 'Kaderine Ulaştın'}
+                </h3>
+                <p className="relative text-sm text-muted max-w-lg mx-auto mb-6 leading-relaxed">
+                  Yaptığın seçimler seni bu noktaya getirdi. Hikayenin bu kolunu tamamladın ve son profilinde kaydedildi.
+                </p>
+
+                {/* Stats Row */}
+                <div className="relative flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-8">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-muted/15 border border-border/30 text-xs font-semibold text-foreground">
+                    <Trophy size={14} className="text-amber-400" />
+                    <span>Keşfedilen Son: {readingProgressData?.discoveredEndings?.length || 1} / {story.stats?.endingCount || 1}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-muted/15 border border-border/30 text-xs font-semibold text-foreground">
+                    <GitFork size={14} className="text-indigo-400" />
+                    <span>{readingProgressData?.pathHistory?.length || 1} Karar Adımı</span>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="relative flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleRewind}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow-lg shadow-indigo-600/25 active:scale-95 transition-all cursor-pointer"
+                  >
+                    <Undo2 size={16} />
+                    <span>Son Karara Geri Dön (Rewind)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleRestartAdventure}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-muted/20 hover:bg-muted/30 border border-border/50 text-foreground font-semibold text-sm active:scale-95 transition-all cursor-pointer"
+                  >
+                    <RotateCcw size={15} />
+                    <span>Baştan Başla</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
+                      router.push(`/story/${slug}`);
+                    }}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-primary hover:bg-primary/90 text-black font-extrabold text-sm shadow-lg shadow-primary/25 active:scale-95 transition-all cursor-pointer"
+                  >
+                    <Award size={16} />
+                    <span>Kitap Sayfası & Değerlendir</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* 🔀 Karar Noktası / Dallanma Kartları */
+              <div className="rounded-3xl p-5 sm:p-8 border border-indigo-500/30 bg-gradient-to-b from-indigo-950/20 via-card to-card shadow-xl shadow-indigo-500/5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center shrink-0">
+                    <Gamepad2 size={22} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg sm:text-xl font-extrabold text-foreground flex items-center gap-2">
+                      Kaderini Belirle
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 uppercase">
+                        Bandersnatch
+                      </span>
+                    </h3>
+                    <p className="text-xs text-muted">
+                      Hikaye burada kollara ayrılıyor. Bir sonraki adımını dikkatli seç!
+                    </p>
+                  </div>
+                </div>
+
+                {chapter.choices && chapter.choices.length > 0 ? (
+                  <div className="space-y-3 mt-5">
+                    {chapter.choices.map((choice, idx) => (
+                      <button
+                        key={choice.id || idx}
+                        type="button"
+                        onClick={() => handleSelectChoice(choice)}
+                        className="w-full group p-4 sm:p-5 rounded-2xl border border-indigo-500/30 hover:border-indigo-400 bg-card/60 hover:bg-indigo-950/30 transition-all duration-200 text-left flex items-center justify-between gap-4 cursor-pointer hover:shadow-lg hover:shadow-indigo-500/10 active:scale-[0.99]"
+                      >
+                        <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                          <div className="w-8 h-8 rounded-xl bg-indigo-500/20 group-hover:bg-indigo-500 group-hover:text-black text-indigo-400 font-black text-xs flex items-center justify-center shrink-0 transition-colors">
+                            {idx + 1}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            {choice.badge && (
+                              <span className="inline-block text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 mb-1">
+                                {choice.badge}
+                              </span>
+                            )}
+                            <h4 className="text-sm sm:text-base font-bold text-foreground group-hover:text-primary transition-colors line-clamp-2">
+                              {choice.text}
+                            </h4>
+                            {choice.description && (
+                              <p className="text-xs text-muted mt-0.5 line-clamp-1">
+                                {choice.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="w-8 h-8 rounded-xl bg-muted/15 group-hover:bg-primary group-hover:text-black text-muted flex items-center justify-center shrink-0 transition-all group-hover:translate-x-1">
+                          <ChevronRight size={18} />
+                        </div>
+                      </button>
+                    ))}
+
+                    {(readingProgressData?.pathHistory?.length || 0) > 1 && (
+                      <div className="pt-3 text-center">
+                        <button
+                          type="button"
+                          onClick={handleRewind}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-indigo-400 transition-colors cursor-pointer py-1 px-3 rounded-lg hover:bg-indigo-500/10"
+                        >
+                          <Undo2 size={13} />
+                          <span>Kararından pişman mısın? Son Karara Geri Dön</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-6 text-center border border-dashed border-border/40 rounded-2xl bg-muted/5 mt-4">
+                    <p className="text-sm font-semibold text-foreground mb-1">Hikaye henüz bu kolda devam etmiyor.</p>
+                    <p className="text-xs text-muted mb-4">Yazar bu dal için henüz yeni bir bölüm eklememiş.</p>
+                    <button
+                      type="button"
+                      onClick={handleRewind}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 text-white font-bold text-xs cursor-pointer hover:bg-indigo-500 transition-all"
+                    >
+                      <Undo2 size={14} />
+                      <span>Önceki Karara Geri Dön</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Bölüm Beğeni ve Tartışma Alanı */}
         <div className="mt-12 pt-8 border-t border-border/20 no-zen-toggle cursor-auto">
           <div className="flex flex-col items-center justify-center mb-16 space-y-4">
@@ -1113,58 +1521,60 @@ export default function ReadPage() {
             </button>
           </div>
 
-          {/* Navigation Buttons (Sayfa İçi) */}
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 my-12 pt-8 border-t border-border/20">
-            {prevChapter ? (
-              <Button
-                variant="outline"
-                onPress={() => handleNavigateChapter(prevChapter.chapterId)}
-                className="w-full sm:flex-1 flex flex-row justify-center items-center gap-2 py-3"
-              >
-                <ChevronLeft size={18} />
-                Önceki Bölüm
-              </Button>
-            ) : <div className="hidden sm:block flex-1" />}
+          {/* Navigation Buttons (Sayfa İçi - Sadece Standart Roman ise) */}
+          {story?.format !== 'interactive' && (
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 my-12 pt-8 border-t border-border/20">
+              {prevChapter ? (
+                <Button
+                  variant="outline"
+                  onPress={() => handleNavigateChapter(prevChapter.chapterId)}
+                  className="w-full sm:flex-1 flex flex-row justify-center items-center gap-2 py-3"
+                >
+                  <ChevronLeft size={18} />
+                  Önceki Bölüm
+                </Button>
+              ) : <div className="hidden sm:block flex-1" />}
 
-            {nextChapter ? (
-              <Button
-                variant="primary"
-                onPress={() => handleNavigateChapter(nextChapter.chapterId)}
-                className="w-full sm:flex-1 flex flex-row justify-center items-center gap-2 py-3 shadow-lg shadow-primary/25"
-              >
-                Sonraki Bölüm
-                <ChevronRight size={18} />
-              </Button>
-            ) : nextSeriesBook ? (
-              <Button
-                variant="primary"
-                onPress={() => {
-                  const slug = (nextSeriesBook.story as any).slug || generateStorySlug(nextSeriesBook.story.title, nextSeriesBook.story.storyId);
-                  router.push(nextSeriesBook.story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
-                }}
-                className="w-full sm:flex-1 flex flex-row justify-center items-center gap-2 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-extrabold shadow-lg shadow-amber-500/25"
-              >
-                <span>Serinin {nextSeriesBook.order}. Kitabına Geç</span>
-                <ChevronRight size={18} />
-              </Button>
-            ) : (
-              <Button
-                variant="primary"
-                onPress={() => {
-                  if (story) {
-                    const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
-                    router.push(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
-                  } else {
-                    router.push('/feed');
-                  }
-                }}
-                className="w-full sm:flex-1 flex flex-row justify-center items-center gap-2 py-3 bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/30"
-              >
-                <Award size={18} />
-                Kitabı Tamamladın! Değerlendir
-              </Button>
-            )}
-          </div>
+              {nextChapter ? (
+                <Button
+                  variant="primary"
+                  onPress={() => handleNavigateChapter(nextChapter.chapterId)}
+                  className="w-full sm:flex-1 flex flex-row justify-center items-center gap-2 py-3 shadow-lg shadow-primary/25"
+                >
+                  Sonraki Bölüm
+                  <ChevronRight size={18} />
+                </Button>
+              ) : nextSeriesBook ? (
+                <Button
+                  variant="primary"
+                  onPress={() => {
+                    const slug = (nextSeriesBook.story as any).slug || generateStorySlug(nextSeriesBook.story.title, nextSeriesBook.story.storyId);
+                    router.push(nextSeriesBook.story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
+                  }}
+                  className="w-full sm:flex-1 flex flex-row justify-center items-center gap-2 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-extrabold shadow-lg shadow-amber-500/25"
+                >
+                  <span>Serinin {nextSeriesBook.order}. Kitabına Geç</span>
+                  <ChevronRight size={18} />
+                </Button>
+              ) : (
+                <Button
+                  variant="primary"
+                  onPress={() => {
+                    if (story) {
+                      const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
+                      router.push(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
+                    } else {
+                      router.push('/feed');
+                    }
+                  }}
+                  className="w-full sm:flex-1 flex flex-row justify-center items-center gap-2 py-3 bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/30"
+                >
+                  <Award size={18} />
+                  Kitabı Tamamladın! Değerlendir
+                </Button>
+              )}
+            </div>
+          )}
 
           {/* Serinin Sonraki Kitabına Devam Kartı */}
           {!nextChapter && nextSeriesBook && (
@@ -1404,7 +1814,31 @@ export default function ReadPage() {
               )}
             </div>
 
-            {nextChapter ? (
+            {story?.format === 'interactive' ? (
+              chapter.isEnding ? (
+                <button
+                  type="button"
+                  onClick={handleRewind}
+                  className="h-11 px-3.5 sm:px-4 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-1.5 bg-amber-500 text-black hover:bg-amber-400 active:scale-95 transition-all shadow-md shadow-amber-500/25 shrink-0"
+                  title="Son Karara Geri Dön"
+                >
+                  <Undo2 size={16} />
+                  <span className="hidden xs:inline">Geri Dön</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById('interactive-choices-section');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="h-11 px-3.5 sm:px-4 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-1.5 bg-indigo-600 text-white hover:bg-indigo-500 active:scale-95 transition-all shadow-md shadow-indigo-600/30 shrink-0"
+                >
+                  <GitFork size={16} />
+                  <span>Seçim Yap</span>
+                </button>
+              )
+            ) : nextChapter ? (
               <button
                 type="button"
                 onClick={() => handleNavigateChapter(nextChapter.chapterId)}

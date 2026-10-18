@@ -46,3 +46,4 @@ Thumbs.db
 *.apk
 !apps/web/public/downloads/*.apk
 *.aab
+*.tsbuildinfo

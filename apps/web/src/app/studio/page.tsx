@@ -19,7 +19,8 @@ import {
   Layers,
   Search,
   Check,
-  PenTool
+  PenTool,
+  Gamepad2
 } from 'lucide-react';
 import { subscribeToAuthorStories, createStory, useAuthStore, syncStoryChapterCount, type Story } from '@readixon/core';
 import { GenreSelector } from '@/components/story/GenreSelector';
@@ -36,6 +37,7 @@ export default function StudioDashboard() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPaywallOpen, setIsPaywallOpen] = useState(false);
+  const [storyFormat, setStoryFormat] = useState<'novel' | 'interactive'>('novel');
   const [newTitle, setNewTitle] = useState('');
   const [newMainGenre, setNewMainGenre] = useState<string | undefined>(undefined);
   const [newSubGenres, setNewSubGenres] = useState<string[]>([]);
@@ -139,6 +141,7 @@ export default function StudioDashboard() {
         title: newTitle.trim(),
         summary: '',
         coverImage: '',
+        format: storyFormat,
         mainGenre: newMainGenre,
         subGenres: newSubGenres,
         tags: combinedTags,
@@ -159,8 +162,9 @@ export default function StudioDashboard() {
       setNewTitle('');
       setNewMainGenre(undefined);
       setNewSubGenres([]);
+      setStoryFormat('novel');
       
-      if (useWizard) {
+      if (useWizard && storyFormat !== 'interactive') {
         router.push(`/studio/story/${newStoryId}/planner`);
       } else {
         router.push(`/studio/story/${newStoryId}`);
@@ -429,8 +433,14 @@ export default function StudioDashboard() {
                       </span>
                     </div>
 
-                    {(story.seriesTitle || story.universeTitle) && (
+                    {(story.seriesTitle || story.universeTitle || story.format === 'interactive') && (
                       <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                        {story.format === 'interactive' && (
+                          <span className="inline-flex items-center gap-1 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-400 border border-indigo-500/25">
+                            <Gamepad2 size={9} />
+                            İnteraktif
+                          </span>
+                        )}
                         {story.seriesTitle && (
                           <span className="inline-flex items-center gap-1 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20">
                             <Layers size={9} />
@@ -510,8 +520,14 @@ export default function StudioDashboard() {
                       </span>
                     </div>
 
-                    {(story.seriesTitle || story.universeTitle) && (
+                    {(story.seriesTitle || story.universeTitle || story.format === 'interactive') && (
                       <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                        {story.format === 'interactive' && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-indigo-500/15 text-indigo-400 border border-indigo-500/25">
+                            <Gamepad2 size={10} />
+                            İnteraktif {story.stats?.endingCount ? `• ${story.stats.endingCount} Son` : ''}
+                          </span>
+                        )}
                         {story.seriesTitle && (
                           <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20">
                             <Layers size={10} />
@@ -594,69 +610,135 @@ export default function StudioDashboard() {
             {/* Modal İçeriği (Kaydırılabilir Gövde) */}
             <div className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-5 scrollbar-thin">
               
-              {/* Başlangıç Yöntemi Seçici Kartlar */}
+              {/* Format Seçimi: Standart Roman vs İnteraktif Hikaye */}
               <div>
                 <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2.5">
-                  Başlangıç Yöntemi
+                  Hikaye Formatı
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* Sihirbaz Seçeneği */}
+                  {/* Standart Roman */}
                   <div
-                    onClick={() => setCreationMode('wizard')}
+                    onClick={() => setStoryFormat('novel')}
                     className={`relative p-3.5 sm:p-4 rounded-xl border text-left cursor-pointer transition-all ${
-                      creationMode === 'wizard'
+                      storyFormat === 'novel'
                         ? 'border-primary/80 bg-primary/10 shadow-sm shadow-primary/20 ring-1 ring-primary/40'
                         : 'border-border/60 bg-muted/5 hover:border-border hover:bg-muted/10'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <div className="w-8 h-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center shrink-0">
-                        <Wand2 size={16} />
+                        <BookOpen size={16} />
                       </div>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/20 text-primary uppercase tracking-wide">
-                        Önerilen
+                        Klasik
                       </span>
                     </div>
                     <h4 className="font-semibold text-sm text-text mb-1 flex items-center gap-1.5">
-                      Kurgu Sihirbazı
-                      {creationMode === 'wizard' && (
+                      Standart Roman
+                      {storyFormat === 'novel' && (
                         <Check size={14} className="text-primary shrink-0" />
                       )}
                     </h4>
                     <p className="text-xs text-muted leading-relaxed">
-                      Kanca, karakterler, çatışma ve final adımlarıyla kurgu iskeletinizi adım adım planlayın.
+                      Bölüm bölüm doğrusal ilerleyen, geleneksel e-kitap ve roman kurgusu.
                     </p>
                   </div>
 
-                  {/* Klasik Seçenek */}
+                  {/* İnteraktif Hikaye */}
                   <div
-                    onClick={() => setCreationMode('classic')}
+                    onClick={() => setStoryFormat('interactive')}
                     className={`relative p-3.5 sm:p-4 rounded-xl border text-left cursor-pointer transition-all ${
-                      creationMode === 'classic'
-                        ? 'border-primary/80 bg-primary/10 shadow-sm shadow-primary/20 ring-1 ring-primary/40'
+                      storyFormat === 'interactive'
+                        ? 'border-indigo-500/80 bg-indigo-500/10 shadow-sm shadow-indigo-500/20 ring-1 ring-indigo-500/40'
                         : 'border-border/60 bg-muted/5 hover:border-border hover:bg-muted/10'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="w-8 h-8 rounded-lg bg-muted/20 text-muted-foreground flex items-center justify-center shrink-0">
-                        <PenTool size={16} />
+                      <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0">
+                        <Gamepad2 size={16} />
                       </div>
-                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-muted/20 text-muted uppercase tracking-wide">
-                        Hızlı
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 uppercase tracking-wide">
+                        🎮 CYOA
                       </span>
                     </div>
                     <h4 className="font-semibold text-sm text-text mb-1 flex items-center gap-1.5">
-                      Klasik Yazım
-                      {creationMode === 'classic' && (
-                        <Check size={14} className="text-primary shrink-0" />
+                      İnteraktif Hikaye
+                      {storyFormat === 'interactive' && (
+                        <Check size={14} className="text-indigo-400 shrink-0" />
                       )}
                     </h4>
                     <p className="text-xs text-muted leading-relaxed">
-                      Herhangi bir planlama şablonu olmadan doğrudan bölümlerinizi serbestçe yazmaya başlayın.
+                      Okuyucunun kaderini belirleyen kararlar, dallanan kollar ve çoklu sonlar.
                     </p>
                   </div>
                 </div>
               </div>
+
+              {/* Başlangıç Yöntemi Seçici Kartlar (Sadece Standart Roman ise) */}
+              {storyFormat === 'novel' && (
+                <div>
+                  <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2.5">
+                    Başlangıç Yöntemi
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Sihirbaz Seçeneği */}
+                    <div
+                      onClick={() => setCreationMode('wizard')}
+                      className={`relative p-3.5 sm:p-4 rounded-xl border text-left cursor-pointer transition-all ${
+                        creationMode === 'wizard'
+                          ? 'border-primary/80 bg-primary/10 shadow-sm shadow-primary/20 ring-1 ring-primary/40'
+                          : 'border-border/60 bg-muted/5 hover:border-border hover:bg-muted/10'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="w-8 h-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center shrink-0">
+                          <Wand2 size={16} />
+                        </div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/20 text-primary uppercase tracking-wide">
+                          Önerilen
+                        </span>
+                      </div>
+                      <h4 className="font-semibold text-sm text-text mb-1 flex items-center gap-1.5">
+                        Kurgu Sihirbazı
+                        {creationMode === 'wizard' && (
+                          <Check size={14} className="text-primary shrink-0" />
+                        )}
+                      </h4>
+                      <p className="text-xs text-muted leading-relaxed">
+                        Kanca, karakterler, çatışma ve final adımlarıyla kurgu iskeletinizi adım adım planlayın.
+                      </p>
+                    </div>
+
+                    {/* Klasik Seçenek */}
+                    <div
+                      onClick={() => setCreationMode('classic')}
+                      className={`relative p-3.5 sm:p-4 rounded-xl border text-left cursor-pointer transition-all ${
+                        creationMode === 'classic'
+                          ? 'border-primary/80 bg-primary/10 shadow-sm shadow-primary/20 ring-1 ring-primary/40'
+                          : 'border-border/60 bg-muted/5 hover:border-border hover:bg-muted/10'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="w-8 h-8 rounded-lg bg-muted/20 text-muted-foreground flex items-center justify-center shrink-0">
+                          <PenTool size={16} />
+                        </div>
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-muted/20 text-muted uppercase tracking-wide">
+                          Hızlı
+                        </span>
+                      </div>
+                      <h4 className="font-semibold text-sm text-text mb-1 flex items-center gap-1.5">
+                        Klasik Yazım
+                        {creationMode === 'classic' && (
+                          <Check size={14} className="text-primary shrink-0" />
+                        )}
+                      </h4>
+                      <p className="text-xs text-muted leading-relaxed">
+                        Herhangi bir planlama şablonu olmadan doğrudan bölümlerinizi serbestçe yazmaya başlayın.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Hikaye Adı */}
               <div>

@@ -13,7 +13,7 @@ export interface ContentRendererProps {
   lineHeight?: 'tight' | 'normal' | 'relaxed';
   textAlign?: 'left' | 'justify';
   textColor?: string;
-  onParagraphCommentClick?: (paragraphIndex: number, text: string) => void;
+  onParagraphCommentClick?: (paragraphIndex: number, text: string, blockId?: string) => void;
   paragraphCommentCounts?: Record<number, number>;
   onQuoteSave?: (text: string) => void;
   onQuoteShare?: (text: string) => void;
@@ -276,7 +276,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                           <div className="absolute top-0.5 right-0 flex items-center">
                             <button 
                               type="button"
-                              onClick={() => onParagraphCommentClick(currentIndex, rawText)}
+                              onClick={() => onParagraphCommentClick(currentIndex, rawText, block.id)}
                               className={`transition-all flex items-center justify-center active:scale-90 ${
                                 commentCount > 0
                                   ? 'h-7 px-2.5 rounded-full bg-primary/20 hover:bg-primary/30 text-primary border border-primary/40 shadow-sm gap-1.5 opacity-100 scale-100'
@@ -316,7 +316,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                   <div className="absolute top-0.5 right-0 flex items-center">
                     <button 
                       type="button"
-                      onClick={() => onParagraphCommentClick(currentIndex, block.text || '')}
+                      onClick={() => onParagraphCommentClick(currentIndex, block.text || '', block.id)}
                       className={`transition-all flex items-center justify-center active:scale-90 ${
                         commentCount > 0
                           ? 'h-7 px-2.5 rounded-full bg-primary/20 hover:bg-primary/30 text-primary border border-primary/40 shadow-sm gap-1.5 opacity-100 scale-100'

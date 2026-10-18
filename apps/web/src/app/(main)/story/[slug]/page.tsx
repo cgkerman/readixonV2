@@ -39,7 +39,8 @@ import {
   BookOpen, Heart, Eye, List, Play, BookmarkPlus, BookmarkCheck, 
   ArrowLeft, Loader2, Star, MessageSquare, Users, Hash,
   Lock, Calendar, Bell, Info, X, Sparkles, ChevronRight, Bookmark, Check,
-  ListPlus, Share2, ArrowUpDown, Layers, Globe, Reply, Trash2, Send
+  ListPlus, Share2, ArrowUpDown, Layers, Globe, Reply, Trash2, Send, PencilLine,
+  Gamepad2, GitFork, Trophy
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from "sonner";
@@ -740,6 +741,13 @@ export default function StoryDetailPage() {
 
             {/* Status & Puan Rozetleri */}
             <div className="flex flex-wrap gap-2 mb-2.5 justify-center md:justify-start items-center">
+              {story.format === 'interactive' && (
+                <span className="px-3 py-1 bg-indigo-500/15 backdrop-blur-md text-indigo-400 text-[11px] font-black rounded-full border border-indigo-500/30 shadow-xs flex items-center gap-1.5">
+                  <Gamepad2 size={13} />
+                  <span>İnteraktif Hikaye • CYOA</span>
+                </span>
+              )}
+
               <span className="px-3 py-1 bg-card/90 backdrop-blur-md text-text text-[11px] font-bold rounded-full border border-border/60 shadow-xs">
                 {story.status === 'completed' ? 'Tamamlandı' : story.status === 'ongoing' ? 'Devam Ediyor' : 'Taslak'}
               </span>
@@ -809,7 +817,7 @@ export default function StoryDetailPage() {
             )}
 
             {/* İstatistik Rozetleri */}
-            <div className="flex items-center justify-center md:justify-start gap-4 mb-5 text-xs text-muted">
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 sm:gap-4 mb-4 text-xs text-muted">
               <div className="flex items-center gap-1.5" title="Okunma Sayısı">
                 <Eye size={14} className="text-sky-400" />
                 <span className="font-bold text-text">{story.stats?.views?.toLocaleString('tr-TR') || '0'}</span> Okunma
@@ -824,7 +832,53 @@ export default function StoryDetailPage() {
                 <List size={14} className="text-primary" />
                 <span className="font-bold text-text">{chapters.length}</span> Bölüm
               </div>
+
+              {story.format === 'interactive' && (
+                <>
+                  <div className="w-1 h-1 rounded-full bg-border" />
+                  <div className="flex items-center gap-1.5" title="Farklı Son Sayısı">
+                    <Trophy size={14} className="text-amber-400" />
+                    <span className="font-bold text-text">{story.stats?.endingCount || 0}</span> Farklı Son
+                  </div>
+                  {Boolean(story.stats?.choiceCount) && (
+                    <>
+                      <div className="w-1 h-1 rounded-full bg-border" />
+                      <div className="flex items-center gap-1.5" title="Karar Noktaları">
+                        <GitFork size={14} className="text-indigo-400" />
+                        <span className="font-bold text-text">{story.stats?.choiceCount}</span> Karar
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
             </div>
+
+            {/* İnteraktif Hikaye Son Keşif İlerleme Kartı */}
+            {story.format === 'interactive' && (
+              <div className="w-full max-w-md md:max-w-lg mb-4 p-3 sm:p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/25 flex items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0">
+                    <Trophy size={16} />
+                  </div>
+                  <div>
+                    <span className="font-bold text-foreground block">
+                      Keşfedilen Sonlar: {readingProgress?.discoveredEndings?.length || 0} / {story.stats?.endingCount || 1}
+                    </span>
+                    <span className="text-[11px] text-muted">
+                      {(readingProgress?.discoveredEndings?.length || 0) >= (story.stats?.endingCount || 1) && (story.stats?.endingCount || 0) > 0
+                        ? '🎉 Tüm sonları keşfettin! Usta maceracı.'
+                        : 'Farklı kararlar alarak gizli ve alternatif sonları keşfet!'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-right shrink-0">
+                  <span className="text-xs font-black text-indigo-400">
+                    %{Math.round(((readingProgress?.discoveredEndings?.length || 0) / Math.max(1, story.stats?.endingCount || 1)) * 100)}
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* ── Hero Aksiyonları (Ana CTA + Kompakt 4'lü Bar) ── */}
             <div className="w-full max-w-md md:max-w-lg space-y-2.5">
@@ -1520,6 +1574,38 @@ export default function StoryDetailPage() {
                                   <MessageSquare size={11} className="opacity-70" />
                                   {(chapter.stats?.commentCount || 0).toLocaleString()}
                                 </span>
+                                {chapter.isRevised && (
+                                  <span className="flex items-center gap-1 shrink-0 text-amber-500 font-semibold bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full text-[10px]">
+                                    <PencilLine size={10} />
+                                    Düzenlendi
+                                  </span>
+                                )}
+                                {chapter.isEnding && (
+                                  <span className={`flex items-center gap-1 shrink-0 font-bold px-2 py-0.5 rounded-full text-[10px] border ${
+                                    chapter.endingType === 'good'
+                                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                      : chapter.endingType === 'bad'
+                                        ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                                        : chapter.endingType === 'secret'
+                                          ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                                          : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                                  }`}>
+                                    <Trophy size={10} />
+                                    {chapter.endingTitle ? `Son: ${chapter.endingTitle}` : 'Final / Son'}
+                                  </span>
+                                )}
+                                {!chapter.isEnding && chapter.choices && chapter.choices.length > 0 && (
+                                  <span className="flex items-center gap-1 shrink-0 text-indigo-400 font-bold bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded-full text-[10px]">
+                                    <GitFork size={10} />
+                                    {chapter.choices.length} Karar Yolu
+                                  </span>
+                                )}
+                                {chapter.isEnding && readingProgress?.discoveredEndings?.includes(chapter.chapterId) && (
+                                  <span className="flex items-center gap-1 shrink-0 text-amber-400 font-extrabold bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full text-[10px]">
+                                    <Sparkles size={10} />
+                                    Keşfedildi
+                                  </span>
+                                )}
                               </div>
                             ) : (
                               publishDateObj && (
