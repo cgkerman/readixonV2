@@ -116,11 +116,21 @@ export function InteractiveRelationshipGraph({
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const nodePositionsRef = useRef<Record<string, { x: number; y: number }>>(initialLayout || {});
 
-  // initialLayout prop'u yüklendiğinde veya değiştiğinde senkronize et
+  // Touch Gesture State (Mobile Pan & Pinch Zoom)
+  const [touchStartDist, setTouchStartDist] = useState<number | null>(null);
+  const [touchStartZoom, setTouchStartZoom] = useState<number>(1);
+  const touchStartPanRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const touchStartPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const hasMovedRef = useRef<boolean>(false);
+
+  // initialLayout prop'u yüklendiğinde senkronize et (mevcut yerel sürüklemeleri ezmeden birleştir)
   useEffect(() => {
     if (initialLayout && Object.keys(initialLayout).length > 0) {
-      setNodePositions(initialLayout);
-      nodePositionsRef.current = initialLayout;
+      setNodePositions((prev) => {
+        const merged = { ...initialLayout, ...prev };
+        nodePositionsRef.current = merged;
+        return merged;
+      });
     }
   }, [initialLayout]);
 
@@ -130,6 +140,21 @@ export function InteractiveRelationshipGraph({
         clearTimeout(autoSaveTimerRef.current);
       }
     };
+  }, []);
+
+  // Desktop Trackpad & Mouse Wheel Smooth Zoom
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const onWheelNative = (e: WheelEvent) => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
+      setZoom((prev) => Math.min(Math.max(prev * zoomFactor, 0.4), 2.8));
+    };
+
+    el.addEventListener('wheel', onWheelNative, { passive: false });
+    return () => el.removeEventListener('wheel', onWheelNative);
   }, []);
 
   // Filtreler & Arama
@@ -268,15 +293,85 @@ export function InteractiveRelationshipGraph({
   // Zoom Kontrolleri
   const handleZoomIn = () => setZoom((prev) => Math.min(prev + 0.25, 2.5));
   const handleZoomOut = () => setZoom((prev) => Math.max(prev - 0.25, 0.5));
-  const handleReset = () => {
-    setZoom(1);
-    setPan({ x: 0, y: 0 });
+
+  // Tuvali Ekrana Göre Akıllı Ortala ve Sığdır (Smart Auto-Fit & Center)
+  const handleReset = useCallback(() => {
     setFocusedNodeId(null);
     setSelectedNode(null);
     setSelectedEdge(null);
-  };
 
-  // Pan (Tuvali Sürükleme) Mantığı
+    const container = containerRef.current;
+    if (!container || nodes.length === 0) {
+      setZoom(1);
+      setPan({ x: 0, y: 0 });
+      return;
+    }
+
+    const containerWidth = container.clientWidth || 800;
+    const containerHeight = container.clientHeight || 550;
+
+    // Tüm düğümlerin kapladığı alanı (bounding box) hesapla
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+
+    nodes.forEach((n) => {
+      if (n.x < minX) minX = n.x;
+      if (n.x > maxX) maxX = n.x;
+      if (n.y < minY) minY = n.y;
+      if (n.y > maxY) maxY = n.y;
+    });
+
+    // Kenarlardan boşluk (margin)
+    const padding = 75;
+    const contentWidth = Math.max(maxX - minX + padding * 2, 220);
+    const contentHeight = Math.max(maxY - minY + padding * 2, 220);
+    const contentCenterX = (minX + maxX) / 2;
+    const contentCenterY = (minY + maxY) / 2;
+
+    // Ekrana tam sığacak ideal zoom oranı
+    const fitZoom = Math.min(
+      containerWidth / contentWidth,
+      containerHeight / contentHeight,
+      1.1
+    );
+    const idealZoom = Number(Math.max(Math.min(fitZoom, 1.25), 0.45).toFixed(2));
+
+    // Düğümlerin ağırlık merkezini ekranın tam ortasına getir
+    const idealPanX = Math.round(containerWidth / 2 - contentCenterX * idealZoom);
+    const idealPanY = Math.round(containerHeight / 2 - contentCenterY * idealZoom);
+
+    setZoom(idealZoom);
+    setPan({ x: idealPanX, y: idealPanY });
+    toast.info('Görünüm ekrana ortalandı');
+  }, [nodes]);
+
+  // Ekranda yer alan tüm karakterlerin en güncel tam yerleşim haritasını çıkar
+  const getFullLayoutToSave = useCallback((): Record<string, { x: number; y: number }> => {
+    const layout: Record<string, { x: number; y: number }> = {};
+    nodes.forEach((node) => {
+      layout[node.id] = {
+        x: Math.round(nodePositionsRef.current[node.id]?.x ?? node.x),
+        y: Math.round(nodePositionsRef.current[node.id]?.y ?? node.y),
+      };
+    });
+    return layout;
+  }, [nodes]);
+
+  // Sayfa ilk yüklendiğinde grafiği otomatik olarak ekran boyutuna göre ortala
+  const initialCenteredRef = useRef(false);
+  useEffect(() => {
+    if (!initialCenteredRef.current && nodes.length > 0 && containerRef.current) {
+      const timer = setTimeout(() => {
+        handleReset();
+        initialCenteredRef.current = true;
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [nodes, handleReset]);
+
+  // Pan (Tuvali Sürükleme) Mantığı - Mouse
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0 || draggingNodeId) return;
     setIsPanning(true);
@@ -297,14 +392,11 @@ export function InteractiveRelationshipGraph({
       const mouseY = (e.clientY - rect.top - pan.y) / zoom;
 
       const newPos = { x: Math.round(mouseX), y: Math.round(mouseY) };
-      setNodePositions((prev) => {
-        const updated = {
-          ...prev,
-          [draggingNodeId]: newPos,
-        };
-        nodePositionsRef.current = updated;
-        return updated;
-      });
+      nodePositionsRef.current[draggingNodeId] = newPos;
+      setNodePositions((prev) => ({
+        ...prev,
+        [draggingNodeId]: newPos,
+      }));
       setHasUnsavedLayout(true);
     }
   };
@@ -318,27 +410,129 @@ export function InteractiveRelationshipGraph({
       autoSaveTimerRef.current = setTimeout(async () => {
         try {
           setIsSavingLayout(true);
-          await onSaveLayout(nodePositionsRef.current);
+          const fullLayout = getFullLayoutToSave();
+          nodePositionsRef.current = fullLayout;
+          setNodePositions(fullLayout);
+          await onSaveLayout(fullLayout);
           setHasUnsavedLayout(false);
         } catch (err) {
           console.error('İlişki ağı otomatik kaydedilemedi:', err);
         } finally {
           setIsSavingLayout(false);
         }
-      }, 1200);
+      }, 700);
+    }
+    setDraggingNodeId(null);
+  };
+
+  // ── Mobil Dokunma (Touch Gestures: Pan, Pinch Zoom & Drag) ──
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      setIsPanning(true);
+      touchStartPanRef.current = { x: touch.clientX - pan.x, y: touch.clientY - pan.y };
+      touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+      hasMovedRef.current = false;
+      setTouchStartDist(null);
+    } else if (e.touches.length === 2) {
+      // 2 parmak: Pinch-to-zoom
+      setIsPanning(false);
+      setDraggingNodeId(null);
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      setTouchStartDist(dist);
+      setTouchStartZoom(zoom);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    // 2 Parmak: Pinch-to-Zoom
+    if (e.touches.length === 2 && touchStartDist !== null) {
+      const newDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const scaleFactor = newDist / touchStartDist;
+      const nextZoom = Math.min(Math.max(touchStartZoom * scaleFactor, 0.4), 2.8);
+      setZoom(nextZoom);
+      return;
+    }
+
+    // 1 Parmak: Düğüm Taşıma veya Tuval Kaydırma (Pan)
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      const moveDelta = Math.hypot(
+        touch.clientX - touchStartPosRef.current.x,
+        touch.clientY - touchStartPosRef.current.y
+      );
+      if (moveDelta > 5) {
+        hasMovedRef.current = true;
+      }
+
+      if (draggingNodeId && isEditable) {
+        // Mobil: Düğümü Taşı
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        const mouseX = (touch.clientX - rect.left - pan.x) / zoom;
+        const mouseY = (touch.clientY - rect.top - pan.y) / zoom;
+
+        const newPos = { x: Math.round(mouseX), y: Math.round(mouseY) };
+        nodePositionsRef.current[draggingNodeId] = newPos;
+        setNodePositions((prev) => ({
+          ...prev,
+          [draggingNodeId]: newPos,
+        }));
+        setHasUnsavedLayout(true);
+      } else {
+        // Mobil: Tuvali Kaydır (Pan)
+        setPan({
+          x: touch.clientX - touchStartPanRef.current.x,
+          y: touch.clientY - touchStartPanRef.current.y,
+        });
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsPanning(false);
+    setTouchStartDist(null);
+
+    if (draggingNodeId && isEditable && onSaveLayout) {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+      autoSaveTimerRef.current = setTimeout(async () => {
+        try {
+          setIsSavingLayout(true);
+          const fullLayout = getFullLayoutToSave();
+          nodePositionsRef.current = fullLayout;
+          setNodePositions(fullLayout);
+          await onSaveLayout(fullLayout);
+          setHasUnsavedLayout(false);
+        } catch (err) {
+          console.error('İlişki ağı otomatik kaydedilemedi:', err);
+        } finally {
+          setIsSavingLayout(false);
+        }
+      }, 700);
     }
     setDraggingNodeId(null);
   };
 
   // Düzeni Manuel Kaydet
   const handleManualSaveLayout = async () => {
-    if (!onSaveLayout) return;
+    if (!onSaveLayout || isSavingLayout) return;
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
     }
     setIsSavingLayout(true);
     try {
-      await onSaveLayout(nodePositionsRef.current);
+      const fullLayout = getFullLayoutToSave();
+      nodePositionsRef.current = fullLayout;
+      setNodePositions(fullLayout);
+      await onSaveLayout(fullLayout);
       setHasUnsavedLayout(false);
       toast.success('İlişki ağı yerleşimi kaydedildi');
     } catch (err) {
@@ -456,9 +650,9 @@ export function InteractiveRelationshipGraph({
   };
 
   return (
-    <div className="relative w-full h-[650px] bg-slate-950 rounded-2xl overflow-hidden border border-border/40 select-none shadow-2xl flex flex-col">
+    <div className="relative w-full h-[540px] sm:h-[650px] bg-slate-950 rounded-2xl overflow-hidden border border-border/40 select-none shadow-2xl flex flex-col touch-none overscroll-contain">
       {/* ── Üst Araç Çubuğu (Toolbar) ── */}
-      <div className="absolute top-4 left-4 right-4 z-20 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
+      <div className="absolute top-2.5 left-2.5 right-2.5 sm:top-4 sm:left-4 sm:right-4 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
         {/* Başlık ve Filtreler */}
         <div className="bg-slate-900/90 backdrop-blur-md px-3 py-2 rounded-2xl border border-border/60 shadow-lg pointer-events-auto flex items-center gap-3">
           <div className="flex items-center gap-2">
@@ -581,10 +775,10 @@ export function InteractiveRelationshipGraph({
           <button
             type="button"
             onClick={handleReset}
-            className="p-1.5 text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors active:scale-95"
-            title="Tuvali Merkeze Al"
+            className="p-1.5 text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-all active:scale-90"
+            title="Tuvali Merkeze Al ve Sığdır"
           >
-            <RotateCcw className="w-4 h-4" />
+            <RotateCcw className="w-4 h-4 transition-transform duration-300 hover:rotate-90 active:rotate-180" />
           </button>
         </div>
       </div>
@@ -608,7 +802,11 @@ export function InteractiveRelationshipGraph({
         onMouseMove={handleCanvasMouseMove}
         onMouseUp={handleCanvasMouseUp}
         onMouseLeave={handleCanvasMouseUp}
-        className={`w-full h-full relative overflow-hidden flex items-center justify-center cursor-grab ${
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
+        className={`w-full h-full relative overflow-hidden flex items-center justify-center cursor-grab touch-none overscroll-contain select-none ${
           isPanning ? 'cursor-grabbing' : ''
         }`}
       >
@@ -679,6 +877,11 @@ export function InteractiveRelationshipGraph({
                 <g
                   key={edge.id}
                   onClick={(e) => handleEdgeClick(edge, e)}
+                  onTouchEnd={(e) => {
+                    if (!hasMovedRef.current) {
+                      handleEdgeClick(edge, e as unknown as React.MouseEvent);
+                    }
+                  }}
                   className="cursor-pointer transition-opacity duration-200"
                   opacity={isDimmed ? 0.15 : 1}
                 >
@@ -755,6 +958,18 @@ export function InteractiveRelationshipGraph({
                     if (!isEditable) return;
                     e.stopPropagation();
                     setDraggingNodeId(node.id);
+                  }}
+                  onTouchStart={(e) => {
+                    hasMovedRef.current = false;
+                    if (isEditable) {
+                      e.stopPropagation();
+                      setDraggingNodeId(node.id);
+                    }
+                  }}
+                  onTouchEnd={(e) => {
+                    if (!hasMovedRef.current) {
+                      handleNodeClick(node, e as unknown as React.MouseEvent);
+                    }
                   }}
                   onClick={(e) => handleNodeClick(node, e)}
                   opacity={isDimmed ? 0.2 : 1}

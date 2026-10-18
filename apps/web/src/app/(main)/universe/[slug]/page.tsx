@@ -231,6 +231,17 @@ export default function PublicUniversePage() {
   useEffect(() => {
     if (!slug) return;
     loadUniverse();
+
+    // Sekmeler arası geçiş yapıldığında en güncel evren verilerini ve grafiği arka planda tazele
+    const handleFocus = () => {
+      getUniverseBySlug(slug).then((u) => {
+        if (u) {
+          setUniverse(u);
+        }
+      }).catch(console.error);
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, [slug]);
 
   const loadUniverse = async () => {
