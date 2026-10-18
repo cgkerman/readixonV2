@@ -65,7 +65,7 @@ service cloud.firestore {
     match /stories/{storyId} {
       allow read: if true;
       allow create: if isAuthenticated() && request.resource.data.authorId == request.auth.uid;
-      // GÜNCELLEME: Beğeni sayıları ve okuma sayıları artabilsin diye
+      // GÜNCELLEME: Beğeni sayıları, görüntülenme ve aktif okuma süresi (telemetri) istatistikleri için
       allow update: if isAuthenticated();
       allow delete: if isOwner(resource.data.authorId);
       
@@ -77,6 +77,7 @@ service cloud.firestore {
       
       match /chapters/{chapterId} {
         allow read: if true;
+        // GÜNCELLEME: Bölüm görüntülenme, tamamlama ve aktif okuma süresi telemetrisi için
         allow create, update: if isAuthenticated();
         
         // DEĞİŞEN SATIR: Bölüm silme yetkisi sadece hikayenin sahibine veriliyor

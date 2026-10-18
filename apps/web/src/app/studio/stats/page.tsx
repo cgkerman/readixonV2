@@ -18,6 +18,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { subscribeToAuthorStories, getPublishedChapters, useAuthStore, type Story } from '@readixon/core';
+import { ReadingAnalyticsSection } from './components/ReadingAnalyticsSection';
 
 // Kompakt sayı formatlayıcı (Örn: 15400 -> 15.4B)
 const formatCompact = (num: number): string => {
@@ -186,7 +187,10 @@ export default function StudioStats() {
             />
           </div>
 
-          {/* ── 2. En İyi Eserler & Yan Paneller ── */}
+          {/* ── 2. Gelişmiş Okuma Analitiği & Okur Tutundurma (Telemetri) ── */}
+          <ReadingAnalyticsSection stories={stories} />
+
+          {/* ── 3. En İyi Eserler & Yan Paneller ── */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
             
             {/* Sol / Üst: En İyi Performans Gösterenler */}

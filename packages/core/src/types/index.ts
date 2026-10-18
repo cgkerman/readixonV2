@@ -105,6 +105,7 @@ export interface StoryStats {
   commentCount?: number; // Toplam bölüm ve satır arası yorum sayısı
   endingCount?: number;  // İnteraktif hikayeler için toplam son sayısı
   choiceCount?: number;  // İnteraktif hikayeler için toplam karar noktası sayısı
+  totalReadTimeSeconds?: number; // Hikayede geçirilen toplam aktif okuma süresi (saniye)
 }
 
 export interface Contributor {
@@ -254,6 +255,39 @@ export interface ChapterStats {
   views: number;
   likes: number;
   commentCount: number;
+  // Gelişmiş Okuma Analitiği (Advanced Telemetry)
+  totalReadTimeSeconds?: number;  // Bölümde geçirilen toplam aktif okuma süresi (saniye)
+  completedReads?: number;        // Bölümü sonuna kadar okuyan okur sayısı
+  readingSessionsCount?: number;  // Toplam okuma oturumu sayısı
+  avgReadTimeSeconds?: number;    // Ortalama okuma süresi (saniye)
+  completionRate?: number;        // Tamamlama oranı (0-100)
+}
+
+export interface ChapterReadingMetric {
+  chapterId: string;
+  title: string;
+  order: number;
+  wordCount: number;
+  estimatedReadTimeSeconds: number; // Kelime sayısına göre beklenen süre (yaklaşık 200 kelime/dk)
+  actualAvgReadTimeSeconds: number; // Gerçek ortalama süre
+  views: number;
+  completedReads: number;
+  completionRate: number; // 0 - 100 (%)
+  retentionRate: number;  // 1. bölüme göre tutunma oranı (0 - 100 %)
+  dropOffRate: number;    // Önceki bölüme göre kayıp/terk oranı (0 - 100 %)
+  readingPace: 'deep' | 'balanced' | 'skimming'; // Derin okuma, Dengeli veya Hızlı tarama
+  engagementScore: number; // 0 - 10
+}
+
+export interface StoryReadingAnalytics {
+  storyId: string;
+  storyTitle: string;
+  totalReadTimeSeconds: number;
+  totalViews: number;
+  overallCompletionRate: number;
+  avgChapterReadTimeSeconds: number;
+  totalWords: number;
+  chapterMetrics: ChapterReadingMetric[];
 }
 
 export interface ChapterAudioTrack {

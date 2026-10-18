@@ -55,7 +55,8 @@ import {
   EyeOff,
   Gamepad2,
   Scale,
-  PenTool
+  PenTool,
+  BarChart3
 } from 'lucide-react';
 import { Typography } from '@readixon/ui';
 import { toast } from 'sonner';
@@ -153,8 +154,25 @@ interface TimelineItem {
 
 const TIMELINE_DATA: TimelineItem[] = [
   {
-    version: 'v2.3.2',
+    version: 'v2.3.3',
     badge: 'En Son Güncelleme',
+    date: '18 Ekim 2026',
+    title: 'Gelişmiş Okuma Analitiği, Okur Tutundurma & Bölüm Telemetrisi',
+    desc: 'Yazarlar için veri odaklı hikaye anlatıcılığı laboratuvarı! Bölüm bazlı ortalama okuma süresi, okur tutunma ve terk eğrisi (Drop-off Funnel), okuma temposu sınıflandırması ve kurgusal ritim tavsiyeleri tamamlandı.',
+    highlights: [
+      'Bölüm Bazlı Aktif Okuma Süresi (Dwell Time): Kullanıcının sekmeyi alta alması ve hareketsiz kalmasını (idle) filtreleyen akıllı süre sayacı',
+      'Okur Tutunma ve Terk Hunisi (Reader Retention & Drop-off Funnel): 1. Bölümden son bölüme kadar okuyucu kitlesinin akış eğrisi ve düşüş noktaları grafiği',
+      'Okuma Temposu Sınıflandırması: Kelime sayısına göre beklenen süre ile gerçekleşen süreyi kıyaslayan Derin Okuma (Deep Read), Dengeli ve Göz Gezdirme (Skim) göstergeleri',
+      'Bölüm Tamamlama Oranı (%): Okurların bölümün sonuna kadar okuma oranını gösteren ilerleme göstergeleri',
+      'Yazar Stüdyosu İnteraktif Grafikleri: Recharts tabanlı Tutunma Hunisi (AreaChart) ve İkili Süre/Tempo (BarChart) görselleştirmeleri',
+      'Akıllı Kurgusal İçgörüler (Smart Editorial Insights): En çok sevilen bölümler ile okur kaybı yaşanan kritik bölümler için yapay zeka/sistem kurgu tavsiyeleri',
+      'Maliyet & Performans Odaklı Telemetri: Client-side debounce ve periyodik heartbeat ile Firestore maliyetini sıfıra yakın tutan atomik sayaç mimarisi',
+    ],
+    icon: BarChart3,
+  },
+  {
+    version: 'v2.3.2',
+    badge: 'Yazarlık & Hukuk',
     date: '18 Ekim 2026',
     title: 'Word Serbest Yazı Modu & Yasal Sözleşme Yönetim Merkezi',
     desc: 'Bölüm editörüne kesintisiz roman yazımını sağlayan Word / Wattpad Serbest Yazı Modu, akıllı çift yönlü blok dönüştürücüsü ve platform geneli yasal sözleşmelerin canlı yönetildiği Admin Hukuk Merkezi tamamlandı.',

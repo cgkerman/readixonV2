@@ -23,6 +23,9 @@ export type {
   StoryStats,
   StoryStatus,
   Chapter,
+  ChapterStats,
+  ChapterReadingMetric,
+  StoryReadingAnalytics,
   ChapterChoice,
   ChapterEndingType,
   ContentBlock,
@@ -212,6 +215,7 @@ export * from './services/editorialService';
 export * from './services/popupService';
 export * from './services/readingListService';
 export * from './services/legalService';
+export * from './services/readingAnalyticsService';
 export * from './utils/imageUtils';
 export * from './utils/cropImageUtils';
 export * from './utils/audioUtils';

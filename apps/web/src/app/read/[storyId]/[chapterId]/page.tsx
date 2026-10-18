@@ -40,6 +40,7 @@ import { ChapterEndActivity } from '@/components/ChapterEndActivity';
 import { ChapterReactions } from '@/components/ChapterReactions';
 import { ChapterMusicPlayer } from '@/components/ChapterMusicPlayer';
 import { useBackButton } from '@/hooks/useBackButton';
+import { useReadingAnalytics } from '@/hooks/useReadingAnalytics';
 import { ReaderUniverseDrawer, type ReaderUniverseTabType } from './ReaderUniverseDrawer';
 import { InlineLorePopover } from './InlineLorePopover';
 import { ChapterUniverseRecap } from './ChapterUniverseRecap';
@@ -180,6 +181,14 @@ export default function ReadPage() {
   // Revizyon & Şeffaflık State'leri
   const [showRevisionNoticeBanner, setShowRevisionNoticeBanner] = useState(false);
   const [showRevisionDetails, setShowRevisionDetails] = useState(false);
+
+  // Gelişmiş Okuma Analitiği ve Aktif Süre Takibi (Active Reading Telemetry)
+  const isChapterCompleted = scrollProgress > 90 || Boolean(chapter?.isEnding);
+  const { flush: flushReadingAnalytics } = useReadingAnalytics({
+    storyId,
+    chapterId,
+    isCompleted: isChapterCompleted
+  });
 
   // Yanıt (Reply) State'leri
   const [replyingToComment, setReplyingToComment] = useState<Comment | null>(null);
@@ -370,6 +379,7 @@ export default function ReadPage() {
 
   // Bölüm geçişi (doğrudan ve sayfa başı sıfırlama ile)
   const handleNavigateChapter = (targetChapterId: string) => {
+    flushReadingAnalytics();
     window.scrollTo({ top: 0, behavior: 'instant' });
     router.push(`/read/${storyId}/${targetChapterId}`);
   };
