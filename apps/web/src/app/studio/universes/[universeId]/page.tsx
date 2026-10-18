@@ -2332,6 +2332,17 @@ export default function UniverseDetailPage() {
     }
   };
 
+  const handleSaveGraphLayout = async (positions: Record<string, { x: number; y: number }>) => {
+    try {
+      await updateUniverse(universeId, { characterGraphLayout: positions });
+      setUniverse((prev) => (prev ? { ...prev, characterGraphLayout: positions } : prev));
+    } catch (err) {
+      console.error('İlişki ağı yerleşimi kaydedilemedi:', err);
+      toast.error('İlişki ağı yerleşimi kaydedilemedi.');
+      throw err;
+    }
+  };
+
   // ── Harita İşlemleri ──
   const handleCreateMap = async () => {
     if (!newMapTitle.trim()) {
@@ -3020,6 +3031,8 @@ export default function UniverseDetailPage() {
               characters={characters}
               locations={locations}
               isEditable={true}
+              initialLayout={universe?.characterGraphLayout}
+              onSaveLayout={handleSaveGraphLayout}
               onAddRelationship={handleAddGraphRelationship}
               onDeleteRelationship={handleDeleteGraphRelationship}
               onSelectCharacter={(char) => openCharDetail(char)}

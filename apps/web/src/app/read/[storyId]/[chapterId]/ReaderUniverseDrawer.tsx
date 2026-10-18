@@ -691,6 +691,7 @@ export function ReaderUniverseDrawer({
                     characters={characters}
                     locations={locations}
                     isEditable={false}
+                    initialLayout={universe?.characterGraphLayout}
                     currentChapterOrder={currentChapterOrder}
                   />
                 </div>

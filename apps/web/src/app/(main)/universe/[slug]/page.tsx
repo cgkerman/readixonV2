@@ -1472,9 +1472,11 @@ export default function PublicUniversePage() {
         {activeTab === 'relationships' && (
           <div className="space-y-4">
             <InteractiveRelationshipGraph
-              characters={characters}
+              characters={allCharacters.length > 0 ? allCharacters : characters}
               locations={locations}
               isEditable={false}
+              initialLayout={universe?.characterGraphLayout}
+              currentChapterOrder={userMaxChapter}
             />
           </div>
         )}

@@ -1475,6 +1475,7 @@ export function UniverseSidebar({
                     characters={characters}
                     locations={locations}
                     isEditable={false}
+                    initialLayout={universe?.characterGraphLayout}
                   />
                 </div>
               </div>

@@ -52,6 +52,9 @@ export interface Universe {
   members?: UniverseMember[];
   collaboratorIds?: string[]; // Query / Security rules için: [userId1, userId2, ...]
 
+  // Karakter İlişki Ağı Özel Yerleşim Koordinatları
+  characterGraphLayout?: Record<string, { x: number; y: number }>;
+
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

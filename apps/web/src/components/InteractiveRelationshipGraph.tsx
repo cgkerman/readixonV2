@@ -24,7 +24,9 @@ import {
   Share2,
   Filter,
   EyeOff,
-  UserCheck
+  UserCheck,
+  Save,
+  Loader2
 } from 'lucide-react';
 import { Button, Typography } from '@readixon/ui';
 import { toast } from 'sonner';
@@ -59,6 +61,8 @@ interface InteractiveRelationshipGraphProps {
   locations?: UniverseLocation[];
   isEditable?: boolean;
   currentChapterOrder?: number;
+  initialLayout?: Record<string, { x: number; y: number }>;
+  onSaveLayout?: (positions: Record<string, { x: number; y: number }>) => Promise<void> | void;
   onAddRelationship?: (sourceId: string, rel: CharacterRelationship) => Promise<void>;
   onDeleteRelationship?: (sourceId: string, targetId: string) => Promise<void>;
   onSelectCharacter?: (char: Character) => void;
@@ -90,6 +94,8 @@ export function InteractiveRelationshipGraph({
   locations = [],
   isEditable = false,
   currentChapterOrder = 9999,
+  initialLayout,
+  onSaveLayout,
   onAddRelationship,
   onDeleteRelationship,
   onSelectCharacter,
@@ -102,9 +108,29 @@ export function InteractiveRelationshipGraph({
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
-  // Node Dragging State
+  // Node Dragging & Layout Persistence State
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
-  const [nodePositions, setNodePositions] = useState<Record<string, { x: number; y: number }>>({});
+  const [nodePositions, setNodePositions] = useState<Record<string, { x: number; y: number }>>(initialLayout || {});
+  const [hasUnsavedLayout, setHasUnsavedLayout] = useState(false);
+  const [isSavingLayout, setIsSavingLayout] = useState(false);
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const nodePositionsRef = useRef<Record<string, { x: number; y: number }>>(initialLayout || {});
+
+  // initialLayout prop'u yüklendiğinde veya değiştiğinde senkronize et
+  useEffect(() => {
+    if (initialLayout && Object.keys(initialLayout).length > 0) {
+      setNodePositions(initialLayout);
+      nodePositionsRef.current = initialLayout;
+    }
+  }, [initialLayout]);
+
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, []);
 
   // Filtreler & Arama
   const [searchQuery, setSearchQuery] = useState('');
@@ -263,23 +289,88 @@ export function InteractiveRelationshipGraph({
         x: e.clientX - panStart.x,
         y: e.clientY - panStart.y,
       });
-    } else if (draggingNodeId) {
+    } else if (draggingNodeId && isEditable) {
       // Düğümü Tuvalde Taşıma
       const rect = containerRef.current?.getBoundingClientRect();
       if (!rect) return;
       const mouseX = (e.clientX - rect.left - pan.x) / zoom;
       const mouseY = (e.clientY - rect.top - pan.y) / zoom;
 
-      setNodePositions((prev) => ({
-        ...prev,
-        [draggingNodeId]: { x: Math.round(mouseX), y: Math.round(mouseY) },
-      }));
+      const newPos = { x: Math.round(mouseX), y: Math.round(mouseY) };
+      setNodePositions((prev) => {
+        const updated = {
+          ...prev,
+          [draggingNodeId]: newPos,
+        };
+        nodePositionsRef.current = updated;
+        return updated;
+      });
+      setHasUnsavedLayout(true);
     }
   };
 
   const handleCanvasMouseUp = () => {
     setIsPanning(false);
+    if (draggingNodeId && isEditable && onSaveLayout) {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+      autoSaveTimerRef.current = setTimeout(async () => {
+        try {
+          setIsSavingLayout(true);
+          await onSaveLayout(nodePositionsRef.current);
+          setHasUnsavedLayout(false);
+        } catch (err) {
+          console.error('İlişki ağı otomatik kaydedilemedi:', err);
+        } finally {
+          setIsSavingLayout(false);
+        }
+      }, 1200);
+    }
     setDraggingNodeId(null);
+  };
+
+  // Düzeni Manuel Kaydet
+  const handleManualSaveLayout = async () => {
+    if (!onSaveLayout) return;
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+    setIsSavingLayout(true);
+    try {
+      await onSaveLayout(nodePositionsRef.current);
+      setHasUnsavedLayout(false);
+      toast.success('İlişki ağı yerleşimi kaydedildi');
+    } catch (err) {
+      console.error('İlişki ağı yerleşimi kaydedilemedi:', err);
+      toast.error('Yerleşim kaydedilemedi');
+    } finally {
+      setIsSavingLayout(false);
+    }
+  };
+
+  // Dairesel Düzene Sıfırla
+  const handleResetLayout = async () => {
+    if (!isEditable) return;
+    if (!window.confirm('Tüm karakter düğümlerini dairesel varsayılan yerleşime sıfırlamak istediğinize emin misiniz?')) return;
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+    setNodePositions({});
+    nodePositionsRef.current = {};
+    setHasUnsavedLayout(false);
+    if (onSaveLayout) {
+      setIsSavingLayout(true);
+      try {
+        await onSaveLayout({});
+        toast.success('Yerleşim varsayılan dairesel düzene sıfırlandı');
+      } catch (err) {
+        console.error('Yerleşim sıfırlanamadı:', err);
+        toast.error('Yerleşim sıfırlanamadı');
+      } finally {
+        setIsSavingLayout(false);
+      }
+    }
   };
 
   // Düğüme Tıklama
@@ -424,6 +515,49 @@ export function InteractiveRelationshipGraph({
             </button>
           )}
 
+          {isEditable && onSaveLayout && (
+            <div className="flex items-center gap-1.5 mr-1">
+              <button
+                type="button"
+                onClick={handleManualSaveLayout}
+                disabled={isSavingLayout}
+                className={`text-xs font-bold px-2.5 py-1.5 rounded-xl transition-all shadow-md flex items-center gap-1.5 active:scale-95 ${
+                  hasUnsavedLayout
+                    ? 'bg-amber-600 hover:bg-amber-500 text-white animate-pulse'
+                    : 'bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-border/50'
+                }`}
+                title="Düğüm Konumlarını Kaydet"
+              >
+                {isSavingLayout ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" />
+                    <span className="hidden sm:inline">Kaydediliyor...</span>
+                  </>
+                ) : hasUnsavedLayout ? (
+                  <>
+                    <Save className="w-3.5 h-3.5" />
+                    <span>Düzeni Kaydet</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-emerald-400 hidden sm:inline">Kaydedildi</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleResetLayout}
+                disabled={isSavingLayout}
+                className="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors active:scale-95 disabled:opacity-50"
+                title="Dairesel Düzene Sıfırla"
+              >
+                <RotateCcw className="w-4 h-4 text-slate-400 hover:text-amber-400" />
+              </button>
+            </div>
+          )}
+
           <button
             type="button"
             onClick={handleZoomIn}
@@ -448,7 +582,7 @@ export function InteractiveRelationshipGraph({
             type="button"
             onClick={handleReset}
             className="p-1.5 text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors active:scale-95"
-            title="Sıfırla"
+            title="Tuvali Merkeze Al"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -614,12 +748,13 @@ export function InteractiveRelationshipGraph({
                   key={node.id}
                   transform={`translate(${node.x}, ${node.y})`}
                   onMouseDown={(e) => {
+                    if (!isEditable) return;
                     e.stopPropagation();
                     setDraggingNodeId(node.id);
                   }}
                   onClick={(e) => handleNodeClick(node, e)}
                   opacity={isDimmed ? 0.2 : 1}
-                  className="cursor-pointer transition-all duration-150 group"
+                  className={`${isEditable ? (draggingNodeId === node.id ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-pointer'} transition-all duration-150 group`}
                 >
                   {/* Dış Halka & Glow */}
                   <circle
