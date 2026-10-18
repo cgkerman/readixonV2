@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Typography, Button } from '@readixon/ui';
 import { 
   getUniverseBySlug, 
+  updateUniverse,
   getStoryById, 
   getSeriesById,
   getUniverseLocations,
@@ -57,6 +58,7 @@ import {
   type Character,
   UNIVERSE_MEMBER_ROLE_CONFIG
 } from '@readixon/core';
+import { toast } from 'sonner';
 import { 
   Sparkles, 
   Globe, 
@@ -340,6 +342,19 @@ export default function PublicUniversePage() {
       universe?.collaboratorIds?.includes(firebaseUser.uid) ||
       userProfile?.isAdmin)
   );
+
+  const handleSaveGraphLayout = async (positions: Record<string, { x: number; y: number }>) => {
+    if (!universe) return;
+    try {
+      await updateUniverse(universe.universeId, { characterGraphLayout: positions });
+      setUniverse((prev) => (prev ? { ...prev, characterGraphLayout: positions } : prev));
+      toast.success('İlişki ağı yerleşimi kaydedildi!');
+    } catch (err) {
+      console.error('İlişki ağı yerleşimi kaydedilemedi:', err);
+      toast.error('İlişki ağı yerleşimi kaydedilemedi.');
+      throw err;
+    }
+  };
 
   // Karakter filtresi & spoiler durumları (PRD Bölüm 38)
   const processedCharacters = React.useMemo(() => {
@@ -1474,8 +1489,9 @@ export default function PublicUniversePage() {
             <InteractiveRelationshipGraph
               characters={allCharacters.length > 0 ? allCharacters : characters}
               locations={locations}
-              isEditable={false}
+              isEditable={isAuthor}
               initialLayout={universe?.characterGraphLayout}
+              onSaveLayout={isAuthor ? handleSaveGraphLayout : undefined}
               currentChapterOrder={userMaxChapter}
             />
           </div>

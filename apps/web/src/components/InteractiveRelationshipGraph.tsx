@@ -593,7 +593,11 @@ export function InteractiveRelationshipGraph({
       <div className="absolute bottom-4 left-4 z-20 pointer-events-none hidden sm:block">
         <div className="bg-slate-900/80 backdrop-blur-md border border-border/60 text-slate-400 text-[11px] px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-2">
           <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-          <span>Düğümleri sürükleyebilir, üzerlerine tıklayarak bağlarını öne çıkarabilirsiniz.</span>
+          <span>
+            {isEditable
+              ? 'Düğümleri sürükleyerek yerleşim düzenini ayarlayabilir ve kaydedebilirsiniz.'
+              : 'Düğümlere tıklayarak karakter bağlarını öne çıkarabilir ve detayları inceleyebilirsiniz.'}
+          </span>
         </div>
       </div>
 
