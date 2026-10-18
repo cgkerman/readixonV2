@@ -77,6 +77,9 @@ export type {
   SitePopup,
   ChapterAudioTrack,
   ReadingList,
+  LegalDocType,
+  LegalSection,
+  LegalDocument,
   // Seri Tipleri
   Series,
   SeriesBookItem,
@@ -208,6 +211,7 @@ export * from './services/pointsService';
 export * from './services/editorialService';
 export * from './services/popupService';
 export * from './services/readingListService';
+export * from './services/legalService';
 export * from './utils/imageUtils';
 export * from './utils/cropImageUtils';
 export * from './utils/audioUtils';
@@ -217,6 +221,7 @@ export * from './services/genreFinder';
 export * from './utils/slug';
 export * from './utils/sanitize';
 export * from './utils/loreAnnotation';
+export * from './utils/blockParser';
 
 // Auth Store & Hooks
 export { useAuthStore } from './store/useAuthStore';

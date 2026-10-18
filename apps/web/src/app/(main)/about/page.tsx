@@ -53,7 +53,9 @@ import {
   FileCheck,
   Send,
   EyeOff,
-  Gamepad2
+  Gamepad2,
+  Scale,
+  PenTool
 } from 'lucide-react';
 import { Typography } from '@readixon/ui';
 import { toast } from 'sonner';
@@ -151,8 +153,25 @@ interface TimelineItem {
 
 const TIMELINE_DATA: TimelineItem[] = [
   {
-    version: 'v2.3.1',
+    version: 'v2.3.2',
     badge: 'En Son Güncelleme',
+    date: '18 Ekim 2026',
+    title: 'Word Serbest Yazı Modu & Yasal Sözleşme Yönetim Merkezi',
+    desc: 'Bölüm editörüne kesintisiz roman yazımını sağlayan Word / Wattpad Serbest Yazı Modu, akıllı çift yönlü blok dönüştürücüsü ve platform geneli yasal sözleşmelerin canlı yönetildiği Admin Hukuk Merkezi tamamlandı.',
+    highlights: [
+      'Word / Wattpad Serbest Yazı Modu: Yazarların bloklarla uğraşmadan tek parça akıcı sayfada roman yazabileceği dikkat dağıtmayan serbest yazım ortamı',
+      'Akıllı Blok Dönüştürücüsü (Word ↔ Blok): Serbest yazılan metinlerin tek tıkla paragraflara, başlıklara ve alıntılara ayrıştırılması veya mevcut blokların akıcı metne geri birleştirilmesi',
+      'Word (.docx) Doğrudan İçe Aktarma: Bilgisayardaki Word belgelerinin biçimlendirmeleriyle birlikte tek tıkla editöre aktarılması',
+      'Tam Ekran Zen / Odak Modu: Yazarların dış etkenlerden arınıp yalnızca kelimelerine odaklanabileceği daktilo odak ortamı',
+      'Admin Yasal & Sözleşme Yönetim Merkezi (/admin/legal): Kullanım Koşulları, Gizlilik & KVKK, Telif Hakları ve Topluluk Kurallarını tek panelden yönetme',
+      'Canlı Eşzamanlı Önizleme (Split View): Yasal sözleşmeleri düzenlerken sağ ekranda okuyucunun göreceği canlı sözleşme kartını anlık takip etme',
+      'Sıfır Kesintili Hukuki Entegrasyon: /terms, /privacy, /copyright ve /guidelines sayfalarının Firestore veritabanıyla dinamik ve güvenli senkronizasyonu',
+    ],
+    icon: Scale,
+  },
+  {
+    version: 'v2.3.1',
+    badge: 'İnteraktif Hikayeler',
     date: '18 Ekim 2026',
     title: 'Kaderini Sen Seç: İnteraktif Hikayeler (CYOA) & Bölüm Revizyon Şeffaflığı',
     desc: 'Readixon çok kollu dallanan kurgu (Bandersnatch / CYOA) motoruna kavuştu! Okuyucu kararlarıyla şekillenen alternatif yollar, çoklu sonlar, son karara geri dönme (rewind) mekaniği, bölüm revizyon şeffaflığı ve satır arası yorum koruma mimarisi tamamlandı.',

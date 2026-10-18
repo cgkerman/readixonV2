@@ -50,6 +50,7 @@ export type { ReadingSettingsPanelProps, ThemeType, FontFamilyType, LineHeightTy
 
 export { BlockEditor } from './BlockEditor';
 export type { BlockEditorProps } from './BlockEditor';
+export * from './FreeWritingEditor';
 export * from './PaywallModal';
 export * from './BadgeCard';
 export * from './HorizontalStoryCard';

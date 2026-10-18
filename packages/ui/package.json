@@ -18,6 +18,7 @@
     "@readixon/config": "workspace:*",
     "@readixon/core": "workspace:*",
     "@types/dompurify": "^3.2.0",
+    "@types/node": "^20",
     "@types/react": "^18.3.31",
     "nativewind": "^4.0.1",
     "typescript": "^5.4.0"

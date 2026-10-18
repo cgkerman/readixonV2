@@ -39,7 +39,7 @@ export default function ChapterEditorPage() {
   const [revisionType, setRevisionType] = useState<'minor' | 'major'>('minor');
   const [revisionNote, setRevisionNote] = useState('');
   const [notifyReaders, setNotifyReaders] = useState(true);
-  
+
   const isInitialLoad = useRef(true);
   const publishedRef = useRef(false);
   const initialWordCountRef = useRef<number | null>(null);
@@ -56,7 +56,7 @@ export default function ChapterEditorPage() {
         fetchChapters(storyId),
         getStoryById(storyId)
       ]);
-      
+
       setAllChapters(chaps || []);
       setStory(sData);
 
@@ -106,7 +106,7 @@ export default function ChapterEditorPage() {
 
   const handleSave = async (manual = false) => {
     if (!chapter) return;
-    
+
     // Check if status changed from draft to published
     const isPublishingNow = chapter.status === 'published';
     const shouldNotify = !publishedRef.current && isPublishingNow;
@@ -117,7 +117,7 @@ export default function ChapterEditorPage() {
 
     if (manual) setSaving(true);
     else setAutoSaveStatus('saving');
-    
+
     try {
       await updateChapter(storyId, chapterId, chapter);
 
@@ -129,7 +129,7 @@ export default function ChapterEditorPage() {
             toast.success("Hikaye taslaktan çıkartılıp 'Devam Ediyor' olarak işaretlendi.");
           }
           const followerIds = await getUserFollowerIds(userProfile.uid);
-          const notificationsPromises = followerIds.map(fId => 
+          const notificationsPromises = followerIds.map(fId =>
             createNotification({
               userId: fId,
               actorId: userProfile.uid,
@@ -154,7 +154,7 @@ export default function ChapterEditorPage() {
         setAutoSaveStatus('saved');
         setTimeout(() => setAutoSaveStatus('idle'), 2000);
       }
-      
+
       // Update local chapters list to reflect title changes instantly
       setAllChapters(prev => prev.map(c => c.chapterId === chapterId ? { ...c, title: chapter.title, status: chapter.status } : c));
 
@@ -162,7 +162,7 @@ export default function ChapterEditorPage() {
         if (shouldNotify) {
           trackInteraction(userProfile.uid, 'chapter_published').catch(e => console.error("Badge error:", e));
         }
-        
+
         if (manual) {
           const currentWords = getWordCount();
           if (initialWordCountRef.current !== null && currentWords > initialWordCountRef.current) {
@@ -281,7 +281,7 @@ export default function ChapterEditorPage() {
     try {
       await deleteChapter(storyId, chapterId);
       toast.success("Bölüm başarıyla silindi.");
-      
+
       const remainingChapters = allChapters.filter(c => c.chapterId !== chapterId);
       if (remainingChapters.length > 0) {
         router.push(`/studio/story/${storyId}/chapter/${remainingChapters[0].chapterId}`);
@@ -315,13 +315,13 @@ export default function ChapterEditorPage() {
 
   return (
     <div className="flex flex-col lg:flex-row min-h-[calc(100vh-64px)] w-full bg-background">
-      
+
       {/* ── Sidebar (Sol Sütun) ── */}
       <aside className="w-full lg:w-80 flex-shrink-0 border-r border-border/50 bg-card/30 p-6 flex flex-col hidden lg:flex">
         <Button variant="ghost" onPress={() => router.push(`/studio/story/${storyId}`)} className="mb-6 self-start -ml-2">
           <ArrowLeft className="mr-2" size={18} /> Hikayeye Dön
         </Button>
-        
+
         <div className="flex items-center justify-between mb-6">
           <Typography variant="h3" className="font-bold">Bölümler ({allChapters.length})</Typography>
           <Button variant="ghost" className="p-2 text-primary" onPress={handleCreateNewChapter}>
@@ -330,7 +330,7 @@ export default function ChapterEditorPage() {
         </div>
 
         <div className="flex-1 overflow-y-auto pr-2 space-y-2">
-          {allChapters.sort((a,b) => a.order - b.order).map(c => {
+          {allChapters.sort((a, b) => a.order - b.order).map(c => {
             const isActive = c.chapterId === chapterId;
             return (
               <Link key={c.chapterId} href={`/studio/story/${storyId}/chapter/${c.chapterId}`}>
@@ -357,9 +357,9 @@ export default function ChapterEditorPage() {
 
       {/* ── Mobil için Üst Bar (Hızlı Bölüm Seçici Entegre) ── */}
       <div className="lg:hidden w-full px-3 py-2.5 border-b border-border/50 bg-card/90 backdrop-blur-md sticky top-0 z-30 flex items-center justify-between gap-2">
-        <Button 
-          variant="ghost" 
-          onPress={() => router.push(`/studio/story/${storyId}`)} 
+        <Button
+          variant="ghost"
+          onPress={() => router.push(`/studio/story/${storyId}`)}
           className="p-2 -ml-1 text-muted hover:text-text cursor-pointer shrink-0"
           aria-label="Hikayeye Dön"
         >
@@ -379,9 +379,9 @@ export default function ChapterEditorPage() {
           <ChevronDown size={14} className="text-muted shrink-0" />
         </button>
 
-        <Button 
-          variant="ghost" 
-          className="p-2 text-primary hover:bg-primary/10 rounded-full cursor-pointer shrink-0" 
+        <Button
+          variant="ghost"
+          className="p-2 text-primary hover:bg-primary/10 rounded-full cursor-pointer shrink-0"
           onPress={handleCreateNewChapter}
           aria-label="Yeni Bölüm Ekle"
         >
@@ -392,46 +392,43 @@ export default function ChapterEditorPage() {
       {/* ── Main Content (Sağ Sütun) ── */}
       <main className="flex-1 p-3 sm:p-6 md:p-8 lg:p-12 pb-32 md:pb-16 overflow-y-auto">
         <div className="max-w-4xl mx-auto w-full">
-          
-                    {/* ── Üst Aksiyon & Kontrol Barı (Modern & Responsive 2 Katman) ── */}
+
+          {/* ── Üst Aksiyon & Kontrol Barı (Modern & Responsive 2 Katman) ── */}
           <div className="bg-card/70 border border-border/60 rounded-2xl p-3 sm:p-4 mb-6 shadow-xs backdrop-blur-sm space-y-3">
-            
+
             {/* 1. Satır: Yayın Durumu Seçici + Otomatik Kayıt + Kaydet Butonu + Sil */}
             <div className="flex items-center justify-between gap-2 flex-wrap">
               {/* Yayın Durumu Segment Seçici */}
               <div className="bg-muted/15 border border-border/60 rounded-xl flex items-center p-0.5 shadow-inner">
-                <button 
+                <button
                   type="button"
                   onClick={() => setChapter({ ...chapter, status: 'draft' })}
-                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    chapter.status === 'draft' 
-                      ? 'bg-card text-foreground shadow-xs' 
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${chapter.status === 'draft'
+                      ? 'bg-card text-foreground shadow-xs'
                       : 'text-muted hover:text-foreground'
-                  }`}
+                    }`}
                 >
                   <FileText size={13} />
                   <span>Taslak</span>
                 </button>
-                <button 
+                <button
                   type="button"
                   onClick={() => setChapter({ ...chapter, status: 'published' })}
-                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    chapter.status === 'published' 
-                      ? 'bg-emerald-500 text-white shadow-xs' 
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${chapter.status === 'published'
+                      ? 'bg-emerald-500 text-white shadow-xs'
                       : 'text-muted hover:text-foreground'
-                  }`}
+                    }`}
                 >
                   <Globe size={13} />
                   <span>Yayınla</span>
                 </button>
-                <button 
+                <button
                   type="button"
                   onClick={() => setChapter({ ...chapter, status: 'scheduled' })}
-                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    chapter.status === 'scheduled' 
-                      ? 'bg-sky-500 text-white shadow-xs' 
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${chapter.status === 'scheduled'
+                      ? 'bg-sky-500 text-white shadow-xs'
                       : 'text-muted hover:text-foreground'
-                  }`}
+                    }`}
                 >
                   <Calendar size={13} />
                   <span>Planlı</span>
@@ -467,10 +464,10 @@ export default function ChapterEditorPage() {
                 </div>
 
                 {/* Manuel Kaydet / Güncelle Butonu */}
-                <Button 
-                  variant="primary" 
-                  onPress={handleSaveClick} 
-                  disabled={saving || autoSaveStatus === 'saving'} 
+                <Button
+                  variant="primary"
+                  onPress={handleSaveClick}
+                  disabled={saving || autoSaveStatus === 'saving'}
                   className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-primary/20 cursor-pointer"
                 >
                   {chapter.status === 'published' && publishedRef.current ? (
@@ -487,9 +484,9 @@ export default function ChapterEditorPage() {
                 </Button>
 
                 {/* Bölümü Sil Butonu */}
-                <button 
+                <button
                   type="button"
-                  onClick={handleDeleteChapter} 
+                  onClick={handleDeleteChapter}
                   className="w-8 h-8 rounded-xl text-muted hover:text-red-400 hover:bg-red-500/10 flex items-center justify-center transition-colors cursor-pointer"
                   title="Bölümü Sil"
                   aria-label="Bölümü Sil"
@@ -503,9 +500,9 @@ export default function ChapterEditorPage() {
             <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/40 overflow-x-auto scrollbar-hide">
               <div className="flex items-center gap-1.5 shrink-0">
                 {/* AI Asistan Butonu */}
-                <button 
+                <button
                   type="button"
-                  onClick={() => setIsAIAssistantOpen(true)} 
+                  onClick={() => setIsAIAssistantOpen(true)}
                   className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-primary/25 bg-primary/10 hover:bg-primary/20 text-primary font-semibold text-xs transition-colors cursor-pointer"
                 >
                   <Sparkles size={13} />
@@ -513,42 +510,39 @@ export default function ChapterEditorPage() {
                 </button>
 
                 {/* Plan Notlarım Butonu */}
-                <button 
+                <button
                   type="button"
-                  onClick={() => setIsPlannerOpen(!isPlannerOpen)} 
-                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
-                    isPlannerOpen 
-                      ? 'border-primary bg-primary/15 text-primary font-semibold' 
+                  onClick={() => setIsPlannerOpen(!isPlannerOpen)}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${isPlannerOpen
+                      ? 'border-primary bg-primary/15 text-primary font-semibold'
                       : 'border-border/60 hover:border-primary/40 text-muted hover:text-text'
-                  }`}
+                    }`}
                 >
                   <BookOpen size={13} />
                   <span>Plan Notlarım</span>
                 </button>
 
                 {/* Evren Bilgi Ağı Butonu */}
-                <button 
+                <button
                   type="button"
-                  onClick={() => setIsUniverseOpen(!isUniverseOpen)} 
-                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
-                    isUniverseOpen 
-                      ? 'border-indigo-500 bg-indigo-500/15 text-indigo-400 font-semibold' 
+                  onClick={() => setIsUniverseOpen(!isUniverseOpen)}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${isUniverseOpen
+                      ? 'border-indigo-500 bg-indigo-500/15 text-indigo-400 font-semibold'
                       : 'border-border/60 hover:border-indigo-500/40 text-muted hover:text-indigo-400'
-                  }`}
+                    }`}
                 >
                   <Layers size={13} />
                   <span>Evren Paneli</span>
                 </button>
 
                 {/* Ön İzleme Butonu */}
-                <button 
+                <button
                   type="button"
-                  onClick={() => setIsPreviewMode(!isPreviewMode)} 
-                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
-                    isPreviewMode 
-                      ? 'border-primary bg-primary text-black font-semibold shadow-xs' 
+                  onClick={() => setIsPreviewMode(!isPreviewMode)}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${isPreviewMode
+                      ? 'border-primary bg-primary text-black font-semibold shadow-xs'
                       : 'border-border/60 hover:border-primary/40 text-muted hover:text-text'
-                  }`}
+                    }`}
                 >
                   {isPreviewMode ? <EyeOff size={13} /> : <Eye size={13} />}
                   <span>{isPreviewMode ? 'Düzenle' : 'Ön İzleme'}</span>
@@ -577,8 +571,8 @@ export default function ChapterEditorPage() {
                   <Typography variant="caption" className="opacity-80">Bu bölüm belirlediğiniz tarih ve saatte otomatik olarak yayınlanacaktır.</Typography>
                 </div>
               </div>
-              <input 
-                type="datetime-local" 
+              <input
+                type="datetime-local"
                 className="bg-background border border-border/50 text-foreground text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 md:ml-auto outline-none transition-all"
                 value={getDatetimeLocal(chapter.publishDate)}
                 onChange={handleDateChange}
@@ -590,9 +584,9 @@ export default function ChapterEditorPage() {
             <Typography variant="caption" className="text-muted uppercase font-bold tracking-wider mb-2 block">
               Bölüm Başlığı
             </Typography>
-            <Input 
-              value={chapter.title} 
-              onChangeText={(title) => setChapter({ ...chapter, title })} 
+            <Input
+              value={chapter.title}
+              onChangeText={(title) => setChapter({ ...chapter, title })}
               placeholder="Örn: Bölüm 1 - Yeni Başlangıçlar"
               className="text-lg md:text-xl font-bold bg-transparent border-b-2 border-border/50 focus:border-primary rounded-none px-0 pb-2 shadow-none"
             />
@@ -601,7 +595,7 @@ export default function ChapterEditorPage() {
           {/* Bölüm Fon Müziği (Soundtrack) Accordion */}
           <div className="bg-card rounded-2xl border border-border/20 shadow-sm mb-6 transition-all overflow-hidden">
             {/* Accordion Trigger */}
-            <div 
+            <div
               role="button"
               tabIndex={0}
               onClick={() => setIsAudioSectionOpen(!isAudioSectionOpen)}
@@ -614,11 +608,10 @@ export default function ChapterEditorPage() {
               className="w-full flex items-center justify-between p-3.5 md:p-4 cursor-pointer hover:bg-muted/10 transition-colors select-none text-left"
             >
               <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                  chapter.audioTrack?.url 
-                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${chapter.audioTrack?.url
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                     : 'bg-primary/10 text-primary'
-                }`}>
+                  }`}>
                   <Music size={18} />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -638,7 +631,7 @@ export default function ChapterEditorPage() {
                     )}
                   </div>
                   <p className="text-xs text-muted truncate mt-0.5">
-                    {chapter.audioTrack?.url 
+                    {chapter.audioTrack?.url
                       ? (chapter.audioTrack.title ? `Aktif: ${chapter.audioTrack.title}` : chapter.audioTrack.url)
                       : 'Okuyucuya bölüm boyunca çalacak YouTube veya Spotify atmosfer müziği ekleyin'}
                   </p>
@@ -649,9 +642,8 @@ export default function ChapterEditorPage() {
                 <span className="text-xs text-muted hidden sm:inline-block font-medium">
                   {isAudioSectionOpen ? 'Daralt' : (chapter.audioTrack?.url ? 'Düzenle' : 'Müzik Ekle')}
                 </span>
-                <div className={`p-1.5 rounded-lg bg-muted/10 text-muted transition-transform duration-200 ${
-                  isAudioSectionOpen ? 'rotate-180 text-foreground' : ''
-                }`}>
+                <div className={`p-1.5 rounded-lg bg-muted/10 text-muted transition-transform duration-200 ${isAudioSectionOpen ? 'rotate-180 text-foreground' : ''
+                  }`}>
                   <ChevronDown size={16} />
                 </div>
               </div>
@@ -809,15 +801,17 @@ export default function ChapterEditorPage() {
             <div>
               <Typography variant="h3" className="mb-1 flex items-center gap-2 text-base md:text-xl">
                 <FileText className="text-primary" size={20} /> İçerik Editörü
-                <button 
-                  onClick={() => setIsInfoModalOpen(true)} 
+                <button
+                  onClick={() => setIsInfoModalOpen(true)}
                   className="text-muted/60 hover:text-primary hover:bg-primary/10 p-1.5 rounded-full transition-all"
                   title="Editör Özelliklerini Görüntüle"
                 >
                   <Info size={16} />
                 </button>
               </Typography>
-              <Typography variant="caption" className="text-muted text-xs md:text-sm">Blokları ekleyip sürükleyerek sıralarını değiştirebilirsiniz.</Typography>
+              <Typography variant="caption" className="text-muted text-xs md:text-sm">
+                İster Word gibi kesintisiz serbest metin yazın, ister blok editörüyle sürükleyip zenginleştirin.
+              </Typography>
             </div>
             <div className="hidden sm:flex items-center gap-2">
               <Typography variant="caption" className="text-primary bg-primary/10 px-3 py-1 rounded-full font-bold">
@@ -835,14 +829,14 @@ export default function ChapterEditorPage() {
                 <ContentRenderer blocks={chapter.contentBlocks} />
               </div>
             ) : (
-              <BlockEditor 
+              <BlockEditor
                 initialBlocks={chapter.contentBlocks}
                 onChange={(blocks) => setChapter({ ...chapter, contentBlocks: blocks })}
                 onUploadImage={handleUploadImage}
               />
             )}
           </div>
-          
+
           {/* ── İnteraktif Hikaye: Karar & Dallanma Yönetimi ── */}
           {story?.format === 'interactive' && (
             <div className="bg-card rounded-2xl border border-indigo-500/30 shadow-lg shadow-indigo-500/5 mb-8 md:mb-12 overflow-hidden">
@@ -872,28 +866,26 @@ export default function ChapterEditorPage() {
                   <button
                     type="button"
                     onClick={() => setChapter({ ...chapter, isEnding: false })}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                      !chapter.isEnding 
-                        ? 'bg-indigo-600 text-white shadow-sm' 
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${!chapter.isEnding
+                        ? 'bg-indigo-600 text-white shadow-sm'
                         : 'text-muted hover:text-foreground'
-                    }`}
+                      }`}
                   >
                     <GitFork size={13} />
                     <span>Karar Seçenekleri</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => setChapter({ 
-                      ...chapter, 
+                    onClick={() => setChapter({
+                      ...chapter,
                       isEnding: true,
                       endingType: chapter.endingType || 'good',
                       endingTitle: chapter.endingTitle || ''
                     })}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                      chapter.isEnding 
-                        ? 'bg-amber-500 text-black shadow-sm font-bold' 
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${chapter.isEnding
+                        ? 'bg-amber-500 text-black shadow-sm font-bold'
                         : 'text-muted hover:text-foreground'
-                    }`}
+                      }`}
                   >
                     <Trophy size={13} />
                     <span>Final / Hikaye Sonu</span>
@@ -935,11 +927,10 @@ export default function ChapterEditorPage() {
                               key={type}
                               type="button"
                               onClick={() => setChapter({ ...chapter, endingType: type as ChapterEndingType })}
-                              className={`p-3 rounded-xl border text-left flex flex-col gap-2 transition-all cursor-pointer ${
-                                isSelected
+                              className={`p-3 rounded-xl border text-left flex flex-col gap-2 transition-all cursor-pointer ${isSelected
                                   ? `${activeCls} shadow-sm font-semibold`
                                   : 'border-border/40 bg-muted/5 hover:border-border text-muted hover:text-foreground'
-                              }`}
+                                }`}
                             >
                               <div className="flex items-center justify-between">
                                 <Icon size={16} />
@@ -1020,7 +1011,7 @@ export default function ChapterEditorPage() {
                       <div className="space-y-3">
                         {chapter.choices.map((choice, index) => {
                           return (
-                            <div 
+                            <div
                               key={choice.id || index}
                               className="p-4 rounded-xl border border-border/40 bg-background/70 hover:border-indigo-500/30 transition-all space-y-3"
                             >
@@ -1160,8 +1151,8 @@ export default function ChapterEditorPage() {
                 <Typography variant="caption" className="text-muted">Okuyucularla etkileşimi artırmak için bölüm sonuna bir soru veya anket ekleyin.</Typography>
               </div>
               {chapter.endActivity && (
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   className="text-destructive hover:bg-destructive/10"
                   onPress={() => setChapter({ ...chapter, endActivity: undefined })}
                 >
@@ -1172,16 +1163,16 @@ export default function ChapterEditorPage() {
 
             {!chapter.endActivity ? (
               <div className="flex flex-col sm:flex-row gap-4 mt-6">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="flex-1 py-8 flex flex-col gap-2 hover:border-primary/50 hover:bg-primary/5"
                   onPress={() => setChapter({ ...chapter, endActivity: { type: 'question', question: '' } })}
                 >
                   <HelpCircle size={28} className="text-primary" />
                   <Typography variant="body" className="font-bold">Açık Uçlu Soru Ekle</Typography>
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="flex-1 py-8 flex flex-col gap-2 hover:border-primary/50 hover:bg-primary/5"
                   onPress={() => setChapter({ ...chapter, endActivity: { type: 'poll', question: '', options: ['', ''] } })}
                 >
@@ -1195,7 +1186,7 @@ export default function ChapterEditorPage() {
                   <Typography variant="caption" className="font-bold text-muted mb-2 block">
                     {chapter.endActivity.type === 'question' ? 'Sorunuz' : 'Anket Sorusu'}
                   </Typography>
-                  <Input 
+                  <Input
                     value={chapter.endActivity.question}
                     onChangeText={(val) => setChapter({ ...chapter, endActivity: { ...chapter.endActivity!, question: val } })}
                     placeholder={chapter.endActivity.type === 'question' ? 'Okuyucularınıza ne sormak istersiniz?' : 'Anket sorusunu buraya yazın...'}
@@ -1212,7 +1203,7 @@ export default function ChapterEditorPage() {
                           <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
                             {String.fromCharCode(65 + idx)}
                           </div>
-                          <Input 
+                          <Input
                             value={opt}
                             onChangeText={(val) => {
                               const newOptions = [...chapter.endActivity!.options!];
@@ -1223,8 +1214,8 @@ export default function ChapterEditorPage() {
                             className="bg-card border-border/50 flex-1"
                           />
                           {chapter.endActivity!.options!.length > 2 && (
-                            <Button 
-                              variant="ghost" 
+                            <Button
+                              variant="ghost"
                               className="text-muted hover:text-destructive hover:bg-destructive/10 p-2 shrink-0"
                               onPress={() => {
                                 const newOptions = chapter.endActivity!.options!.filter((_, i) => i !== idx);
@@ -1238,8 +1229,8 @@ export default function ChapterEditorPage() {
                       ))}
                     </div>
                     {chapter.endActivity.options.length < 5 && (
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         className="mt-4 text-primary hover:bg-primary/10 w-full"
                         onPress={() => {
                           const newOptions = [...chapter.endActivity!.options!, ''];
@@ -1254,16 +1245,16 @@ export default function ChapterEditorPage() {
               </div>
             )}
           </div>
-          
+
         </div>
       </main>
 
       {/* ── Planner Sidebar (Sağ Sütun) ── */}
       {isPlannerOpen && (
-        <PlannerSidebar 
-          storyId={storyId} 
-          chapterId={chapterId} 
-          onClose={() => setIsPlannerOpen(false)} 
+        <PlannerSidebar
+          storyId={storyId}
+          chapterId={chapterId}
+          onClose={() => setIsPlannerOpen(false)}
         />
       )}
 
@@ -1271,8 +1262,8 @@ export default function ChapterEditorPage() {
       {isInfoModalOpen && (
         <div className="fixed inset-0 z-[200] bg-background/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-card border border-border/50 shadow-2xl rounded-2xl p-6 md:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto relative animate-in zoom-in-95 duration-200 custom-scrollbar">
-            <button 
-              onClick={() => setIsInfoModalOpen(false)} 
+            <button
+              onClick={() => setIsInfoModalOpen(false)}
               className="absolute top-4 right-4 p-2 text-muted hover:text-foreground hover:bg-muted/10 rounded-full transition-colors"
             >
               <X size={20} />
@@ -1280,7 +1271,7 @@ export default function ChapterEditorPage() {
             <Typography variant="h2" className="mb-6 flex items-center gap-2">
               <Info className="text-primary" /> Editör Rehberi
             </Typography>
-            
+
             <div className="space-y-6">
               <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
                 <Typography variant="h4" className="text-primary mb-2 flex items-center gap-2">1. Akıllı Kopyala & Yapıştır (Tavsiye Edilen)</Typography>
@@ -1325,7 +1316,7 @@ export default function ChapterEditorPage() {
                 </Typography>
               </div>
             </div>
-            
+
             <div className="mt-8 flex justify-end">
               <Button variant="primary" onPress={() => setIsInfoModalOpen(false)} className="px-6 rounded-full">Anladım</Button>
             </div>
@@ -1333,13 +1324,13 @@ export default function ChapterEditorPage() {
         </div>
       )}
 
-            {/* ── Mobil Hızlı Bölüm Değiştirici Çekmecesi (Bottom Sheet) ── */}
+      {/* ── Mobil Hızlı Bölüm Değiştirici Çekmecesi (Bottom Sheet) ── */}
       {isChapterDrawerOpen && (
-        <div 
+        <div
           onClick={() => setIsChapterDrawerOpen(false)}
           className="lg:hidden fixed inset-0 z-[100] flex items-end justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
         >
-          <div 
+          <div
             className="w-full max-h-[82vh] flex flex-col bg-card border-t border-border/70 rounded-t-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-6 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
@@ -1359,8 +1350,8 @@ export default function ChapterEditorPage() {
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onPress={() => {
                     setIsChapterDrawerOpen(false);
                     handleCreateNewChapter();
@@ -1393,18 +1384,16 @@ export default function ChapterEditorPage() {
                         router.push(`/studio/story/${storyId}/chapter/${c.chapterId}`);
                       }
                     }}
-                    className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
-                      isActive 
-                        ? 'bg-primary/15 border-primary shadow-sm ring-1 ring-primary/40' 
+                    className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${isActive
+                        ? 'bg-primary/15 border-primary shadow-sm ring-1 ring-primary/40'
                         : 'bg-muted/5 border-border/50 hover:border-primary/40 active:scale-[0.99]'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
-                        isActive 
-                          ? 'bg-primary text-black' 
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${isActive
+                          ? 'bg-primary text-black'
                           : 'bg-muted/20 text-muted'
-                      }`}>
+                        }`}>
                         #{c.order}
                       </div>
                       <div className="min-w-0">
@@ -1412,13 +1401,12 @@ export default function ChapterEditorPage() {
                           {c.title || 'İsimsiz Bölüm'}
                         </h4>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className={`text-[10px] uppercase font-bold px-1.5 py-0.2 rounded ${
-                            c.status === 'published' 
-                              ? 'bg-green-500/15 text-green-400' 
-                              : c.status === 'scheduled' 
-                                ? 'bg-blue-500/15 text-blue-400' 
+                          <span className={`text-[10px] uppercase font-bold px-1.5 py-0.2 rounded ${c.status === 'published'
+                              ? 'bg-green-500/15 text-green-400'
+                              : c.status === 'scheduled'
+                                ? 'bg-blue-500/15 text-blue-400'
                                 : 'bg-muted/20 text-muted'
-                          }`}>
+                            }`}>
                             {c.status === 'published' ? 'YAYINDA' : c.status === 'scheduled' ? 'PLANLI' : 'TASLAK'}
                           </span>
                           {c.audioTrack?.url && (
@@ -1446,16 +1434,16 @@ export default function ChapterEditorPage() {
       )}
 
 
-      <ReadixonAIAssistant 
-        isOpen={isAIAssistantOpen} 
-        onClose={() => setIsAIAssistantOpen(false)} 
-        currentContent={chapter.contentBlocks?.map((b: any) => b.text).join('\n') || ''} 
+      <ReadixonAIAssistant
+        isOpen={isAIAssistantOpen}
+        onClose={() => setIsAIAssistantOpen(false)}
+        currentContent={chapter.contentBlocks?.map((b: any) => b.text).join('\n') || ''}
       />
 
       {isPlannerOpen && (
-        <PlannerSidebar 
-          storyId={storyId} 
-          chapterId={chapterId} 
+        <PlannerSidebar
+          storyId={storyId}
+          chapterId={chapterId}
           chapterTitle={chapter?.title}
           chapterOrder={chapter?.order}
           onInsertText={(textToInsert) => {
@@ -1476,14 +1464,14 @@ export default function ChapterEditorPage() {
             setIsPlannerOpen(false);
             setIsUniverseOpen(true);
           }}
-          onClose={() => setIsPlannerOpen(false)} 
+          onClose={() => setIsPlannerOpen(false)}
         />
       )}
 
       {isUniverseOpen && (
-        <UniverseSidebar 
-          storyId={storyId} 
-          chapterId={chapterId} 
+        <UniverseSidebar
+          storyId={storyId}
+          chapterId={chapterId}
           chapterTitle={chapter?.title}
           chapterOrder={chapter?.order}
           currentContent={chapter?.contentBlocks?.map((b: any) => b.text).filter(Boolean).join('\n') || ''}
@@ -1505,7 +1493,7 @@ export default function ChapterEditorPage() {
             setIsUniverseOpen(false);
             setIsPlannerOpen(true);
           }}
-          onClose={() => setIsUniverseOpen(false)} 
+          onClose={() => setIsUniverseOpen(false)}
         />
       )}
 
@@ -1542,15 +1530,13 @@ export default function ChapterEditorPage() {
               {/* Seçenek 1: Küçük Düzeltme */}
               <div
                 onClick={() => setRevisionType('minor')}
-                className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-start gap-3.5 ${
-                  revisionType === 'minor'
+                className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-start gap-3.5 ${revisionType === 'minor'
                     ? 'border-primary bg-primary/10 shadow-sm'
                     : 'border-border/40 bg-card/60 hover:bg-card/90 hover:border-border'
-                }`}
+                  }`}
               >
-                <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center shrink-0 ${
-                  revisionType === 'minor' ? 'border-primary' : 'border-muted'
-                }`}>
+                <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center shrink-0 ${revisionType === 'minor' ? 'border-primary' : 'border-muted'
+                  }`}>
                   {revisionType === 'minor' && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
                 </div>
                 <div>
@@ -1567,15 +1553,13 @@ export default function ChapterEditorPage() {
               {/* Seçenek 2: Majör Revizyon */}
               <div
                 onClick={() => setRevisionType('major')}
-                className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-start gap-3.5 ${
-                  revisionType === 'major'
+                className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-start gap-3.5 ${revisionType === 'major'
                     ? 'border-amber-500 bg-amber-500/10 shadow-sm'
                     : 'border-border/40 bg-card/60 hover:bg-card/90 hover:border-border'
-                }`}
+                  }`}
               >
-                <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center shrink-0 ${
-                  revisionType === 'major' ? 'border-amber-500' : 'border-muted'
-                }`}>
+                <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center shrink-0 ${revisionType === 'major' ? 'border-amber-500' : 'border-muted'
+                  }`}>
                   {revisionType === 'major' && <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />}
                 </div>
                 <div>

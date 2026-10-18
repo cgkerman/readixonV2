@@ -923,6 +923,33 @@ export interface ReadingList {
 }
 
 // ─────────────────────────────────────────────────────────────────
+// Legal Documents & Terms Management
+// ─────────────────────────────────────────────────────────────────
+
+export type LegalDocType = 'terms' | 'privacy' | 'copyright' | 'guidelines';
+
+export interface LegalSection {
+  id: string;
+  title: string;
+  content: string; // HTML or Markdown formatted content
+}
+
+export interface LegalDocument {
+  id: LegalDocType;
+  title: string;
+  description?: string;
+  effectiveDate: string; // e.g. "08.07.2026"
+  version: string; // e.g. "v2.0"
+  leadText?: string; // Giriş / özet paragrafı
+  sections: LegalSection[];
+  rawContent?: string; // Serbest metin formatı için opsiyonel
+  isActive?: boolean;
+  updatedAt?: any;
+  updatedBy?: string;
+  updatedByEmail?: string;
+}
+
+// ─────────────────────────────────────────────────────────────────
 // Evren & Seri Modül Dışa Aktarımları
 // ─────────────────────────────────────────────────────────────────
 export * from './series';
