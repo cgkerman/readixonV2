@@ -2,10 +2,11 @@
 
 import React, { useEffect, useState } from 'react';
 import { Typography, Button } from '@readixon/ui';
-import { getAdminStories, Story } from '@readixon/core';
+import { getAdminStories, formatReadingHours, Story } from '@readixon/core';
 import type { DocumentSnapshot } from 'firebase/firestore';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, Clock, BarChart2 } from 'lucide-react';
 import Link from 'next/link';
+import { ReadingAnalyticsSection } from '@/components/ReadingAnalyticsSection';
 
 export default function AdminStoriesPage() {
   const [stories, setStories] = useState<Story[]>([]);
@@ -51,27 +52,37 @@ export default function AdminStoriesPage() {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <Typography variant="h2" className="font-bold">Hikayeler</Typography>
-          <Typography variant="body" className="text-muted mt-1">Platformdaki tüm hikayelerin ve eserlerin listesi.</Typography>
+          <Typography variant="h2" className="font-bold">Hikayeler & Okuma Analitiği</Typography>
+          <Typography variant="body" className="text-muted mt-1">Platformdaki tüm eserlerin listesi, okuma telemetrileri ve tutundurma oranları.</Typography>
         </div>
       </div>
+
+      {/* ── Yönetim Okuma Analitiği & Tutundurma Denetimi ── */}
+      {stories.length > 0 && (
+        <ReadingAnalyticsSection 
+          stories={stories} 
+          variant="admin" 
+          title="Platform Eserleri Okuma Analitiği Denetimi" 
+        />
+      )}
 
       <div className="bg-card/40 border border-border/50 rounded-2xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[1000px]">
             <thead>
               <tr className="border-b border-border/50 bg-card/60 backdrop-blur-sm">
-                <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider w-[35%]">Hikaye</th>
-                <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider w-[20%]">Yazar</th>
-                <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider w-[15%]">Durum</th>
-                <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider w-[15%]">İstatistikler</th>
-                <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider w-[15%]">Oluşturulma</th>
+                <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider w-[28%]">Hikaye</th>
+                <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider w-[18%]">Yazar</th>
+                <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider w-[12%]">Durum</th>
+                <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider w-[18%]">İstatistikler & Telemetri</th>
+                <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider w-[12%]">Oluşturulma</th>
+                <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider w-[12%] text-right">İşlem</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
               {loading && stories.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-20 text-center">
+                  <td colSpan={6} className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
                       <Typography variant="body" className="text-muted">Yükleniyor...</Typography>
@@ -80,7 +91,7 @@ export default function AdminStoriesPage() {
                 </tr>
               ) : stories.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-20 text-center text-muted">Kayıtlı hikaye bulunamadı.</td>
+                  <td colSpan={6} className="px-6 py-20 text-center text-muted">Kayıtlı hikaye bulunamadı.</td>
                 </tr>
               ) : (
                 stories.map((story) => (
@@ -140,10 +151,24 @@ export default function AdminStoriesPage() {
                         <span className="text-xs text-muted"><strong className="text-text">{story.stats?.views?.toLocaleString() || 0}</strong> Okunma</span>
                         <span className="text-xs text-muted"><strong className="text-text">{story.stats?.likes?.toLocaleString() || 0}</strong> Beğeni</span>
                         <span className="text-xs text-muted"><strong className="text-text">{story.stats?.chapterCount || 0}</strong> Bölüm</span>
+                        {story.stats?.totalReadTimeSeconds ? (
+                          <span className="text-[11px] font-semibold text-indigo-400 flex items-center gap-1 mt-0.5">
+                            <Clock size={11} /> {formatReadingHours(story.stats.totalReadTimeSeconds)}
+                          </span>
+                        ) : null}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-muted font-medium">
                       {story.createdAt ? new Date(story.createdAt.seconds * 1000).toLocaleDateString('tr-TR') : '-'}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <Link
+                        href={`/admin/stories/${story.storyId}`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-all shadow-2xs"
+                      >
+                        <BarChart2 size={13} />
+                        <span>İncele</span>
+                      </Link>
                     </td>
                   </tr>
                 ))

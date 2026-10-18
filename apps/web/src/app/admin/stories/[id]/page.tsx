@@ -1,12 +1,12 @@
 "use client";
-
 import React, { useEffect, useState } from 'react';
 import { Typography, Button } from '@readixon/ui';
-import { getStoryById, fetchChapters, getUserProfile, Story, Chapter, User } from '@readixon/core';
+import { getStoryById, fetchChapters, getUserProfile, formatReadingHours, Story, Chapter, User } from '@readixon/core';
 import { ArrowLeft, BookOpen, Clock, Heart, Eye, List, Hash, Download } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ChapterViewerModal } from '@/components/ChapterViewerModal';
+import { ReadingAnalyticsSection } from '@/components/ReadingAnalyticsSection';
 
 export default function AdminStoryDetailPage() {
   const { id } = useParams() as { id: string };
@@ -313,6 +313,18 @@ export default function AdminStoryDetailPage() {
                   <Typography variant="h3" className="font-bold text-xl">{story.stats?.chapterCount || chapters.length}</Typography>
                 </div>
               </div>
+
+              <div className="flex items-center gap-4 bg-background border border-border/50 p-4 rounded-xl">
+                <div className="w-10 h-10 rounded-full bg-indigo-500/10 text-indigo-400 flex items-center justify-center shrink-0">
+                  <Clock size={20} />
+                </div>
+                <div>
+                  <Typography variant="caption" className="text-muted font-semibold uppercase tracking-wider text-[10px]">Toplam Okunma Süresi</Typography>
+                  <Typography variant="h3" className="font-bold text-xl">
+                    {formatReadingHours(story.stats?.totalReadTimeSeconds || 0)}
+                  </Typography>
+                </div>
+              </div>
             </div>
           </div>
           
@@ -323,6 +335,14 @@ export default function AdminStoryDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Gelişmiş Okuma Analitiği & Tutundurma Denetimi (Yönetim Paneli) ── */}
+      <ReadingAnalyticsSection 
+        initialStory={story} 
+        initialChapters={chapters} 
+        showStorySelector={false} 
+        variant="admin" 
+      />
 
       {/* Bölüm İçerik Görüntüleyici Modal */}
       <ChapterViewerModal
