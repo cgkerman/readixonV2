@@ -489,6 +489,14 @@ export default function ReadPage() {
         getStoryById(storyId)
       ]);
 
+      if (!chap && chaps && chaps.length > 0) {
+        const fallbackChapter = chaps[0];
+        if (fallbackChapter?.chapterId && fallbackChapter.chapterId !== chapterId) {
+          router.replace(`/read/${storyId}/${fallbackChapter.chapterId}`);
+          return;
+        }
+      }
+
       if (chap && chap.status === 'scheduled' && chap.publishDate) {
         const pubDate = chap.publishDate.toDate ? chap.publishDate.toDate() : new Date(chap.publishDate as any);
         if (pubDate > new Date()) {

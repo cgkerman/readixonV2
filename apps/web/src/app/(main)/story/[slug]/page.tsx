@@ -599,10 +599,15 @@ export default function StoryDetailPage() {
     ? (Object.values(editorialReview.scores).reduce((a, b) => a + b, 0) / Object.values(editorialReview.scores).length).toFixed(1)
     : '9.0';
 
-  const handleStartReading = (specificChapterId?: string) => {
-    const chapterToOpen = specificChapterId || targetChapterId;
-    if (chapterToOpen) {
-      router.push(`/read/${storyId}/${chapterToOpen}`);
+  const handleStartReading = (specificChapterId?: any) => {
+    const validChapterId = (typeof specificChapterId === 'string' && specificChapterId.trim().length > 0 && specificChapterId !== '[object Object]')
+      ? specificChapterId
+      : (targetChapterId || chapters[0]?.chapterId);
+
+    if (validChapterId) {
+      router.push(`/read/${storyId}/${validChapterId}`);
+    } else {
+      toast.info("Bu hikayede henüz okunabilir bir bölüm bulunmuyor.");
     }
   };
 
@@ -896,19 +901,29 @@ export default function StoryDetailPage() {
               {/* 1. Satır: Ana Okuma Butonu (Full Width) */}
               <Button 
                 variant="primary" 
-                onPress={handleStartReading} 
+                onPress={() => handleStartReading()} 
                 className="w-full shadow-lg shadow-primary/25 text-sm sm:text-base font-bold py-3.5 rounded-2xl active:scale-[0.99] transition-all flex items-center justify-center cursor-pointer"
                 disabled={chapters.length === 0}
               >
                 {hasReadingHistory ? (
                   <>
                     <Bookmark size={18} className="mr-2 fill-current shrink-0" />
-                    <span>Kaldığın Yerden Devam Et {targetChapterTitle ? `(${targetChapterTitle})` : ''}</span>
+                    <span>
+                      {story.format === 'short_story' 
+                        ? 'Okumaya Devam Et' 
+                        : `Kaldığın Yerden Devam Et ${targetChapterTitle ? `(${targetChapterTitle})` : ''}`}
+                    </span>
                   </>
                 ) : (
                   <>
                     <BookOpen size={18} className="mr-2 shrink-0" />
-                    <span>{chapters.length === 0 ? 'Henüz Bölüm Yok' : 'İlk Bölümü Oku'}</span>
+                    <span>
+                      {chapters.length === 0 
+                        ? 'Henüz Bölüm Yok' 
+                        : story.format === 'short_story' 
+                          ? 'Hikayeyi Oku' 
+                          : 'İlk Bölümü Oku'}
+                    </span>
                   </>
                 )}
               </Button>
@@ -992,7 +1007,7 @@ export default function StoryDetailPage() {
               storyTitle={story.title}
               authorName={author?.displayName || story.authorName}
               authorAvatar={author?.avatarUrl || story.authorAvatarUrl}
-              onReadStory={handleStartReading}
+              onReadStory={(chapterId) => handleStartReading(chapterId)}
             />
           </div>
         </div>
@@ -1471,16 +1486,18 @@ export default function StoryDetailPage() {
                 </span>
               </div>
 
-              {/* Sıralama Toggle'ı */}
-              <button
-                type="button"
-                onClick={() => setChapterSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-muted/10 hover:bg-muted/20 border border-border/50 text-text transition-colors cursor-pointer select-none"
-                title="Bölüm sıralamasını tersine çevir"
-              >
-                <ArrowUpDown size={13} className="text-primary" />
-                <span>{chapterSortOrder === 'asc' ? '1 → Son' : 'Son → 1'}</span>
-              </button>
+              {/* Sıralama Toggle'ı (Kısa hikayelerde tek bölüm olduğundan gizlenir) */}
+              {story.format !== 'short_story' && (
+                <button
+                  type="button"
+                  onClick={() => setChapterSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-muted/10 hover:bg-muted/20 border border-border/50 text-text transition-colors cursor-pointer select-none"
+                  title="Bölüm sıralamasını tersine çevir"
+                >
+                  <ArrowUpDown size={13} className="text-primary" />
+                  <span>{chapterSortOrder === 'asc' ? '1 → Son' : 'Son → 1'}</span>
+                </button>
+              )}
             </div>
 
             {/* Bölüm Kartları */}
@@ -2037,19 +2054,23 @@ export default function StoryDetailPage() {
                 <p className="text-xs font-bold text-text truncate leading-tight">{story.title}</p>
                 <p className="text-[10px] text-muted truncate">
                   {hasReadingHistory 
-                    ? `Devam et: ${targetChapterTitle || 'Bölüm'}` 
-                    : `${chapters.length} Bölüm`}
+                    ? (story.format === 'short_story' ? 'Okumaya Devam Et' : `Devam et: ${targetChapterTitle || 'Bölüm'}`) 
+                    : (story.format === 'short_story' ? 'Tek Bölüm' : `${chapters.length} Bölüm`)}
                 </p>
               </div>
             </div>
 
             <Button
               variant="primary"
-              onPress={handleStartReading}
+              onPress={() => handleStartReading()}
               className="px-4 py-2 rounded-xl text-xs font-bold shrink-0 shadow-md shadow-primary/20 flex items-center gap-1.5 cursor-pointer"
             >
               <Play size={12} className="fill-current" />
-              <span>{hasReadingHistory ? 'Devam Et' : 'Oku'}</span>
+              <span>
+                {hasReadingHistory 
+                  ? 'Devam Et' 
+                  : (story.format === 'short_story' ? 'Hikayeyi Oku' : 'Oku')}
+              </span>
             </Button>
 
           </div>

@@ -304,8 +304,13 @@ export const getRecentlyUpdatedStories = async (limitCount: number = 10): Promis
 export const fetchChapters = async (storyId: string) => {
   try {
     const chaptersRef = collection(db, 'stories', storyId, 'chapters');
-    const q = query(chaptersRef, orderBy('order', 'asc'));
-    const querySnapshot = await getDocs(q);
+    let querySnapshot;
+    try {
+      const q = query(chaptersRef, orderBy('order', 'asc'));
+      querySnapshot = await getDocs(q);
+    } catch {
+      querySnapshot = await getDocs(chaptersRef);
+    }
     
     const chapters: Chapter[] = [];
     querySnapshot.forEach((doc) => {
@@ -316,9 +321,17 @@ export const fetchChapters = async (storyId: string) => {
     });
 
     if (chapters.length === 0) {
-      return [];
+      // Fallback: orderBy olmaksızın çekmeyi dene (order alanı eksik dökümanlar için)
+      const fallbackSnap = await getDocs(chaptersRef);
+      fallbackSnap.forEach((doc) => {
+        chapters.push({
+          chapterId: doc.id,
+          ...doc.data()
+        } as Chapter);
+      });
     }
 
+    chapters.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
     return chapters;
   } catch (error) {
     console.error("Error fetching chapters:", error);
@@ -329,10 +342,17 @@ export const fetchChapters = async (storyId: string) => {
 /**
  * Belirli bir bölümün detayını getirir (içerik blokları dahil).
  */
-export const fetchChapter = async (storyId: string, chapterId: string) => {
+export const fetchChapter = async (storyId: string, chapterId: string): Promise<Chapter | null> => {
   try {
-    // In a real app, you might fetch a specific doc: getDoc(doc(db, 'stories', storyId, 'chapters', chapterId))
-    // For now, we reuse fetchChapters since they are small
+    if (!storyId || !chapterId || chapterId === '[object Object]') return null;
+    const chapterRef = doc(db, 'stories', storyId, 'chapters', chapterId);
+    const snap = await getDoc(chapterRef);
+    if (snap.exists()) {
+      return {
+        chapterId: snap.id,
+        ...snap.data()
+      } as Chapter;
+    }
     const chapters = await fetchChapters(storyId);
     return chapters.find(c => c.chapterId === chapterId) || null;
   } catch (error) {
