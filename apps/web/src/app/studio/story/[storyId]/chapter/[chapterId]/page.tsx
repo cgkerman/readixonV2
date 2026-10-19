@@ -161,6 +161,9 @@ export default function ChapterEditorPage() {
       if (userProfile) {
         if (shouldNotify) {
           trackInteraction(userProfile.uid, 'chapter_published').catch(e => console.error("Badge error:", e));
+          if (story?.format === 'short_story') {
+            trackInteraction(userProfile.uid, 'short_story_published').catch(e => console.error("Short story badge error:", e));
+          }
         }
 
         if (manual) {
@@ -263,6 +266,10 @@ export default function ChapterEditorPage() {
   }, [chapter, loading]);
 
   const handleCreateNewChapter = async () => {
+    if (story?.format === 'short_story') {
+      toast.info("Kısa hikayeler tek bölümle sınırlıdır. İkinci bir bölüm eklenemez.");
+      return;
+    }
     try {
       const newChapId = await createChapter(storyId, {
         title: `Bölüm ${allChapters.length + 1}`,
@@ -323,10 +330,14 @@ export default function ChapterEditorPage() {
         </Button>
 
         <div className="flex items-center justify-between mb-6">
-          <Typography variant="h3" className="font-bold">Bölümler ({allChapters.length})</Typography>
-          <Button variant="ghost" className="p-2 text-primary" onPress={handleCreateNewChapter}>
-            <PlusCircle size={20} />
-          </Button>
+          <Typography variant="h3" className="font-bold">
+            {story?.format === 'short_story' ? 'Kısa Hikaye (Tek Bölüm)' : `Bölümler (${allChapters.length})`}
+          </Typography>
+          {story?.format !== 'short_story' && (
+            <Button variant="ghost" className="p-2 text-primary" onPress={handleCreateNewChapter}>
+              <PlusCircle size={20} />
+            </Button>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto pr-2 space-y-2">
@@ -379,14 +390,18 @@ export default function ChapterEditorPage() {
           <ChevronDown size={14} className="text-muted shrink-0" />
         </button>
 
-        <Button
-          variant="ghost"
-          className="p-2 text-primary hover:bg-primary/10 rounded-full cursor-pointer shrink-0"
-          onPress={handleCreateNewChapter}
-          aria-label="Yeni Bölüm Ekle"
-        >
-          <PlusCircle size={20} />
-        </Button>
+        {story?.format !== 'short_story' ? (
+          <Button
+            variant="ghost"
+            className="p-2 text-primary hover:bg-primary/10 rounded-full cursor-pointer shrink-0"
+            onPress={handleCreateNewChapter}
+            aria-label="Yeni Bölüm Ekle"
+          >
+            <PlusCircle size={20} />
+          </Button>
+        ) : (
+          <div className="w-9" />
+        )}
       </div>
 
       {/* ── Main Content (Sağ Sütun) ── */}
@@ -1350,16 +1365,18 @@ export default function ChapterEditorPage() {
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  onPress={() => {
-                    setIsChapterDrawerOpen(false);
-                    handleCreateNewChapter();
-                  }}
-                  className="text-xs px-2.5 py-1 text-primary border-primary/30 hover:bg-primary/10 cursor-pointer"
-                >
-                  <PlusCircle size={14} className="mr-1" /> Yeni Bölüm
-                </Button>
+                {story?.format !== 'short_story' && (
+                  <Button
+                    variant="outline"
+                    onPress={() => {
+                      setIsChapterDrawerOpen(false);
+                      handleCreateNewChapter();
+                    }}
+                    className="text-xs px-2.5 py-1 text-primary border-primary/30 hover:bg-primary/10 cursor-pointer"
+                  >
+                    <PlusCircle size={14} className="mr-1" /> Yeni Bölüm
+                  </Button>
+                )}
                 <button
                   type="button"
                   onClick={() => setIsChapterDrawerOpen(false)}

@@ -131,6 +131,43 @@ export const getInteractiveStoriesPaginated = async (limitCount: number = 10, la
 };
 
 /**
+ * Kısa Hikayeleri (Tek bölümlük eserler) Firestore'dan çeker.
+ */
+export const getShortStoriesPaginated = async (limitCount: number = 10, lastDoc?: DocumentSnapshot) => {
+  const storiesRef = collection(db, 'stories');
+  
+  let q = query(
+    storiesRef,
+    where('format', '==', 'short_story'),
+    limit(50)
+  );
+
+  if (lastDoc) {
+    q = query(q, startAfter(lastDoc));
+  }
+
+  try {
+    const querySnapshot = await getDocs(q);
+    let allStories = await enrichStories(querySnapshot.docs);
+    let stories = allStories.filter(s => s.status === 'ongoing' || s.status === 'completed');
+
+    stories.sort((a, b) => {
+      const aTime = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+      const bTime = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+      return bTime - aTime;
+    });
+
+    stories = stories.slice(0, limitCount);
+
+    const lastVisible = querySnapshot.docs.length > 0 ? querySnapshot.docs[querySnapshot.docs.length - 1] : undefined;
+    return { stories, lastDoc: lastVisible };
+  } catch (error: any) {
+    console.error("getShortStoriesPaginated Firebase error:", error.message);
+    return { stories: [], lastDoc: undefined };
+  }
+};
+
+/**
  * Son güncellenen (yeni bölüm eklenen) hikayeleri Firestore'dan çeker.
  */
 export const getRecentlyUpdatedStories = async (limitCount: number = 10): Promise<StoryWithLatestChapter[]> => {
@@ -501,6 +538,18 @@ export const syncStoryChapterCount = async (storyId: string): Promise<number> =>
  */
 export const createChapter = async (storyId: string, data: Partial<Chapter>) => {
   try {
+    // Kısa hikaye koruması: formatı 'short_story' ise en fazla 1 bölüm olabilir
+    const storySnap = await getDoc(doc(db, 'stories', storyId));
+    if (storySnap.exists()) {
+      const storyData = storySnap.data();
+      if (storyData.format === 'short_story') {
+        const existingChaptersSnap = await getDocs(collection(db, 'stories', storyId, 'chapters'));
+        if (existingChaptersSnap.docs.length >= 1) {
+          throw new Error('Kısa hikayeler yalnızca tek bir bölümden oluşabilir.');
+        }
+      }
+    }
+
     const newChapterRef = doc(collection(db, 'stories', storyId, 'chapters'));
     const newChapter = {
       ...data,
@@ -705,8 +754,16 @@ export const syncReadingProgress = async (
     
     if (isChapterCompleted && !completedChapters.includes(currentChapterId)) {
       completedChapters.push(currentChapterId);
-      import('./achievementService').then(module => {
+      import('./achievementService').then(async (module) => {
         module.trackRead(userId).catch(err => console.error("trackRead error:", err));
+        try {
+          const sSnap = await getDoc(doc(db, 'stories', storyId));
+          if (sSnap.exists() && sSnap.data().format === 'short_story') {
+            module.trackInteraction(userId, 'short_story_read').catch(err => console.error("trackShortStoryRead error:", err));
+          }
+        } catch (sErr) {
+          console.error("Story fetch for short_story achievement error:", sErr);
+        }
       });
     }
 

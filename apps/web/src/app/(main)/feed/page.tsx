@@ -19,6 +19,7 @@ import {
   getTrendingDiscussions, 
   getWebtoonsPaginated, 
   getInteractiveStoriesPaginated,
+  getShortStoriesPaginated,
   getEditorialReviews, 
   getPublicUniverses,
   getPublicSeries,
@@ -151,6 +152,12 @@ export default function FeedPage() {
     queryFn: () => getInteractiveStoriesPaginated(10),
   });
   const interactiveStories = interactiveData?.stories || [];
+
+  const { data: shortStoriesData, isLoading: shortStoriesLoading } = useQuery({
+    queryKey: ['stories', 'short_story', 'feed'],
+    queryFn: () => getShortStoriesPaginated(10),
+  });
+  const shortStories = shortStoriesData?.stories || [];
 
   const { data: recentlyUpdatedStories = [], isLoading: recentlyUpdatedLoading } = useQuery({
     queryKey: ['stories', 'recentlyUpdated'],
@@ -1140,6 +1147,49 @@ export default function FeedPage() {
               }}
               onLikePress={handleLikePress}
             />
+          )}
+
+          {/* Kısa Hikayeler (Tek Oturuşta Bitenler) */}
+          {shortStoriesLoading ? (
+            <CarouselRowSkeleton 
+              title="Tek Oturuşta Biten Kısa Hikayeler"
+              subtitle="Zamanınız az mı? Tek bir bölümde tamamlanan, vurucu ve sürükleyici kısa romanlar."
+              icon={<Feather className="text-amber-400" size={24} />}
+            />
+          ) : shortStories.length > 0 ? (
+            <CarouselRow
+              title="Tek Oturuşta Biten Kısa Hikayeler"
+              subtitle="Zamanınız az mı? Tek bir bölümde tamamlanan, vurucu ve sürükleyici kısa romanlar."
+              icon={<Feather className="text-amber-400" size={24} />}
+              stories={shortStories}
+              onStoryClick={(story) => {
+                const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
+                router.push(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
+              }}
+              onLikePress={handleLikePress}
+            />
+          ) : (
+            <div className="relative group/section rounded-3xl bg-gradient-to-r from-amber-500/10 via-card to-card border border-amber-500/20 p-6 sm:p-7 flex flex-col md:flex-row items-center justify-between gap-5 shadow-xs overflow-hidden">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
+                  <Feather size={24} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-extrabold text-base sm:text-lg text-foreground">Tek Oturuşta Biten Kısa Hikayeler</h3>
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25">
+                      Yeni Vitrin
+                    </span>
+                  </div>
+                  <p className="text-muted text-xs mt-0.5">Zamanın kısıtlı mı? Tek bir bölümle sınırlandırılmış, tek nefeste biten sürükleyici kısa romanlar ve öyküler.</p>
+                </div>
+              </div>
+              <Link href="/studio" className="shrink-0">
+                <Button variant="primary" className="rounded-xl text-xs font-bold px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black">
+                  İlk Kısa Hikayeni Yaz
+                </Button>
+              </Link>
+            </div>
           )}
 
           {/* Gizli Hazineler (Yakında) */}

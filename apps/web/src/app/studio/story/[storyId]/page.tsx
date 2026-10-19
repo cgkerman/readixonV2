@@ -29,7 +29,9 @@ import {
   ArrowUp,
   ArrowDown,
   Film,
-  Pencil
+  Pencil,
+  Feather,
+  Check
 } from 'lucide-react';
 import {
   getStoryById,
@@ -217,6 +219,18 @@ export default function StoryDetailAdminPage() {
         contributors: validContributors,
         seriesLabel: seriesLabel.trim() || undefined
       });
+
+      if (story) {
+        if (story.format === 'short_story' && (status === 'ongoing' || status === 'completed') && story.status === 'draft') {
+          const { trackInteraction } = await import('@readixon/core');
+          trackInteraction(story.authorId, 'short_story_published').catch(() => {});
+        }
+        if (status === 'completed' && story.status !== 'completed') {
+          const { trackInteraction } = await import('@readixon/core');
+          trackInteraction(story.authorId, 'story_completed').catch(() => {});
+        }
+      }
+
       toast.success('Kaydedildi');
     } catch (e) {
       toast.error('Hata oluştu');
@@ -567,10 +581,14 @@ export default function StoryDetailAdminPage() {
   };
 
   const handleAddChapter = async () => {
+    if (story?.format === 'short_story' && chapters.length >= 1) {
+      toast.info("Kısa hikayeler yalnızca tek bir bölümden oluşabilir.");
+      return;
+    }
     try {
-      const titlePrefix = story?.format === 'webtoon' ? 'Episod' : 'Bölüm';
+      const titlePrefix = story?.format === 'webtoon' ? 'Episod' : story?.format === 'short_story' ? 'Kısa Hikaye' : 'Bölüm';
       const newChapId = await createChapter(storyId, {
-        title: `${titlePrefix} ${chapters.length + 1}`,
+        title: story?.format === 'short_story' ? 'Tek Bölüm' : `${titlePrefix} ${chapters.length + 1}`,
         order: chapters.length + 1,
         contentBlocks: []
       });
@@ -579,8 +597,8 @@ export default function StoryDetailAdminPage() {
       } else {
         router.push(`/studio/story/${storyId}/chapter/${newChapId}`);
       }
-    } catch (e) {
-      toast.error("Bölüm oluşturulamadı.");
+    } catch (e: any) {
+      toast.error(e?.message || "Bölüm oluşturulamadı.");
     }
   };
 
@@ -708,9 +726,16 @@ export default function StoryDetailAdminPage() {
       <div className="bg-card border border-border/60 rounded-2xl p-4 sm:p-6 mb-6 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl font-bold text-text truncate">
-              {title || 'İsimsiz Hikaye'}
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold text-text truncate">
+                {title || 'İsimsiz Hikaye'}
+              </h1>
+              {story?.format === 'short_story' && (
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-500 border border-amber-500/25 text-[10px] font-extrabold flex items-center gap-1 shrink-0">
+                  <Feather size={11} /> Kısa Hikaye
+                </span>
+              )}
+            </div>
             <p className="text-xs sm:text-sm text-muted mt-1">
               Hikayenizin bölümlerini, vitrinini ve yazar araçlarını yönetin.
             </p>
@@ -720,7 +745,9 @@ export default function StoryDetailAdminPage() {
           <div className="flex items-center gap-3 sm:gap-4 shrink-0 bg-muted/10 px-3.5 py-2 rounded-xl border border-border/40">
             <div className="flex items-center gap-1.5 text-xs text-muted">
               <BookOpen size={14} className="text-primary" />
-              <span className="font-bold text-text">{chapters.length}</span> Bölüm
+              <span className="font-bold text-text">
+                {story?.format === 'short_story' ? `${chapters.length}/1 (Tek Bölüm)` : `${chapters.length} Bölüm`}
+              </span>
             </div>
             <div className="w-px h-3.5 bg-border/60" />
             <div className="flex items-center gap-1.5 text-xs text-muted">
@@ -844,23 +871,48 @@ export default function StoryDetailAdminPage() {
         <div className="space-y-6">
           {/* Bölüm Listesi Kartı */}
           <div className="bg-card p-4 sm:p-6 rounded-2xl border border-border/60 shadow-xs">
+            {story?.format === 'short_story' && (
+              <div className="mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center gap-2.5 text-xs text-amber-500 font-medium">
+                <Feather size={16} className="shrink-0" />
+                <span>
+                  <strong>Kısa Hikaye (Tek Bölümlü Eser):</strong> Bu hikaye yapısı gereği tek bölümle sınırlandırılmıştır. İkinci bir bölüm eklenemez.
+                </span>
+              </div>
+            )}
+
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
               <div>
                 <Typography variant="h3" className="font-bold text-base sm:text-lg">
-                  {story?.format === 'webtoon' ? 'Episod Listesi' : 'Bölüm Listesi'}
+                  {story?.format === 'webtoon' ? 'Episod Listesi' : story?.format === 'short_story' ? 'Kısa Hikaye Bölümü' : 'Bölüm Listesi'}
                 </Typography>
                 <p className="text-xs text-muted mt-0.5">
                   Yazmak veya düzenlemek istediğiniz bölüme dokunun.
                 </p>
               </div>
-              <Button 
-                variant="primary" 
-                onPress={handleAddChapter} 
-                className="flex items-center justify-center gap-2 text-xs sm:text-sm py-2.5 px-4 cursor-pointer font-semibold shadow-md shadow-primary/20"
-              >
-                <PlusCircle size={16} />
-                <span>{story?.format === 'webtoon' ? 'Yeni Episod Ekle' : 'Yeni Bölüm Ekle'}</span>
-              </Button>
+              {story?.format === 'short_story' && chapters.length >= 1 ? (
+                <div 
+                  className="flex items-center gap-1.5 text-xs py-2 px-3.5 rounded-xl bg-amber-500/15 text-amber-500 border border-amber-500/30 font-semibold select-none shadow-xs"
+                  title="Kısa hikayeler tek bölümle sınırlıdır. İkinci bir bölüm eklenemez."
+                >
+                  <Check size={14} className="text-amber-500" />
+                  <span>Tek Bölüm Tamamlandı (1/1)</span>
+                </div>
+              ) : (
+                <Button 
+                  variant="primary" 
+                  onPress={handleAddChapter} 
+                  className="flex items-center justify-center gap-2 text-xs sm:text-sm py-2.5 px-4 cursor-pointer font-semibold shadow-md shadow-primary/20"
+                >
+                  <PlusCircle size={16} />
+                  <span>
+                    {story?.format === 'webtoon' 
+                      ? 'Yeni Episod Ekle' 
+                      : story?.format === 'short_story' 
+                        ? 'Tek Bölümü Oluştur' 
+                        : 'Yeni Bölüm Ekle'}
+                  </span>
+                </Button>
+              )}
             </div>
 
             {/* Bölümler veya Boş Durum */}
@@ -880,7 +932,7 @@ export default function StoryDetailAdminPage() {
                   onPress={handleAddChapter}
                   className="text-xs cursor-pointer"
                 >
-                  <PlusCircle size={14} className="mr-1.5" /> İlk Bölümü Oluştur
+                  <PlusCircle size={14} className="mr-1.5" /> {story?.format === 'short_story' ? 'Tek Bölümü Oluştur' : 'İlk Bölümü Oluştur'}
                 </Button>
               </div>
             ) : (
@@ -944,32 +996,34 @@ export default function StoryDetailAdminPage() {
               Yazar Araçları
             </Typography>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Kurgu Sihirbazı */}
-              <div
-                onClick={() => router.push(`/studio/story/${storyId}/planner`)}
-                className="bg-card p-4 sm:p-5 rounded-2xl border border-primary/20 hover:border-primary/50 cursor-pointer hover:bg-primary/5 transition-all group flex flex-col justify-between shadow-xs"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center group-hover:scale-105 transition-transform">
-                      <Wand2 size={20} />
+              {/* Kurgu Sihirbazı - Kısa hikayelerde sihirbaz gösterilmez */}
+              {story?.format !== 'short_story' && (
+                <div
+                  onClick={() => router.push(`/studio/story/${storyId}/planner`)}
+                  className="bg-card p-4 sm:p-5 rounded-2xl border border-primary/20 hover:border-primary/50 cursor-pointer hover:bg-primary/5 transition-all group flex flex-col justify-between shadow-xs"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="w-10 h-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center group-hover:scale-105 transition-transform">
+                        <Wand2 size={20} />
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary uppercase">
+                        Planlama
+                      </span>
                     </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary uppercase">
-                      Planlama
-                    </span>
+                    <h4 className="font-bold text-sm sm:text-base text-text group-hover:text-primary transition-colors mb-1">
+                      Kurgu Sihirbazı
+                    </h4>
+                    <p className="text-xs text-muted leading-relaxed">
+                      Açılış kancası, karakterler, plot twistler ve final adımlarını adım adım planlayın.
+                    </p>
                   </div>
-                  <h4 className="font-bold text-sm sm:text-base text-text group-hover:text-primary transition-colors mb-1">
-                    Kurgu Sihirbazı
-                  </h4>
-                  <p className="text-xs text-muted leading-relaxed">
-                    Açılış kancası, karakterler, plot twistler ve final adımlarını adım adım planlayın.
-                  </p>
+                  <div className="flex items-center gap-1 text-xs font-semibold text-primary mt-4">
+                    <span>Planlayıcıya Git</span>
+                    <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                  </div>
                 </div>
-                <div className="flex items-center gap-1 text-xs font-semibold text-primary mt-4">
-                  <span>Planlayıcıya Git</span>
-                  <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
-                </div>
-              </div>
+              )}
 
               {/* Bölüm Aktiviteleri */}
               <div

@@ -17,9 +17,11 @@ async function ensureAchievements(uid: string, currentData?: UserAchievements): 
     consecutiveWriteDays: 0,
     wordImports: 0,
     publishedChapters: 0,
+    publishedShortStories: 0,
     completedStories: 0,
     commentsReplied: 0,
     chaptersRead: 0,
+    shortStoriesRead: 0,
     consecutiveReadDays: 0,
     storiesInLibrary: 0,
     commentsGiven: 0,
@@ -91,12 +93,16 @@ export async function evaluateBadges(uid: string): Promise<string[]> {
 
   if (achievements.completedStories >= 1) award('finalist');
   if (achievements.commentsReplied >= 50) award('silver_tongue');
+  if ((achievements.publishedShortStories || 0) >= 1) award('short_story_debut');
+  if ((achievements.publishedShortStories || 0) >= 3) award('short_story_master');
 
   // --- 3. Tüketim ve Keşif (Okurlar İçin) ---
   if (achievements.chaptersRead >= 1) award('first_page');
   if (achievements.chaptersRead >= 10) award('bookworm_1');
   if (achievements.chaptersRead >= 50) award('bookworm_2');
   if (achievements.chaptersRead >= 100) award('bookworm_3');
+  if ((achievements.shortStoriesRead || 0) >= 1) award('short_story_reader_1');
+  if ((achievements.shortStoriesRead || 0) >= 5) award('short_story_collector');
 
   if (achievements.storiesInLibrary >= 10) award('librarian');
 
@@ -217,7 +223,7 @@ export async function trackRead(uid: string): Promise<string[]> {
 
 export async function trackInteraction(
   uid: string, 
-  type: 'comment_given' | 'like_given' | 'story_library_added' | 'word_import' | 'chapter_published' | 'story_completed' | 'comment_replied'
+  type: 'comment_given' | 'like_given' | 'story_library_added' | 'word_import' | 'chapter_published' | 'story_completed' | 'comment_replied' | 'short_story_published' | 'short_story_read'
 ): Promise<string[]> {
   const userRef = doc(db, USERS_COLLECTION, uid);
   const snap = await getDoc(userRef);
@@ -244,11 +250,17 @@ export async function trackInteraction(
     case 'chapter_published':
       updates.publishedChapters = achievements.publishedChapters + 1;
       break;
+    case 'short_story_published':
+      updates.publishedShortStories = (achievements.publishedShortStories || 0) + 1;
+      break;
     case 'story_completed':
       updates.completedStories = achievements.completedStories + 1;
       break;
     case 'comment_replied':
       updates.commentsReplied = achievements.commentsReplied + 1;
+      break;
+    case 'short_story_read':
+      updates.shortStoriesRead = (achievements.shortStoriesRead || 0) + 1;
       break;
   }
 

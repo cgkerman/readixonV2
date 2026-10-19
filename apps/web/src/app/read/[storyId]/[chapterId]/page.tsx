@@ -1870,6 +1870,14 @@ export default function ReadPage() {
                 <span>Kitap #{nextSeriesBook.order}</span>
                 <ChevronRight size={18} />
               </button>
+            ) : story?.format === 'short_story' ? (
+              <div
+                className="h-11 px-3 sm:px-4 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-1.5 bg-amber-500/15 border border-amber-500/30 text-amber-500 select-none shrink-0"
+                title="Kısa Hikaye Sonu"
+              >
+                <CheckCircle size={15} />
+                <span>Hikaye Sonu</span>
+              </div>
             ) : (
               <button
                 type="button"

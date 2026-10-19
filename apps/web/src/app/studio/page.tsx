@@ -20,7 +20,8 @@ import {
   Search,
   Check,
   PenTool,
-  Gamepad2
+  Gamepad2,
+  Feather
 } from 'lucide-react';
 import { subscribeToAuthorStories, createStory, useAuthStore, syncStoryChapterCount, type Story } from '@readixon/core';
 import { GenreSelector } from '@/components/story/GenreSelector';
@@ -37,7 +38,7 @@ export default function StudioDashboard() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPaywallOpen, setIsPaywallOpen] = useState(false);
-  const [storyFormat, setStoryFormat] = useState<'novel' | 'interactive'>('novel');
+  const [storyFormat, setStoryFormat] = useState<'novel' | 'interactive' | 'short_story'>('novel');
   const [newTitle, setNewTitle] = useState('');
   const [newMainGenre, setNewMainGenre] = useState<string | undefined>(undefined);
   const [newSubGenres, setNewSubGenres] = useState<string[]>([]);
@@ -125,9 +126,10 @@ export default function StudioDashboard() {
     }
     
     const userProfile = useAuthStore.getState().userProfile;
+    const isWizardEligible = storyFormat === 'novel' && useWizard;
     
     // Paywall check
-    if (useWizard) {
+    if (isWizardEligible) {
       if (userProfile?.status !== 'premium' && userProfile?.hasUsedFreeWizard) {
         setIsPaywallOpen(true);
         return;
@@ -149,7 +151,7 @@ export default function StudioDashboard() {
         status: 'draft'
       });
 
-      if (useWizard && !userProfile?.hasUsedFreeWizard) {
+      if (isWizardEligible && !userProfile?.hasUsedFreeWizard) {
         try {
           const { consumeFreeWizard } = await import('@readixon/core');
           await consumeFreeWizard(firebaseUser.uid);
@@ -164,7 +166,7 @@ export default function StudioDashboard() {
       setNewSubGenres([]);
       setStoryFormat('novel');
       
-      if (useWizard && storyFormat !== 'interactive') {
+      if (isWizardEligible) {
         router.push(`/studio/story/${newStoryId}/planner`);
       } else {
         router.push(`/studio/story/${newStoryId}`);
@@ -433,8 +435,14 @@ export default function StudioDashboard() {
                       </span>
                     </div>
 
-                    {(story.seriesTitle || story.universeTitle || story.format === 'interactive') && (
+                    {(story.seriesTitle || story.universeTitle || story.format === 'interactive' || story.format === 'short_story') && (
                       <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                        {story.format === 'short_story' && (
+                          <span className="inline-flex items-center gap-1 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-500 border border-amber-500/25">
+                            <Feather size={9} />
+                            Kısa Hikaye (Tek Bölüm)
+                          </span>
+                        )}
                         {story.format === 'interactive' && (
                           <span className="inline-flex items-center gap-1 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-400 border border-indigo-500/25">
                             <Gamepad2 size={9} />
@@ -520,8 +528,14 @@ export default function StudioDashboard() {
                       </span>
                     </div>
 
-                    {(story.seriesTitle || story.universeTitle || story.format === 'interactive') && (
+                    {(story.seriesTitle || story.universeTitle || story.format === 'interactive' || story.format === 'short_story') && (
                       <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                        {story.format === 'short_story' && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-500 border border-amber-500/25">
+                            <Feather size={10} />
+                            Kısa Hikaye (Tek Bölüm)
+                          </span>
+                        )}
                         {story.format === 'interactive' && (
                           <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-indigo-500/15 text-indigo-400 border border-indigo-500/25">
                             <Gamepad2 size={10} />
@@ -610,16 +624,16 @@ export default function StudioDashboard() {
             {/* Modal İçeriği (Kaydırılabilir Gövde) */}
             <div className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-5 scrollbar-thin">
               
-              {/* Format Seçimi: Standart Roman vs İnteraktif Hikaye */}
+              {/* Format Seçimi: Standart Roman vs Kısa Hikaye vs İnteraktif Hikaye */}
               <div>
                 <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2.5">
                   Hikaye Formatı
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {/* Standart Roman */}
                   <div
                     onClick={() => setStoryFormat('novel')}
-                    className={`relative p-3.5 sm:p-4 rounded-xl border text-left cursor-pointer transition-all ${
+                    className={`relative p-3.5 rounded-xl border text-left cursor-pointer transition-all ${
                       storyFormat === 'novel'
                         ? 'border-primary/80 bg-primary/10 shadow-sm shadow-primary/20 ring-1 ring-primary/40'
                         : 'border-border/60 bg-muted/5 hover:border-border hover:bg-muted/10'
@@ -640,14 +654,42 @@ export default function StudioDashboard() {
                       )}
                     </h4>
                     <p className="text-xs text-muted leading-relaxed">
-                      Bölüm bölüm doğrusal ilerleyen, geleneksel e-kitap ve roman kurgusu.
+                      Bölüm bölüm doğrusal ilerleyen geleneksel e-kitap ve roman kurgusu.
+                    </p>
+                  </div>
+
+                  {/* Kısa Hikaye (Tek Bölüm) */}
+                  <div
+                    onClick={() => setStoryFormat('short_story')}
+                    className={`relative p-3.5 rounded-xl border text-left cursor-pointer transition-all ${
+                      storyFormat === 'short_story'
+                        ? 'border-amber-500/80 bg-amber-500/10 shadow-sm shadow-amber-500/20 ring-1 ring-amber-500/40'
+                        : 'border-border/60 bg-muted/5 hover:border-border hover:bg-muted/10'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
+                        <Feather size={16} />
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 uppercase tracking-wide">
+                        Tek Bölüm
+                      </span>
+                    </div>
+                    <h4 className="font-semibold text-sm text-text mb-1 flex items-center gap-1.5">
+                      Kısa Hikaye
+                      {storyFormat === 'short_story' && (
+                        <Check size={14} className="text-amber-500 shrink-0" />
+                      )}
+                    </h4>
+                    <p className="text-xs text-muted leading-relaxed">
+                      Tek oturuşta okunabilen, yalnızca 1 bölümle sınırlı kompakt kısa roman.
                     </p>
                   </div>
 
                   {/* İnteraktif Hikaye */}
                   <div
                     onClick={() => setStoryFormat('interactive')}
-                    className={`relative p-3.5 sm:p-4 rounded-xl border text-left cursor-pointer transition-all ${
+                    className={`relative p-3.5 rounded-xl border text-left cursor-pointer transition-all ${
                       storyFormat === 'interactive'
                         ? 'border-indigo-500/80 bg-indigo-500/10 shadow-sm shadow-indigo-500/20 ring-1 ring-indigo-500/40'
                         : 'border-border/60 bg-muted/5 hover:border-border hover:bg-muted/10'
@@ -668,7 +710,7 @@ export default function StudioDashboard() {
                       )}
                     </h4>
                     <p className="text-xs text-muted leading-relaxed">
-                      Okuyucunun kaderini belirleyen kararlar, dallanan kollar ve çoklu sonlar.
+                      Okuyucunun kaderini belirleyen kararlar ve çoklu sonlar.
                     </p>
                   </div>
                 </div>
@@ -799,15 +841,23 @@ export default function StudioDashboard() {
               </Button>
               <Button 
                 variant="primary" 
-                onPress={() => handleCreateNew(creationMode === 'wizard')} 
+                onPress={() => handleCreateNew(storyFormat === 'novel' && creationMode === 'wizard')} 
                 disabled={isCreating}
                 className="flex-1 sm:flex-initial flex items-center justify-center gap-2 py-3 px-5 rounded-xl font-bold text-xs sm:text-sm shadow-xl shadow-primary/25 cursor-pointer"
               >
-                {creationMode === 'wizard' ? <Wand2 size={16} /> : <PenTool size={16} />}
+                {storyFormat === 'short_story' ? (
+                  <Feather size={16} />
+                ) : (creationMode === 'wizard' && storyFormat === 'novel') ? (
+                  <Wand2 size={16} />
+                ) : (
+                  <PenTool size={16} />
+                )}
                 <span>
                   {isCreating 
                     ? 'Oluşturuluyor...' 
-                    : (creationMode === 'wizard' ? 'Sihirbazla Oluştur ve Başla' : 'Hikayeyi Oluştur ve Başla')}
+                    : storyFormat === 'short_story'
+                      ? 'Kısa Hikayeyi Oluştur ve Başla'
+                      : (creationMode === 'wizard' && storyFormat === 'novel' ? 'Sihirbazla Oluştur ve Başla' : 'Hikayeyi Oluştur ve Başla')}
                 </span>
               </Button>
             </div>

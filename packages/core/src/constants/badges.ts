@@ -19,7 +19,9 @@ import {
   Heart, 
   UserPlus, 
   Calendar,
-  Award
+  Award,
+  Feather,
+  Zap
 } from 'lucide-react';
 
 export type BadgeTier = 'bronze' | 'silver' | 'gold' | 'diamond' | 'special';
@@ -219,6 +221,24 @@ export const BADGES: Record<string, BadgeConfig> = {
     category: 'writer_publishing',
     conditionDescription: 'Okuyucularından gelen yorumlara 50 kez yanıt verme.',
   },
+  short_story_debut: {
+    id: 'short_story_debut',
+    title: 'Kısa & Vurucu',
+    description: 'İlk tek bölümlük kısa hikayeni başarıyla okurlarla buluşturdun.',
+    icon: Feather,
+    tier: 'bronze',
+    category: 'writer_publishing',
+    conditionDescription: 'Platformda en az 1 adet kısa hikaye yayınlama.',
+  },
+  short_story_master: {
+    id: 'short_story_master',
+    title: 'Kısa Kurgu Ustası',
+    description: 'Az kelimeyle derin dünyalar kurma sanatında ustalaştın.',
+    icon: Award,
+    tier: 'silver',
+    category: 'writer_publishing',
+    conditionDescription: 'En az 3 farklı kısa hikaye yayınlama.',
+  },
 
   // --- 3. Tüketim ve Keşif (Okurlar İçin) ---
   first_page: {
@@ -283,6 +303,24 @@ export const BADGES: Record<string, BadgeConfig> = {
     tier: 'silver',
     category: 'reader_consumption',
     conditionDescription: 'Gece 00:00 ile 04:00 saatleri arasında en az 3 bölüm okuma.',
+  },
+  short_story_reader_1: {
+    id: 'short_story_reader_1',
+    title: 'Tek Nefeste',
+    description: 'İlk kısa hikayeyi tek bir oturuşta baştan sona bitirdin.',
+    icon: Zap,
+    tier: 'bronze',
+    category: 'reader_consumption',
+    conditionDescription: '1 kısa hikayeyi sonuna kadar okuma.',
+  },
+  short_story_collector: {
+    id: 'short_story_collector',
+    title: 'Öykü Koleksiyoneri',
+    description: 'Hızlı ve vurucu kurguların tadını çıkarıyorsun.',
+    icon: Star,
+    tier: 'silver',
+    category: 'reader_consumption',
+    conditionDescription: 'En az 5 farklı kısa hikayeyi tamamlayarak okuma.',
   },
 
   // --- 4. Etkileşim ve Sadakat (Okurlar İçin) ---

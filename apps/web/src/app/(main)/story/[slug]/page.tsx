@@ -40,7 +40,8 @@ import {
   ArrowLeft, Loader2, Star, MessageSquare, Users, Hash,
   Lock, Calendar, Bell, Info, X, Sparkles, ChevronRight, Bookmark, Check,
   ListPlus, Share2, ArrowUpDown, Layers, Globe, Reply, Trash2, Send, PencilLine,
-  Gamepad2, GitFork, Trophy
+  Gamepad2, GitFork, Trophy,
+  Feather
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from "sonner";
@@ -741,6 +742,13 @@ export default function StoryDetailPage() {
 
             {/* Status & Puan Rozetleri */}
             <div className="flex flex-wrap gap-2 mb-2.5 justify-center md:justify-start items-center">
+              {story.format === 'short_story' && (
+                <span className="px-3 py-1 bg-amber-500/15 backdrop-blur-md text-amber-500 dark:text-amber-400 text-[11px] font-black rounded-full border border-amber-500/30 shadow-xs flex items-center gap-1.5">
+                  <Feather size={13} />
+                  <span>Kısa Hikaye • Tek Bölüm</span>
+                </span>
+              )}
+
               {story.format === 'interactive' && (
                 <span className="px-3 py-1 bg-indigo-500/15 backdrop-blur-md text-indigo-400 text-[11px] font-black rounded-full border border-indigo-500/30 shadow-xs flex items-center gap-1.5">
                   <Gamepad2 size={13} />
@@ -830,7 +838,9 @@ export default function StoryDetailPage() {
               <div className="w-1 h-1 rounded-full bg-border" />
               <div className="flex items-center gap-1.5" title="Bölüm Sayısı">
                 <List size={14} className="text-primary" />
-                <span className="font-bold text-text">{chapters.length}</span> Bölüm
+                <span className="font-bold text-text">
+                  {story.format === 'short_story' ? 'Tek Bölüm' : `${chapters.length} Bölüm`}
+                </span>
               </div>
 
               {story.format === 'interactive' && (
@@ -1453,9 +1463,11 @@ export default function StoryDetailPage() {
             {/* Kontrol Barı: Bölüm Sayısı + Sıralama Butonu */}
             <div className="flex items-center justify-between p-3.5 sm:p-4 bg-card/60 backdrop-blur-md rounded-2xl border border-border/50">
               <div className="flex items-center gap-2.5">
-                <span className="text-xs sm:text-sm font-bold text-text">Bölüm Listesi</span>
+                <span className="text-xs sm:text-sm font-bold text-text">
+                  {story.format === 'short_story' ? 'Kısa Hikaye' : 'Bölüm Listesi'}
+                </span>
                 <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary/15 text-primary border border-primary/25">
-                  {chapters.length} Bölüm
+                  {story.format === 'short_story' ? 'Tek Bölüm' : `${chapters.length} Bölüm`}
                 </span>
               </div>
 

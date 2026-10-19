@@ -25,21 +25,23 @@ export interface UserAchievements {
   totalWordsWritten: number; // Editörde yazılan toplam kelime
   consecutiveWriteDays: number; // Peş peşe yazılan gün sayısı
   lastWriteDate?: string; // Son yazılan tarih (YYYY-MM-DD)
-  
+
   wordImports: number; // Dışarıdan dosya (docx/txt vs.) aktarma sayısı
   publishedChapters: number; // Yayına alınan bölüm sayısı
+  publishedShortStories?: number; // Yayına alınan tek bölümlük kısa hikaye sayısı
   completedStories: number; // Tamamlandı işaretlenen hikaye sayısı
   commentsReplied: number; // Okuyucu yorumlarına verilen cevap sayısı
 
   // --- Okur İstatistikleri ---
   chaptersRead: number; // Okunan toplam bölüm sayısı
+  shortStoriesRead?: number; // Okunup tamamlanan kısa hikaye sayısı
   consecutiveReadDays: number; // Peş peşe okunan gün sayısı
   lastReadDate?: string; // Son okunan tarih (YYYY-MM-DD)
-  
+
   storiesInLibrary: number; // Kütüphaneye eklenen hikaye sayısı
   commentsGiven: number; // Yapılan toplam yorum sayısı
   likesGiven: number; // Verilen toplam beğeni/oy sayısı
-  
+
   earnedBadges: string[]; // Kazanılan rozetlerin ID'leri
 }
 
@@ -123,7 +125,7 @@ export interface EditorialReview {
   editorId: string;
   editorName: string;
   editorAvatar?: string;
-  
+
   about: string; // Eser Hakkında
   firstImpression: string; // Editörün İlk İzlenimi
   storyAndStructure: string; // Hikâye ve Yapı
@@ -136,7 +138,7 @@ export interface EditorialReview {
   readerExperience: string; // Okuyucu Deneyimi
   finalWord: string; // Editörün Son Sözü
   spoilerNotes?: string; // Spoilerli Editör Notları
-  
+
   scores: {
     storyStructure: number;
     characters: number;
@@ -147,7 +149,7 @@ export interface EditorialReview {
     emotionalImpact: number;
     technicalConsistency: number;
   };
-  
+
   authorNotifiedAt?: Timestamp;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -179,7 +181,7 @@ export interface Story {
   tags: string[];
   isAdultContent?: boolean;
   stats: StoryStats;
-  
+
   // YayÄ±nevi/Platform Ek DetaylarÄ±
   foreword?: string;          // Ã–nsÃ¶z
   backCover?: string;         // Arka Kapak YazÄ±sÄ±
@@ -189,7 +191,7 @@ export interface Story {
   status: StoryStatus;
   createdAt: Timestamp;
   updatedAt: Timestamp;
-  format?: 'novel' | 'webtoon' | 'interactive';
+  format?: 'novel' | 'webtoon' | 'interactive' | 'short_story';
 
   // Readixon Tür Defteri (1 Ana Tür + Sınırsız Alt Tür)
   mainGenre?: string;
@@ -513,16 +515,16 @@ export interface SitePopup {
 // 3.8. Bildirimler (/users/{userId}/notifications/{notificationId})
 // ─────────────────────────────────────────────
 
-export type NotificationType = 
-  | 'follow' 
-  | 'story_like' 
+export type NotificationType =
+  | 'follow'
+  | 'story_like'
   | 'chapter_like'
-  | 'story_comment' 
+  | 'story_comment'
   | 'comment_like'
   | 'chapter_activity'
   | 'paragraph_comment'
-  | 'readix_like' 
-  | 'readix_comment' 
+  | 'readix_like'
+  | 'readix_comment'
   | 'readix_mention'
   | 'new_chapter'
   | 'chapter_revised'
@@ -539,7 +541,7 @@ export interface AppNotification {
   actorId: string; // The user who performed the action
   actorName: string; // Display name
   actorAvatar?: string; // Avatar URL
-  actorUsername?: string; 
+  actorUsername?: string;
   type: NotificationType;
   entityId?: string; // e.g. storyId or readixId
   entityTitle?: string; // optional context, e.g. "Yüzüklerin Efendisi"
@@ -709,9 +711,9 @@ export interface LobbyRoom {
   maxParticipants: number; // Max katÄ±lÄ±mcÄ± sayÄ±sÄ± (Ã¶rn: 20)
   wordLimit: number; // Kelime sÄ±nÄ±rÄ± (Ã¶rn: 1000)
   durationMinutes: number; // YazÄ±m sÃ¼resi (dk) (Ã¶rn: 120)
-  
+
   participantIds: string[]; // HÄ±zlÄ± sorgulama iÃ§in katÄ±lÄ±mcÄ± ID'leri
-  
+
   createdBy: string; // OdayÄ± kuran adminin UID'si
   createdAt: Timestamp;
   startedAt?: Timestamp; // Oyun baÅŸladÄ±ÄŸÄ±nda atanÄ±r
@@ -772,9 +774,9 @@ export interface CurveballRoom {
   maxParticipants: number;
   wordLimit: number;
   durationMinutes: number;
-  
+
   curveball: CurveballConfig;
-  
+
   participantIds: string[];
   createdBy: string;
   createdAt: Timestamp;
@@ -847,36 +849,36 @@ export interface Character {
   storyId: string;
   name: string;
   role: CharacterRole;
-  
+
   // Basic Info
   age?: string;
   gender?: string;
   occupation?: string;
-  
+
   // Visual
   avatarUrl?: string;
-  
+
   // Physical Appearance
   bodyType?: string;
   eyeColor?: string;
   hairColor?: string;
   clothingStyle?: string;
   distinguishingFeatures?: string; // Scars, tattoos, etc.
-  
+
   // Psychology
   personalityTraits?: string[]; // e.g. ['Brave', 'Introverted']
   greatestFear?: string;
   secretDesire?: string;
   flaws?: string;
-  
+
   // Story Arc
   startingState?: string;
   endingState?: string;
   coreMotivation?: string;
-  
+
   // Stats
   rpgStats?: CharacterRPGStats;
-  
+
   // Evren Defteri 2.0 Entegrasyonu (Geriye dönük uyumlu / Opsiyonel)
   universeId?: string;
   storyIds?: string[];

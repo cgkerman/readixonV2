@@ -45,7 +45,7 @@ export interface AugmentedComment extends Comment {
   storyId: string;
   storyTitle: string;
   storyCover?: string;
-  storyFormat: 'novel' | 'webtoon' | 'interactive';
+  storyFormat: 'novel' | 'webtoon' | 'interactive' | 'short_story';
   chapterId: string;
   chapterTitle: string;
   chapterOrder: number;
@@ -55,7 +55,7 @@ export interface AugmentedReview extends Review {
   storyId: string;
   storyTitle: string;
   storyCover?: string;
-  storyFormat: 'novel' | 'webtoon' | 'interactive';
+  storyFormat: 'novel' | 'webtoon' | 'interactive' | 'short_story';
 }
 
 type TabType = 'all' | 'comments' | 'reviews';
