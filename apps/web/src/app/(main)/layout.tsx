@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { BookOpen, Compass, Search, User, LogOut, PenTool, Hash, Settings, Bell, MessageCircle, Menu, X, LifeBuoy, Feather, ShieldAlert, Crown, Info, TrendingUp, Sun, Moon } from 'lucide-react';
 import { Typography, Button } from '@readixon/ui';
@@ -210,8 +211,20 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       {/* ── Top Navbar (Desktop) ── */}
       <header className="hidden xl:flex sticky top-0 z-50 items-center justify-between border-b border-border/50 bg-background/80 px-8 h-[76px] shrink-0 backdrop-blur-md">
         {/* Left: Logo */}
-        <Link href="/feed" className="shrink-0 flex items-center">
-          <Typography variant="h2" className="font-bold text-primary tracking-tighter">readixon</Typography>
+        <Link href="/feed" className="shrink-0 flex items-center gap-2.5 group">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-primary to-amber-400 p-[1px] shadow-sm shadow-primary/20">
+            <div className="w-full h-full rounded-[11px] bg-white flex items-center justify-center overflow-hidden p-0.5">
+              <Image
+                src="/brand-logo.png"
+                alt="Readixon"
+                width={28}
+                height={28}
+                className="object-contain group-hover:scale-105 transition-transform"
+                priority
+              />
+            </div>
+          </div>
+          <Typography variant="h2" className="font-bold text-foreground tracking-tighter">readixon</Typography>
         </Link>
 
         {/* Center: Main Navigation */}

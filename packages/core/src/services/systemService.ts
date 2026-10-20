@@ -1,6 +1,69 @@
-import { collection, query, where, orderBy, getDocs, getDoc, limit, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, runTransaction, increment } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, getDoc, limit, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, runTransaction, increment, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { Announcement, AdminPoll, AdminQuote, HeroBanner } from '../types';
+
+/**
+ * Yayında olan duyuruları anlık (realtime onSnapshot) olarak dinler.
+ * Admin bir duyuru eklediğinde, sildiğinde veya güncellediğinde sayfayı yenilemeye gerek kalmadan arayüze anında yansır.
+ * @param callback Duyurular güncellendiğinde çağrılan fonksiyon
+ * @param limitCount Çekilecek maksimum duyuru sayısı (varsayılan: 5)
+ * @returns unsubscribe fonksiyonu
+ */
+export const subscribeToActiveAnnouncements = (
+  callback: (announcements: Announcement[]) => void,
+  limitCount: number = 5
+): (() => void) => {
+  try {
+    const q = query(
+      collection(db, 'announcements'),
+      where('isActive', '==', true),
+      orderBy('createdAt', 'desc'),
+      limit(limitCount)
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const announcements: Announcement[] = [];
+        const now = new Date();
+
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          let isValid = true;
+
+          if (data.publishAt && data.publishAt.toDate() > now) {
+            isValid = false;
+          }
+          if (data.expireAt && data.expireAt.toDate() < now) {
+            isValid = false;
+          }
+
+          if (isValid) {
+            // Kültür duyurularını ana akışta (general) gösterme
+            if (data.category === 'culture') {
+              return;
+            }
+
+            announcements.push({
+              id: doc.id,
+              ...data
+            } as Announcement);
+          }
+        });
+
+        callback(announcements);
+      },
+      (error) => {
+        console.error("Duyurular anlık dinlenirken hata:", error);
+      }
+    );
+
+    return unsubscribe;
+  } catch (error) {
+    console.error("Duyuru dinleyicisi başlatılamadı:", error);
+    return () => {};
+  }
+};
 
 /**
  * Yayında olan duyuruları getirir.

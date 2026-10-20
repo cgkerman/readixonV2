@@ -26,6 +26,9 @@ import {
 import { subscribeToAuthorStories, createStory, useAuthStore, syncStoryChapterCount, type Story } from '@readixon/core';
 import { GenreSelector } from '@/components/story/GenreSelector';
 import { toast } from "sonner";
+import { StudioAnnouncementsAndUpdates } from './components/StudioAnnouncementsAndUpdates';
+import { StudioAdBanner } from './components/StudioAdBanner';
+import { StudioWriterTools } from './components/StudioWriterTools';
 
 export default function StudioDashboard() {
   const router = useRouter();
@@ -178,6 +181,15 @@ export default function StudioDashboard() {
     }
   };
 
+  const handleOpenCreateStoryWithSpark = (
+    sparkTitle?: string,
+    sparkFormat?: 'novel' | 'interactive' | 'short_story'
+  ) => {
+    if (sparkTitle) setNewTitle(sparkTitle);
+    if (sparkFormat) setStoryFormat(sparkFormat);
+    setIsModalOpen(true);
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full relative">
       
@@ -303,57 +315,65 @@ export default function StudioDashboard() {
         </Link>
       </div>
 
-      {/* ── 3. Filtreleme & Arama Sekmeleri ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 sm:mb-6">
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1 -mx-4 px-4 sm:mx-0 sm:px-0">
-          <button
-            type="button"
-            onClick={() => setFilterStatus('all')}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shrink-0 ${
-              filterStatus === 'all'
-                ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/25'
-                : 'bg-card/70 hover:bg-card text-muted hover:text-foreground border border-border/40'
-            }`}
-          >
-            Tümü ({stories.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterStatus('published')}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shrink-0 ${
-              filterStatus === 'published'
-                ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/25'
-                : 'bg-card/70 hover:bg-card text-muted hover:text-foreground border border-border/40'
-            }`}
-          >
-            Yayındakiler ({publishedCount})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterStatus('draft')}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shrink-0 ${
-              filterStatus === 'draft'
-                ? 'bg-amber-500 text-black shadow-sm shadow-amber-500/25'
-                : 'bg-card/70 hover:bg-card text-muted hover:text-foreground border border-border/40'
-            }`}
-          >
-            Taslaklar ({draftCount})
-          </button>
-        </div>
+      {/* ── 2.8. Saksı Zamanı, Kurgu İlhamı & Yazar Destek Araçları ── */}
+      <StudioWriterTools
+        storiesCount={stories.length}
+        onOpenCreateStory={handleOpenCreateStoryWithSpark}
+      />
 
-        {stories.length > 3 && (
-          <div className="relative w-full sm:w-60">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Hikaye ara..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-card/60 border border-border/50 rounded-xl pl-9 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:border-primary/50 transition-colors"
-            />
+      {/* ── 3. Filtreleme & Arama Sekmeleri (Yalnızca Hikaye Varsa) ── */}
+      {stories.length > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 sm:mb-6">
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <button
+              type="button"
+              onClick={() => setFilterStatus('all')}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                filterStatus === 'all'
+                  ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/25'
+                  : 'bg-card/70 hover:bg-card text-muted hover:text-foreground border border-border/40'
+              }`}
+            >
+              Tümü ({stories.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterStatus('published')}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                filterStatus === 'published'
+                  ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/25'
+                  : 'bg-card/70 hover:bg-card text-muted hover:text-foreground border border-border/40'
+              }`}
+            >
+              Yayındakiler ({publishedCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterStatus('draft')}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                filterStatus === 'draft'
+                  ? 'bg-amber-500 text-black shadow-sm shadow-amber-500/25'
+                  : 'bg-card/70 hover:bg-card text-muted hover:text-foreground border border-border/40'
+              }`}
+            >
+              Taslaklar ({draftCount})
+            </button>
           </div>
-        )}
-      </div>
+
+          {stories.length > 3 && (
+            <div className="relative w-full sm:w-60">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Hikaye ara..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-card/60 border border-border/50 rounded-xl pl-9 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:border-primary/50 transition-colors"
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── 4. Hikaye Listesi / Kartlar ── */}
       {loading ? (
@@ -363,24 +383,7 @@ export default function StudioDashboard() {
             Hikayeler Yükleniyor...
           </Typography>
         </div>
-      ) : stories.length === 0 ? (
-        <div className="text-center py-16 sm:py-20 border-2 border-dashed border-border/30 rounded-3xl bg-card/30 p-6">
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto text-primary mb-4 shadow-sm">
-            <FileText size={32} />
-          </div>
-          <Typography variant="h3" className="mb-2 text-lg sm:text-xl font-bold">
-            Henüz Bir Hikayeniz Yok
-          </Typography>
-          <Typography variant="body" className="text-muted max-w-sm mx-auto mb-6 text-xs sm:text-sm">
-            Readixon yazar topluluğuna ilk izinizi bırakın. Taslağınızı hemen oluşturun veya sihirbazla adım adım kurgulayın.
-          </Typography>
-          <div className="flex justify-center">
-            <Button variant="primary" onPress={() => setIsModalOpen(true)} className="rounded-full px-6 py-2.5 font-bold shadow-md shadow-primary/20">
-              <Plus size={18} className="mr-1.5" /> İlk Hikayeni Başlat
-            </Button>
-          </div>
-        </div>
-      ) : filteredStories.length === 0 ? (
+      ) : stories.length === 0 ? null : filteredStories.length === 0 ? (
         <div className="text-center py-16 border border-border/30 rounded-3xl bg-card/20 p-6">
           <p className="text-muted text-sm mb-3">Bu filtreleme kriterine uygun hikaye bulunamadı.</p>
           <button
@@ -581,6 +584,12 @@ export default function StudioDashboard() {
           </div>
         </>
       )}
+
+      {/* ── 5. Kitapların Altı: Admin Duyuruları, Son Güncelleme & Reklam Alanı ── */}
+      <div className="mt-8 sm:mt-12 space-y-4 sm:space-y-6">
+        <StudioAnnouncementsAndUpdates />
+        <StudioAdBanner />
+      </div>
 
       {/* ── Mobil Floating Action Button (FAB) ── */}
       <button

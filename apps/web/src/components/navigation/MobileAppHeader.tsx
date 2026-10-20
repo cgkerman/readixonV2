@@ -22,9 +22,9 @@ export function MobileAppHeader({ unreadMessageCount = 0, onOpenMenu }: MobileAp
       {/* Sol: Readixon Logo + Marka */}
       <Link href="/feed" className="flex items-center gap-2.5 active:scale-95 transition-transform">
         <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary to-amber-400 p-[1px] shadow-sm shadow-primary/20">
-          <div className="w-full h-full rounded-[11px] bg-background/90 flex items-center justify-center overflow-hidden">
+          <div className="w-full h-full rounded-[11px] bg-white flex items-center justify-center overflow-hidden p-0.5">
             <Image
-              src="/icon.png"
+              src="/brand-logo.png"
               alt="Readixon"
               width={26}
               height={26}
