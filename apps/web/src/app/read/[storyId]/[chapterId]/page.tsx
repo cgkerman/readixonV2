@@ -44,6 +44,7 @@ import { useReadingAnalytics } from '@/hooks/useReadingAnalytics';
 import { ReaderUniverseDrawer, type ReaderUniverseTabType } from './ReaderUniverseDrawer';
 import { InlineLorePopover } from './InlineLorePopover';
 import { ChapterUniverseRecap } from './ChapterUniverseRecap';
+import { ChatStoryReader } from '@/components/story/chat';
 
 function ChapterTitleMarquee({ title, storyTitle, textColor }: { title: string; storyTitle?: string; textColor: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -928,6 +929,21 @@ export default function ReadPage() {
   const currentIndex = chapters.findIndex(c => c.chapterId === chapterId);
   const prevChapter = currentIndex > 0 ? chapters[currentIndex - 1] : null;
   const nextChapter = currentIndex < chapters.length - 1 ? chapters[currentIndex + 1] : null;
+
+  // Mesaj Hikayesi (Chat Story / Tap-to-Reveal) Görünümü
+  if (story?.format === 'chat') {
+    return (
+      <ChatStoryReader
+        story={story}
+        chapter={chapter}
+        allChapters={chapters}
+        onNavigateChapter={handleNavigateChapter}
+        isLiked={isLiked}
+        onToggleLike={handleToggleLike}
+        commentsCount={comments.length}
+      />
+    );
+  }
 
   // Theme Styles
   const currentThemeStyle = readerThemeStyles[theme] || readerThemeStyles.dark;

@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import Link from 'next/link';
 import { PlannerSidebar } from './PlannerSidebar';
 import { UniverseSidebar } from './UniverseSidebar';
+import { ChatStoryEditor } from '@/components/story/chat';
 
 export default function ChapterEditorPage() {
   const params = useParams();
@@ -67,7 +68,7 @@ export default function ChapterEditorPage() {
       } else {
         setChapter({
           chapterId,
-          title: 'Yeni Bölüm',
+          title: sData?.format === 'chat' ? `Sohbet ${chaps.length + 1}` : 'Yeni Bölüm',
           order: chaps.length + 1,
           contentBlocks: [],
           status: 'draft',
@@ -271,10 +272,12 @@ export default function ChapterEditorPage() {
       return;
     }
     try {
+      const titlePrefix = story?.format === 'chat' ? 'Sohbet' : story?.format === 'webtoon' ? 'Episod' : 'Bölüm';
       const newChapId = await createChapter(storyId, {
-        title: `Bölüm ${allChapters.length + 1}`,
+        title: `${titlePrefix} ${allChapters.length + 1}`,
         order: allChapters.length + 1,
         contentBlocks: [],
+        chatMessages: story?.format === 'chat' ? [] : undefined,
         status: 'draft'
       });
       router.push(`/studio/story/${storyId}/chapter/${newChapId}`);
@@ -318,6 +321,38 @@ export default function ChapterEditorPage() {
 
   if (loading || !chapter) {
     return <div className="p-8 text-center"><Typography variant="body">Yükleniyor...</Typography></div>;
+  }
+
+  // Mesaj Hikayesi Editörü
+  if (story?.format === 'chat') {
+    return (
+      <ChatStoryEditor
+        story={story}
+        chapter={chapter}
+        allChapters={allChapters}
+        onCreateChapter={handleCreateNewChapter}
+        onSave={async (updatedChapter, updatedStory) => {
+          setSaving(true);
+          try {
+            if (updatedChapter) {
+              await updateChapter(storyId, chapterId, updatedChapter);
+              setChapter(prev => prev ? { ...prev, ...updatedChapter } : prev);
+              setAllChapters(prev => prev.map(c => c.chapterId === chapterId ? { ...c, ...updatedChapter } : c));
+            }
+            if (updatedStory) {
+              await updateStory(storyId, updatedStory);
+              setStory(prev => prev ? { ...prev, ...updatedStory } : prev);
+            }
+          } catch (err) {
+            console.error(err);
+            toast.error("Değişiklikler kaydedilemedi.");
+          } finally {
+            setSaving(false);
+          }
+        }}
+        isSaving={saving}
+      />
+    );
   }
 
   return (

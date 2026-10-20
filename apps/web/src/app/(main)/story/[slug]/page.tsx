@@ -761,6 +761,13 @@ export default function StoryDetailPage() {
                 </span>
               )}
 
+              {story.format === 'chat' && (
+                <span className="px-3 py-1 bg-emerald-500/15 backdrop-blur-md text-emerald-400 text-[11px] font-black rounded-full border border-emerald-500/30 shadow-xs flex items-center gap-1.5">
+                  <MessageSquare size={13} />
+                  <span>Mesaj Hikayesi • Dokunarak Oku</span>
+                </span>
+              )}
+
               <span className="px-3 py-1 bg-card/90 backdrop-blur-md text-text text-[11px] font-bold rounded-full border border-border/60 shadow-xs">
                 {story.status === 'completed' ? 'Tamamlandı' : story.status === 'ongoing' ? 'Devam Ediyor' : 'Taslak'}
               </span>
@@ -844,7 +851,7 @@ export default function StoryDetailPage() {
               <div className="flex items-center gap-1.5" title="Bölüm Sayısı">
                 <List size={14} className="text-primary" />
                 <span className="font-bold text-text">
-                  {story.format === 'short_story' ? 'Tek Bölüm' : `${chapters.length} Bölüm`}
+                  {story.format === 'short_story' ? 'Tek Bölüm' : story.format === 'chat' ? `${chapters.length} Sohbet` : `${chapters.length} Bölüm`}
                 </span>
               </div>
 
@@ -864,6 +871,23 @@ export default function StoryDetailPage() {
                       </div>
                     </>
                   )}
+                </>
+              )}
+
+              {story.format === 'chat' && (
+                <>
+                  <div className="w-1 h-1 rounded-full bg-border" />
+                  <div className="flex items-center gap-1.5" title="Konuşmacı Sayısı">
+                    <Users size={14} className="text-emerald-400" />
+                    <span className="font-bold text-text">{story.chatCharacters?.length || 2}</span> Konuşmacı
+                  </div>
+                  <div className="w-1 h-1 rounded-full bg-border" />
+                  <div className="flex items-center gap-1.5" title="Toplam Mesaj Sayısı">
+                    <MessageSquare size={14} className="text-emerald-400" />
+                    <span className="font-bold text-text">
+                      {chapters.reduce((acc, c) => acc + (c.chatMessages?.length || 0), 0)}
+                    </span> Mesaj
+                  </div>
                 </>
               )}
             </div>
@@ -895,6 +919,46 @@ export default function StoryDetailPage() {
               </div>
             )}
 
+            {/* ── Mesaj Hikayesi Özel Tanıtım & Karakter Rozeti ── */}
+            {story.format === 'chat' && (
+              <div className="w-full max-w-md md:max-w-lg mb-4 p-3 sm:p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                    <MessageSquare size={16} />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="font-bold text-foreground block truncate">
+                      {story.chatCharacters && story.chatCharacters.length > 0 
+                        ? `${story.chatCharacters.length} Konuşmacılı Sohbet Kurgusu` 
+                        : 'WhatsApp Tarzı Mesaj Hikayesi'}
+                    </span>
+                    <span className="text-[11px] text-muted block truncate">
+                      Ekrana dokunarak mesajları adım adım keşfedin • Ses efektli
+                    </span>
+                  </div>
+                </div>
+
+                {story.chatCharacters && story.chatCharacters.length > 0 && (
+                  <div className="flex items-center -space-x-1.5 shrink-0" title="Konuşmacılar">
+                    {story.chatCharacters.slice(0, 4).map((c) => (
+                      <div
+                        key={c.id}
+                        className="w-6 h-6 rounded-full border-2 border-background flex items-center justify-center text-[9px] font-bold text-white shadow-xs overflow-hidden"
+                        style={{ backgroundColor: c.color || '#10b981' }}
+                        title={c.name}
+                      >
+                        {c.avatarUrl ? (
+                          <img src={c.avatarUrl} alt={c.name} className="w-full h-full object-cover" />
+                        ) : (
+                          c.name.charAt(0)
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* ── Hero Aksiyonları (Ana CTA + Kompakt 4'lü Bar) ── */}
             <div className="w-full max-w-md md:max-w-lg space-y-2.5">
               
@@ -902,27 +966,43 @@ export default function StoryDetailPage() {
               <Button 
                 variant="primary" 
                 onPress={() => handleStartReading()} 
-                className="w-full shadow-lg shadow-primary/25 text-sm sm:text-base font-bold py-3.5 rounded-2xl active:scale-[0.99] transition-all flex items-center justify-center cursor-pointer"
+                className={`w-full text-sm sm:text-base font-bold py-3.5 rounded-2xl active:scale-[0.99] transition-all flex items-center justify-center cursor-pointer ${
+                  story.format === 'chat'
+                    ? 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-lg shadow-emerald-500/25'
+                    : 'shadow-lg shadow-primary/25'
+                }`}
                 disabled={chapters.length === 0}
               >
                 {hasReadingHistory ? (
                   <>
-                    <Bookmark size={18} className="mr-2 fill-current shrink-0" />
+                    {story.format === 'chat' ? (
+                      <MessageSquare size={18} className="mr-2 fill-current shrink-0" />
+                    ) : (
+                      <Bookmark size={18} className="mr-2 fill-current shrink-0" />
+                    )}
                     <span>
                       {story.format === 'short_story' 
                         ? 'Okumaya Devam Et' 
-                        : `Kaldığın Yerden Devam Et ${targetChapterTitle ? `(${targetChapterTitle})` : ''}`}
+                        : story.format === 'chat'
+                          ? `Sohbete Devam Et ${targetChapterTitle ? `(${targetChapterTitle})` : ''}`
+                          : `Kaldığın Yerden Devam Et ${targetChapterTitle ? `(${targetChapterTitle})` : ''}`}
                     </span>
                   </>
                 ) : (
                   <>
-                    <BookOpen size={18} className="mr-2 shrink-0" />
+                    {story.format === 'chat' ? (
+                      <MessageSquare size={18} className="mr-2 shrink-0" />
+                    ) : (
+                      <BookOpen size={18} className="mr-2 shrink-0" />
+                    )}
                     <span>
                       {chapters.length === 0 
-                        ? 'Henüz Bölüm Yok' 
+                        ? 'Henüz Sohbet Yok' 
                         : story.format === 'short_story' 
                           ? 'Hikayeyi Oku' 
-                          : 'İlk Bölümü Oku'}
+                          : story.format === 'chat'
+                            ? 'Sohbeti Oku (Dokunarak Başla)'
+                            : 'İlk Bölümü Oku'}
                     </span>
                   </>
                 )}
@@ -1304,6 +1384,47 @@ export default function StoryDetailPage() {
                   )}
                 </div>
 
+                {/* Mesaj Hikayesi Konuşmacıları (Varsa) */}
+                {story.format === 'chat' && story.chatCharacters && story.chatCharacters.length > 0 && (
+                  <div className="bg-card/50 border border-emerald-500/25 p-5 sm:p-7 rounded-2xl shadow-xs">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+                        <MessageSquare size={14} />
+                      </div>
+                      <Typography variant="h3" className="text-base sm:text-lg font-bold text-text">
+                        Sohbet Konuşmacıları ({story.chatCharacters.length})
+                      </Typography>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {story.chatCharacters.map((char) => (
+                        <div
+                          key={char.id}
+                          className="flex items-center gap-3 p-2.5 rounded-xl bg-background/60 border border-border/50"
+                        >
+                          <div
+                            className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 overflow-hidden shadow-xs"
+                            style={{ backgroundColor: char.color || '#10b981' }}
+                          >
+                            {char.avatarUrl ? (
+                              <img src={char.avatarUrl} alt={char.name} className="w-full h-full object-cover" />
+                            ) : (
+                              char.name.charAt(0)
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="font-extrabold text-xs text-foreground block truncate">
+                              {char.name}
+                            </span>
+                            <span className="text-[10px] text-muted font-medium">
+                              {char.isSelf ? 'Ben (Sağ Yeşil Balon)' : 'Konuşmacı (Sol Balon)'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Önsöz (Varsa) */}
                 {story.foreword && (
                   <div className="bg-card/50 border border-border/50 p-5 sm:p-7 rounded-2xl shadow-xs">
@@ -1479,10 +1600,10 @@ export default function StoryDetailPage() {
             <div className="flex items-center justify-between p-3.5 sm:p-4 bg-card/60 backdrop-blur-md rounded-2xl border border-border/50">
               <div className="flex items-center gap-2.5">
                 <span className="text-xs sm:text-sm font-bold text-text">
-                  {story.format === 'short_story' ? 'Kısa Hikaye' : 'Bölüm Listesi'}
+                  {story.format === 'short_story' ? 'Kısa Hikaye' : story.format === 'chat' ? 'Sohbet Listesi' : 'Bölüm Listesi'}
                 </span>
                 <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary/15 text-primary border border-primary/25">
-                  {story.format === 'short_story' ? 'Tek Bölüm' : `${chapters.length} Bölüm`}
+                  {story.format === 'short_story' ? 'Tek Bölüm' : story.format === 'chat' ? `${chapters.length} Sohbet` : `${chapters.length} Bölüm`}
                 </span>
               </div>
 
@@ -1621,6 +1742,12 @@ export default function StoryDetailPage() {
                                   }`}>
                                     <Trophy size={10} />
                                     {chapter.endingTitle ? `Son: ${chapter.endingTitle}` : 'Final / Son'}
+                                  </span>
+                                )}
+                                {story.format === 'chat' && (
+                                  <span className="flex items-center gap-1 shrink-0 font-bold px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                    <MessageSquare size={10} />
+                                    {chapter.chatMessages && chapter.chatMessages.length > 0 ? `${chapter.chatMessages.length} Mesaj` : 'Sohbet'}
                                   </span>
                                 )}
                                 {!chapter.isEnding && chapter.choices && chapter.choices.length > 0 && (

@@ -586,11 +586,12 @@ export default function StoryDetailAdminPage() {
       return;
     }
     try {
-      const titlePrefix = story?.format === 'webtoon' ? 'Episod' : story?.format === 'short_story' ? 'Kısa Hikaye' : 'Bölüm';
+      const titlePrefix = story?.format === 'webtoon' ? 'Episod' : story?.format === 'short_story' ? 'Kısa Hikaye' : story?.format === 'chat' ? 'Sohbet' : 'Bölüm';
       const newChapId = await createChapter(storyId, {
         title: story?.format === 'short_story' ? 'Tek Bölüm' : `${titlePrefix} ${chapters.length + 1}`,
         order: chapters.length + 1,
-        contentBlocks: []
+        contentBlocks: [],
+        chatMessages: story?.format === 'chat' ? [] : undefined
       });
       if (story?.format === 'webtoon') {
         router.push(`/studio/webtoons/${storyId}/episodes/${newChapId}`);
@@ -735,6 +736,11 @@ export default function StoryDetailAdminPage() {
                   <Feather size={11} /> Kısa Hikaye
                 </span>
               )}
+              {story?.format === 'chat' && (
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 text-[10px] font-extrabold flex items-center gap-1 shrink-0">
+                  <MessageSquare size={11} /> Mesaj Hikayesi
+                </span>
+              )}
             </div>
             <p className="text-xs sm:text-sm text-muted mt-1">
               Hikayenizin bölümlerini, vitrinini ve yazar araçlarını yönetin.
@@ -746,7 +752,7 @@ export default function StoryDetailAdminPage() {
             <div className="flex items-center gap-1.5 text-xs text-muted">
               <BookOpen size={14} className="text-primary" />
               <span className="font-bold text-text">
-                {story?.format === 'short_story' ? `${chapters.length}/1 (Tek Bölüm)` : `${chapters.length} Bölüm`}
+                {story?.format === 'short_story' ? `${chapters.length}/1 (Tek Bölüm)` : story?.format === 'chat' ? `${chapters.length} Sohbet` : `${chapters.length} Bölüm`}
               </span>
             </div>
             <div className="w-px h-3.5 bg-border/60" />
@@ -883,7 +889,7 @@ export default function StoryDetailAdminPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
               <div>
                 <Typography variant="h3" className="font-bold text-base sm:text-lg">
-                  {story?.format === 'webtoon' ? 'Episod Listesi' : story?.format === 'short_story' ? 'Kısa Hikaye Bölümü' : 'Bölüm Listesi'}
+                  {story?.format === 'webtoon' ? 'Episod Listesi' : story?.format === 'short_story' ? 'Kısa Hikaye Bölümü' : story?.format === 'chat' ? 'Sohbet Listesi' : 'Bölüm Listesi'}
                 </Typography>
                 <p className="text-xs text-muted mt-0.5">
                   Yazmak veya düzenlemek istediğiniz bölüme dokunun.
@@ -909,7 +915,9 @@ export default function StoryDetailAdminPage() {
                       ? 'Yeni Episod Ekle' 
                       : story?.format === 'short_story' 
                         ? 'Tek Bölümü Oluştur' 
-                        : 'Yeni Bölüm Ekle'}
+                        : story?.format === 'chat'
+                          ? 'Yeni Sohbet Ekle'
+                          : 'Yeni Bölüm Ekle'}
                   </span>
                 </Button>
               )}
@@ -922,7 +930,7 @@ export default function StoryDetailAdminPage() {
                   <BookOpen size={24} />
                 </div>
                 <h4 className="font-semibold text-text text-sm sm:text-base">
-                  {story?.format === 'webtoon' ? 'Henüz episod eklenmemiş' : 'Henüz hiç bölüm eklenmemiş'}
+                  {story?.format === 'webtoon' ? 'Henüz episod eklenmemiş' : story?.format === 'chat' ? 'Henüz sohbet eklenmemiş' : 'Henüz hiç bölüm eklenmemiş'}
                 </h4>
                 <p className="text-xs text-muted max-w-sm mt-1 mb-4">
                   Hikayenizin ilk bölümünü oluşturarak yazmaya hemen başlayabilirsiniz.
@@ -932,7 +940,7 @@ export default function StoryDetailAdminPage() {
                   onPress={handleAddChapter}
                   className="text-xs cursor-pointer"
                 >
-                  <PlusCircle size={14} className="mr-1.5" /> {story?.format === 'short_story' ? 'Tek Bölümü Oluştur' : 'İlk Bölümü Oluştur'}
+                  <PlusCircle size={14} className="mr-1.5" /> {story?.format === 'short_story' ? 'Tek Bölümü Oluştur' : story?.format === 'chat' ? 'İlk Sohbeti Oluştur' : 'İlk Bölümü Oluştur'}
                 </Button>
               </div>
             ) : (
@@ -960,6 +968,12 @@ export default function StoryDetailAdminPage() {
                         {chap.audioTrack?.url && (
                           <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full shrink-0" title="Fon Müziği Eklendi">
                             <Music size={11} /> Müzikli
+                          </span>
+                        )}
+                        {story?.format === 'chat' && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full shrink-0">
+                            <MessageSquare size={11} />
+                            {chap.chatMessages && chap.chatMessages.length > 0 ? `${chap.chatMessages.length} Mesaj` : 'Henüz mesaj yok'}
                           </span>
                         )}
                       </div>

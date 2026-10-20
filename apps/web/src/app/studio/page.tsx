@@ -21,7 +21,8 @@ import {
   Check,
   PenTool,
   Gamepad2,
-  Feather
+  Feather,
+  MessageSquare
 } from 'lucide-react';
 import { subscribeToAuthorStories, createStory, useAuthStore, syncStoryChapterCount, type Story } from '@readixon/core';
 import { GenreSelector } from '@/components/story/GenreSelector';
@@ -41,7 +42,7 @@ export default function StudioDashboard() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPaywallOpen, setIsPaywallOpen] = useState(false);
-  const [storyFormat, setStoryFormat] = useState<'novel' | 'interactive' | 'short_story'>('novel');
+  const [storyFormat, setStoryFormat] = useState<'novel' | 'interactive' | 'short_story' | 'chat'>('novel');
   const [newTitle, setNewTitle] = useState('');
   const [newMainGenre, setNewMainGenre] = useState<string | undefined>(undefined);
   const [newSubGenres, setNewSubGenres] = useState<string[]>([]);
@@ -183,7 +184,7 @@ export default function StudioDashboard() {
 
   const handleOpenCreateStoryWithSpark = (
     sparkTitle?: string,
-    sparkFormat?: 'novel' | 'interactive' | 'short_story'
+    sparkFormat?: 'novel' | 'interactive' | 'short_story' | 'chat'
   ) => {
     if (sparkTitle) setNewTitle(sparkTitle);
     if (sparkFormat) setStoryFormat(sparkFormat);
@@ -438,8 +439,14 @@ export default function StudioDashboard() {
                       </span>
                     </div>
 
-                    {(story.seriesTitle || story.universeTitle || story.format === 'interactive' || story.format === 'short_story') && (
+                    {(story.seriesTitle || story.universeTitle || story.format === 'interactive' || story.format === 'short_story' || story.format === 'chat') && (
                       <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                        {story.format === 'chat' && (
+                          <span className="inline-flex items-center gap-1 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
+                            <MessageSquare size={9} />
+                            Mesaj Hikayesi
+                          </span>
+                        )}
                         {story.format === 'short_story' && (
                           <span className="inline-flex items-center gap-1 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-500 border border-amber-500/25">
                             <Feather size={9} />
@@ -531,8 +538,14 @@ export default function StudioDashboard() {
                       </span>
                     </div>
 
-                    {(story.seriesTitle || story.universeTitle || story.format === 'interactive' || story.format === 'short_story') && (
+                    {(story.seriesTitle || story.universeTitle || story.format === 'interactive' || story.format === 'short_story' || story.format === 'chat') && (
                       <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                        {story.format === 'chat' && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
+                            <MessageSquare size={10} />
+                            Mesaj Hikayesi (Sohbet)
+                          </span>
+                        )}
                         {story.format === 'short_story' && (
                           <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-500 border border-amber-500/25">
                             <Feather size={10} />
@@ -604,7 +617,7 @@ export default function StudioDashboard() {
       {/* ── Hikaye Oluşturma Modalı (Mobil Uyumlu Bottom Sheet & Masaüstü Modal) ── */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md p-0 sm:p-4 animate-in fade-in duration-200">
-          <div className="bg-card border-t sm:border border-border/80 rounded-t-3xl sm:rounded-2xl shadow-2xl w-full max-w-xl h-[90vh] sm:h-auto sm:max-h-[85vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-2 duration-200">
+          <div className="bg-card border-t sm:border border-border/80 rounded-t-3xl sm:rounded-2xl shadow-2xl w-full max-w-xl sm:max-w-2xl lg:max-w-3xl h-[90vh] sm:h-auto sm:max-h-[85vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-2 duration-200">
             {/* Mobil Çekme Tutacağı */}
             <div className="sm:hidden pt-3 pb-1 flex justify-center shrink-0">
               <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
@@ -631,161 +644,213 @@ export default function StudioDashboard() {
             </div>
             
             {/* Modal İçeriği (Kaydırılabilir Gövde) */}
-            <div className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-5 scrollbar-thin">
+            <div className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-5 scrollbar-thin [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-border/60 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
               
-              {/* Format Seçimi: Standart Roman vs Kısa Hikaye vs İnteraktif Hikaye */}
+              {/* Format Seçimi: 2x2 Dengeli Grid (Mobilde 1 Kolon, Masaüstünde 2 Kolon) */}
               <div>
                 <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2.5">
                   Hikaye Formatı
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
                   {/* Standart Roman */}
                   <div
                     onClick={() => setStoryFormat('novel')}
-                    className={`relative p-3.5 rounded-xl border text-left cursor-pointer transition-all ${
+                    className={`relative p-3.5 sm:p-4 rounded-2xl border text-left cursor-pointer transition-all ${
                       storyFormat === 'novel'
-                        ? 'border-primary/80 bg-primary/10 shadow-sm shadow-primary/20 ring-1 ring-primary/40'
+                        ? 'border-primary bg-primary/10 shadow-sm shadow-primary/20 ring-1 ring-primary/40'
                         : 'border-border/60 bg-muted/5 hover:border-border hover:bg-muted/10'
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="w-8 h-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center shrink-0">
-                        <BookOpen size={16} />
+                    <div className="flex items-start gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center shrink-0 mt-0.5">
+                        <BookOpen size={18} />
                       </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/20 text-primary uppercase tracking-wide">
-                        Klasik
-                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <h4 className="font-bold text-sm text-text truncate flex items-center gap-1.5">
+                            Standart Roman
+                            {storyFormat === 'novel' && (
+                              <Check size={14} className="text-primary shrink-0" />
+                            )}
+                          </h4>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/20 text-primary uppercase tracking-wide shrink-0">
+                            Klasik
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted leading-relaxed">
+                          Bölüm bölüm doğrusal ilerleyen geleneksel e-kitap ve roman kurgusu.
+                        </p>
+                      </div>
                     </div>
-                    <h4 className="font-semibold text-sm text-text mb-1 flex items-center gap-1.5">
-                      Standart Roman
-                      {storyFormat === 'novel' && (
-                        <Check size={14} className="text-primary shrink-0" />
-                      )}
-                    </h4>
-                    <p className="text-xs text-muted leading-relaxed">
-                      Bölüm bölüm doğrusal ilerleyen geleneksel e-kitap ve roman kurgusu.
-                    </p>
+                  </div>
+
+                  {/* Mesaj Hikayesi (Chat Story) */}
+                  <div
+                    onClick={() => setStoryFormat('chat')}
+                    className={`relative p-3.5 sm:p-4 rounded-2xl border text-left cursor-pointer transition-all ${
+                      storyFormat === 'chat'
+                        ? 'border-emerald-500 bg-emerald-500/10 shadow-sm shadow-emerald-500/20 ring-1 ring-emerald-500/40'
+                        : 'border-border/60 bg-muted/5 hover:border-border hover:bg-muted/10'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+                        <MessageSquare size={18} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <h4 className="font-bold text-sm text-text truncate flex items-center gap-1.5">
+                            Mesaj Hikayesi
+                            {storyFormat === 'chat' && (
+                              <Check size={14} className="text-emerald-500 shrink-0" />
+                            )}
+                          </h4>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 uppercase tracking-wide shrink-0">
+                            Sohbet
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted leading-relaxed">
+                          WhatsApp konuşması gibi akan, okuyucu dokundukça açılan akıcı sohbet kurguları.
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Kısa Hikaye (Tek Bölüm) */}
                   <div
                     onClick={() => setStoryFormat('short_story')}
-                    className={`relative p-3.5 rounded-xl border text-left cursor-pointer transition-all ${
+                    className={`relative p-3.5 sm:p-4 rounded-2xl border text-left cursor-pointer transition-all ${
                       storyFormat === 'short_story'
-                        ? 'border-amber-500/80 bg-amber-500/10 shadow-sm shadow-amber-500/20 ring-1 ring-amber-500/40'
+                        ? 'border-amber-500 bg-amber-500/10 shadow-sm shadow-amber-500/20 ring-1 ring-amber-500/40'
                         : 'border-border/60 bg-muted/5 hover:border-border hover:bg-muted/10'
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
-                        <Feather size={16} />
+                    <div className="flex items-start gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0 mt-0.5">
+                        <Feather size={18} />
                       </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 uppercase tracking-wide">
-                        Tek Bölüm
-                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <h4 className="font-bold text-sm text-text truncate flex items-center gap-1.5">
+                            Kısa Hikaye
+                            {storyFormat === 'short_story' && (
+                              <Check size={14} className="text-amber-500 shrink-0" />
+                            )}
+                          </h4>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 uppercase tracking-wide shrink-0">
+                            Tek Bölüm
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted leading-relaxed">
+                          Tek oturuşta okunabilen, yalnızca 1 bölümle sınırlı kompakt kısa roman.
+                        </p>
+                      </div>
                     </div>
-                    <h4 className="font-semibold text-sm text-text mb-1 flex items-center gap-1.5">
-                      Kısa Hikaye
-                      {storyFormat === 'short_story' && (
-                        <Check size={14} className="text-amber-500 shrink-0" />
-                      )}
-                    </h4>
-                    <p className="text-xs text-muted leading-relaxed">
-                      Tek oturuşta okunabilen, yalnızca 1 bölümle sınırlı kompakt kısa roman.
-                    </p>
                   </div>
 
                   {/* İnteraktif Hikaye */}
                   <div
                     onClick={() => setStoryFormat('interactive')}
-                    className={`relative p-3.5 rounded-xl border text-left cursor-pointer transition-all ${
+                    className={`relative p-3.5 sm:p-4 rounded-2xl border text-left cursor-pointer transition-all ${
                       storyFormat === 'interactive'
-                        ? 'border-indigo-500/80 bg-indigo-500/10 shadow-sm shadow-indigo-500/20 ring-1 ring-indigo-500/40'
+                        ? 'border-indigo-500 bg-indigo-500/10 shadow-sm shadow-indigo-500/20 ring-1 ring-indigo-500/40'
                         : 'border-border/60 bg-muted/5 hover:border-border hover:bg-muted/10'
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0">
-                        <Gamepad2 size={16} />
+                    <div className="flex items-start gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
+                        <Gamepad2 size={18} />
                       </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 uppercase tracking-wide">
-                        🎮 CYOA
-                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <h4 className="font-bold text-sm text-text truncate flex items-center gap-1.5">
+                            İnteraktif Hikaye
+                            {storyFormat === 'interactive' && (
+                              <Check size={14} className="text-indigo-400 shrink-0" />
+                            )}
+                          </h4>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 uppercase tracking-wide shrink-0">
+                            CYOA
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted leading-relaxed">
+                          Okuyucunun kaderini belirleyen kararlar ve çoklu sonlar.
+                        </p>
+                      </div>
                     </div>
-                    <h4 className="font-semibold text-sm text-text mb-1 flex items-center gap-1.5">
-                      İnteraktif Hikaye
-                      {storyFormat === 'interactive' && (
-                        <Check size={14} className="text-indigo-400 shrink-0" />
-                      )}
-                    </h4>
-                    <p className="text-xs text-muted leading-relaxed">
-                      Okuyucunun kaderini belirleyen kararlar ve çoklu sonlar.
-                    </p>
                   </div>
                 </div>
               </div>
 
-              {/* Başlangıç Yöntemi Seçici Kartlar (Sadece Standart Roman ise) */}
+              {/* Başlangıç Yöntemi Seçici Kartlar (Sadece Standart Roman ise - Aynı 2'li Izgara) */}
               {storyFormat === 'novel' && (
                 <div>
                   <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2.5">
                     Başlangıç Yöntemi
                   </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
                     {/* Sihirbaz Seçeneği */}
                     <div
                       onClick={() => setCreationMode('wizard')}
-                      className={`relative p-3.5 sm:p-4 rounded-xl border text-left cursor-pointer transition-all ${
+                      className={`relative p-3.5 sm:p-4 rounded-2xl border text-left cursor-pointer transition-all ${
                         creationMode === 'wizard'
-                          ? 'border-primary/80 bg-primary/10 shadow-sm shadow-primary/20 ring-1 ring-primary/40'
+                          ? 'border-primary bg-primary/10 shadow-sm shadow-primary/20 ring-1 ring-primary/40'
                           : 'border-border/60 bg-muted/5 hover:border-border hover:bg-muted/10'
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="w-8 h-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center shrink-0">
-                          <Wand2 size={16} />
+                      <div className="flex items-start gap-3.5">
+                        <div className="w-10 h-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center shrink-0 mt-0.5">
+                          <Wand2 size={18} />
                         </div>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/20 text-primary uppercase tracking-wide">
-                          Önerilen
-                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <h4 className="font-bold text-sm text-text truncate flex items-center gap-1.5">
+                              Kurgu Sihirbazı
+                              {creationMode === 'wizard' && (
+                                <Check size={14} className="text-primary shrink-0" />
+                              )}
+                            </h4>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/20 text-primary uppercase tracking-wide shrink-0">
+                              Önerilen
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted leading-relaxed">
+                            Kanca, karakterler, çatışma ve final adımlarıyla kurgu iskeletinizi adım adım planlayın.
+                          </p>
+                        </div>
                       </div>
-                      <h4 className="font-semibold text-sm text-text mb-1 flex items-center gap-1.5">
-                        Kurgu Sihirbazı
-                        {creationMode === 'wizard' && (
-                          <Check size={14} className="text-primary shrink-0" />
-                        )}
-                      </h4>
-                      <p className="text-xs text-muted leading-relaxed">
-                        Kanca, karakterler, çatışma ve final adımlarıyla kurgu iskeletinizi adım adım planlayın.
-                      </p>
                     </div>
 
                     {/* Klasik Seçenek */}
                     <div
                       onClick={() => setCreationMode('classic')}
-                      className={`relative p-3.5 sm:p-4 rounded-xl border text-left cursor-pointer transition-all ${
+                      className={`relative p-3.5 sm:p-4 rounded-2xl border text-left cursor-pointer transition-all ${
                         creationMode === 'classic'
-                          ? 'border-primary/80 bg-primary/10 shadow-sm shadow-primary/20 ring-1 ring-primary/40'
+                          ? 'border-primary bg-primary/10 shadow-sm shadow-primary/20 ring-1 ring-primary/40'
                           : 'border-border/60 bg-muted/5 hover:border-border hover:bg-muted/10'
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="w-8 h-8 rounded-lg bg-muted/20 text-muted-foreground flex items-center justify-center shrink-0">
-                          <PenTool size={16} />
+                      <div className="flex items-start gap-3.5">
+                        <div className="w-10 h-10 rounded-xl bg-muted/20 text-muted-foreground flex items-center justify-center shrink-0 mt-0.5">
+                          <PenTool size={18} />
                         </div>
-                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-muted/20 text-muted uppercase tracking-wide">
-                          Hızlı
-                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <h4 className="font-bold text-sm text-text truncate flex items-center gap-1.5">
+                              Klasik Yazım
+                              {creationMode === 'classic' && (
+                                <Check size={14} className="text-primary shrink-0" />
+                              )}
+                            </h4>
+                            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-muted/20 text-muted uppercase tracking-wide shrink-0">
+                              Hızlı
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted leading-relaxed">
+                            Herhangi bir planlama şablonu olmadan doğrudan bölümlerinizi serbestçe yazmaya başlayın.
+                          </p>
+                        </div>
                       </div>
-                      <h4 className="font-semibold text-sm text-text mb-1 flex items-center gap-1.5">
-                        Klasik Yazım
-                        {creationMode === 'classic' && (
-                          <Check size={14} className="text-primary shrink-0" />
-                        )}
-                      </h4>
-                      <p className="text-xs text-muted leading-relaxed">
-                        Herhangi bir planlama şablonu olmadan doğrudan bölümlerinizi serbestçe yazmaya başlayın.
-                      </p>
                     </div>
                   </div>
                 </div>
@@ -856,6 +921,8 @@ export default function StudioDashboard() {
               >
                 {storyFormat === 'short_story' ? (
                   <Feather size={16} />
+                ) : storyFormat === 'chat' ? (
+                  <MessageSquare size={16} />
                 ) : (creationMode === 'wizard' && storyFormat === 'novel') ? (
                   <Wand2 size={16} />
                 ) : (
@@ -866,7 +933,9 @@ export default function StudioDashboard() {
                     ? 'Oluşturuluyor...' 
                     : storyFormat === 'short_story'
                       ? 'Kısa Hikayeyi Oluştur ve Başla'
-                      : (creationMode === 'wizard' && storyFormat === 'novel' ? 'Sihirbazla Oluştur ve Başla' : 'Hikayeyi Oluştur ve Başla')}
+                      : storyFormat === 'chat'
+                        ? 'Mesaj Hikayesini Oluştur ve Başla'
+                        : (creationMode === 'wizard' && storyFormat === 'novel' ? 'Sihirbazla Oluştur ve Başla' : 'Hikayeyi Oluştur ve Başla')}
                 </span>
               </Button>
             </div>

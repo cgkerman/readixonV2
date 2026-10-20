@@ -168,6 +168,43 @@ export const getShortStoriesPaginated = async (limitCount: number = 10, lastDoc?
 };
 
 /**
+ * Mesaj Hikayelerini (Chat Stories) Firestore'dan çeker.
+ */
+export const getChatStoriesPaginated = async (limitCount: number = 10, lastDoc?: DocumentSnapshot) => {
+  const storiesRef = collection(db, 'stories');
+  
+  let q = query(
+    storiesRef,
+    where('format', '==', 'chat'),
+    limit(50)
+  );
+
+  if (lastDoc) {
+    q = query(q, startAfter(lastDoc));
+  }
+
+  try {
+    const querySnapshot = await getDocs(q);
+    let allStories = await enrichStories(querySnapshot.docs);
+    let stories = allStories.filter(s => s.status === 'ongoing' || s.status === 'completed');
+
+    stories.sort((a, b) => {
+      const aTime = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+      const bTime = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+      return bTime - aTime;
+    });
+
+    stories = stories.slice(0, limitCount);
+
+    const lastVisible = querySnapshot.docs.length > 0 ? querySnapshot.docs[querySnapshot.docs.length - 1] : undefined;
+    return { stories, lastDoc: lastVisible };
+  } catch (error: any) {
+    console.error("getChatStoriesPaginated Firebase error:", error.message);
+    return { stories: [], lastDoc: undefined };
+  }
+};
+
+/**
  * Son güncellenen (yeni bölüm eklenen) hikayeleri Firestore'dan çeker.
  */
 export const getRecentlyUpdatedStories = async (limitCount: number = 10): Promise<StoryWithLatestChapter[]> => {

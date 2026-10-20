@@ -16,17 +16,24 @@ import {
   Check, 
   Trash2,
   Lightbulb,
-  GraduationCap
+  GraduationCap,
+  MessageSquare
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface StudioWriterToolsProps {
   storiesCount: number;
-  onOpenCreateStory: (initialTitle?: string, initialFormat?: 'novel' | 'interactive' | 'short_story') => void;
+  onOpenCreateStory: (initialTitle?: string, initialFormat?: 'novel' | 'interactive' | 'short_story' | 'chat') => void;
 }
 
 // Yaratıcı "Saksı Zamanı" Fikir Tohumları
 const CREATIVE_SPARKS = [
+  {
+    title: 'Bilinmeyen Numara: 03:14',
+    genre: 'Korku / Gerilim',
+    format: 'chat' as const,
+    pitch: 'Gece yarısı gelen "Işıkları kapat ve arkana bakma" mesajı ve odanın içinde çalan ikinci bir gizli telefon.',
+  },
   {
     title: 'Son Hatıra Satıcısı',
     genre: 'Bilim Kurgu',
@@ -171,8 +178,8 @@ export const StudioWriterTools: React.FC<StudioWriterToolsProps> = ({
             </button>
           </div>
 
-          {/* 3 Yazım Formatı Seçeneği */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mb-6">
+          {/* 4 Yazım Formatı Seçeneği */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mb-6">
             {/* Roman */}
             <div 
               onClick={() => onOpenCreateStory(undefined, 'novel')}
@@ -189,6 +196,22 @@ export const StudioWriterTools: React.FC<StudioWriterToolsProps> = ({
               </p>
             </div>
 
+            {/* Mesaj Hikayesi */}
+            <div 
+              onClick={() => onOpenCreateStory(undefined, 'chat')}
+              className="p-4 rounded-2xl bg-card/80 border border-border/60 hover:border-emerald-500/50 transition-all cursor-pointer group hover:-translate-y-0.5 shadow-xs"
+            >
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+                <MessageSquare size={20} />
+              </div>
+              <h4 className="font-bold text-sm text-foreground group-hover:text-emerald-400 transition-colors">
+                Mesaj Hikayesi
+              </h4>
+              <p className="text-xs text-muted mt-1 leading-snug">
+                WhatsApp konuşması gibi akan, okuyucu dokundukça açılan bağımlılık yapıcı sohbet kurguları.
+              </p>
+            </div>
+
             {/* CYOA İnteraktif */}
             <div 
               onClick={() => onOpenCreateStory(undefined, 'interactive')}
@@ -198,7 +221,7 @@ export const StudioWriterTools: React.FC<StudioWriterToolsProps> = ({
                 <Gamepad2 size={20} />
               </div>
               <h4 className="font-bold text-sm text-foreground group-hover:text-indigo-400 transition-colors">
-                Kaderini Sen Seç (İnteraktif)
+                Kaderini Sen Seç
               </h4>
               <p className="text-xs text-muted mt-1 leading-snug">
                 Okuyucunun seçimleriyle dallanan yollar, çoklu sonlar ve Bandersnatch tarzı interaktif macera.
@@ -281,7 +304,7 @@ export const StudioWriterTools: React.FC<StudioWriterToolsProps> = ({
                   {currentSpark.genre}
                 </span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted/20 text-muted">
-                  {currentSpark.format === 'short_story' ? 'Kısa Hikaye' : currentSpark.format === 'interactive' ? 'İnteraktif' : 'Roman'}
+                  {currentSpark.format === 'short_story' ? 'Kısa Hikaye' : currentSpark.format === 'chat' ? 'Mesaj Hikayesi' : currentSpark.format === 'interactive' ? 'İnteraktif' : 'Roman'}
                 </span>
               </div>
               <h4 className="font-extrabold text-sm sm:text-base text-foreground mb-1">

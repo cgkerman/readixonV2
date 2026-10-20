@@ -59,77 +59,81 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background overflow-hidden relative">
-      {/* ── Top Navbar (Desktop) ── */}
-      <header className="hidden xl:flex items-center justify-between border-b border-border/10 bg-card/30 px-8 h-[76px] shrink-0 backdrop-blur-md z-50">
-        {/* Left: Logo */}
-        <Link href="/studio" className="shrink-0 flex items-center gap-2.5 group">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-primary to-amber-400 p-[1px] shadow-sm shadow-primary/20">
-            <div className="w-full h-full rounded-[11px] bg-background flex items-center justify-center">
-              <PenTool className="text-primary group-hover:rotate-12 transition-transform duration-200" size={19} />
+      {/* ── Top Navbar (Desktop - Bölüm/Episod Yazma Ekranlarında Gizlenir) ── */}
+      {!isDeepEditor && (
+        <header className="hidden xl:flex items-center justify-between border-b border-border/10 bg-card/30 px-8 h-[76px] shrink-0 backdrop-blur-md z-50">
+          {/* Left: Logo */}
+          <Link href="/studio" className="shrink-0 flex items-center gap-2.5 group">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-primary to-amber-400 p-[1px] shadow-sm shadow-primary/20">
+              <div className="w-full h-full rounded-[11px] bg-background flex items-center justify-center">
+                <PenTool className="text-primary group-hover:rotate-12 transition-transform duration-200" size={19} />
+              </div>
             </div>
-          </div>
-          <Typography variant="h3" className="font-bold text-text tracking-tight">Stüdyo</Typography>
-        </Link>
-
-        {/* Center: Main Navigation */}
-        <nav className="flex items-center gap-2">
-          {studioNavItems.map((item) => {
-            const isActive = pathname === item.href || (item.href !== '/studio' && pathname.startsWith(item.href));
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl transition-all relative ${
-                  isActive ? 'bg-primary/10 text-primary font-bold' : 'text-muted hover:bg-muted/10 hover:text-text font-medium'
-                }`}
-              >
-                <item.icon size={20} className={isActive ? "text-primary" : ""} />
-                <span className="text-[15px]">{item.name}</span>
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* Right: Actions */}
-        <div className="flex items-center gap-4 shrink-0">
-          <Link
-            href="/feed"
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-muted hover:text-text hover:bg-muted/10 transition-colors"
-          >
-            <ArrowLeft size={18} />
-            <span className="font-medium text-sm">Okuyucuya Dön</span>
+            <Typography variant="h3" className="font-bold text-text tracking-tight">Stüdyo</Typography>
           </Link>
-        </div>
-      </header>
+
+          {/* Center: Main Navigation */}
+          <nav className="flex items-center gap-2">
+            {studioNavItems.map((item) => {
+              const isActive = pathname === item.href || (item.href !== '/studio' && pathname.startsWith(item.href));
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl transition-all relative ${
+                    isActive ? 'bg-primary/10 text-primary font-bold' : 'text-muted hover:bg-muted/10 hover:text-text font-medium'
+                  }`}
+                >
+                  <item.icon size={20} className={isActive ? "text-primary" : ""} />
+                  <span className="text-[15px]">{item.name}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Right: Actions */}
+          <div className="flex items-center gap-4 shrink-0">
+            <Link
+              href="/feed"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-muted hover:text-text hover:bg-muted/10 transition-colors"
+            >
+              <ArrowLeft size={18} />
+              <span className="font-medium text-sm">Okuyucuya Dön</span>
+            </Link>
+          </div>
+        </header>
+      )}
 
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto flex flex-col">
-        {/* ── Mobile Top Header (Çentik & Safe-Area Uyumlu) ── */}
-        <header className="xl:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-3 bg-background/85 backdrop-blur-xl border-b border-border/40 shrink-0 select-none pt-[calc(0.75rem+env(safe-area-inset-top,0px))] transition-all">
-          <Link href="/studio" className="flex items-center gap-2.5 active:scale-95 transition-transform">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary to-amber-400 p-[1px] shadow-sm shadow-primary/20">
-              <div className="w-full h-full rounded-[11px] bg-background/90 flex items-center justify-center">
-                <PenTool className="text-primary" size={17} />
+        {/* ── Mobile Top Header (Çentik & Safe-Area Uyumlu - Bölüm Yazarken Gizlenir) ── */}
+        {!isDeepEditor && (
+          <header className="xl:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-3 bg-background/85 backdrop-blur-xl border-b border-border/40 shrink-0 select-none pt-[calc(0.75rem+env(safe-area-inset-top,0px))] transition-all">
+            <Link href="/studio" className="flex items-center gap-2.5 active:scale-95 transition-transform">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary to-amber-400 p-[1px] shadow-sm shadow-primary/20">
+                <div className="w-full h-full rounded-[11px] bg-background/90 flex items-center justify-center">
+                  <PenTool className="text-primary" size={17} />
+                </div>
               </div>
-            </div>
-            <div className="flex flex-col">
-              <span className="font-extrabold text-base tracking-tight text-foreground leading-none">
-                stüdyo
-              </span>
-              <span className="text-[10px] text-muted font-medium mt-0.5">
-                Yazar Paneli
-              </span>
-            </div>
-          </Link>
+              <div className="flex flex-col">
+                <span className="font-extrabold text-base tracking-tight text-foreground leading-none">
+                  stüdyo
+                </span>
+                <span className="text-[10px] text-muted font-medium mt-0.5">
+                  Yazar Paneli
+                </span>
+              </div>
+            </Link>
 
-          <Link
-            href="/feed"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card/80 hover:bg-card border border-border/60 text-muted hover:text-foreground text-xs font-semibold active:scale-95 transition-all shadow-xs"
-          >
-            <ArrowLeft size={14} className="text-primary" />
-            <span>Okuyucuya Dön</span>
-          </Link>
-        </header>
+            <Link
+              href="/feed"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card/80 hover:bg-card border border-border/60 text-muted hover:text-foreground text-xs font-semibold active:scale-95 transition-all shadow-xs"
+            >
+              <ArrowLeft size={14} className="text-primary" />
+              <span>Okuyucuya Dön</span>
+            </Link>
+          </header>
+        )}
 
         <div className="flex-1 flex flex-col">
           {children}

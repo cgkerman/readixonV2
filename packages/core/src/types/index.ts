@@ -191,11 +191,14 @@ export interface Story {
   status: StoryStatus;
   createdAt: Timestamp;
   updatedAt: Timestamp;
-  format?: 'novel' | 'webtoon' | 'interactive' | 'short_story';
+  format?: 'novel' | 'webtoon' | 'interactive' | 'short_story' | 'chat';
 
   // Readixon Tür Defteri (1 Ana Tür + Sınırsız Alt Tür)
   mainGenre?: string;
   subGenres?: string[];
+
+  // Mesaj Hikayesi (Chat Story) Karakterleri
+  chatCharacters?: ChatStoryCharacter[];
 
   // Evren & Seri Entegrasyonu (Geriye dönük uyumlu / Opsiyonel)
   universeId?: string;
@@ -204,6 +207,25 @@ export interface Story {
   seriesTitle?: string;
   seriesOrder?: number;
   seriesLabel?: string;
+}
+
+export interface ChatStoryCharacter {
+  id: string; // örn. 'c1', 'c2'
+  name: string; // örn. 'Can', 'Ece', 'Gizemli Numara'
+  avatarUrl?: string; // Profil resmi URL'i
+  color?: string; // Balon rengi (örn. '#10b981', '#3b82f6')
+  isSelf?: boolean; // Sağ tarafta yeşil/mavi balon (Ana Karakter / "Ben")
+}
+
+export type ChatStoryMessageType = 'text' | 'image' | 'system';
+
+export interface ChatStoryMessage {
+  id: string;
+  senderId?: string; // ChatStoryCharacter.id (eğer 'system' ise undefined olabilir)
+  type: ChatStoryMessageType;
+  text?: string;
+  mediaUrl?: string;
+  time?: string; // örn. '23:42'
 }
 
 export type StoryWithLatestChapter = Story & {
@@ -320,6 +342,8 @@ export interface Chapter {
   endingTitle?: string;
   choices?: ChapterChoice[];
   parentChapterIds?: string[];
+  // Mesaj Hikayesi (Chat Story)
+  chatMessages?: ChatStoryMessage[];
 }
 
 export type ChapterEndingType = 'good' | 'bad' | 'secret' | 'neutral';

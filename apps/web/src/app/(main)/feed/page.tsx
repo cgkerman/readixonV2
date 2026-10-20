@@ -20,6 +20,7 @@ import {
   getWebtoonsPaginated, 
   getInteractiveStoriesPaginated,
   getShortStoriesPaginated,
+  getChatStoriesPaginated,
   getEditorialReviews, 
   getPublicUniverses,
   getPublicSeries,
@@ -44,7 +45,7 @@ import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-quer
 import {
   Flame, Sparkles, TrendingUp, Clock, ChevronRight, ChevronLeft, ChevronDown, Play, Users, Heart, CheckCircle, BellRing, BookOpen, MessageCircle, RotateCcw, Gem, Award, GalleryVertical,
   Rocket, Wand2, Eye, Ghost, Compass, ShieldAlert, Smile, Feather, Swords, Theater, Laugh, Moon, Skull, Brain, PenTool, Zap, Hourglass,
-  GraduationCap, Coffee, Cpu, Crown, Fingerprint, FileText, Globe, Layers, Gamepad2
+  GraduationCap, Coffee, Cpu, Crown, Fingerprint, FileText, Globe, Layers, Gamepad2, MessageSquare
 } from 'lucide-react';
 import { AuthorCard } from '@readixon/ui';
 import { toast } from "sonner";
@@ -158,6 +159,12 @@ export default function FeedPage() {
     queryFn: () => getShortStoriesPaginated(10),
   });
   const shortStories = shortStoriesData?.stories || [];
+
+  const { data: chatStoriesData, isLoading: chatStoriesLoading } = useQuery({
+    queryKey: ['stories', 'chat', 'feed'],
+    queryFn: () => getChatStoriesPaginated(10),
+  });
+  const chatStories = chatStoriesData?.stories || [];
 
   const { data: recentlyUpdatedStories = [], isLoading: recentlyUpdatedLoading } = useQuery({
     queryKey: ['stories', 'recentlyUpdated'],
@@ -1187,6 +1194,49 @@ export default function FeedPage() {
               <Link href="/studio" className="shrink-0">
                 <Button variant="primary" className="rounded-xl text-xs font-bold px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black">
                   İlk Kısa Hikayeni Yaz
+                </Button>
+              </Link>
+            </div>
+          )}
+
+          {/* ── Mesaj Hikayeleri: Dokunarak Oku (WhatsApp Tarzı Kurgular) ── */}
+          {chatStoriesLoading ? (
+            <CarouselRowSkeleton 
+              title="Mesaj Hikayeleri: Dokunarak Oku"
+              subtitle="WhatsApp konuşması gibi akan, ekrana her dokunuşunda yeni bir mesajın belirdiği sürükleyici sohbet kurguları."
+              icon={<MessageSquare className="text-emerald-400" size={24} />}
+            />
+          ) : chatStories.length > 0 ? (
+            <CarouselRow
+              title="Mesaj Hikayeleri: Dokunarak Oku"
+              subtitle="WhatsApp konuşması gibi akan, ekrana her dokunuşunda yeni bir mesajın belirdiği sürükleyici sohbet kurguları."
+              icon={<MessageSquare className="text-emerald-400" size={24} />}
+              stories={chatStories}
+              onStoryClick={(story) => {
+                const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
+                router.push(`/story/${slug}`);
+              }}
+              onLikePress={handleLikePress}
+            />
+          ) : (
+            <div className="relative group/section rounded-3xl bg-gradient-to-r from-emerald-500/10 via-card to-card border border-emerald-500/20 p-6 sm:p-7 flex flex-col md:flex-row items-center justify-between gap-5 shadow-xs overflow-hidden">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                  <MessageSquare size={24} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-extrabold text-base sm:text-lg text-foreground">Mesaj Hikayeleri: Dokunarak Oku</h3>
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
+                      Yeni Format
+                    </span>
+                  </div>
+                  <p className="text-muted text-xs mt-0.5">WhatsApp konuşması okur gibi ilerleyen, ekrana her dokunduğunda yeni bir mesajın açıldığı yenilikçi sohbet kurguları.</p>
+                </div>
+              </div>
+              <Link href="/studio" className="shrink-0">
+                <Button variant="primary" className="rounded-xl text-xs font-bold px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black">
+                  İlk Mesaj Hikayeni Yaz
                 </Button>
               </Link>
             </div>
