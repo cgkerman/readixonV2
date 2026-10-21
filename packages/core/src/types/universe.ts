@@ -37,6 +37,54 @@ export const getUniverseGenreLabel = (genre?: string): string => {
   return UNIVERSE_GENRE_LABELS[normalized] || genre;
 };
 
+// Karakter Rolleri Türkçe Etiket Haritası
+export const CHARACTER_ROLE_LABELS: Record<string, string> = {
+  protagonist: 'Baş Kahraman',
+  antagonist: 'Antagonist',
+  supporting: 'Yan Karakter',
+  minor: 'Arka Plan Karakteri',
+  figuran: 'Figüran',
+  background: 'Arka Plan Karakteri',
+  love_interest: 'Aşk İlgisi',
+  mentor: 'Usta / Mentor',
+  deuteragonist: 'İkincil Kahraman',
+  side: 'Yan Karakter',
+  'side character': 'Yan Karakter',
+  villain: 'Kötü Karakter',
+  antihero: 'Anti-Kahraman',
+  'anti-hero': 'Anti-Kahraman',
+};
+
+export const getCharacterRoleLabel = (role?: string): string => {
+  if (!role) return 'Karakter';
+  const normalized = role.toLowerCase().trim();
+  if (CHARACTER_ROLE_LABELS[normalized]) {
+    return CHARACTER_ROLE_LABELS[normalized];
+  }
+  if (normalized.includes('baş') || normalized.includes('ana') || normalized.includes('protagonist')) {
+    return 'Baş Kahraman';
+  }
+  if (normalized.includes('antagonist') || normalized.includes('düşman') || normalized.includes('kötü') || normalized.includes('villain')) {
+    return 'Antagonist';
+  }
+  if (normalized.includes('supporting') || normalized.includes('yan') || normalized.includes('destek') || normalized.includes('side')) {
+    return 'Yan Karakter';
+  }
+  if (normalized.includes('minor') || normalized.includes('figüran') || normalized.includes('figuran') || normalized.includes('background') || normalized.includes('arka plan')) {
+    return 'Arka Plan Karakteri';
+  }
+  if (normalized.includes('love') || normalized.includes('aşk')) {
+    return 'Aşk İlgisi';
+  }
+  if (normalized.includes('mentor') || normalized.includes('usta') || normalized.includes('rehber')) {
+    return 'Usta / Mentor';
+  }
+  if (normalized.includes('deuteragonist') || normalized.includes('ikincil')) {
+    return 'İkincil Kahraman';
+  }
+  return role;
+};
+
 export interface UniverseStats {
   characterCount: number;
   locationCount: number;

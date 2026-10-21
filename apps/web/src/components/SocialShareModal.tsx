@@ -7,8 +7,16 @@ import {
   type UniverseLocation, 
   type UniversePlotThread, 
   type Story,
-  getUniverseGenreLabel
+  getUniverseGenreLabel,
+  getCharacterRoleLabel
 } from '@readixon/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
+
+interface NativeImageSaverPlugin {
+  saveImage(options: { base64: string; fileName: string }): Promise<{ success: boolean; fileName?: string }>;
+}
+
+const NativeImageSaver = registerPlugin<NativeImageSaverPlugin>('NativeImageSaver');
 import { 
   X, 
   Sparkles, 
@@ -124,10 +132,10 @@ const THEME_CONFIGS: Record<SocialThemePreset, {
 // Rol Rozetleri için Renk Haritası
 const getRoleBadgeStyle = (rawRole?: string) => {
   const norm = (rawRole || '').trim().toLowerCase();
-  if (norm.includes('baş') || norm.includes('protagonist')) {
+  if (norm.includes('baş') || norm.includes('ana') || norm.includes('protagonist')) {
     return { label: 'Baş Kahraman', bg: 'bg-amber-400 text-black border-amber-300', canvasColor: '#fbbf24', canvasText: '#000000' };
   }
-  if (norm.includes('antagonist') || norm.includes('düşman') || norm.includes('kötü')) {
+  if (norm.includes('antagonist') || norm.includes('düşman') || norm.includes('kötü') || norm.includes('villain')) {
     return { label: 'Antagonist', bg: 'bg-rose-600 text-white border-rose-500', canvasColor: '#e11d48', canvasText: '#ffffff' };
   }
   if (norm.includes('aşk') || norm.includes('love')) {
@@ -139,7 +147,11 @@ const getRoleBadgeStyle = (rawRole?: string) => {
   if (norm.includes('ikincil') || norm.includes('deuteragonist')) {
     return { label: 'İkincil Kahraman', bg: 'bg-indigo-600 text-white border-indigo-500', canvasColor: '#4f46e5', canvasText: '#ffffff' };
   }
-  return { label: rawRole || 'Yan Karakter', bg: 'bg-sky-600 text-white border-sky-500', canvasColor: '#0284c7', canvasText: '#ffffff' };
+  if (norm.includes('minor') || norm.includes('arka plan') || norm.includes('figüran') || norm.includes('figuran')) {
+    return { label: 'Arka Plan Karakteri', bg: 'bg-zinc-600 text-white border-zinc-500', canvasColor: '#52525b', canvasText: '#ffffff' };
+  }
+  const translated = getCharacterRoleLabel(rawRole);
+  return { label: translated || 'Yan Karakter', bg: 'bg-sky-600 text-white border-sky-500', canvasColor: '#0284c7', canvasText: '#ffffff' };
 };
 
 // Resim yükleyici yardımcı fonksiyonu
@@ -582,7 +594,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
     universeFeaturedCover
   ]);
 
-  // PNG İndirme
+  // PNG İndirme (Mobil Capacitor Galeri & Sunucu Bileti & Web Share & Blob Destekli)
   const handleDownload = async () => {
     setIsExporting(true);
     try {
@@ -592,13 +604,92 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         return;
       }
 
+      const fileName = `${universe.slug || 'readixon'}-${cardType}-${ratio}-kart.png`;
+
+      // 1. Android Native Capacitor Shell (Cihazın Galerisine doğrudan kaydet)
+      if (Capacitor.isNativePlatform()) {
+        try {
+          await NativeImageSaver.saveImage({
+            base64: dataUrl,
+            fileName,
+          });
+          toast.success('Sosyal paylaşım kartı telefonunuzun Galerisine kaydedildi!');
+          return;
+        } catch (nativeErr: any) {
+          console.warn('NativeImageSaver başarısız oldu, alternatif indirme deneniyor:', nativeErr);
+        }
+      }
+
+      // 2. Mobil / WebView / Sunucu İndirme Bileti (/api/download?format=json)
+      try {
+        const formData = new FormData();
+        formData.append('image', dataUrl);
+        formData.append('fileName', fileName);
+        formData.append('format', 'json');
+
+        const res = await fetch('/api/download?format=json', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.downloadUrl) {
+            if (Capacitor.isNativePlatform() || /Android|iPhone|iPad/i.test(navigator.userAgent)) {
+              window.open(data.downloadUrl, '_system');
+            } else {
+              const a = document.createElement('a');
+              a.href = data.downloadUrl;
+              a.download = fileName;
+              document.body.appendChild(a);
+              a.click();
+              setTimeout(() => {
+                if (document.body.contains(a)) document.body.removeChild(a);
+              }, 500);
+            }
+            toast.success('Sosyal kart indiriliyor! Bildirim panelinizi kontrol edebilirsiniz.');
+            return;
+          }
+        }
+      } catch (apiErr) {
+        console.warn('/api/download çağrısı başarısız oldu, Blob ile devam ediliyor:', apiErr);
+      }
+
+      // 3. Web Share API Fallback (Mobil cihazlarda dosya paylaşım/kaydet menüsü)
+      if (/Android|iPhone|iPad/i.test(navigator.userAgent) && typeof navigator !== 'undefined' && navigator.share) {
+        try {
+          const blob = await (await fetch(dataUrl)).blob();
+          const file = new File([blob], fileName, { type: 'image/png' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: `${universe.title} | Readixon`,
+              text: `🌌 ${universe.title} kurgu kartı`,
+            });
+            toast.success('Kart paylaşıldı / kaydedildi!');
+            return;
+          }
+        } catch (shareErr: any) {
+          if (shareErr.name === 'AbortError') return;
+          console.warn('Web Share fallback hatası:', shareErr);
+        }
+      }
+
+      // 4. Standart Masaüstü / Tarayıcı Blob İndirmesi
+      const blob = await (await fetch(dataUrl)).blob();
+      const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.download = `${universe.slug || 'readixon'}-${cardType}-${ratio}-kart.png`;
-      link.href = dataUrl;
+      link.href = objectUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
       link.click();
+      setTimeout(() => {
+        URL.revokeObjectURL(objectUrl);
+        if (document.body.contains(link)) document.body.removeChild(link);
+      }, 1000);
       toast.success('Sosyal paylaşım kartı yüksek kalitede indirildi!');
     } catch (e) {
-      console.error(e);
+      console.error('İndirme hatası:', e);
       toast.error('İndirme sırasında hata oluştu.');
     } finally {
       setIsExporting(false);
@@ -661,13 +752,13 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
   const selectedCharacterRoleBadge = selectedCharacter ? getRoleBadgeStyle(selectedCharacter.role) : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 md:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-2.5 sm:p-5 md:p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
       {/* Gizli Canvas (Arka Plan Çizim Motoru) */}
       <canvas ref={canvasRef} className="hidden pointer-events-none" />
 
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-5xl max-h-[94vh] bg-card border border-border/60 rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95 duration-200"
+        className="w-full max-w-5xl max-h-[calc(100dvh-2rem)] sm:max-h-[92vh] bg-card border border-border/60 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95 duration-200"
       >
         {/* Header */}
         <div className="p-5 sm:p-6 border-b border-border/50 flex items-center justify-between bg-card/60 backdrop-blur-md shrink-0">
@@ -694,7 +785,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         </div>
 
         {/* Gövde: Sol Kontroller & Sağ Canlı Önizleme */}
-        <div className="flex-1 overflow-y-auto grid grid-cols-1 lg:grid-cols-12 gap-6 p-5 sm:p-7">
+        <div className="flex-1 overflow-y-auto grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 sm:p-7 pb-12 sm:pb-7">
           
           {/* SOL: Konfigürasyon Paneli (5 Kolon) */}
           <div className="lg:col-span-5 space-y-5">
@@ -756,7 +847,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                 >
                   {characters.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name} ({c.role})
+                      {c.name} ({getCharacterRoleLabel(c.role)})
                     </option>
                   ))}
                 </select>

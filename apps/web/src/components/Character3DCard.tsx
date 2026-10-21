@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useCallback } from 'react';
-import type { Character } from '@readixon/core';
+import { type Character, getCharacterRoleLabel } from '@readixon/core';
 import { Sparkles, Lock, Zap, Brain, Flame, Heart, Eye, ChevronRight, Share2 } from 'lucide-react';
 
 export interface Character3DCardProps {
@@ -79,7 +79,7 @@ const getRoleBadgeConfig = (rawRole?: string): RoleConfig => {
     };
   }
   return {
-    label: rawRole || 'Karakter',
+    label: getCharacterRoleLabel(rawRole) || 'Karakter',
     color: 'text-white font-black',
     bg: 'bg-slate-700 dark:bg-slate-700 shadow-xs',
     border: 'border-transparent',
@@ -304,7 +304,7 @@ export const Character3DCard: React.FC<Character3DCardProps> = ({
             </h3>
             {isUnlocked && (
               <p className="text-xs text-muted-foreground font-bold truncate mt-0.5">
-                {character.occupation || character.role || 'Evren Karakteri'}
+                {character.occupation || getCharacterRoleLabel(character.role) || 'Evren Karakteri'}
               </p>
             )}
           </div>

@@ -1,22 +1,23 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import type { 
-  Character, 
-  UniverseLocation, 
-  UniverseTimelineEvent, 
-  UniverseGlossaryTerm, 
-  UniverseLore, 
-  UniverseItem, 
-  UniverseOrganization, 
-  UniversePowerSystem, 
-  UniverseRace, 
-  UniverseCreature, 
-  UniverseCulture, 
-  UniverseCanonRule, 
-  UniversePlotThread, 
-  Story, 
-  Series 
+import { 
+  type Character, 
+  type UniverseLocation, 
+  type UniverseTimelineEvent, 
+  type UniverseGlossaryTerm, 
+  type UniverseLore, 
+  type UniverseItem, 
+  type UniverseOrganization, 
+  type UniversePowerSystem, 
+  type UniverseRace, 
+  type UniverseCreature, 
+  type UniverseCulture, 
+  type UniverseCanonRule, 
+  type UniversePlotThread, 
+  type Story, 
+  type Series,
+  getCharacterRoleLabel
 } from '@readixon/core';
 import { 
   Search, 
@@ -183,13 +184,14 @@ export const UniverseSearchDrawer: React.FC<UniverseSearchDrawerProps> = ({
     // 1. Karakterler
     characters.forEach((c) => {
       const isSpoiler = !isAuthorMode && !!c.isSpoiler && (c.spoilerThresholdChapter || 0) > userMaxChapter;
+      const roleLabel = getCharacterRoleLabel(c.role);
       list.push({
         id: c.id,
         category: 'character',
         title: isSpoiler ? `Gizli Karakter (#${c.spoilerThresholdChapter})` : c.name,
-        subtitle: isSpoiler ? 'Henüz keşfedilmemiş karakter' : (c.role || 'Karakter'),
+        subtitle: isSpoiler ? 'Henüz keşfedilmemiş karakter' : (roleLabel || 'Karakter'),
         description: isSpoiler ? 'Bu karakterin kilidi ilgili bölüm okunduğunda açılacaktır.' : (c.coreMotivation || c.readerNotes || c.occupation || ''),
-        badge: isSpoiler ? `🔒 Bölüm #${c.spoilerThresholdChapter}` : c.role,
+        badge: isSpoiler ? `🔒 Bölüm #${c.spoilerThresholdChapter}` : roleLabel,
         isSpoiler,
         spoilerThresholdChapter: c.spoilerThresholdChapter,
         imageUrl: isSpoiler ? undefined : (c.pngGallery?.transparentPngUrl || c.avatarUrl),

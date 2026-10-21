@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import type { 
-  Character, 
-  UniverseLocation, 
-  UniverseItem, 
-  Story 
+import { 
+  type Character, 
+  type UniverseLocation, 
+  type UniverseItem, 
+  type Story,
+  getCharacterRoleLabel
 } from '@readixon/core';
 import { 
   X, 
@@ -200,7 +201,7 @@ export const CharacterReaderModal: React.FC<CharacterReaderModalProps> = ({
             <div className="flex-1 text-center sm:text-left min-w-0">
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-2">
                 <span className="px-3 py-1 rounded-xl bg-primary/20 border border-primary/30 text-primary text-[10px] font-black uppercase tracking-wider">
-                  {character.role || 'Karakter'}
+                  {getCharacterRoleLabel(character.role) || 'Karakter'}
                 </span>
                 {character.gender && (
                   <span className="px-2.5 py-0.5 rounded-lg bg-card/80 border border-border/50 text-muted text-[11px] font-bold">

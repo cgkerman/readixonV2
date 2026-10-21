@@ -141,6 +141,8 @@ export type {
 export {
   UNIVERSE_GENRE_LABELS,
   getUniverseGenreLabel,
+  CHARACTER_ROLE_LABELS,
+  getCharacterRoleLabel,
   LOCATION_TYPE_LABELS,
   CANON_RULE_CATEGORY_LABELS,
   PLOT_THREAD_STATUS_LABELS,

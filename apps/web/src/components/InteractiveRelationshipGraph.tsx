@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import type { Character, CharacterRelationship, UniverseLocation } from '@readixon/core';
+import { type Character, type CharacterRelationship, type UniverseLocation, getCharacterRoleLabel } from '@readixon/core';
 import { 
   Users, 
   Search, 
@@ -1072,7 +1072,7 @@ export function InteractiveRelationshipGraph({
                 </h4>
                 <div className="flex items-center gap-1.5 mt-1">
                   <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300">
-                    {selectedNode.role}
+                    {getCharacterRoleLabel(selectedNode.role)}
                   </span>
                   {selectedNode.occupation && (
                     <span className="text-[11px] text-slate-400 truncate max-w-[140px]">

@@ -158,6 +158,7 @@ import {
   subscribeToAuthorStories,
   getSeriesByAuthorId,
   LOCATION_TYPE_LABELS,
+  getCharacterRoleLabel,
   type Universe, 
   type UniverseGenre, 
   type UniverseVisibility, 
@@ -6358,7 +6359,7 @@ export default function UniverseDetailPage() {
                           {characters
                             .filter((c) => c.id !== selectedCharForDetail.id)
                             .map((c) => (
-                              <option key={c.id} value={c.id}>{c.name} ({c.role})</option>
+                              <option key={c.id} value={c.id}>{c.name} ({getCharacterRoleLabel(c.role)})</option>
                             ))}
                         </select>
                       </div>
@@ -6924,7 +6925,7 @@ export default function UniverseDetailPage() {
                               }`}
                             >
                               <span>{c.name}</span>
-                              <span className="text-[10px] opacity-70">({c.role})</span>
+                              <span className="text-[10px] opacity-70">({getCharacterRoleLabel(c.role)})</span>
                             </button>
                           );
                         })}
