@@ -139,6 +139,8 @@ export type {
 } from './types';
 
 export {
+  UNIVERSE_GENRE_LABELS,
+  getUniverseGenreLabel,
   LOCATION_TYPE_LABELS,
   CANON_RULE_CATEGORY_LABELS,
   PLOT_THREAD_STATUS_LABELS,

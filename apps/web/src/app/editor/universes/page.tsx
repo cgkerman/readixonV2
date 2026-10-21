@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Typography, Button } from '@readixon/ui';
-import { getAllUniverses, generateUniverseSlug, type Universe } from '@readixon/core';
+import { getAllUniverses, generateUniverseSlug, getUniverseGenreLabel, type Universe } from '@readixon/core';
 import { 
   Globe, Search, ExternalLink, LayoutTemplate, 
   BookOpen, Sparkles, Layers, ShieldCheck, Eye 
@@ -174,7 +174,7 @@ export default function EditorUniversesPage() {
                             </div>
                             {u.genre && (
                               <span className="text-[10px] font-bold text-purple-400 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded inline-block mb-1">
-                                {u.genre}
+                                {getUniverseGenreLabel(u.genre)}
                               </span>
                             )}
                             <p className="text-xs text-muted line-clamp-1">

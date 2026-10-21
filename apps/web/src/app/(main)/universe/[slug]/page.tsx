@@ -35,6 +35,7 @@ import {
   generateSeriesSlug,
   getUserReadingProgress,
   useAuthStore,
+  getUniverseGenreLabel,
   type Universe, 
   type Story, 
   type Series,
@@ -653,7 +654,7 @@ export default function PublicUniversePage() {
                 </span>
                 {universe.genre && (
                   <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-card/80 border border-border/60 text-muted backdrop-blur-md">
-                    {universe.genre}
+                    {getUniverseGenreLabel(universe.genre)}
                   </span>
                 )}
               </div>

@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Typography, Button, ConfirmationDialog } from '@readixon/ui';
-import { getAllUniverses, deleteUniverse, generateUniverseSlug, type Universe } from '@readixon/core';
+import { getAllUniverses, deleteUniverse, generateUniverseSlug, getUniverseGenreLabel, type Universe } from '@readixon/core';
 import { 
   Globe, Search, ExternalLink, Trash2, 
   BookOpen, Layers 
@@ -157,7 +157,7 @@ export default function AdminUniversesPage() {
                             </span>
                             {u.genre && (
                               <span className="text-[10px] text-purple-400 block truncate">
-                                {u.genre}
+                                {getUniverseGenreLabel(u.genre)}
                               </span>
                             )}
                           </div>

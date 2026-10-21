@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { getUniverseById, extractUniverseIdFromSlug, generateUniverseSlug, getUserProfile } from '@readixon/core';
+import { getUniverseById, extractUniverseIdFromSlug, generateUniverseSlug, getUserProfile, getUniverseGenreLabel } from '@readixon/core';
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const universeId = extractUniverseIdFromSlug(params.slug);
@@ -148,7 +148,7 @@ export default async function UniverseLayout({
           <p>
             Yaratıcı: <a href={`https://readixon.com/profile/@${authorUsername}`}>{authorName}</a>
           </p>
-          {universe.genre && <p>Tür: {universe.genre}</p>}
+          {universe.genre && <p>Tür: {getUniverseGenreLabel(universe.genre)}</p>}
           {universe.tags && universe.tags.length > 0 && (
             <p>Etiketler: {universe.tags.join(', ')}</p>
           )}

@@ -32,7 +32,8 @@ import {
   getUniverseById,
   generateSeriesSlug,
   generateUniverseSlug,
-  generateStorySlug
+  generateStorySlug,
+  getUniverseGenreLabel
 } from '@readixon/core';
 import type { Story, User, Chapter, Review, Character, EditorialReview, ReadingProgress, Series, Universe } from '@readixon/core';
 import { 
@@ -1123,7 +1124,7 @@ export default function StoryDetailPage() {
                           </span>
                           {universe.genre && (
                             <span className="text-[11px] text-muted font-semibold capitalize truncate">
-                              • {universe.genre}
+                              • {getUniverseGenreLabel(universe.genre)}
                             </span>
                           )}
                         </div>

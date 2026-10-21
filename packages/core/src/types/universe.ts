@@ -16,6 +16,27 @@ export type UniverseGenre =
   | 'hybrid'
   | 'custom';
 
+export const UNIVERSE_GENRE_LABELS: Record<UniverseGenre, string> = {
+  fantasy: 'Fantastik',
+  'sci-fi': 'Bilimkurgu',
+  real_world: 'Gerçek Dünya',
+  alternate_history: 'Alternatif Tarih',
+  dystopia: 'Distopya',
+  utopia: 'Ütopya',
+  contemporary: 'Çağdaş',
+  historical: 'Tarihi Kurgu',
+  mythological: 'Mitolojik',
+  post_apocalyptic: 'Kıyamet Sonrası',
+  hybrid: 'Hibrit',
+  custom: 'Özel Kurgu',
+};
+
+export const getUniverseGenreLabel = (genre?: string): string => {
+  if (!genre) return 'Kurgusal Evren';
+  const normalized = genre.toLowerCase().trim() as UniverseGenre;
+  return UNIVERSE_GENRE_LABELS[normalized] || genre;
+};
+
 export interface UniverseStats {
   characterCount: number;
   locationCount: number;
