@@ -5,8 +5,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { RefreshCw, Check } from 'lucide-react';
 
-const PULL_THRESHOLD = 50; // Yenilemenin tetikleneceği çekme mesafesi (px)
-const MAX_PULL = 82; // Maksimum esneme mesafesi (px)
+const PULL_THRESHOLD = 75; // Yenilemenin tetikleneceği çekme mesafesi (px) - doğal ve dengeli
+const MAX_PULL = 112; // Maksimum esneme mesafesi (px)
 
 export function MobilePullToRefresh() {
   const pathname = usePathname();
@@ -23,17 +23,20 @@ export function MobilePullToRefresh() {
   const pullDistanceRef = useRef<number>(0);
   const isPullingRef = useRef<boolean>(false);
   const isRefreshingRef = useRef<boolean>(false);
+  const canPullRef = useRef<boolean>(false); // SADECE en tepeden başlayan jestlere izin veren kritik kilit
   const hasTriggeredHapticRef = useRef<boolean>(false);
 
-  // Okuma sayfasında veya modal açıkken devre dışı bırak
+  // Okuma sayfasında veya stüdyo editöründe kullanıcı yazarken devre dışı bırak
   const isReaderPage = pathname?.startsWith('/read/');
+  const isEditorPage = pathname?.startsWith('/editor') || pathname?.includes('/chapters/');
+  const isDisabledPage = isReaderPage || isEditorPage;
 
   const handleRefresh = useCallback(async () => {
     if (isRefreshingRef.current) return;
     isRefreshingRef.current = true;
     setIsRefreshing(true);
-    pullDistanceRef.current = 48;
-    setPullDistance(48); // Yenileme sırasında sabit duracağı yükseklik
+    pullDistanceRef.current = 52;
+    setPullDistance(52); // Yenileme sırasında sabit duracağı yükseklik
 
     // Haptik titreşim
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
@@ -80,18 +83,46 @@ export function MobilePullToRefresh() {
   }, [queryClient, router]);
 
   useEffect(() => {
-    if (isReaderPage) return;
+    if (isDisabledPage) return;
 
     const getScrollY = () =>
       window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
 
+    // İç kaydırılabilir bir kapta (çekmece, modal, mini liste) mıyız denetimi
+    const isInsideScrollable = (target: HTMLElement | null): boolean => {
+      let el = target;
+      while (el && el !== document.body && el !== document.documentElement) {
+        if (el.scrollHeight > el.clientHeight + 4) {
+          const style = window.getComputedStyle(el);
+          const overflowY = style.overflowY;
+          if (overflowY === 'auto' || overflowY === 'scroll') {
+            if (el.scrollTop > 1) return true;
+          }
+        }
+        el = el.parentElement;
+      }
+      return false;
+    };
+
     const handleTouchStart = (e: TouchEvent) => {
-      // Zaten yenileniyorsa, modal açıksa (body overflow hidden) veya sayfa en tepede değilse dinleme
+      // Başlangıçta kilidi kesinlikle kapalı tut
+      canPullRef.current = false;
+      isPullingRef.current = false;
+      pullDistanceRef.current = 0;
+      hasTriggeredHapticRef.current = false;
+
+      // Zaten yenileniyorsa veya modal açıksa (body overflow hidden) dinleme
       if (
         isRefreshingRef.current ||
-        getScrollY() > 5 ||
         document.body.style.overflow === 'hidden'
       ) {
+        return;
+      }
+
+      // Sayfa en tepede DEĞİLSE (kullanıcı aşağı kaydırmışsa):
+      // Bu dokunuş normal bir yukarı kaydırma hareketidir; ASLA pull-to-refresh'e dönüşemez!
+      const currentScrollY = getScrollY();
+      if (currentScrollY > 1) {
         return;
       }
 
@@ -105,20 +136,28 @@ export function MobilePullToRefresh() {
         return;
       }
 
+      // İç kaydırılabilir bir konteynerdeyse (örn: açık modal veya çekmece içi liste)
+      if (isInsideScrollable(target)) {
+        return;
+      }
+
+      // Tüm koşullar sağlandı: Kullanıcı tam olarak sayfanın en tepesinde ve geçerli bir alana dokundu
       startYRef.current = e.touches[0].clientY;
       startXRef.current = e.touches[0].clientX;
-      isPullingRef.current = false;
-      pullDistanceRef.current = 0;
-      hasTriggeredHapticRef.current = false;
+      canPullRef.current = true;
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      const scrollY = getScrollY();
-      if (
-        isRefreshingRef.current ||
-        scrollY > 5 ||
-        document.body.style.overflow === 'hidden'
-      ) {
+      // Eğer dokunuş en tepeden başlamadıysa (örneğin aşağıdan yukarı kaydırılıyorsa),
+      // BROWSER'IN NATIVE SCROLL'UNA ASLA MÜDAHALE ETME!
+      if (!canPullRef.current || isRefreshingRef.current) {
+        return;
+      }
+
+      const currentScrollY = getScrollY();
+      // Eğer hareket sırasında sayfa bir şekilde aşağı kaymışsa iptal et
+      if (currentScrollY > 1) {
+        canPullRef.current = false;
         if (isPullingRef.current) {
           isPullingRef.current = false;
           setIsPulling(false);
@@ -133,9 +172,21 @@ export function MobilePullToRefresh() {
       const diffY = currentY - startYRef.current;
       const diffX = currentX - startXRef.current;
 
-      // Yalnızca aşağı doğru ve belirgin dikey kaydırmalarda tetikle (yatay kaydırmayı engelleme)
+      // Kullanıcı yukarı itiyorsa (diffY <= 0)
+      if (diffY <= 0) {
+        if (isPullingRef.current) {
+          isPullingRef.current = false;
+          setIsPulling(false);
+          pullDistanceRef.current = 0;
+          setPullDistance(0);
+        }
+        return;
+      }
+
+      // Yalnızca aşağı doğru ve belirgin dikey kaydırmalarda tetikle (yatay kaydırma ve titreşimleri ele)
       if (!isPullingRef.current) {
-        if (diffY > 6 && diffY > Math.abs(diffX) * 1.2 && scrollY <= 0) {
+        // En az 16px dikey çekilmeli ve dikey hareket yatayın en az 1.8 katı olmalı
+        if (diffY > 16 && diffY > Math.abs(diffX) * 1.8) {
           isPullingRef.current = true;
           setIsPulling(true);
         } else {
@@ -144,11 +195,16 @@ export function MobilePullToRefresh() {
       }
 
       if (isPullingRef.current && diffY > 0) {
-        // Esneme direnci formülü
+        // Doğal yaylanma direnci (rubber-band)
+        const friction = 0.42;
+        const rawDistance = diffY * friction;
         const resistanceDistance = Math.min(
           MAX_PULL,
-          diffY * 0.48
+          rawDistance <= PULL_THRESHOLD
+            ? rawDistance
+            : PULL_THRESHOLD + (rawDistance - PULL_THRESHOLD) * 0.4
         );
+
         pullDistanceRef.current = resistanceDistance;
         setPullDistance(resistanceDistance);
 
@@ -157,22 +213,29 @@ export function MobilePullToRefresh() {
           hasTriggeredHapticRef.current = true;
           if (typeof window !== 'undefined' && 'vibrate' in navigator) {
             try {
-              navigator.vibrate(12);
+              navigator.vibrate(15);
             } catch (err) {}
           }
         } else if (resistanceDistance < PULL_THRESHOLD) {
           hasTriggeredHapticRef.current = false;
         }
 
-        // Sayfanın garip zıplamasını önle
-        if (e.cancelable && diffY > 10) {
+        // Sadece çekme eylemi kesinleştiğinde ve belirgin mesafe aşıldığında varsayılanı engelle
+        if (e.cancelable && diffY > 20) {
           e.preventDefault();
         }
       }
     };
 
     const handleTouchEnd = () => {
-      if (!isPullingRef.current) return;
+      canPullRef.current = false;
+
+      if (!isPullingRef.current) {
+        pullDistanceRef.current = 0;
+        setPullDistance(0);
+        return;
+      }
+
       isPullingRef.current = false;
       setIsPulling(false);
 
@@ -197,14 +260,14 @@ export function MobilePullToRefresh() {
       window.removeEventListener('touchend', handleTouchEnd);
       window.removeEventListener('touchcancel', handleTouchEnd);
     };
-  }, [isReaderPage, handleRefresh]);
+  }, [isDisabledPage, handleRefresh]);
 
-  if (isReaderPage) return null;
+  if (isDisabledPage) return null;
 
   // Görünürlük ve dönüş açıları
   const isReady = pullDistance >= PULL_THRESHOLD;
   const rotationDegrees = Math.min(360, (pullDistance / PULL_THRESHOLD) * 360);
-  const opacity = Math.min(1, Math.max(0, (pullDistance - 8) / 30));
+  const opacity = Math.min(1, Math.max(0, (pullDistance - 15) / 35));
 
   // Eğer çekilmiyorsa ve yenilenmiyorsa render etme
   if (pullDistance === 0 && !isRefreshing) return null;
@@ -259,3 +322,4 @@ export function MobilePullToRefresh() {
     </div>
   );
 }
+
