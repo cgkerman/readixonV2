@@ -136,6 +136,14 @@ export type {
   InlineUniverseEntity,
   UniverseMemberRole,
   UniverseMember,
+  DivinationType,
+  UniverseDivinationCard,
+  UniverseDivinationSystem,
+  ProphecyStatus,
+  UniverseProphecy,
+  SpellTier,
+  UniverseSpell,
+  UniverseRitual,
 } from './types';
 
 export {
@@ -147,6 +155,9 @@ export {
   CANON_RULE_CATEGORY_LABELS,
   PLOT_THREAD_STATUS_LABELS,
   PLOT_THREAD_IMPORTANCE_LABELS,
+  DIVINATION_TYPE_LABELS,
+  PROPHECY_STATUS_LABELS,
+  SPELL_TIER_LABELS,
   UNIVERSE_MEMBER_ROLE_CONFIG,
   getUserUniverseRole,
   canManageUniverseMembers,
@@ -223,6 +234,7 @@ export * from './services/popupService';
 export * from './services/readingListService';
 export * from './services/legalService';
 export * from './services/readingAnalyticsService';
+export * from './services/platformWordStatsService';
 export * from './utils/imageUtils';
 export * from './utils/cropImageUtils';
 export * from './utils/audioUtils';

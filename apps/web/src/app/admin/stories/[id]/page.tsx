@@ -2,11 +2,12 @@
 import React, { useEffect, useState } from 'react';
 import { Typography, Button } from '@readixon/ui';
 import { getStoryById, fetchChapters, getUserProfile, formatReadingHours, Story, Chapter, User } from '@readixon/core';
-import { ArrowLeft, BookOpen, Clock, Heart, Eye, List, Hash, Download } from 'lucide-react';
+import { ArrowLeft, BookOpen, Clock, Heart, Eye, List, Hash, Download, Sparkles, Share2 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ChapterViewerModal } from '@/components/ChapterViewerModal';
 import { ReadingAnalyticsSection } from '@/components/ReadingAnalyticsSection';
+import { AdminStoryShareModal } from '@/components/admin/AdminStoryShareModal';
 
 export default function AdminStoryDetailPage() {
   const { id } = useParams() as { id: string };
@@ -16,6 +17,7 @@ export default function AdminStoryDetailPage() {
   const [loading, setLoading] = useState(true);
   const [selectedChapterIndex, setSelectedChapterIndex] = useState<number | null>(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const handleDownload = async (url: string, filename: string) => {
     try {
@@ -99,35 +101,56 @@ export default function AdminStoryDetailPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      <Link href="/admin/stories">
-        <Button variant="ghost" className="text-muted hover:text-text -ml-4">
-          <ArrowLeft size={18} className="mr-2" /> Hikayelere Dön
-        </Button>
-      </Link>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <Link href="/admin/stories">
+          <Button variant="ghost" className="text-muted hover:text-text -ml-4">
+            <ArrowLeft size={18} className="mr-2" /> Hikayelere Dön
+          </Button>
+        </Link>
+
+        <button
+          type="button"
+          onClick={() => setIsShareModalOpen(true)}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs sm:text-sm shadow-md shadow-purple-600/20 active:scale-98 transition-all cursor-pointer"
+        >
+          <Sparkles size={16} />
+          <span>Sosyal Paylaşım Stüdyosu</span>
+        </button>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Sol Kolon: Temel Bilgiler */}
         <div className="lg:col-span-2 space-y-8">
           <div className="flex flex-col sm:flex-row gap-6">
-            <div className="w-32 h-48 sm:w-48 sm:h-72 rounded-xl bg-card overflow-hidden shrink-0 border border-border/50 shadow-xl relative group">
-              {story.coverImage ? (
-                <>
-                  <img src={story.coverImage} alt={story.title} className="w-full h-full object-cover transition-opacity group-hover:opacity-80" />
-                  <button
-                    onClick={() => handleDownload(story.coverImage!, `${story.title}-kapak.jpg`)}
-                    className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Kapağı İndir"
-                  >
-                    <div className="bg-background/80 p-3 rounded-full text-foreground hover:bg-background hover:scale-110 transition-all shadow-lg backdrop-blur-sm">
-                      <Download size={24} />
-                    </div>
-                  </button>
-                </>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted bg-card/40">
-                  <BookOpen size={40} />
-                </div>
-              )}
+            <div className="flex flex-col items-center shrink-0 w-32 sm:w-48 gap-2.5">
+              <div className="w-32 h-48 sm:w-48 sm:h-72 rounded-xl bg-card overflow-hidden shrink-0 border border-border/50 shadow-xl relative group w-full">
+                {story.coverImage ? (
+                  <>
+                    <img src={story.coverImage} alt={story.title} className="w-full h-full object-cover transition-opacity group-hover:opacity-80" />
+                    <button
+                      onClick={() => handleDownload(story.coverImage!, `${story.title}-kapak.jpg`)}
+                      className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Kapağı İndir"
+                    >
+                      <div className="bg-background/80 p-3 rounded-full text-foreground hover:bg-background hover:scale-110 transition-all shadow-lg backdrop-blur-sm">
+                        <Download size={24} />
+                      </div>
+                    </button>
+                  </>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-muted bg-card/40">
+                    <BookOpen size={40} />
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsShareModalOpen(true)}
+                className="w-full py-2 px-3 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-2xs cursor-pointer"
+              >
+                <Sparkles size={14} />
+                <span>Tanıtım Kartı Üret</span>
+              </button>
             </div>
             
             <div className="flex-1 space-y-4">
@@ -364,6 +387,16 @@ export default function AdminStoryDetailPage() {
         hasPrev={selectedChapterIndex !== null && selectedChapterIndex > 0}
         hasNext={selectedChapterIndex !== null && selectedChapterIndex < chapters.length - 1}
       />
+
+      {/* Readixon Kurumsal Paylaşım Modalı */}
+      {isShareModalOpen && (
+        <AdminStoryShareModal
+          story={story}
+          author={author}
+          chapters={chapters}
+          onClose={() => setIsShareModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

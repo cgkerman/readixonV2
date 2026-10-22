@@ -113,12 +113,14 @@ body {
   
   /* Kaydırma çubuğunu gizleme sınıfı */
   .scrollbar-hide,
-  .scrollbar-none {
+  .scrollbar-none,
+  .no-scrollbar {
     -ms-overflow-style: none; /* IE and Edge */
     scrollbar-width: none; /* Firefox */
   }
   .scrollbar-hide::-webkit-scrollbar,
-  .scrollbar-none::-webkit-scrollbar {
+  .scrollbar-none::-webkit-scrollbar,
+  .no-scrollbar::-webkit-scrollbar {
     display: none; /* Chrome, Safari and Opera */
   }
 

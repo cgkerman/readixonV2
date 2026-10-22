@@ -126,8 +126,13 @@ export default function ChapterEditorPage() {
         const storyData = await getStoryById(storyId);
         if (storyData) {
           if (storyData.status === 'draft') {
-            await updateStory(storyId, { status: 'ongoing' });
-            toast.success("Hikaye taslaktan çıkartılıp 'Devam Ediyor' olarak işaretlendi.");
+            const isShort = storyData.format === 'short_story';
+            await updateStory(storyId, { status: isShort ? 'completed' : 'ongoing' });
+            toast.success(
+              isShort
+                ? "Kısa hikaye yayına alındı ve 'Tamamlandı' olarak işaretlendi."
+                : "Hikaye taslaktan çıkartılıp 'Devam Ediyor' olarak işaretlendi."
+            );
           }
           const followerIds = await getUserFollowerIds(userProfile.uid);
           const notificationsPromises = followerIds.map(fId =>

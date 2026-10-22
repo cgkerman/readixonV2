@@ -108,6 +108,7 @@ export interface StoryStats {
   endingCount?: number;  // İnteraktif hikayeler için toplam son sayısı
   choiceCount?: number;  // İnteraktif hikayeler için toplam karar noktası sayısı
   totalReadTimeSeconds?: number; // Hikayede geçirilen toplam aktif okuma süresi (saniye)
+  totalWords?: number;           // Hikayedeki tüm yayınlanmış bölümlerin toplam kelime sayısı
 }
 
 export interface Contributor {

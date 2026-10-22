@@ -74,12 +74,17 @@ export const countWordsInBlocks = (blocks?: any[]): number => {
   if (!blocks || !Array.isArray(blocks)) return 0;
   let wordCount = 0;
   for (const block of blocks) {
-    if (block && typeof block.content === 'string') {
-      // HTML etiketlerini ve özel karakterleri temizle
-      const plainText = block.content.replace(/<[^>]*>/g, ' ').trim();
-      if (plainText) {
-        const words = plainText.split(/\s+/).filter(Boolean);
-        wordCount += words.length;
+    if (block) {
+      const rawText = typeof block.text === 'string'
+        ? block.text
+        : (typeof block.content === 'string' ? block.content : '');
+      if (rawText) {
+        // HTML etiketlerini ve özel karakterleri temizle
+        const plainText = rawText.replace(/<[^>]*>/g, ' ').trim();
+        if (plainText) {
+          const words = plainText.split(/\s+/).filter(Boolean);
+          wordCount += words.length;
+        }
       }
     }
   }

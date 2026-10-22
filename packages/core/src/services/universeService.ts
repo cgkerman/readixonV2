@@ -36,7 +36,11 @@ import type {
   UniverseCanonRule,
   UniversePlotThread,
   UniverseMember,
-  UniverseMemberRole
+  UniverseMemberRole,
+  UniverseDivinationSystem,
+  UniverseProphecy,
+  UniverseSpell,
+  UniverseRitual
 } from '../types';
 import { generateUniverseSlug, extractUniverseIdFromSlug } from '../utils/slug';
 import { getUserProfile } from './userService';
@@ -1904,6 +1908,287 @@ export const addPlotThreadClue = async (
     updatedAt: serverTimestamp(),
   }));
 };
+
+// ─────────────────────────────────────────────────────────────────
+// Mistik Sanatlar: Fal & Kehanet Sistemleri (Divination Systems)
+// ─────────────────────────────────────────────────────────────────
+
+export const getUniverseDivinations = async (universeId: string): Promise<UniverseDivinationSystem[]> => {
+  const colRef = collection(db, 'universes', universeId, 'divinations');
+  const q = query(colRef, orderBy('createdAt', 'desc'));
+  const snap = await getDocs(q);
+
+  const list: UniverseDivinationSystem[] = [];
+  snap.forEach((d) => list.push(d.data() as UniverseDivinationSystem));
+  return list;
+};
+
+export const createUniverseDivination = async (
+  universeId: string,
+  data: Partial<UniverseDivinationSystem>
+): Promise<string> => {
+  const colRef = collection(db, 'universes', universeId, 'divinations');
+  const newRef = doc(colRef);
+  const id = newRef.id;
+
+  const item: Record<string, any> = {
+    id,
+    universeId,
+    name: (data.name || 'İsimsiz Fal / Kehanet Sistemi').trim(),
+    type: data.type || 'tarot_cards',
+    description: data.description || '',
+    toolsAndMediums: data.toolsAndMediums || '',
+    practitioners: data.practitioners || '',
+    accuracyAndReliability: data.accuracyAndReliability || '',
+    costsAndDangers: data.costsAndDangers || '',
+    cardsOrSymbols: data.cardsOrSymbols || [],
+    authorNotes: data.authorNotes || '',
+    imageUrl: data.imageUrl || '',
+    isSpoiler: data.isSpoiler || false,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+
+  if (data.spoilerThresholdChapter !== undefined) {
+    item.spoilerThresholdChapter = data.spoilerThresholdChapter;
+  }
+
+  await setDoc(newRef, cleanFirestoreData(item));
+  return id;
+};
+
+export const updateUniverseDivination = async (
+  universeId: string,
+  divinationId: string,
+  data: Partial<UniverseDivinationSystem>
+): Promise<void> => {
+  await updateDoc(
+    doc(db, 'universes', universeId, 'divinations', divinationId),
+    cleanFirestoreData({
+      ...data,
+      updatedAt: serverTimestamp(),
+    })
+  );
+};
+
+export const deleteUniverseDivination = async (
+  universeId: string,
+  divinationId: string
+): Promise<void> => {
+  await deleteDoc(doc(db, 'universes', universeId, 'divinations', divinationId));
+};
+
+// ─────────────────────────────────────────────────────────────────
+// Mistik Sanatlar: Büyük Kehanetler (Prophecies)
+// ─────────────────────────────────────────────────────────────────
+
+export const getUniverseProphecies = async (universeId: string): Promise<UniverseProphecy[]> => {
+  const colRef = collection(db, 'universes', universeId, 'prophecies');
+  const q = query(colRef, orderBy('createdAt', 'desc'));
+  const snap = await getDocs(q);
+
+  const list: UniverseProphecy[] = [];
+  snap.forEach((d) => list.push(d.data() as UniverseProphecy));
+  return list;
+};
+
+export const createUniverseProphecy = async (
+  universeId: string,
+  data: Partial<UniverseProphecy>
+): Promise<string> => {
+  const colRef = collection(db, 'universes', universeId, 'prophecies');
+  const newRef = doc(colRef);
+  const id = newRef.id;
+
+  const item: Record<string, any> = {
+    id,
+    universeId,
+    title: (data.title || 'İsimsiz Kehanet').trim(),
+    prophecyText: data.prophecyText || '',
+    divinationSystemId: data.divinationSystemId || '',
+    divinationSystemName: data.divinationSystemName || '',
+    seerName: data.seerName || '',
+    targetSubject: data.targetSubject || '',
+    status: data.status || 'pending',
+    interpretation: data.interpretation || '',
+    fulfillmentDetails: data.fulfillmentDetails || '',
+    relatedCharacterIds: data.relatedCharacterIds || [],
+    relatedLocationIds: data.relatedLocationIds || [],
+    authorNotes: data.authorNotes || '',
+    isSpoiler: data.isSpoiler || false,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+
+  if (data.spoilerThresholdChapter !== undefined) {
+    item.spoilerThresholdChapter = data.spoilerThresholdChapter;
+  }
+
+  await setDoc(newRef, cleanFirestoreData(item));
+  return id;
+};
+
+export const updateUniverseProphecy = async (
+  universeId: string,
+  prophecyId: string,
+  data: Partial<UniverseProphecy>
+): Promise<void> => {
+  await updateDoc(
+    doc(db, 'universes', universeId, 'prophecies', prophecyId),
+    cleanFirestoreData({
+      ...data,
+      updatedAt: serverTimestamp(),
+    })
+  );
+};
+
+export const deleteUniverseProphecy = async (
+  universeId: string,
+  prophecyId: string
+): Promise<void> => {
+  await deleteDoc(doc(db, 'universes', universeId, 'prophecies', prophecyId));
+};
+
+// ─────────────────────────────────────────────────────────────────
+// Mistik Sanatlar: Büyü Kitabı (Grimoire / Spells)
+// ─────────────────────────────────────────────────────────────────
+
+export const getUniverseSpells = async (universeId: string): Promise<UniverseSpell[]> => {
+  const colRef = collection(db, 'universes', universeId, 'spells');
+  const q = query(colRef, orderBy('createdAt', 'desc'));
+  const snap = await getDocs(q);
+
+  const list: UniverseSpell[] = [];
+  snap.forEach((d) => list.push(d.data() as UniverseSpell));
+  return list;
+};
+
+export const createUniverseSpell = async (
+  universeId: string,
+  data: Partial<UniverseSpell>
+): Promise<string> => {
+  const colRef = collection(db, 'universes', universeId, 'spells');
+  const newRef = doc(colRef);
+  const id = newRef.id;
+
+  const item: Record<string, any> = {
+    id,
+    universeId,
+    name: (data.name || 'İsimsiz Büyü').trim(),
+    school: data.school || 'Elemental',
+    tier: data.tier || 'novice',
+    incantation: data.incantation || '',
+    somaticGesture: data.somaticGesture || '',
+    componentsAndMaterials: data.componentsAndMaterials || '',
+    effects: data.effects || '',
+    castingTime: data.castingTime || '',
+    costsAndBackfire: data.costsAndBackfire || '',
+    counterMagic: data.counterMagic || '',
+    powerSystemId: data.powerSystemId || '',
+    authorNotes: data.authorNotes || '',
+    imageUrl: data.imageUrl || '',
+    isSpoiler: data.isSpoiler || false,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+
+  if (data.spoilerThresholdChapter !== undefined) {
+    item.spoilerThresholdChapter = data.spoilerThresholdChapter;
+  }
+
+  await setDoc(newRef, cleanFirestoreData(item));
+  return id;
+};
+
+export const updateUniverseSpell = async (
+  universeId: string,
+  spellId: string,
+  data: Partial<UniverseSpell>
+): Promise<void> => {
+  await updateDoc(
+    doc(db, 'universes', universeId, 'spells', spellId),
+    cleanFirestoreData({
+      ...data,
+      updatedAt: serverTimestamp(),
+    })
+  );
+};
+
+export const deleteUniverseSpell = async (
+  universeId: string,
+  spellId: string
+): Promise<void> => {
+  await deleteDoc(doc(db, 'universes', universeId, 'spells', spellId));
+};
+
+// ─────────────────────────────────────────────────────────────────
+// Mistik Sanatlar: Ritüeller, Ayinler & Lanetler (Rituals & Curses)
+// ─────────────────────────────────────────────────────────────────
+
+export const getUniverseRituals = async (universeId: string): Promise<UniverseRitual[]> => {
+  const colRef = collection(db, 'universes', universeId, 'rituals');
+  const q = query(colRef, orderBy('createdAt', 'desc'));
+  const snap = await getDocs(q);
+
+  const list: UniverseRitual[] = [];
+  snap.forEach((d) => list.push(d.data() as UniverseRitual));
+  return list;
+};
+
+export const createUniverseRitual = async (
+  universeId: string,
+  data: Partial<UniverseRitual>
+): Promise<string> => {
+  const colRef = collection(db, 'universes', universeId, 'rituals');
+  const newRef = doc(colRef);
+  const id = newRef.id;
+
+  const item: Record<string, any> = {
+    id,
+    universeId,
+    name: (data.name || 'İsimsiz Ritüel / Lanet').trim(),
+    purpose: data.purpose || '',
+    requiredConditions: data.requiredConditions || '',
+    requiredSacrifices: data.requiredSacrifices || '',
+    participants: data.participants || '',
+    risksAndFailures: data.risksAndFailures || '',
+    permanentEffects: data.permanentEffects || '',
+    authorNotes: data.authorNotes || '',
+    imageUrl: data.imageUrl || '',
+    isSpoiler: data.isSpoiler || false,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+
+  if (data.spoilerThresholdChapter !== undefined) {
+    item.spoilerThresholdChapter = data.spoilerThresholdChapter;
+  }
+
+  await setDoc(newRef, cleanFirestoreData(item));
+  return id;
+};
+
+export const updateUniverseRitual = async (
+  universeId: string,
+  ritualId: string,
+  data: Partial<UniverseRitual>
+): Promise<void> => {
+  await updateDoc(
+    doc(db, 'universes', universeId, 'rituals', ritualId),
+    cleanFirestoreData({
+      ...data,
+      updatedAt: serverTimestamp(),
+    })
+  );
+};
+
+export const deleteUniverseRitual = async (
+  universeId: string,
+  ritualId: string
+): Promise<void> => {
+  await deleteDoc(doc(db, 'universes', universeId, 'rituals', ritualId));
+};
+
 
 
 

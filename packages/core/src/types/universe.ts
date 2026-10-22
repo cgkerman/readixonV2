@@ -889,6 +889,153 @@ export const UNIVERSE_MEMBER_ROLE_CONFIG: Record<
   },
 };
 
+// ─────────────────────────────────────────────────────────────────
+// Mistik Sanatlar & Kehanet (Mystic Arts, Divination, Spells & Rituals)
+// ─────────────────────────────────────────────────────────────────
+
+export type DivinationType =
+  | 'tarot_cards'      // Kart / Tarot / Kadim Deste
+  | 'runes'            // Rün / Kemik / Taş Atma
+  | 'astrology'        // Yıldızname & Göksel Çarklar
+  | 'elemental'        // Ateş / Duman / Su / Çay-Kahve / Kristal Küre
+  | 'dreams_visions'   // Durugörü, Trans & Rüyalar
+  | 'omens_portents'   // Alametler & Göksel İşaretler
+  | 'other';
+
+export const DIVINATION_TYPE_LABELS: Record<DivinationType, { label: string; icon: string }> = {
+  tarot_cards: { label: 'Tarot & Kadim Deste', icon: '🎴' },
+  runes: { label: 'Rün & Kemik / Taş Atma', icon: 'ᚱ' },
+  astrology: { label: 'Yıldızname & Astroloji', icon: '✨' },
+  elemental: { label: 'Elementel (Su/Ateş/Duman/Ayna)', icon: '🔮' },
+  dreams_visions: { label: 'Durugörü & Rüyalar', icon: '👁️' },
+  omens_portents: { label: 'Alametler & Göksel İşaretler', icon: '☄️' },
+  other: { label: 'Diğer Mistik Yöntem', icon: '🕯️' },
+};
+
+export interface UniverseDivinationCard {
+  id: string;
+  name: string;                         // Kart / Sembol Adı (Örn: "Ölüm Meleği", "Uçurum Rünü", "Kanlı Şafak")
+  meaning: string;                      // Düz Anlamı / Ana Mesaj
+  reversedMeaning?: string;             // Ters Anlamı / Gölge Mesajı (varsa)
+  prophecyText?: string;                // Fal çekildiğinde okuyucuya fısıldanan söz / kehanet
+  elementOrSuit?: string;               // Element veya Takım (Kılıçlar, Ateş, Kupa, Ruh vb.)
+  symbolIcon?: string;                  // Sembol / Emoji veya İkon
+  imageUrl?: string;                    // Kartın özel illüstrasyonu
+}
+
+export interface UniverseDivinationSystem {
+  id: string;
+  universeId: string;
+  name: string;                         // Örn: "Yüksek Divan Tarotu", "Kuzey Kemik Falı", "Ay Aynası Kehaneti"
+  type: DivinationType;
+  description: string;                  // Yöntemin açıklaması, kökeni ve felsefesi
+  toolsAndMediums?: string;             // Kullanılan araçlar (78 kartlık kemik deste, kutsal su kasesi vb.)
+  practitioners?: string;               // Kimler bakabilir? (Kahinler, cadılar, herkes?)
+  accuracyAndReliability?: string;      // Doğruluk oranı & Kaderin değişebilirliği
+  costsAndDangers?: string;             // Bedeli, tehlikeleri (Körlük, akıl yitimi, lanet vb.)
+  cardsOrSymbols?: UniverseDivinationCard[]; // Tanımlı kartlar veya rünler (Okuyucu falı için kullanılır!)
+  authorNotes?: string;
+  imageUrl?: string;
+  
+  isSpoiler?: boolean;
+  spoilerThresholdChapter?: number;
+  
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export type ProphecyStatus = 
+  | 'pending'          // Gerçekleşmesi Bekleniyor
+  | 'fulfilled'        // Gerçekleşti
+  | 'misinterpreted'  // Yanlış Yorumlandı
+  | 'broken'           // Kader Kırıldı / Engellendi
+  | 'in_progress';     // Gerçekleşme Sürecinde
+
+export const PROPHECY_STATUS_LABELS: Record<ProphecyStatus, { label: string; color: string }> = {
+  pending: { label: 'Bekleniyor', color: 'text-amber-700 dark:text-amber-400 bg-amber-500/10 border-amber-500/20' },
+  fulfilled: { label: 'Gerçekleşti', color: 'text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
+  misinterpreted: { label: 'Yanlış Yorumlandı', color: 'text-purple-700 dark:text-purple-400 bg-purple-500/10 border-purple-500/20' },
+  broken: { label: 'Kader Kırıldı', color: 'text-rose-700 dark:text-rose-400 bg-rose-500/10 border-rose-500/20' },
+  in_progress: { label: 'Süreçte', color: 'text-blue-700 dark:text-blue-400 bg-blue-500/10 border-blue-500/20' },
+};
+
+export interface UniverseProphecy {
+  id: string;
+  universeId: string;
+  title: string;                         // Örn: "Kızıl Gecenin Çöküşü", "İkiz Hükümdarların Sonu"
+  prophecyText: string;                  // Kehanetin kendisi (şiir, mısra veya söz)
+  divinationSystemId?: string;           // Bağlı olduğu fal/kehanet sistemi (opsiyonel)
+  divinationSystemName?: string;
+  seerName?: string;                     // Söyleyen Kahin / Karakter
+  targetSubject?: string;                // Kime / Neye dair (Örn: "Veliaht Prens", "Güneş Krallığı")
+  status: ProphecyStatus;
+  interpretation?: string;               // Toplumun veya yazarın yorumu
+  fulfillmentDetails?: string;           // Nasıl gerçekleşti veya ne bekleniyor?
+  relatedCharacterIds?: string[];
+  relatedLocationIds?: string[];
+  authorNotes?: string;
+  
+  isSpoiler?: boolean;
+  spoilerThresholdChapter?: number;
+  
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export type SpellTier = 'novice' | 'adept' | 'master' | 'ancient' | 'forbidden';
+
+export const SPELL_TIER_LABELS: Record<SpellTier, { label: string; color: string }> = {
+  novice: { label: 'Çırak / Temel', color: 'text-blue-700 dark:text-blue-400 bg-blue-500/10 border-blue-500/20' },
+  adept: { label: 'Kıdemli / İleri', color: 'text-cyan-700 dark:text-cyan-400 bg-cyan-500/10 border-cyan-500/20' },
+  master: { label: 'Usta / Yüksek Büyü', color: 'text-purple-700 dark:text-purple-400 bg-purple-500/10 border-purple-500/20' },
+  ancient: { label: 'Kadim / Kayıp Sanat', color: 'text-amber-700 dark:text-amber-400 bg-amber-500/10 border-amber-500/20' },
+  forbidden: { label: 'Yasaklı / Tabu', color: 'text-rose-700 dark:text-rose-400 bg-rose-500/10 border-rose-500/20' },
+};
+
+export interface UniverseSpell {
+  id: string;
+  universeId: string;
+  name: string;                         // Örn: "Ruh Yangını", "Gölge Adımı", "Astra Yansıma"
+  school: string;                       // Okul / Element (Nekromansi, Elemental, İllüzyon, Şifa, Zaman vb.)
+  tier: SpellTier;                      // Kademe
+  incantation?: string;                 // Sözsel Büyü Sözleri (Tekerleme, Antik Dil)
+  somaticGesture?: string;              // Jest / El Mührü / Asa Hareketi
+  componentsAndMaterials?: string;      // Materyaller / Bileşenler
+  effects: string;                      // Etkisi ve Menzili
+  castingTime?: string;                 // Döküm Süresi (Anlık, 5 dakika, ayin gerektirir)
+  costsAndBackfire?: string;            // Bedeli & Geri Tepme / Yan Etki
+  counterMagic?: string;                // Karşı Büyüsü / Zayıflığı
+  powerSystemId?: string;               // Bağlı Güç Sistemi (opsiyonel)
+  authorNotes?: string;
+  imageUrl?: string;
+  
+  isSpoiler?: boolean;
+  spoilerThresholdChapter?: number;
+  
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface UniverseRitual {
+  id: string;
+  universeId: string;
+  name: string;                         // Örn: "Kan Bağı Mührü", "Dolunay Diriltme Ayini"
+  purpose: string;                      // Amacı (Ölü çağırma, taht koruma, lanetleme vb.)
+  requiredConditions: string;           // Gerekli zaman ve mekan koşulları (Tutulma, kutsal kuyu vb.)
+  requiredSacrifices: string;           // Adaklar / Kurbanlar / Nesneler
+  participants?: string;                // Katılımcılar (Tek kişi, meclis, tarikat)
+  risksAndFailures: string;             // Bozulursa ne olur? Riskler ve felaketler
+  permanentEffects?: string;            // Geride bıraktığı kalıcı mühür veya iz
+  authorNotes?: string;
+  imageUrl?: string;
+  
+  isSpoiler?: boolean;
+  spoilerThresholdChapter?: number;
+  
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
 /**
  * Kullanıcının verilen evrendeki rolünü tespit eder
  */

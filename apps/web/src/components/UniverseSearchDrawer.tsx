@@ -15,6 +15,10 @@ import {
   type UniverseCulture, 
   type UniverseCanonRule, 
   type UniversePlotThread, 
+  type UniverseSpell,
+  type UniverseDivinationSystem,
+  type UniverseProphecy,
+  type UniverseRitual,
   type Story, 
   type Series,
   getCharacterRoleLabel
@@ -44,7 +48,11 @@ import {
   CornerDownLeft, 
   ArrowRight,
   SlidersHorizontal,
-  ChevronRight
+  ChevronRight,
+  Compass,
+  Wand2,
+  Flame,
+  Eye
 } from 'lucide-react';
 
 export type SearchCategoryKey = 
@@ -62,6 +70,10 @@ export type SearchCategoryKey =
   | 'culture' 
   | 'canon_rule' 
   | 'plot_thread' 
+  | 'spell'
+  | 'divination'
+  | 'prophecy'
+  | 'ritual'
   | 'story'
   | 'series';
 
@@ -99,6 +111,10 @@ export interface UniverseSearchDrawerProps {
   cultures?: UniverseCulture[];
   canonRules?: UniverseCanonRule[];
   plotThreads?: UniversePlotThread[];
+  spells?: UniverseSpell[];
+  divinations?: UniverseDivinationSystem[];
+  prophecies?: UniverseProphecy[];
+  rituals?: UniverseRitual[];
   stories?: Story[];
   seriesList?: Series[];
   // Yönlendirme ve Hızlı Eylem Geri Çağrımları
@@ -120,6 +136,10 @@ const CATEGORY_META: Record<string, { label: string; icon: React.ElementType; co
   culture: { label: 'Kültür & Din', icon: Landmark, color: 'text-purple-400', bg: 'bg-purple-500/15', border: 'border-purple-500/30' },
   canon_rule: { label: 'Canon Kuralı', icon: Scale, color: 'text-pink-400', bg: 'bg-pink-500/15', border: 'border-pink-500/30' },
   plot_thread: { label: 'Kurgu Düğümü', icon: HelpCircle, color: 'text-orange-400', bg: 'bg-orange-500/15', border: 'border-orange-500/30' },
+  spell: { label: 'Büyü Kitabı', icon: Wand2, color: 'text-amber-400', bg: 'bg-amber-500/15', border: 'border-amber-500/30' },
+  divination: { label: 'Fal & Deste', icon: Compass, color: 'text-purple-400', bg: 'bg-purple-500/15', border: 'border-purple-500/30' },
+  prophecy: { label: 'Kehanet', icon: Eye, color: 'text-indigo-400', bg: 'bg-indigo-500/15', border: 'border-indigo-500/30' },
+  ritual: { label: 'Ritüel / Lanet', icon: Flame, color: 'text-rose-400', bg: 'bg-rose-500/15', border: 'border-rose-500/30' },
   story: { label: 'Bağlı Eser', icon: BookOpen, color: 'text-primary', bg: 'bg-primary/15', border: 'border-primary/30' },
   series: { label: 'Seri', icon: Layers, color: 'text-amber-300', bg: 'bg-amber-400/15', border: 'border-amber-400/30' },
 };
@@ -143,6 +163,10 @@ export const UniverseSearchDrawer: React.FC<UniverseSearchDrawerProps> = ({
   cultures = [],
   canonRules = [],
   plotThreads = [],
+  spells = [],
+  divinations = [],
+  prophecies = [],
+  rituals = [],
   stories = [],
   seriesList = [],
   onSelectResult,
@@ -379,6 +403,65 @@ export const UniverseSearchDrawer: React.FC<UniverseSearchDrawerProps> = ({
       });
     });
 
+    // 13.1 Büyüler
+    spells.forEach((sp) => {
+      const isSpoiler = !isAuthorMode && !!sp.isSpoiler && (sp.spoilerThresholdChapter || 0) > userMaxChapter;
+      list.push({
+        id: sp.id,
+        category: 'spell',
+        title: isSpoiler ? `Gizli Büyü (#${sp.spoilerThresholdChapter})` : sp.name,
+        subtitle: isSpoiler ? 'Kilitli Büyü' : `${sp.school} • ${sp.tier}`,
+        description: isSpoiler ? 'Bu büyü hikayenin ilerleyen bölümlerinde açığa çıkar.' : sp.effects,
+        badge: isSpoiler ? `🔒 B.${sp.spoilerThresholdChapter}+` : sp.tier,
+        isSpoiler,
+        spoilerThresholdChapter: sp.spoilerThresholdChapter,
+        targetTab: 'mystic_arts',
+        payload: sp,
+      });
+    });
+
+    // 13.2 Fal & Kehanet Sistemleri
+    divinations.forEach((dv) => {
+      list.push({
+        id: dv.id,
+        category: 'divination',
+        title: dv.name,
+        subtitle: dv.type,
+        description: dv.description,
+        badge: 'Fal & Deste',
+        targetTab: 'mystic_arts',
+        payload: dv,
+      });
+    });
+
+    // 13.3 Büyük Kehanetler
+    prophecies.forEach((pr) => {
+      list.push({
+        id: pr.id,
+        category: 'prophecy',
+        title: pr.title,
+        subtitle: pr.seerName ? `Kahin: ${pr.seerName}` : 'Kadim Kehanet',
+        description: pr.prophecyText,
+        badge: pr.status,
+        targetTab: 'mystic_arts',
+        payload: pr,
+      });
+    });
+
+    // 13.4 Ritüeller
+    rituals.forEach((rt) => {
+      list.push({
+        id: rt.id,
+        category: 'ritual',
+        title: rt.name,
+        subtitle: 'Kadim Ayin / Lanet',
+        description: rt.purpose,
+        badge: 'Ritüel',
+        targetTab: 'mystic_arts',
+        payload: rt,
+      });
+    });
+
     // 14. Eserler
     stories.forEach((st) => {
       list.push({
@@ -424,6 +507,10 @@ export const UniverseSearchDrawer: React.FC<UniverseSearchDrawerProps> = ({
     cultures,
     canonRules,
     plotThreads,
+    spells,
+    divinations,
+    prophecies,
+    rituals,
     stories,
     seriesList,
     isAuthorMode,

@@ -170,6 +170,140 @@ const loadImgAsync = (src?: string): Promise<HTMLImageElement | null> => {
   });
 };
 
+/**
+ * 3D Fiziksel Gerçekçi Ciltli Kitap Çizim Motoru (Canvas 2D)
+ */
+const drawRealistic3DBookOnCanvas = (
+  ctx: CanvasRenderingContext2D,
+  bookImg: HTMLImageElement,
+  centerX: number,
+  centerY: number,
+  bookW: number,
+  bookH: number,
+  themeAccent: string
+) => {
+  ctx.save();
+
+  const bookX = Math.round(centerX - bookW / 2);
+  const bookY = Math.round(centerY - bookH / 2);
+  const pageThickness = Math.max(16, Math.round(bookW * 0.085));
+  const bottomThickness = Math.max(10, Math.round(pageThickness * 0.62));
+
+  // 1. Zemin Yumuşak Perspektif & Kontak Gölgesi
+  ctx.save();
+  ctx.beginPath();
+  const shadowGrad = ctx.createRadialGradient(
+    centerX + pageThickness * 0.4, bookY + bookH + 18, 15,
+    centerX + pageThickness * 0.4, bookY + bookH + 18, bookW * 0.75
+  );
+  shadowGrad.addColorStop(0, 'rgba(0, 0, 0, 0.75)');
+  shadowGrad.addColorStop(0.5, 'rgba(0, 0, 0, 0.35)');
+  shadowGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = shadowGrad;
+  ctx.ellipse(centerX + pageThickness * 0.4, bookY + bookH + 20, bookW * 0.65, 24, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // 2. Alt Sayfa Kenarı (Bottom Page Block)
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(bookX + 16, bookY + bookH);
+  ctx.lineTo(bookX + bookW, bookY + bookH);
+  ctx.lineTo(bookX + bookW + pageThickness, bookY + bookH + bottomThickness);
+  ctx.lineTo(bookX + 26, bookY + bookH + bottomThickness);
+  ctx.closePath();
+  const bottomPageGrad = ctx.createLinearGradient(0, bookY + bookH, 0, bookY + bookH + bottomThickness);
+  bottomPageGrad.addColorStop(0, '#cec4b3');
+  bottomPageGrad.addColorStop(0.5, '#eae2d3');
+  bottomPageGrad.addColorStop(1, '#a89c8a');
+  ctx.fillStyle = bottomPageGrad;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.restore();
+
+  // 3. Sağ Sayfa Kenarı (Right Page Block & Hairline Striations)
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(bookX + bookW, bookY + 3);
+  ctx.lineTo(bookX + bookW + pageThickness, bookY + 3 + bottomThickness);
+  ctx.lineTo(bookX + bookW + pageThickness, bookY + bookH + bottomThickness);
+  ctx.lineTo(bookX + bookW, bookY + bookH);
+  ctx.closePath();
+  const rightPageGrad = ctx.createLinearGradient(bookX + bookW, 0, bookX + bookW + pageThickness, 0);
+  rightPageGrad.addColorStop(0, '#c2b8a7');
+  rightPageGrad.addColorStop(0.3, '#f5efe4');
+  rightPageGrad.addColorStop(0.7, '#dfd5c5');
+  rightPageGrad.addColorStop(1, '#9e917d');
+  ctx.fillStyle = rightPageGrad;
+  ctx.fill();
+
+  // Sayfa Yaprak Çizgileri
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
+  ctx.lineWidth = 1;
+  for (let py = bookY + 8; py < bookY + bookH - 2; py += 5) {
+    ctx.beginPath();
+    ctx.moveTo(bookX + bookW + 2, py);
+    ctx.lineTo(bookX + bookW + pageThickness - 2, py + bottomThickness);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // 4. Ön Cilt Kapağı (Hardcover Front Board)
+  ctx.save();
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
+  ctx.shadowBlur = 30;
+  ctx.shadowOffsetX = 12;
+  ctx.shadowOffsetY = 16;
+  ctx.drawImage(bookImg, bookX, bookY, bookW, bookH);
+  ctx.restore();
+
+  // 5. Cilt Kenarlığı
+  ctx.save();
+  ctx.strokeStyle = `${themeAccent}50`;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(bookX, bookY, bookW, bookH);
+
+  // 6. Sırt (Spine) Işık/Gölge Kavisli Borusu
+  const spineW = Math.max(16, Math.round(bookW * 0.11));
+  const spineGrad = ctx.createLinearGradient(bookX, 0, bookX + spineW, 0);
+  spineGrad.addColorStop(0, 'rgba(0, 0, 0, 0.72)');
+  spineGrad.addColorStop(0.35, 'rgba(0, 0, 0, 0.22)');
+  spineGrad.addColorStop(0.65, 'rgba(255, 255, 255, 0.22)');
+  spineGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = spineGrad;
+  ctx.fillRect(bookX, bookY, spineW, bookH);
+
+  // Menteşe Oluğu (Hinge Groove Crease)
+  const grooveX = bookX + spineW * 0.88;
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(grooveX, bookY);
+  ctx.lineTo(grooveX, bookY + bookH);
+  ctx.stroke();
+
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(grooveX + 2, bookY);
+  ctx.lineTo(grooveX + 2, bookY + bookH);
+  ctx.stroke();
+
+  // 7. Yüzey Işık Yansıması (Specular Sheen Sweep)
+  const sheenGrad = ctx.createLinearGradient(bookX, bookY, bookX + bookW, bookY + bookH);
+  sheenGrad.addColorStop(0.2, 'transparent');
+  sheenGrad.addColorStop(0.45, 'rgba(255, 255, 255, 0.18)');
+  sheenGrad.addColorStop(0.55, 'rgba(255, 255, 255, 0.04)');
+  sheenGrad.addColorStop(0.75, 'transparent');
+  ctx.fillStyle = sheenGrad;
+  ctx.fillRect(bookX, bookY, bookW, bookH);
+
+  ctx.restore();
+  ctx.restore();
+};
+
 export const SocialShareModal: React.FC<SocialShareModalProps> = ({
   universe,
   characters = [],
@@ -311,10 +445,19 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
     ctx.fillRect(0, 0, width, height * 0.5);
     ctx.restore();
 
-    // 3. Zarif Dış Çerçeve ve Köşe Süslemeleri
+    // 3. Zarif Dış Çerçeve ve Köşe Süslemeleri (Safe-Zone Korumalı)
+    let frameTop = 36;
+    let frameBottom = height - 36;
+    let headerY = ratio === 'post' ? 110 : ratio === 'story' ? 310 : 85;
+
+    if (ratio === 'story') {
+      frameTop = 220;
+      frameBottom = 1680;
+    }
+
     ctx.strokeStyle = `${currentTheme.canvasAccent}40`;
     ctx.lineWidth = 3;
-    ctx.strokeRect(36, 36, width - 72, height - 72);
+    ctx.strokeRect(36, frameTop, width - 72, frameBottom - frameTop);
 
     // Köşe Vurguları
     const cornerSize = 28;
@@ -322,19 +465,18 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
     ctx.lineWidth = 5;
     // Sol Üst
     ctx.beginPath();
-    ctx.moveTo(36, 36 + cornerSize); ctx.lineTo(36, 36); ctx.lineTo(36 + cornerSize, 36); ctx.stroke();
+    ctx.moveTo(36, frameTop + cornerSize); ctx.lineTo(36, frameTop); ctx.lineTo(36 + cornerSize, frameTop); ctx.stroke();
     // Sağ Üst
     ctx.beginPath();
-    ctx.moveTo(width - 36 - cornerSize, 36); ctx.lineTo(width - 36, 36); ctx.lineTo(width - 36, 36 + cornerSize); ctx.stroke();
+    ctx.moveTo(width - 36 - cornerSize, frameTop); ctx.lineTo(width - 36, frameTop); ctx.lineTo(width - 36, frameTop + cornerSize); ctx.stroke();
     // Sol Alt
     ctx.beginPath();
-    ctx.moveTo(36, height - 36 - cornerSize); ctx.lineTo(36, height - 36); ctx.lineTo(36 + cornerSize, height - 36); ctx.stroke();
+    ctx.moveTo(36, frameBottom - cornerSize); ctx.lineTo(36, frameBottom); ctx.lineTo(36 + cornerSize, frameBottom); ctx.stroke();
     // Sağ Alt
     ctx.beginPath();
-    ctx.moveTo(width - 36 - cornerSize, height - 36); ctx.lineTo(width - 36, height - 36); ctx.lineTo(width - 36, height - 36 - cornerSize); ctx.stroke();
+    ctx.moveTo(width - 36 - cornerSize, frameBottom); ctx.lineTo(width - 36, frameBottom); ctx.lineTo(width - 36, frameBottom - cornerSize); ctx.stroke();
 
     // 4. Başlık Damgası (Header)
-    const headerY = ratio === 'post' ? 85 : ratio === 'story' ? 95 : 75;
     ctx.font = 'bold 26px sans-serif';
     ctx.fillStyle = currentTheme.canvasAccent;
     ctx.textAlign = 'center';
@@ -438,47 +580,22 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
       const genreLabelTr = getUniverseGenreLabel(universe.genre);
       ctx.fillText(`[ TÜR: ${genreLabelTr.toUpperCase()} ]`, width / 2, badgeY);
 
-      // 3D Kitap Kapağı Çizimi
+      // 3D Kitap Kapağı Çizimi (Fiziksel Gerçekçi Ciltli Kitap)
       const bookImg = await loadImgAsync(universeFeaturedCover);
-      const bookCenterY = ratio === 'post' ? height * 0.41 : ratio === 'story' ? height * 0.40 : height * 0.42;
-      const bookH = ratio === 'post' ? height * 0.35 : ratio === 'story' ? height * 0.38 : height * 0.34;
-      const bookW = bookH * 0.68; // Kitap en boy oranı
+      const bookCenterY = ratio === 'post' ? height * 0.41 : ratio === 'story' ? 760 : height * 0.42;
+      const bookH = ratio === 'post' ? height * 0.35 : ratio === 'story' ? 440 : height * 0.34;
+      const bookW = Math.round(bookH * 0.67);
 
       if (bookImg) {
-        ctx.save();
-        const bookX = (width - bookW) / 2;
-        const bookY = bookCenterY - bookH / 2;
-
-        // Kitap arkası gölge ve glow
-        const glow = ctx.createRadialGradient(width / 2, bookCenterY, 30, width / 2, bookCenterY, bookW);
-        glow.addColorStop(0, `${currentTheme.canvasAccent}45`);
-        glow.addColorStop(1, 'transparent');
-        ctx.fillStyle = glow;
-        ctx.fillRect(bookX - 50, bookY - 30, bookW + 100, bookH + 60);
-
-        // 3D Kitap gölgesi
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.75)';
-        ctx.shadowBlur = 40;
-        ctx.shadowOffsetX = 15;
-        ctx.shadowOffsetY = 20;
-
-        // Kitap Kapağı
-        ctx.drawImage(bookImg, bookX, bookY, bookW, bookH);
-
-        // Kitap sırtı / 3D efekti
-        ctx.shadowColor = 'transparent';
-        const spineGrad = ctx.createLinearGradient(bookX, 0, bookX + 16, 0);
-        spineGrad.addColorStop(0, 'rgba(0, 0, 0, 0.6)');
-        spineGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.15)');
-        spineGrad.addColorStop(1, 'transparent');
-        ctx.fillStyle = spineGrad;
-        ctx.fillRect(bookX, bookY, 16, bookH);
-
-        ctx.strokeStyle = `${currentTheme.canvasAccent}60`;
-        ctx.lineWidth = 3;
-        ctx.strokeRect(bookX, bookY, bookW, bookH);
-
-        ctx.restore();
+        drawRealistic3DBookOnCanvas(
+          ctx,
+          bookImg,
+          width / 2,
+          bookCenterY,
+          bookW,
+          bookH,
+          currentTheme.canvasAccent
+        );
       }
 
       // Evren Bilgileri
@@ -563,8 +680,8 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
       }
     }
 
-    // 6. Alt Alan (Footer CTA & Readixon URL)
-    const footerY = height - (ratio === 'post' ? 75 : ratio === 'story' ? 85 : 65);
+    // 6. Alt Alan (Footer CTA & Readixon URL - Safe-Zone Korumalı)
+    const footerY = ratio === 'story' ? 1540 : height - (ratio === 'post' ? 85 : 65);
     ctx.font = 'bold 24px sans-serif';
     ctx.fillStyle = currentTheme.canvasAccent;
     ctx.fillText('readixon.com/universe', width / 2, footerY);
@@ -1013,10 +1130,12 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
               <Sparkles size={11} className="text-primary" /> Canlı Kart Önizlemesi ({ratio.toUpperCase()})
             </span>
 
-            {/* DOM Önizleme Çerçevesi */}
+            {/* DOM Önizleme Çerçevesi (Safe-Zone Korumalı) */}
             <div
               ref={previewRef}
-              className={`w-full max-w-[340px] rounded-3xl overflow-hidden border-2 shadow-2xl relative flex flex-col justify-between p-5 select-none transition-all duration-300 bg-black ${currentTheme.border} ${
+              className={`w-full max-w-[340px] rounded-3xl overflow-hidden border-2 shadow-2xl relative flex flex-col justify-between select-none transition-all duration-300 bg-black ${currentTheme.border} ${
+                ratio === 'story' ? 'p-6 py-12' : 'p-5'
+              } ${
                 ratio === 'post'
                   ? 'aspect-[4/5]'
                   : ratio === 'story'
@@ -1141,31 +1260,96 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                       {getUniverseGenreLabel(universe.genre)}
                     </span>
 
-                    {/* 3D Kitap Kapağı Vitrini (Canlı Önizlemede Net ve Belirgin) */}
+                    {/* 3D Fiziksel Gerçekçi Ciltli Kitap Kapağı Vitrini */}
                     {universeFeaturedCover ? (
-                      <div className="relative my-2 flex items-center justify-center">
-                        {/* Kitap Glow */}
-                        <div 
-                          className="absolute w-32 h-44 rounded-2xl blur-2xl opacity-45 pointer-events-none"
-                          style={{ background: currentTheme.canvasAccent }}
-                        />
-                        {/* 3D Fiziksel Kitap */}
-                        <div 
-                          className="w-28 sm:w-32 h-40 sm:h-44 rounded-r-xl rounded-l-xs overflow-hidden border-y border-r border-white/25 relative bg-zinc-950 transition-transform duration-300 hover:scale-105"
+                      <div 
+                        className="relative my-2 select-none group flex items-center justify-center"
+                        style={{ perspective: '1100px' }}
+                      >
+                        <div
+                          className="relative transition-transform duration-300"
                           style={{
-                            transform: 'perspective(700px) rotateY(-8deg)',
-                            boxShadow: '12px 18px 35px rgba(0,0,0,0.85), inset -2px 0 6px rgba(255,255,255,0.15)'
+                            transform: 'rotateY(-16deg) rotateX(4deg) rotateZ(-1deg)',
+                            transformStyle: 'preserve-3d',
                           }}
                         >
-                          <img 
-                            src={universeFeaturedCover} 
-                            alt={universe.title}
-                            crossOrigin="anonymous"
-                            className="w-full h-full object-cover" 
+                          {/* Zemin Kontak & Perspektif Gölgesi */}
+                          <div 
+                            className="absolute -bottom-4 -left-3 right-0 h-6 rounded-full blur-md pointer-events-none"
+                            style={{
+                              background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 60%, transparent 80%)',
+                              transform: 'rotateX(75deg) scale(1.1)',
+                            }}
                           />
-                          {/* 3D Kitap Sırtı Işıltısı */}
-                          <div className="absolute inset-y-0 left-0 w-3 bg-gradient-to-r from-black/80 via-white/20 to-transparent pointer-events-none" />
-                          <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent pointer-events-none" />
+
+                          {/* Sağ Sayfa Kenarı (Page Block / Kağıt Yaprakları Kalınlığı) */}
+                          <div 
+                            className="absolute top-[2px] bottom-[2px] -right-[11px] w-[12px] rounded-r-xs pointer-events-none"
+                            style={{
+                              background: 'linear-gradient(to right, #ded7cb, #f5efe6 30%, #e8e0d5 70%, #c9c0b2)',
+                              boxShadow: 'inset 0 1px 1px rgba(0,0,0,0.1), inset 0 -1px 1px rgba(0,0,0,0.1), 2px 0 4px rgba(0,0,0,0.35)',
+                              transform: 'skewY(-6deg)',
+                              transformOrigin: 'left center',
+                            }}
+                          >
+                            {/* Sayfa Çizgileri */}
+                            <div 
+                              className="w-full h-full opacity-35"
+                              style={{
+                                backgroundImage: 'repeating-linear-gradient(to bottom, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 3px)',
+                              }}
+                            />
+                          </div>
+
+                          {/* Alt Sayfa Kenarı */}
+                          <div 
+                            className="absolute -bottom-[8px] left-[6px] right-[2px] h-[8px] pointer-events-none rounded-b-xs"
+                            style={{
+                              background: 'linear-gradient(to bottom, #d6cebf, #f2ece1)',
+                              boxShadow: '0 3px 6px rgba(0,0,0,0.35)',
+                              transform: 'skewX(-16deg)',
+                              transformOrigin: 'top center',
+                            }}
+                          />
+
+                          {/* Ön Cilt Kapağı */}
+                          <div
+                            className="w-28 sm:w-32 h-40 sm:h-44 rounded-r-md overflow-hidden relative"
+                            style={{
+                              boxShadow: `0 18px 36px -8px rgba(0,0,0,0.9), 0 0 20px -5px ${currentTheme.glow}`,
+                            }}
+                          >
+                            <img
+                              src={universeFeaturedCover}
+                              alt={universe.title}
+                              crossOrigin="anonymous"
+                              className="w-full h-full object-cover"
+                            />
+
+                            {/* Cilt Kenar Kıvrımı & Menteşe Kanalı (Spine Crease) */}
+                            <div className="absolute inset-y-0 left-0 w-3.5 bg-gradient-to-r from-black/75 via-black/25 to-transparent pointer-events-none" />
+                            <div className="absolute inset-y-0 left-[13px] w-[1.5px] bg-black/40 shadow-[1px_0_1px_rgba(255,255,255,0.2)] pointer-events-none" />
+                            <div className="absolute inset-y-0 left-[15px] w-[2px] bg-white/15 pointer-events-none" />
+
+                            {/* Üst Yüzey Işık Yansıması (Specular Sheen) */}
+                            <div 
+                              className="absolute inset-0 pointer-events-none"
+                              style={{
+                                background: 'linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.16) 45%, rgba(255,255,255,0.03) 55%, transparent 70%)',
+                              }}
+                            />
+
+                            {/* İnce Cilt Kenarlık Çizgisi */}
+                            <div className="absolute inset-0 border border-white/20 rounded-r-md pointer-events-none" />
+                          </div>
+
+                          {/* Sol Sırt Yuvarlağı (Spine Tube) */}
+                          <div 
+                            className="absolute top-0 bottom-0 -left-[6px] w-[7px] rounded-l-md pointer-events-none"
+                            style={{
+                              background: 'linear-gradient(to right, rgba(0,0,0,0.8), rgba(255,255,255,0.25) 35%, rgba(0,0,0,0.5))',
+                            }}
+                          />
                         </div>
                       </div>
                     ) : (

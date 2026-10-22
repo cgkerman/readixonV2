@@ -35,11 +35,22 @@ import {
   type UniverseSoundtrack,
   getUniverseCanonRules,
   getUniversePlotThreads,
+  getUniverseDivinations,
+  getUniverseProphecies,
+  getUniverseSpells,
+  getUniverseRituals,
   CANON_RULE_CATEGORY_LABELS,
   PLOT_THREAD_STATUS_LABELS,
   PLOT_THREAD_IMPORTANCE_LABELS,
+  DIVINATION_TYPE_LABELS,
+  PROPHECY_STATUS_LABELS,
+  SPELL_TIER_LABELS,
   type UniverseCanonRule,
-  type UniversePlotThread
+  type UniversePlotThread,
+  type UniverseDivinationSystem,
+  type UniverseProphecy,
+  type UniverseSpell,
+  type UniverseRitual
 } from '@readixon/core';
 import { 
   Layers, 
@@ -76,12 +87,16 @@ import {
   ShieldAlert,
   AlertTriangle,
   Lightbulb,
-  Sparkles
+  Sparkles,
+  Compass,
+  Wand2,
+  Flame
 } from 'lucide-react';
 import { InteractiveWorldMap } from '@/components/InteractiveWorldMap';
 import { InteractiveRelationshipGraph } from '@/components/InteractiveRelationshipGraph';
+import { UniverseDivinationCardModal } from '@/components/UniverseDivinationCardModal';
 
-export type ReaderUniverseTabType = 'characters' | 'relationships' | 'races' | 'creatures' | 'cultures' | 'locations' | 'maps' | 'organizations' | 'items' | 'powers' | 'glossary' | 'lore' | 'media' | 'soundtracks' | 'canon_rules' | 'plot_threads';
+export type ReaderUniverseTabType = 'characters' | 'relationships' | 'races' | 'creatures' | 'cultures' | 'locations' | 'maps' | 'organizations' | 'items' | 'powers' | 'mystic_arts' | 'glossary' | 'lore' | 'media' | 'soundtracks' | 'canon_rules' | 'plot_threads';
 
 export interface ReaderUniverseDrawerProps {
   universeId: string;
@@ -138,6 +153,11 @@ export function ReaderUniverseDrawer({
   const [soundtracks, setSoundtracks] = useState<UniverseSoundtrack[]>([]);
   const [canonRules, setCanonRules] = useState<UniverseCanonRule[]>([]);
   const [plotThreads, setPlotThreads] = useState<UniversePlotThread[]>([]);
+  const [divinations, setDivinations] = useState<UniverseDivinationSystem[]>([]);
+  const [prophecies, setProphecies] = useState<UniverseProphecy[]>([]);
+  const [spells, setSpells] = useState<UniverseSpell[]>([]);
+  const [rituals, setRituals] = useState<UniverseRitual[]>([]);
+  const [isDivinationModalOpen, setIsDivinationModalOpen] = useState(false);
   const [selectedLightboxMedia, setSelectedLightboxMedia] = useState<UniverseMedia | null>(null);
 
   // Close on Escape key
@@ -169,7 +189,11 @@ export function ReaderUniverseDrawer({
           mediaData, 
           trackData,
           canonData,
-          threadData
+          threadData,
+          divs,
+          props,
+          spls,
+          rits
         ] = await Promise.all([
           getUniverseById(universeId),
           getUniverseCharacters(universeId),
@@ -187,6 +211,10 @@ export function ReaderUniverseDrawer({
           getUniverseSoundtracks(universeId),
           getUniverseCanonRules(universeId),
           getUniversePlotThreads(universeId),
+          getUniverseDivinations(universeId),
+          getUniverseProphecies(universeId),
+          getUniverseSpells(universeId),
+          getUniverseRituals(universeId),
         ]);
         setUniverse(u);
         setCharacters(chars);
@@ -203,6 +231,10 @@ export function ReaderUniverseDrawer({
         setSoundtracks(trackData);
         setCanonRules(canonData.filter((r) => r.isPublic !== false));
         setPlotThreads(threadData.filter((t) => t.isPublic === true));
+        setDivinations(divs);
+        setProphecies(props);
+        setSpells(spls);
+        setRituals(rits);
         const publicMaps = mapList.filter((m) => !m.isSpoiler || (m.spoilerThresholdChapter || 0) <= currentChapterOrder);
         setMaps(publicMaps);
         if (publicMaps.length > 0) setSelectedMapId(publicMaps[0].id);
@@ -306,6 +338,27 @@ export function ReaderUniverseDrawer({
   const filteredPlotThreads = plotThreads.filter(t =>
     t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     ((t.description || '').toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const filteredDivinations = divinations.filter(d =>
+    d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (d.description && d.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const filteredSpells = spells.filter(s =>
+    s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    s.school.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    s.effects.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredRituals = rituals.filter(r =>
+    r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    r.purpose.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredProphecies = prophecies.filter(p =>
+    p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.prophecyText.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -490,6 +543,23 @@ export function ReaderUniverseDrawer({
                 <Zap size={13} />
                 <span>Güç</span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-muted/20">{powerSystems.length}</span>
+              </button>
+            )}
+
+            {(divinations.length > 0 || spells.length > 0 || rituals.length > 0) && (
+              <button
+                onClick={() => setActiveTab('mystic_arts')}
+                className={`py-2.5 px-3 text-xs font-bold border-b-2 flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap shrink-0 ${
+                  activeTab === 'mystic_arts'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted hover:text-foreground'
+                }`}
+              >
+                <Sparkles size={13} className="text-purple-400" />
+                <span>Mistik</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-muted/20">
+                  {divinations.length + spells.length + rituals.length}
+                </span>
               </button>
             )}
 
@@ -1227,6 +1297,145 @@ export function ReaderUniverseDrawer({
               )
             )}
 
+            {/* ── MİSTİK SANATLAR (Fal, Kehanet, Büyü Kitabı & Ritüeller) ── */}
+            {activeTab === 'mystic_arts' && (
+              <div className="space-y-4">
+                {/* 🔮 Evrenin Falına Bak Butonu */}
+                <button
+                  type="button"
+                  onClick={() => setIsDivinationModalOpen(true)}
+                  className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-md shadow-purple-900/40 transition-all active:scale-95 cursor-pointer"
+                >
+                  <Sparkles size={14} className="animate-spin" style={{ animationDuration: '6s' }} />
+                  <span>Evrenin Falına Bak / Kart Çek</span>
+                </button>
+
+                {/* Büyüler Listesi */}
+                {filteredSpells.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                      <Zap size={13} className="text-amber-400" />
+                      Büyüler & Tılsımlar ({filteredSpells.length})
+                    </span>
+                    {filteredSpells.map((s) => {
+                      const isLocked = isItemSpoilerLocked(s.isSpoiler, s.spoilerThresholdChapter, s.id);
+                      const tierConfig = SPELL_TIER_LABELS[s.tier] || { label: 'Temel', color: 'text-blue-400 bg-blue-400/10 border-blue-400/20' };
+
+                      return (
+                        <div key={s.id} className="p-3 rounded-2xl border border-border/50 bg-background/60 space-y-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <span className="text-xs font-bold text-foreground block">{s.name}</span>
+                              <span className="text-[10px] text-muted">{s.school}</span>
+                            </div>
+                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${tierConfig.color}`}>
+                              {tierConfig.label}
+                            </span>
+                          </div>
+
+                          {isLocked ? (
+                            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 text-[10px] flex items-center justify-between">
+                              <span className="flex items-center gap-1">
+                                <Lock size={11} /> Bölüm {s.spoilerThresholdChapter}+ sonrasında açılır.
+                              </span>
+                              <button onClick={() => toggleUnlockSpoiler(s.id)} className="underline font-bold">Aç</button>
+                            </div>
+                          ) : (
+                            <div className="space-y-1 text-[11px]">
+                              {s.incantation && (
+                                <p className="italic text-amber-900 dark:text-amber-200 font-serif text-[10px]">&ldquo;{s.incantation}&rdquo;</p>
+                              )}
+                              <p className="text-foreground/85 dark:text-muted leading-relaxed">{s.effects}</p>
+                              {s.costsAndBackfire && (
+                                <p className="text-rose-700 dark:text-rose-300 text-[10px]"><strong className="text-rose-600 dark:text-rose-400">Bedel: </strong>{s.costsAndBackfire}</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Fallar ve Kehanet Sistemleri */}
+                {filteredDivinations.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                      <Compass size={13} className="text-purple-600 dark:text-purple-400" />
+                      Fal & Kehanet Yöntemleri ({filteredDivinations.length})
+                    </span>
+                    {filteredDivinations.map((d) => (
+                      <div key={d.id} className="p-3 rounded-2xl border border-border/50 bg-background/60 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-foreground">{d.name}</span>
+                          <span className="text-[10px] text-purple-700 dark:text-purple-300 font-semibold">{DIVINATION_TYPE_LABELS[d.type]?.label || 'Fal'}</span>
+                        </div>
+                        {d.description && <p className="text-[11px] text-foreground/80 dark:text-muted">{d.description}</p>}
+                        {d.cardsOrSymbols && d.cardsOrSymbols.length > 0 && (
+                          <div className="flex flex-wrap gap-1 pt-1">
+                            {d.cardsOrSymbols.slice(0, 6).map((c) => (
+                              <span key={c.id} className="px-1.5 py-0.5 rounded bg-purple-500/10 text-[9px] text-foreground font-semibold">
+                                {c.symbolIcon} {c.name}
+                              </span>
+                            ))}
+                            {d.cardsOrSymbols.length > 6 && (
+                              <span className="text-[9px] text-muted font-bold self-center">+{d.cardsOrSymbols.length - 6}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Ritüeller */}
+                {filteredRituals.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                      <Flame size={13} className="text-rose-600 dark:text-rose-400" />
+                      Ritüeller & Ayinler ({filteredRituals.length})
+                    </span>
+                    {filteredRituals.map((r) => (
+                      <div key={r.id} className="p-3 rounded-2xl border border-border/50 bg-background/60 space-y-1">
+                        <span className="text-xs font-bold text-foreground block">{r.name}</span>
+                        <p className="text-[11px] text-foreground/80 dark:text-muted">{r.purpose}</p>
+                        {r.requiredSacrifices && (
+                          <p className="text-[10px] text-rose-700 dark:text-rose-300"><strong className="text-rose-600 dark:text-rose-400">Adak: </strong>{r.requiredSacrifices}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Büyük Kehanetler */}
+                {filteredProphecies.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                      <Eye size={13} className="text-purple-600 dark:text-purple-400" />
+                      Kayıtlı Kehanetler ({filteredProphecies.length})
+                    </span>
+                    {filteredProphecies.map((p) => (
+                      <div key={p.id} className="p-3 rounded-2xl border border-border/50 bg-background/60 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-foreground">{p.title}</span>
+                          <span className="text-[9px] px-1.5 py-0.5 rounded font-bold border border-purple-500/20 text-purple-700 dark:text-purple-300">
+                            {PROPHECY_STATUS_LABELS[p.status]?.label || 'Kehanet'}
+                          </span>
+                        </div>
+                        <blockquote className="p-2 rounded-xl bg-purple-500/10 dark:bg-purple-950/20 text-purple-950 dark:text-purple-200 font-serif italic text-[11px]">
+                          &ldquo;{p.prophecyText}&rdquo;
+                        </blockquote>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {filteredDivinations.length === 0 && filteredSpells.length === 0 && filteredRituals.length === 0 && filteredProphecies.length === 0 && (
+                  <p className="text-xs text-muted text-center py-8">Mistik kayıt bulunamadı.</p>
+                )}
+              </div>
+            )}
+
             {/* 3. SEKME: SÖZLÜK */}
             {activeTab === 'glossary' && (
               filteredGlossary.length === 0 ? (
@@ -1671,6 +1880,16 @@ export function ReaderUniverseDrawer({
             </div>
           </div>
         </div>
+      )}
+      {/* ── MİSTİK FAL VE KEHANET MODALI ── */}
+      {universe && (
+        <UniverseDivinationCardModal
+          isOpen={isDivinationModalOpen}
+          onClose={() => setIsDivinationModalOpen(false)}
+          universeTitle={universe.title}
+          divinations={divinations}
+          prophecies={prophecies}
+        />
       )}
     </div>
   );

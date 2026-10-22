@@ -136,7 +136,8 @@ export default function StoryDetailAdminPage() {
         setMainGenre(realStory.mainGenre);
         setSubGenres(realStory.subGenres || []);
         setCoverImage(realStory.coverImage || '');
-        setStatus(realStory.status || 'draft');
+        const initialStatus = (realStory.format === 'short_story' && realStory.status === 'ongoing') ? 'completed' : (realStory.status || 'draft');
+        setStatus(initialStatus);
         setForeword(realStory.foreword || '');
         setBackCover(realStory.backCover || '');
         setTrailerVideoUrl(realStory.trailerVideoUrl || '');
@@ -211,7 +212,7 @@ export default function StoryDetailAdminPage() {
         subGenres,
         tags: combinedTags,
         coverImage,
-        status,
+        status: (story?.format === 'short_story' && status === 'ongoing') ? 'completed' : status,
         foreword,
         backCover,
         trailerVideoUrl,
@@ -251,7 +252,7 @@ export default function StoryDetailAdminPage() {
         subGenres,
         tags: combinedTags,
         coverImage,
-        status,
+        status: (story?.format === 'short_story' && status === 'ongoing') ? 'completed' : status,
         foreword,
         backCover,
         trailerVideoUrl,
@@ -641,19 +642,20 @@ export default function StoryDetailAdminPage() {
   };
 
   const getStatusBadge = (s: StoryStatus) => {
+    const isShortStory = story?.format === 'short_story';
     switch (s) {
       case 'ongoing':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            Yayında (Devam Ediyor)
+            {isShortStory ? 'Yayında (Tek Bölüm)' : 'Yayında (Devam Ediyor)'}
           </span>
         );
       case 'completed':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/20">
             <CheckCircle size={12} />
-            Tamamlandı
+            {isShortStory ? 'Yayında (Tek Bölüm / Tamamlandı)' : 'Tamamlandı'}
           </span>
         );
       default:
@@ -1114,23 +1116,44 @@ export default function StoryDetailAdminPage() {
 
               {/* Yayın Durumu */}
               <div className="bg-card p-4 sm:p-5 rounded-2xl border border-border/60 shadow-xs">
-                <Typography variant="caption" className="font-bold text-muted uppercase block mb-2">
-                  Yayın Durumu
-                </Typography>
+                <div className="flex items-center justify-between mb-2">
+                  <Typography variant="caption" className="font-bold text-muted uppercase">
+                    Yayın Durumu
+                  </Typography>
+                  {story?.format === 'short_story' && (
+                    <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
+                      Tek Bölümlük Eser
+                    </span>
+                  )}
+                </div>
                 <div className="relative">
                   <select
-                    value={status}
+                    value={story?.format === 'short_story' && status === 'ongoing' ? 'completed' : status}
                     onChange={(e) => setStatus(e.target.value as any)}
                     className="w-full bg-muted/10 border border-border/60 rounded-xl p-3 text-xs sm:text-sm text-text focus:outline-none focus:border-primary appearance-none cursor-pointer"
                   >
-                    <option value="draft">Taslak (Sadece siz görebilirsiniz)</option>
-                    <option value="ongoing">Yayında (Devam Ediyor)</option>
-                    <option value="completed">Yayında (Tamamlandı)</option>
+                    {story?.format === 'short_story' ? (
+                      <>
+                        <option value="draft">Taslak (Yalnızca siz görebilirsiniz)</option>
+                        <option value="completed">Yayında (Tek Bölüm / Tamamlandı)</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="draft">Taslak (Sadece siz görebilirsiniz)</option>
+                        <option value="ongoing">Yayında (Devam Ediyor)</option>
+                        <option value="completed">Yayında (Tamamlandı)</option>
+                      </>
+                    )}
                   </select>
                   <div className="absolute inset-y-0 right-3.5 flex items-center pointer-events-none text-muted">
                     <ChevronDown size={18} />
                   </div>
                 </div>
+                {story?.format === 'short_story' && (
+                  <p className="text-[11px] text-muted mt-2 leading-relaxed">
+                    💡 Kısa hikayeler tek bölümlük olduğu için &ldquo;Devam Ediyor&rdquo; durumu bulunmaz. Yayına aldığınızda doğrudan tamamlanmış bir eser olarak okuyuculara sunulur.
+                  </p>
+                )}
               </div>
 
               {/* Seri & Evren Bağlantısı */}

@@ -18,6 +18,10 @@ import {
   getUniverseOrganizations,
   getUniverseItems,
   getUniversePowerSystems,
+  getUniverseDivinations,
+  getUniverseProphecies,
+  getUniverseSpells,
+  getUniverseRituals,
   getUniverseRaces,
   getUniverseCreatures,
   getUniverseCultures,
@@ -29,6 +33,9 @@ import {
   CANON_RULE_CATEGORY_LABELS,
   PLOT_THREAD_STATUS_LABELS,
   PLOT_THREAD_IMPORTANCE_LABELS,
+  DIVINATION_TYPE_LABELS,
+  PROPHECY_STATUS_LABELS,
+  SPELL_TIER_LABELS,
   parseAudioTrack,
   getAudioPlatformLabel,
   generateStorySlug,
@@ -56,6 +63,10 @@ import {
   type CanonRuleCategory,
   type UniversePlotThread,
   type PlotThreadStatus,
+  type UniverseDivinationSystem,
+  type UniverseProphecy,
+  type UniverseSpell,
+  type UniverseRitual,
   type Character,
   UNIVERSE_MEMBER_ROLE_CONFIG
 } from '@readixon/core';
@@ -99,7 +110,10 @@ import {
   AlertTriangle,
   Lightbulb,
   Search,
-  Filter
+  Filter,
+  Compass,
+  Wand2,
+  Flame
 } from 'lucide-react';
 import { InteractiveWorldMap } from '@/components/InteractiveWorldMap';
 import { InteractiveRelationshipGraph } from '@/components/InteractiveRelationshipGraph';
@@ -107,8 +121,9 @@ import { Character3DCard } from '@/components/Character3DCard';
 import { CharacterReaderModal } from '@/components/CharacterReaderModal';
 import { SocialShareModal, type SocialCardType } from '@/components/SocialShareModal';
 import { UniverseSearchDrawer, type UniverseSearchResultItem } from '@/components/UniverseSearchDrawer';
+import { UniverseDivinationCardModal } from '@/components/UniverseDivinationCardModal';
 
-type ReaderUniverseTab = 'works' | 'characters' | 'relationships' | 'races' | 'creatures' | 'cultures' | 'locations' | 'maps' | 'organizations' | 'items' | 'powers' | 'timeline' | 'glossary' | 'lore' | 'media' | 'soundtracks' | 'canon_rules' | 'plot_threads' | 'credits';
+type ReaderUniverseTab = 'works' | 'characters' | 'relationships' | 'races' | 'creatures' | 'cultures' | 'locations' | 'maps' | 'organizations' | 'items' | 'powers' | 'mystic_arts' | 'timeline' | 'glossary' | 'lore' | 'media' | 'soundtracks' | 'canon_rules' | 'plot_threads' | 'credits';
 
 const MEDIA_CATEGORY_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   character: { label: 'Karakter & Portre', color: 'text-violet-400', bg: 'bg-violet-500/10' },
@@ -226,6 +241,11 @@ export default function PublicUniversePage() {
   const [activeLightboxMedia, setActiveLightboxMedia] = useState<UniverseMedia | null>(null);
   const [canonRules, setCanonRules] = useState<UniverseCanonRule[]>([]);
   const [plotThreads, setPlotThreads] = useState<UniversePlotThread[]>([]);
+  const [divinations, setDivinations] = useState<UniverseDivinationSystem[]>([]);
+  const [prophecies, setProphecies] = useState<UniverseProphecy[]>([]);
+  const [spells, setSpells] = useState<UniverseSpell[]>([]);
+  const [rituals, setRituals] = useState<UniverseRitual[]>([]);
+  const [isDivinationModalOpen, setIsDivinationModalOpen] = useState<boolean>(false);
   const [selectedCanonCategory, setSelectedCanonCategory] = useState<string>('all');
   const [selectedThreadStatus, setSelectedThreadStatus] = useState<string>('all');
 
@@ -276,7 +296,11 @@ export default function PublicUniversePage() {
         mediaData, 
         trackData,
         canonData,
-        threadData
+        threadData,
+        divs,
+        props,
+        spls,
+        rits
       ] = await Promise.all([
         Promise.all((u.connectedStoryIds || []).map((id) => getStoryById(id))),
         Promise.all((u.connectedSeriesIds || []).map((id) => getSeriesById(id))),
@@ -296,6 +320,10 @@ export default function PublicUniversePage() {
         getUniverseSoundtracks(uId),
         getUniverseCanonRules(uId),
         getUniversePlotThreads(uId),
+        getUniverseDivinations(uId),
+        getUniverseProphecies(uId),
+        getUniverseSpells(uId),
+        getUniverseRituals(uId),
       ]);
 
       setStories(storyProms.filter(Boolean) as Story[]);
@@ -317,6 +345,10 @@ export default function PublicUniversePage() {
       setSoundtracks(trackData.filter((s) => !s.isSpoiler));
       setCanonRules(canonData.filter((r) => r.isPublic !== false && !r.isSpoiler));
       setPlotThreads(threadData.filter((t) => t.isPublic === true && !t.isSpoiler));
+      setDivinations(divs.filter((d) => !d.isSpoiler || isAuthor));
+      setProphecies(props.filter((p) => !p.isSpoiler || isAuthor));
+      setSpells(spls.filter((s) => !s.isSpoiler || isAuthor));
+      setRituals(rits.filter((r) => !r.isSpoiler || isAuthor));
       const publicMaps = mapList.filter((m) => !m.isSpoiler);
       setMaps(publicMaps);
       if (publicMaps.length > 0) {
@@ -481,7 +513,7 @@ export default function PublicUniversePage() {
     if (['locations', 'maps', 'cultures'].includes(activeTab)) {
       return 'world';
     }
-    if (['lore', 'timeline', 'glossary', 'powers', 'items', 'canon_rules', 'plot_threads'].includes(activeTab)) {
+    if (['lore', 'timeline', 'glossary', 'powers', 'mystic_arts', 'items', 'canon_rules', 'plot_threads'].includes(activeTab)) {
       return 'lore';
     }
     if (['media', 'soundtracks'].includes(activeTab)) {
@@ -816,6 +848,15 @@ export default function PublicUniversePage() {
                     <span>Keşif Kartı (#{userMaxChapter})</span>
                   </button>
                 )}
+                {/* 🔮 Mistik Fal & Kehanet Çarkı Butonu (Gamification Wow Faktörü) */}
+                <button
+                  type="button"
+                  onClick={() => setIsDivinationModalOpen(true)}
+                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs sm:text-sm flex items-center gap-2 transition-all active:scale-95 shadow-md shadow-purple-900/30 cursor-pointer"
+                >
+                  <Sparkles size={15} className="animate-spin" style={{ animationDuration: '6s' }} />
+                  <span>Evrenin Falına Bak / Kart Çek</span>
+                </button>
               </div>
             </div>
           </div>
@@ -1107,6 +1148,19 @@ export default function PublicUniversePage() {
                   }`}
                 >
                   ⚡ Güç Sistemleri ({powerSystems.length})
+                </button>
+              )}
+              {(divinations.length > 0 || spells.length > 0 || rituals.length > 0 || prophecies.length > 0) && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('mystic_arts')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'mystic_arts'
+                      ? 'bg-purple-600/20 text-purple-400 border border-purple-500/40 shadow-xs'
+                      : 'text-muted hover:text-foreground hover:bg-card/70'
+                  }`}
+                >
+                  🔮 Mistik Sanatlar ({divinations.length + spells.length + rituals.length})
                 </button>
               )}
               {items.length > 0 && (
@@ -2144,6 +2198,176 @@ export default function PublicUniversePage() {
           </div>
         )}
 
+        {/* ── MİSTİK SANATLAR & KEHANET ── */}
+        {activeTab === 'mystic_arts' && (
+          <div className="space-y-8">
+            {/* İnteraktif Kart Çekme Vitrini */}
+            <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-purple-500/10 via-card to-card dark:from-purple-950/40 dark:via-card/80 dark:to-card border border-purple-500/30 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xl">
+              <div className="space-y-2 text-center sm:text-left">
+                <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-purple-500/10 dark:bg-purple-500/20 border border-purple-500/30 text-purple-700 dark:text-purple-300 text-xs font-bold">
+                  <Sparkles size={12} className="text-purple-600 dark:text-purple-400" />
+                  <span>İnteraktif Evren Falı</span>
+                </div>
+                <h3 className="text-lg sm:text-xl font-black text-foreground">
+                  Evrenin Gizemli Falına Bak
+                </h3>
+                <p className="text-xs text-foreground/80 dark:text-muted max-w-xl leading-relaxed">
+                  Yazarın bu evren için tasarladığı kadim destelerden bir kart çek, rünlerin veya tarotun fısıldadığı günün kehanetini keşfet.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsDivinationModalOpen(true)}
+                className="px-5 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-purple-900/40 transition-all hover:scale-105 active:scale-95 shrink-0"
+              >
+                <Sparkles size={16} />
+                <span>Bir Kehanet Kartı Çek</span>
+              </button>
+            </div>
+
+            {/* Fal & Kehanet Sistemleri */}
+            {divinations.length > 0 && (
+              <div className="space-y-4">
+                <Typography variant="h3" className="text-base font-bold text-foreground flex items-center gap-2">
+                  <Compass size={18} className="text-purple-600 dark:text-purple-400" />
+                  <span>Fal & Kehanet Sistemleri ({divinations.length})</span>
+                </Typography>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {divinations.map((div) => {
+                    const typeConfig = DIVINATION_TYPE_LABELS[div.type] || { label: 'Diğer', icon: '🕯️' };
+                    return (
+                      <div key={div.id} className="p-5 rounded-2xl bg-card border border-border/70 space-y-3 shadow-sm">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">{typeConfig.icon}</span>
+                          <div>
+                            <h4 className="font-bold text-sm text-foreground">{div.name}</h4>
+                            <span className="text-xs text-purple-700 dark:text-purple-300 font-semibold">{typeConfig.label}</span>
+                          </div>
+                        </div>
+                        {div.description && (
+                          <p className="text-xs text-foreground/80 dark:text-muted leading-relaxed">{div.description}</p>
+                        )}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-2 border-t border-border/30">
+                          {div.toolsAndMediums && (
+                            <div className="text-foreground/80 dark:text-muted"><span className="font-bold text-foreground">Araç:</span> {div.toolsAndMediums}</div>
+                          )}
+                          {div.accuracyAndReliability && (
+                            <div className="text-foreground/80 dark:text-muted"><span className="font-bold text-foreground">Güvenilirlik:</span> {div.accuracyAndReliability}</div>
+                          )}
+                          {div.costsAndDangers && (
+                            <div className="text-rose-700 dark:text-rose-300"><span className="font-bold text-rose-600 dark:text-rose-400">Risk:</span> {div.costsAndDangers}</div>
+                          )}
+                        </div>
+                        {div.cardsOrSymbols && div.cardsOrSymbols.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {div.cardsOrSymbols.map((c) => (
+                              <span key={c.id} className="px-2 py-0.5 rounded-lg bg-muted/40 dark:bg-background/60 border border-purple-500/20 text-[10px] font-semibold text-foreground">
+                                {c.symbolIcon} {c.name}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Büyü Kitabı (Spells) */}
+            {spells.length > 0 && (
+              <div className="space-y-4">
+                <Typography variant="h3" className="text-base font-bold text-foreground flex items-center gap-2">
+                  <Wand2 size={18} className="text-amber-600 dark:text-amber-400" />
+                  <span>Büyü Kitabı & Tılsımlar ({spells.length})</span>
+                </Typography>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {spells.map((s) => {
+                    const tierConfig = SPELL_TIER_LABELS[s.tier] || { label: 'Temel', color: 'text-blue-700 dark:text-blue-400 bg-blue-500/10 border-blue-500/20' };
+                    return (
+                      <div key={s.id} className="p-4 rounded-2xl bg-card border border-border/70 space-y-2.5 shadow-sm">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <h4 className="font-bold text-sm text-foreground">{s.name}</h4>
+                            <span className="text-[11px] text-foreground/75 dark:text-muted">{s.school}</span>
+                          </div>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${tierConfig.color}`}>
+                            {tierConfig.label}
+                          </span>
+                        </div>
+                        {s.incantation && (
+                          <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs italic text-amber-900 dark:text-amber-200 font-serif">
+                            &ldquo;{s.incantation}&rdquo;
+                          </div>
+                        )}
+                        <p className="text-xs text-foreground/90">{s.effects}</p>
+                        {s.costsAndBackfire && (
+                          <p className="text-[11px] text-rose-700 dark:text-rose-300"><strong className="text-rose-600 dark:text-rose-400">Bedel: </strong>{s.costsAndBackfire}</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Ritüeller & Lanetler */}
+            {rituals.length > 0 && (
+              <div className="space-y-4">
+                <Typography variant="h3" className="text-base font-bold text-foreground flex items-center gap-2">
+                  <Flame size={18} className="text-rose-600 dark:text-rose-400" />
+                  <span>Ritüeller, Ayinler & Lanetler ({rituals.length})</span>
+                </Typography>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {rituals.map((r) => (
+                    <div key={r.id} className="p-5 rounded-2xl bg-card border border-border/70 space-y-2.5 shadow-sm">
+                      <h4 className="font-bold text-sm text-foreground">{r.name}</h4>
+                      <p className="text-xs text-foreground/80 dark:text-muted">{r.purpose}</p>
+                      <div className="space-y-1 text-[11px]">
+                        {r.requiredConditions && <div><span className="font-bold text-foreground">Koşullar:</span> <span className="text-foreground/80 dark:text-muted">{r.requiredConditions}</span></div>}
+                        {r.requiredSacrifices && <div><span className="font-bold text-rose-600 dark:text-rose-400">Adaklar:</span> <span className="text-rose-700 dark:text-rose-300 font-medium">{r.requiredSacrifices}</span></div>}
+                        {r.risksAndFailures && <div><span className="font-bold text-rose-600 dark:text-rose-400">Risk:</span> <span className="text-rose-800 dark:text-rose-300/90 font-medium">{r.risksAndFailures}</span></div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Büyük Kehanetler */}
+            {prophecies.length > 0 && (
+              <div className="space-y-4">
+                <Typography variant="h3" className="text-base font-bold text-foreground flex items-center gap-2">
+                  <Eye size={18} className="text-purple-600 dark:text-purple-400" />
+                  <span>Kayıtlı Büyük Kehanetler ({prophecies.length})</span>
+                </Typography>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {prophecies.map((p) => {
+                    const statusConfig = PROPHECY_STATUS_LABELS[p.status] || { label: 'Bekleniyor', color: 'text-amber-700 dark:text-amber-400 bg-amber-500/10 border-amber-500/20' };
+                    return (
+                      <div key={p.id} className="p-5 rounded-2xl bg-card border border-border/70 space-y-3 shadow-sm">
+                        <div className="flex items-center justify-between gap-2">
+                          <h4 className="font-bold text-sm text-foreground">{p.title}</h4>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusConfig.color}`}>
+                            {statusConfig.label}
+                          </span>
+                        </div>
+                        <blockquote className="p-3.5 rounded-xl bg-purple-500/10 dark:bg-purple-950/30 border-l-4 border-purple-500 text-xs italic text-purple-950 dark:text-purple-200 font-serif leading-relaxed shadow-sm">
+                          &ldquo;{p.prophecyText}&rdquo;
+                        </blockquote>
+                        {p.seerName && (
+                          <span className="text-[11px] text-foreground/80 dark:text-muted block">Söyleyen: {p.seerName}</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── ZAMAN ÇİZELGESİ ── */}
         {activeTab === 'timeline' && (
           <div>
@@ -2890,9 +3114,23 @@ export default function PublicUniversePage() {
           cultures={cultures}
           canonRules={canonRules}
           plotThreads={plotThreads}
+          spells={spells}
+          divinations={divinations}
+          prophecies={prophecies}
+          rituals={rituals}
           stories={stories}
           seriesList={seriesList}
           onSelectResult={handleSelectSearchResult}
+        />
+      )}
+      {/* ── İNTERAKTİF EVREN FALI VE KEHANET KARTI MODALI (WOW FAKTÖRÜ) ── */}
+      {universe && (
+        <UniverseDivinationCardModal
+          isOpen={isDivinationModalOpen}
+          onClose={() => setIsDivinationModalOpen(false)}
+          universeTitle={universe.title}
+          divinations={divinations}
+          prophecies={prophecies}
         />
       )}
     </div>

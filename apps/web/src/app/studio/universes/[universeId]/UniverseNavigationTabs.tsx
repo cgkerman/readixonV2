@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   type LucideIcon,
   BookOpen, 
@@ -22,13 +22,9 @@ import {
   BookA, 
   Scroll, 
   Search,
-  ChevronLeft,
-  ChevronRight,
   Sparkles,
   LayoutGrid,
-  Check,
-  X,
-  Filter
+  X
 } from 'lucide-react';
 
 export type ActiveUniverseTab = 
@@ -42,6 +38,7 @@ export type ActiveUniverseTab =
   | 'organizations' 
   | 'items' 
   | 'powers' 
+  | 'mystic_arts'
   | 'cultures'
   | 'media'
   | 'soundtracks'
@@ -63,6 +60,7 @@ export interface UniverseTabCounts {
   organizations?: number;
   items?: number;
   powers?: number;
+  mystic_arts?: number;
   cultures?: number;
   media?: number;
   soundtracks?: number;
@@ -78,181 +76,193 @@ interface UniverseNavigationTabsProps {
   activeTab: ActiveUniverseTab;
   onSelectTab: (tab: ActiveUniverseTab) => void;
   counts: UniverseTabCounts;
+  onOpenCodex?: () => void;
 }
 
-type TabCategory = 'all' | 'core' | 'entities' | 'world' | 'narrative' | 'media';
+export type TabCategory = 'core' | 'entities' | 'world' | 'narrative' | 'media';
 
 interface TabDefinition {
   id: ActiveUniverseTab;
   label: string;
   icon: LucideIcon;
-  category: 'core' | 'entities' | 'world' | 'narrative' | 'media';
+  category: TabCategory;
   description: string;
 }
 
-const ALL_TABS: TabDefinition[] = [
-  // 🏛️ Temel & Eserler
+export const ALL_TABS: TabDefinition[] = [
+  // 🏛️ Temel & Eserler (3)
   { id: 'overview', label: 'Genel & Eserler', icon: BookOpen, category: 'core', description: 'Evren özeti ve bağlı hikayeler' },
   { id: 'canon_rules', label: 'Seri Bible & Canon', icon: Scale, category: 'core', description: 'Değiştirilemez temel kanunlar' },
   { id: 'members', label: 'Ekip & İzinler', icon: Users, category: 'core', description: 'Ortak yazarlar ve yetkiler' },
 
-  // 👤 Karakter & Varlıklar
+  // 👤 Karakter & Varlıklar (4)
   { id: 'characters', label: 'Karakterler', icon: Users, category: 'entities', description: 'Karakter arkları ve profiller' },
   { id: 'relationships', label: 'İlişki Ağı', icon: Share2, category: 'entities', description: 'Dostluk, düşmanlık ve bağlar grafiği' },
   { id: 'races', label: 'Irklar & Türler', icon: Dna, category: 'entities', description: 'Halklar, biyolojiler ve kökenler' },
   { id: 'creatures', label: 'Yaratıklar & Canavarlar', icon: Skull, category: 'entities', description: 'Fauna, canavarlar ve tehlike sınıfları' },
 
-  // 🗺️ Dünya & Mekânlar
+  // 🗺️ Dünya & Mekânlar (5)
   { id: 'locations', label: 'Mekânlar', icon: MapPin, category: 'world', description: 'Şehirler, kaleler ve diyarlar' },
   { id: 'maps', label: 'Dünya Haritası', icon: MapIcon, category: 'world', description: 'Etkileşimli harita ve pinler' },
   { id: 'organizations', label: 'Organizasyonlar', icon: Building2, category: 'world', description: 'Loncalar, tarikatlar ve fraksiyonlar' },
   { id: 'items', label: 'Eşyalar & Yadigârlar', icon: Sword, category: 'world', description: 'Efsanevi silahlar ve kadim nesneler' },
   { id: 'cultures', label: 'Kültür & İnanç', icon: Landmark, category: 'world', description: 'Gelenekler, dinler ve tabular' },
 
-  // 📜 Kurallar & Hikaye
+  // 📜 Kurallar & Hikaye (6)
   { id: 'powers', label: 'Güç Sistemleri', icon: Zap, category: 'narrative', description: 'Büyü okulları ve bedel kuralları' },
+  { id: 'mystic_arts', label: 'Mistik Sanatlar', icon: Sparkles, category: 'narrative', description: 'Fal, kehanet, büyü kitabı ve ritüeller' },
   { id: 'timeline', label: 'Zaman Çizelgesi', icon: Clock, category: 'narrative', description: 'Çağlar, savaşlar ve kronoloji' },
   { id: 'plot_threads', label: 'Açık Düğümler & Gizemler', icon: HelpCircle, category: 'narrative', description: 'Sırlar ve çözülecek gizemler' },
   { id: 'glossary', label: 'Sözlük & Terimler', icon: BookA, category: 'narrative', description: 'Kurgusal kavramlar ve diller' },
   { id: 'lore', label: 'Lore & Kurallar', icon: Scroll, category: 'narrative', description: 'Derin dünya bilgisi ve tarih' },
 
-  // 🎨 Sanat & Medya
+  // 🎨 Sanat & Medya (2)
   { id: 'media', label: 'Sanat & Moodboard', icon: Palette, category: 'media', description: 'Görsel referanslar ve konsept çizimler' },
   { id: 'soundtracks', label: 'Müzik & Ambiyans', icon: Music, category: 'media', description: 'Atmosfer parçaları ve temalar' },
 ];
 
 const CATEGORIES: { id: TabCategory; label: string; icon: string }[] = [
-  { id: 'all', label: 'Tümü', icon: '🌟' },
-  { id: 'core', label: 'Temel & Eserler', icon: '🏛️' },
-  { id: 'entities', label: 'Karakterler & Irklar', icon: '👤' },
+  { id: 'core', label: 'Temel & Kanon', icon: '🏛️' },
+  { id: 'entities', label: 'Karakter & Varlıklar', icon: '👤' },
   { id: 'world', label: 'Dünya & Mekân', icon: '🗺️' },
-  { id: 'narrative', label: 'Kurallar & Tarih', icon: '📜' },
-  { id: 'media', label: 'Sanat & Müzik', icon: '🎨' },
+  { id: 'narrative', label: 'Kurgu & Kurallar', icon: '📜' },
+  { id: 'media', label: 'Sanat & Medya', icon: '🎨' },
 ];
 
 export function UniverseNavigationTabs({
   activeTab,
   onSelectTab,
-  counts
+  counts,
+  onOpenCodex
 }: UniverseNavigationTabsProps) {
-  const [selectedCategory, setSelectedCategory] = useState<TabCategory>('all');
+  // Aktif sekmenin ait olduğu kategoriyi bul
+  const activeTabDefinition = useMemo(() => {
+    return ALL_TABS.find((t) => t.id === activeTab);
+  }, [activeTab]);
+
+  const [selectedCategory, setSelectedCategory] = useState<TabCategory>(
+    activeTabDefinition ? activeTabDefinition.category : 'core'
+  );
   const [onlyFilled, setOnlyFilled] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDirectoryModal, setShowDirectoryModal] = useState(false);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
 
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const activeTabRef = useRef<HTMLButtonElement>(null);
+  // activeTab dışarıdan değiştiğinde kategori senkronizasyonu
+  useEffect(() => {
+    const item = ALL_TABS.find((t) => t.id === activeTab);
+    if (item && item.category !== selectedCategory) {
+      setSelectedCategory(item.category);
+    }
+  }, [activeTab]);
 
   // Toplam dolu modül sayısı
   const totalFilledCount = useMemo(() => {
     return ALL_TABS.filter((t) => (counts[t.id] || 0) > 0).length;
   }, [counts]);
 
-  // Filtrelenmiş sekmeler
-  const filteredTabs = useMemo(() => {
-    return ALL_TABS.filter((tab) => {
-      // 1. Kategori filtresi
-      if (selectedCategory !== 'all' && tab.category !== selectedCategory) {
-        // Eğer aktif sekme filtrenin dışındaysa yine de göster
-        if (tab.id !== activeTab) return false;
+  // Kategori bazlı dolu sayıları
+  const categoryFilledCounts = useMemo(() => {
+    const result: Record<TabCategory, number> = {
+      core: 0,
+      entities: 0,
+      world: 0,
+      narrative: 0,
+      media: 0,
+    };
+    ALL_TABS.forEach((t) => {
+      if ((counts[t.id] || 0) > 0) {
+        result[t.category] = (result[t.category] || 0) + 1;
       }
+    });
+    return result;
+  }, [counts]);
 
-      // 2. Sadece dolu olanlar filtresi
-      if (onlyFilled && (counts[tab.id] || 0) === 0 && tab.id !== activeTab) {
-        return false;
-      }
-
-      // 3. Arama filtresi
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
+  // Alt satırda gösterilecek sekmeler (Arama aktifse tümü içinde arar, değilse seçili kategorininkileri gösterir)
+  const visibleTabs = useMemo(() => {
+    // 1. Arama aktifse: Tüm modüller içinde ara
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      return ALL_TABS.filter((tab) => {
         const matchesLabel = tab.label.toLowerCase().includes(q);
         const matchesDesc = tab.description.toLowerCase().includes(q);
-        if (!matchesLabel && !matchesDesc) return false;
-      }
-
-      return true;
-    });
-  }, [selectedCategory, onlyFilled, searchQuery, counts, activeTab]);
-
-  // Kaydırma durumunu denetleme
-  const checkScrollability = () => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 10);
-    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 10);
-  };
-
-  useEffect(() => {
-    checkScrollability();
-    window.addEventListener('resize', checkScrollability);
-    return () => window.removeEventListener('resize', checkScrollability);
-  }, [filteredTabs]);
-
-  // Aktif sekme değiştiğinde veya sayfa açıldığında sekmeyi görünür alana ortala
-  useEffect(() => {
-    if (activeTabRef.current && scrollContainerRef.current) {
-      activeTabRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-        inline: 'center'
+        if (onlyFilled && (counts[tab.id] || 0) === 0) return false;
+        return matchesLabel || matchesDesc;
       });
     }
-  }, [activeTab]);
 
-  const handleScroll = (direction: 'left' | 'right') => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
-    const amount = el.clientWidth * 0.6;
-    el.scrollBy({
-      left: direction === 'left' ? -amount : amount,
-      behavior: 'smooth'
+    // 2. Normal mod: Seçili kategorinin sekmeleri
+    return ALL_TABS.filter((tab) => {
+      if (tab.category !== selectedCategory) return false;
+      if (onlyFilled && (counts[tab.id] || 0) === 0 && tab.id !== activeTab) return false;
+      return true;
     });
+  }, [selectedCategory, searchQuery, onlyFilled, counts, activeTab]);
+
+  // Kategori seçildiğinde
+  const handleSelectCategory = (catId: TabCategory) => {
+    setSelectedCategory(catId);
+    setSearchQuery(''); // Kategoriye tıklanınca aramayı temizle
+    // Eğer o anki aktif sekme bu kategoride değilse, bu kategorinin ilk sekmesini aç
+    const catTabs = ALL_TABS.filter((t) => t.category === catId);
+    if (catTabs.length > 0 && !catTabs.some((t) => t.id === activeTab)) {
+      onSelectTab(catTabs[0].id);
+    }
   };
 
   return (
-    <div className="mb-6 space-y-2.5">
-      {/* ── 1. ÜST KONTROL ÇUBUĞU (Kategori Hapları + Dolu Filtresi + Arama + Fihrist) ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-card/70 backdrop-blur-md p-2 rounded-2xl border border-border">
+    <div className="mb-6 rounded-3xl bg-card border border-border/80 shadow-sm p-3 space-y-3">
+      {/* ── 1. ÜST SATIR: Ana Kategori Hapları & Sağ Araçlar ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-border/60">
         
-        {/* Sol: Kategori Hapları (Segmented Filter) */}
-        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
+        {/* Sol: 5 Ana Kategori Sekmesi (Sıfır kaydırma, ferah hiyerarşi) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scrollbar-none py-0.5">
           {CATEGORIES.map((cat) => {
-            const isCatActive = selectedCategory === cat.id;
+            const isCatActive = selectedCategory === cat.id && !searchQuery.trim();
+            const filledCount = categoryFilledCounts[cat.id];
+            const catTotal = ALL_TABS.filter(t => t.category === cat.id).length;
+
             return (
               <button
                 key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all select-none cursor-pointer ${
+                onClick={() => handleSelectCategory(cat.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all select-none cursor-pointer border ${
                   isCatActive
-                    ? 'bg-primary text-white shadow-xs font-bold'
-                    : 'text-muted hover:text-text hover:bg-muted/15'
+                    ? 'bg-primary text-white border-primary shadow-xs font-bold'
+                    : 'bg-muted/10 hover:bg-muted/20 border-transparent text-foreground/75 hover:text-foreground'
                 }`}
               >
                 <span>{cat.icon}</span>
                 <span>{cat.label}</span>
+                <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-bold ${
+                  isCatActive 
+                    ? 'bg-white/20 text-white' 
+                    : filledCount > 0 
+                    ? 'bg-primary/10 text-primary dark:bg-primary/20' 
+                    : 'bg-muted/20 text-muted'
+                }`}>
+                  {filledCount > 0 ? filledCount : catTotal}
+                </span>
               </button>
             );
           })}
         </div>
 
-        {/* Sağ: "Dolu Olanlar" Butonu + Arama + Fihrist Popover */}
+        {/* Sağ: "Dolu Olanlar" Filtresi + Hızlı Arama + Fihrist Popover */}
         <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
           {/* Dolu Olanlar Filtresi Toggle */}
           <button
             onClick={() => setOnlyFilled(!onlyFilled)}
             className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all select-none cursor-pointer border ${
               onlyFilled
-                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400 font-bold'
-                : 'bg-muted/10 border-border text-muted hover:text-text hover:bg-muted/20'
+                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-400 font-bold'
+                : 'bg-muted/10 border-border/60 text-foreground/70 hover:text-foreground hover:bg-muted/20'
             }`}
             title="Yalnızca içeriği olan modülleri göster"
           >
-            <Sparkles size={12} className={onlyFilled ? 'text-emerald-400' : 'text-muted'} />
+            <Sparkles size={12} className={onlyFilled ? 'text-emerald-500' : 'text-muted'} />
             <span className="hidden sm:inline">Dolu Olanlar</span>
             <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-bold ${
-              onlyFilled ? 'bg-emerald-500/20 text-emerald-300' : 'bg-muted/20 text-muted'
+              onlyFilled ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300' : 'bg-muted/20 text-muted'
             }`}>
               {totalFilledCount}/{ALL_TABS.length}
             </span>
@@ -266,12 +276,12 @@ export function UniverseNavigationTabs({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Modül ara..."
-              className="w-24 sm:w-32 focus:w-44 transition-all duration-200 bg-muted/15 hover:bg-muted/25 focus:bg-background border border-border rounded-xl pl-8 pr-6 py-1.5 text-xs text-text focus:outline-none focus:border-primary placeholder:text-muted/60"
+              className="w-24 sm:w-32 focus:w-44 transition-all duration-200 bg-muted/15 hover:bg-muted/25 focus:bg-background border border-border/80 rounded-xl pl-8 pr-6 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary placeholder:text-muted"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-text"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-foreground"
               >
                 <X size={12} />
               </button>
@@ -281,39 +291,45 @@ export function UniverseNavigationTabs({
           {/* Fihrist (Tüm Modüller Grid Modalı) Butonu */}
           <button
             onClick={() => setShowDirectoryModal(true)}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-muted/15 hover:bg-muted/25 border border-border text-text hover:text-primary transition-all cursor-pointer select-none"
-            title="Tüm evren modülleri fihristini aç"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-primary/10 hover:bg-primary/20 border border-primary/25 text-primary transition-all cursor-pointer select-none"
+            title="Tüm 20 evren modülünün fihristini aç"
           >
-            <LayoutGrid size={13} className="text-primary" />
-            <span className="hidden md:inline font-bold">Fihrist</span>
+            <LayoutGrid size={13} />
+            <span className="hidden md:inline">Fihrist</span>
           </button>
+
+          {/* Evren Defteri (Kadim Kodeks) Butonu */}
+          {onOpenCodex && (
+            <button
+              type="button"
+              onClick={onOpenCodex}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/35 text-amber-700 dark:text-amber-300 transition-all cursor-pointer select-none"
+              title="Yazdığınız evreni fantastik bir defter / kodeks gibi görüntüleyin"
+            >
+              <BookOpen size={13} className="text-amber-600 dark:text-amber-400" />
+              <span className="hidden sm:inline">Defter</span>
+            </button>
+          )}
         </div>
 
       </div>
 
-      {/* ── 2. ANA SEKME BAR (Yatay Kaydırılabilir & Ok Butonlu) ── */}
-      <div className="relative group">
-        
-        {/* Sol Kaydırma Oku & Degrade */}
-        {canScrollLeft && (
-          <div className="absolute left-0 top-0 bottom-0 z-10 flex items-center pr-4 bg-gradient-to-r from-background via-background/80 to-transparent pointer-events-none">
-            <button
-              onClick={() => handleScroll('left')}
-              className="pointer-events-auto w-7 h-7 rounded-full bg-card border border-border shadow-md flex items-center justify-center text-text hover:bg-primary hover:text-white transition-all cursor-pointer -ml-1"
-              aria-label="Sola Kaydır"
-            >
-              <ChevronLeft size={15} />
-            </button>
+      {/* ── 2. ALT SATIR: Seçili Kategorinin Modülleri (Sıfır Kaydırma, Tek Sırada Derli Toplu) ── */}
+      <div className="flex flex-wrap items-center gap-2 pt-0.5 animate-in fade-in-50 duration-150">
+        {visibleTabs.length === 0 ? (
+          <div className="py-2 px-3 text-xs text-muted italic flex items-center gap-2">
+            <span>Arama kriterine uygun modül bulunamadı.</span>
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="text-primary hover:underline font-bold not-italic"
+              >
+                Aramayı Temizle
+              </button>
+            )}
           </div>
-        )}
-
-        {/* Sekmeler Konteyneri */}
-        <div
-          ref={scrollContainerRef}
-          onScroll={checkScrollability}
-          className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none scroll-smooth select-none px-0.5"
-        >
-          {filteredTabs.map((tab) => {
+        ) : (
+          visibleTabs.map((tab) => {
             const Icon = tab.icon;
             const count = counts[tab.id] ?? 0;
             const isTabActive = activeTab === tab.id;
@@ -322,61 +338,53 @@ export function UniverseNavigationTabs({
             return (
               <button
                 key={tab.id}
-                ref={isTabActive ? activeTabRef : null}
-                onClick={() => onSelectTab(tab.id)}
-                className={`group/btn flex items-center gap-2 px-3.5 py-2.5 rounded-2xl text-xs transition-all whitespace-nowrap shrink-0 border cursor-pointer ${
+                onClick={() => {
+                  onSelectTab(tab.id);
+                  if (searchQuery.trim()) {
+                    setSelectedCategory(tab.category);
+                    setSearchQuery('');
+                  }
+                }}
+                className={`group flex items-center gap-2 px-3.5 py-2 rounded-2xl text-xs transition-all whitespace-nowrap border cursor-pointer ${
                   isTabActive
-                    ? 'bg-primary text-white border-primary shadow-sm font-bold scale-[1.01]'
+                    ? 'bg-primary text-white border-primary shadow-xs font-bold scale-[1.01]'
                     : hasData
-                    ? 'bg-card hover:bg-card/90 border-border text-text hover:border-primary/50 hover:shadow-xs'
-                    : 'bg-card/40 hover:bg-card/80 border-border/40 text-muted hover:text-text'
+                    ? 'bg-muted/15 hover:bg-card border-border/80 text-foreground hover:border-primary/50 hover:shadow-xs'
+                    : 'bg-transparent hover:bg-muted/15 border-border/40 text-foreground/70 hover:text-foreground'
                 }`}
                 title={tab.description}
               >
                 <Icon 
-                  size={15} 
+                  size={14} 
                   className={
                     isTabActive 
                       ? 'text-white' 
                       : hasData 
                       ? 'text-primary' 
-                      : 'text-muted group-hover/btn:text-text'
+                      : 'text-muted group-hover:text-foreground'
                   } 
                 />
                 
                 <span className="font-semibold">{tab.label}</span>
 
-                {/* Sayı Rozeti (Badge) */}
-                <span className={`px-1.5 py-0.5 rounded-md text-[10px] transition-all font-bold ${
-                  isTabActive
-                    ? 'bg-white/20 text-white'
-                    : hasData
-                    ? 'bg-primary/15 text-primary border border-primary/25 shadow-2xs font-extrabold'
-                    : 'bg-muted/15 text-muted/60'
-                }`}>
+                <span
+                  className={`px-1.5 py-0.2 rounded-md text-[10px] font-bold ${
+                    isTabActive
+                      ? 'bg-white/20 text-white'
+                      : hasData
+                      ? 'bg-primary/10 text-primary border border-primary/20'
+                      : 'bg-muted/20 text-muted'
+                  }`}
+                >
                   {count}
                 </span>
               </button>
             );
-          })}
-        </div>
-
-        {/* Sağ Kaydırma Oku & Degrade */}
-        {canScrollRight && (
-          <div className="absolute right-0 top-0 bottom-0 z-10 flex items-center pl-4 bg-gradient-to-l from-background via-background/80 to-transparent pointer-events-none">
-            <button
-              onClick={() => handleScroll('right')}
-              className="pointer-events-auto w-7 h-7 rounded-full bg-card border border-border shadow-md flex items-center justify-center text-text hover:bg-primary hover:text-white transition-all cursor-pointer -mr-1"
-              aria-label="Sağa Kaydır"
-            >
-              <ChevronRight size={15} />
-            </button>
-          </div>
+          })
         )}
-
       </div>
 
-      {/* ── 3. FİHRİST MODALI / MEGA MENU (Yüksek Kontrastlı & Kristal Netliğinde) ── */}
+      {/* ── 3. FİHRİST MODALI / MEGA MENU ── */}
       {showDirectoryModal && (
         <div 
           className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-150"
@@ -393,13 +401,13 @@ export function UniverseNavigationTabs({
                   <LayoutGrid size={20} />
                 </div>
                 <div>
-                  <h3 className="text-base sm:text-lg font-black text-text tracking-tight">Evren Modülleri Fihristi</h3>
+                  <h3 className="text-base sm:text-lg font-black text-foreground tracking-tight">Evren Modülleri Fihristi</h3>
                   <p className="text-xs text-muted mt-0.5">Tüm kurgu araçlarına tek bir bakışla ulaşın ve doğrudan geçiş yapın.</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowDirectoryModal(false)}
-                className="w-9 h-9 rounded-full bg-muted/15 hover:bg-muted/30 text-text hover:text-primary flex items-center justify-center transition-colors cursor-pointer"
+                className="w-9 h-9 rounded-full bg-muted/15 hover:bg-muted/30 text-foreground hover:text-primary flex items-center justify-center transition-colors cursor-pointer"
                 title="Kapat"
               >
                 <X size={18} />
@@ -408,7 +416,7 @@ export function UniverseNavigationTabs({
 
             {/* Kategorilere Göre Gruplanmış Net Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {CATEGORIES.filter(c => c.id !== 'all').map((cat) => {
+              {CATEGORIES.map((cat) => {
                 const catTabs = ALL_TABS.filter(t => t.category === cat.id);
                 const filledCatCount = catTabs.filter(t => (counts[t.id] || 0) > 0).length;
 
@@ -417,7 +425,7 @@ export function UniverseNavigationTabs({
                     
                     {/* Kategori Başlığı */}
                     <div className="flex items-center justify-between pb-2 border-b border-border/60">
-                      <div className="flex items-center gap-2 text-xs font-black text-text tracking-wide uppercase">
+                      <div className="flex items-center gap-2 text-xs font-black text-foreground tracking-wide uppercase">
                         <span className="text-sm">{cat.icon}</span>
                         <span>{cat.label}</span>
                       </div>
@@ -440,13 +448,14 @@ export function UniverseNavigationTabs({
                           <button
                             key={tab.id}
                             onClick={() => {
+                              setSelectedCategory(tab.category);
                               onSelectTab(tab.id);
                               setShowDirectoryModal(false);
                             }}
                             className={`flex items-center justify-between p-2.5 rounded-xl text-xs text-left transition-all cursor-pointer border ${
                               isTabActive
                                 ? 'bg-primary text-white font-bold border-primary shadow-xs'
-                                : 'bg-card hover:bg-card/90 border-border/70 hover:border-primary/50 text-text'
+                                : 'bg-card hover:bg-card/90 border-border/70 hover:border-primary/50 text-foreground'
                             }`}
                           >
                             <div className="flex items-center gap-2.5 min-w-0">
@@ -456,7 +465,7 @@ export function UniverseNavigationTabs({
                                 <Icon size={13} />
                               </div>
                               <div className="min-w-0">
-                                <span className={`truncate block ${isTabActive ? 'font-black text-white' : 'font-bold text-text'}`}>
+                                <span className={`truncate block ${isTabActive ? 'font-black text-white' : 'font-bold text-foreground'}`}>
                                   {tab.label}
                                 </span>
                               </div>
@@ -484,11 +493,11 @@ export function UniverseNavigationTabs({
             {/* Alt Eylemler */}
             <div className="pt-3 border-t border-border flex items-center justify-between">
               <span className="text-xs text-muted font-medium">
-                Toplam <strong className="text-text font-bold">{totalFilledCount}</strong> modülde kurgu verisi bulunuyor.
+                Toplam <strong className="text-foreground font-bold">{totalFilledCount}</strong> modülde kurgu verisi bulunuyor.
               </span>
               <button
                 onClick={() => setShowDirectoryModal(false)}
-                className="px-5 py-2.5 rounded-xl bg-muted/20 hover:bg-muted/30 text-xs font-bold text-text transition-colors cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-muted/20 hover:bg-muted/30 text-xs font-bold text-foreground transition-colors cursor-pointer"
               >
                 Kapat
               </button>

@@ -1,0 +1,30 @@
+# Readixon v2.6: Kelimelerin Gücü, Kademeli Eşik Sistemi & 3D Evren Defteri (Grimoire) 🚀
+
+## Genel Bakış
+Bu sürümde, platform genelindeki edebi üretimi canlı ve dinamik bir topluluk hedefine dönüştüren **"Kelimelerin Gücü"** vitrini ile okuyucuların kurgusal dünyalara büyüleyici bir kitap hissiyatıyla dalmasını sağlayan **"3D Evren Defteri (Grimoire / Codex)"** tamamlandı.
+
+---
+
+## 🌟 Yapılan Temel Geliştirmeler
+
+### 1. Kelimelerin Gücü (Gündem Sayfası Entegrasyonu)
+- **Gündem Konumu:** Keşfet sayfasından alınarak Gündem (`/agenda`) sayfasında Kültür & Sanat haberlerinin hemen altına, *Üstün Nitelikli Eserler* bloğunun üzerine yerleştirildi.
+- **%100 Gerçek Firestore Verisi:** Sentetik/yapay tabanlar tamamen kaldırılarak, platformda yayında olan tüm hikayelerin bölümlerindeki kelimeler (`contentBlocks`, `text`, `content`) anlık hesaplanmaktadır.
+- **Canlı Metrikler:** 
+  - Anlık `174.150` Kelime
+  - `11` Aktif Eser
+  - `71` Yayınlanmış Bölüm
+  - `14,5` Saat Kesintisiz Okuma
+  - Edebi Kıyas: *Tolstoy'un Savaş ve Barış eserinin %31'i*
+- **Otomatik Kademeli Eşik Sistemi (Graduated Milestone Ladder):** 1.000 kelimeden 50M+ kelimeye kadar 14 basamaklı dinamik seviye mimarisi (`MILESTONES_CONFIG` & `calculateMilestoneTier`). Şu an `Seviye 7: Büyük Kütüphane` (Hedef: 250.000 kelime, %49 tamamlandı) aktif. Yazarlar ürettikçe hedef aşıldığında sistem otomatik olarak bir sonraki seviyeye geçmektedir.
+- **Göz Dostu & Kompakt Tasarım:** Hem Açık hem Koyu modda keskin kontrast sağlayan, sayfayı yormayan sade ve modern tasarım.
+
+### 2. 3D Evren Defteri (Grimoire / Codex)
+- **3D Sayfa Çevirme (Page-flip):** Çift taraflı gerçekçi sayfa çevirme animasyonu, fısıltılı sayfa sesi efektleri ve okuyucu dostu navigasyon.
+- **4 Antika Tema:** Parşömen, Fildişi, Gece Gezgini ve Kraliyet Kırmızısı.
+- **Yazar Evren Stüdyosu ile %100 Senkronizasyon:** Yazarın tanımladığı Karakterler, Mekanlar, Fraksiyonlar, Zaman Çizelgesi ve Büyü/Teknoloji Mistik Sanatlar verileri canlı olarak defterde listelenir.
+- **Tek Tıkla PDF Dışa Aktarma:** Okurların ve yazarların evren defterini antika bir e-kitap formatında tek tıkla PDF olarak indirebilmesi (jsPDF motoru).
+- **Kehanet Kartları:** Evren varlıklarını tarot tarzı kartlarla keşfetme deneyimi.
+
+### 3. Tek Bölümlük Hikaye / Durum Mantığı
+- Tek bölümlük bağımsız kısa hikayelerin durum seçimleri (Taslak / Tamamlandı) yazar ergonomisine göre optimize edildi.

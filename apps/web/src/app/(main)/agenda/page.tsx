@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Typography, Button } from '@readixon/ui';
 import { collection, getDocs, limit, orderBy, query, where, onSnapshot } from 'firebase/firestore';
-import { db, getTopStories, getActiveAdminPolls, voteAdminPoll, AdminPoll, getActiveQuote, AdminQuote, useAuthStore, slugify } from '@readixon/core';
+import { db, getTopStories, getActiveAdminPolls, voteAdminPoll, AdminPoll, getActiveQuote, AdminQuote, useAuthStore, slugify, getPlatformWordStats } from '@readixon/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Loader2, TrendingUp, BookOpen, Newspaper, Quote as QuoteIcon, Vote, ChevronRight, ChevronLeft, Eye, Heart, Layers, Star, Clock, Calendar, Copy, Check } from 'lucide-react';
@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { AgendaFooter } from './components/AgendaFooter';
 import { PlatformFeedback } from './components/PlatformFeedback';
 import { ExcellentStoriesSection } from './components/ExcellentStoriesSection';
+import { PowerOfWordsBanner } from '@/components/PowerOfWordsBanner';
 
 function formatNewsDate(createdAt: any): string {
   if (!createdAt) return 'Yeni';
@@ -157,6 +158,13 @@ export default function AgendaPage() {
   const { data: adminQuote, isLoading: quoteLoading } = useQuery({
     queryKey: ['admin_quote', 'active'],
     queryFn: () => getActiveQuote(),
+  });
+
+  // 6. Kelimelerin Gücü (Gerçek Verilerle Canlı Edebiyat İstatistiği)
+  const { data: wordStats, isLoading: wordStatsLoading } = useQuery({
+    queryKey: ['platform', 'wordStats'],
+    queryFn: () => getPlatformWordStats(),
+    staleTime: 5 * 60 * 1000,
   });
 
   const handleVote = async (pollId: string, optionIndex: number) => {
@@ -423,6 +431,11 @@ export default function AgendaPage() {
             )}
           </section>
         )}
+
+        {/* ── Kelimelerin Gücü (Canlı Kolektif Edebiyat Arşivi) ── */}
+        <section className="w-full">
+          <PowerOfWordsBanner stats={wordStats} isLoading={wordStatsLoading} />
+        </section>
 
         {/* Üstün Nitelikli Eserler (Editör Değerlendirmeleri 8.0+) */}
         <ExcellentStoriesSection />

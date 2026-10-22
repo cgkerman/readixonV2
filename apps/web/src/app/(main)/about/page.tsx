@@ -154,8 +154,28 @@ interface TimelineItem {
 
 const TIMELINE_DATA: TimelineItem[] = [
   {
-    version: 'v2.5',
+    version: 'v2.6',
     badge: 'En Son Güncelleme',
+    date: '23 Ekim 2026',
+    title: 'Kelimelerin Gücü: Canlı Edebiyat Sayacı, Kademeli Eşik Sistemi & 3D Evren Defteri (Grimoire)',
+    desc: 'Readixon\'da yazılan her cümlenin kolektif bir anıta dönüştüğü "Kelimelerin Gücü" vitrini Gündem sayfasında yayında! Yalnızca gerçek Firestore bölüm verilerini toplayan canlı kelime sayacı, platform büyüdükçe otomatik seviye atlayan 14 basamaklı kademeli eşik sistemi, edebi ölçek kıyaslamaları ve okuyucuları büyüleyen 3D sayfa çevirmeli, PDF dışa aktarma destekli Evren Defteri (Grimoire) Readixon v2.6\'da.',
+    highlights: [
+      'Kelimelerin Gücü (Canlı Kolektif Arşiv): Gündem sayfasında Kültür & Sanat haberlerinin altına konumlandırılan, platformdaki tüm yayındaki hikaye ve bölümlerin kelimelerini anlık toplayarak odometre animasyonuyla sergileyen canlı edebiyat vitrini',
+      'Otomatik Kademeli Eşik Sistemi (Graduated Milestone Ladder): 1.000 kelimeden 50M+ kelimeye kadar uzanan dinamik seviye basamakları; hedef aşıldığında bir sonraki seviyeye (Örn: Seviye 7 Büyük Kütüphane ➔ Seviye 8 Edebi Külliyat) otomatik geçiş ve anlık ilerleme takibi',
+      'Yalnızca %100 Gerçek Veri Prensibi: Sentetik ve yapay tabanların tamamen kaldırılarak Firestore veritabanındaki gerçek yayınlanmış eser, bölüm, kelime ve okuma saati metriklerinin şeffaf hesaplanması',
+      'Dinamik Edebi Kıyaslamalar: Kelime hacmine göre otomatik ölçeklenen Tolstoy\'un Savaş ve Barış, Tolkien\'in LOTR Üçlemesi ve Saint-Exupéry\'nin Küçük Prens eserleriyle anlık edebi hacim oranları',
+      'Göz Dostu & Kompakt Tasarım: Hem Açık modda hem Koyu modda keskin kontrast sağlayan, sayfayı yormayan sade ve modern tasarım dili',
+      '3D Evren Defteri (Grimoire / Codex): Okuyucu ve evren sayfalarında çalışan, gerçekçi sayfa çevirme (Page-flip) animasyonlu, 4 antika tema (Parşömen, Fildişi, Gece Gezgini, Kraliyet Kırmızısı) ve ses efektli interaktif evren el kitabı',
+      'Yazar Evren Stüdyosu Tam Senkronizasyonu: Evren Defteri\'nin doğrudan yazarın stüdyoda tanımladığı Karakterler, Mekanlar, Fraksiyonlar, Zaman Çizelgesi ve Büyü/Teknoloji Mistik Sanatlar verileriyle gerçek zamanlı çalışması',
+      'Tek Tıkla PDF İndirme (jsPDF): Yazarların ve okurların kurgusal evrenlerini şık antika bir e-kitap / defter formatında tek dokunuşla bilgisayarlarına veya telefonlarına PDF olarak kaydedebilmesi',
+      'Kehanet Kartları (Tarot Tarzı Evren Keşfi): Evren varlıklarını gizemli kehanet kartları şeklinde sergileyen etkileşimli kart keşif deneyimi',
+      'Tek Bölümlük Hikaye / Durum İyileştirmesi: Tek bölümlük bağımsız kısa hikayelerin durum mantığının (Taslak / Tamamlandı) optimize edilmesi',
+    ],
+    icon: Sparkles,
+  },
+  {
+    version: 'v2.5',
+    badge: 'Mesaj Hikayeleri',
     date: '21 Ekim 2026',
     title: 'Sürükleyici Mesaj Hikayeleri (Chat Stories), Çerçevesiz Medya & İstemci Tarafı Görsel Optimizasyonu',
     desc: 'WhatsApp ve mesajlaşma hissiyatında ilerleyen, okurun her dokunuşunda (Tap-to-Reveal) yeni bir mesajın belirdiği yenilikçi "Mesaj Hikayeleri" formatı yayına alındı! Çerçevesiz doğal medya balonları, tam ekran görsel inceleme (Lightbox), sunucuyu yormayan istemci tarafı akıllı görsel sıkıştırma motoru, çoklu konuşmacı destekli dinamik üst bar ve yazar stüdyosu canlı telefon simülatörü Readixon\'da.',

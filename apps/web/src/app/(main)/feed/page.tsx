@@ -227,6 +227,7 @@ export default function FeedPage() {
     queryFn: () => getPublicSeries(10),
   });
 
+
   const recentStories = recentData?.pages.flatMap((p: any) => p.stories) || [];
   const topStories = topData?.pages.flatMap((p: any) => p.stories) || [];
 
@@ -918,6 +919,7 @@ export default function FeedPage() {
           </Button>
         </div>
       </div>
+
 
       {/* ── 4. Yatay Kaydırmalı Listeler (Carousels) & Duyurular ── */}
       <div className="flex flex-col gap-12 px-6 md:px-16">

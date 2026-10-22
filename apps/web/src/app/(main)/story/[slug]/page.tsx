@@ -770,7 +770,11 @@ export default function StoryDetailPage() {
               )}
 
               <span className="px-3 py-1 bg-card/90 backdrop-blur-md text-text text-[11px] font-bold rounded-full border border-border/60 shadow-xs">
-                {story.status === 'completed' ? 'Tamamlandı' : story.status === 'ongoing' ? 'Devam Ediyor' : 'Taslak'}
+                {story.status === 'completed'
+                  ? (story.format === 'short_story' ? 'Tek Bölüm • Tamamlandı' : 'Tamamlandı')
+                  : story.status === 'ongoing'
+                    ? (story.format === 'short_story' ? 'Tek Bölüm' : 'Devam Ediyor')
+                    : 'Taslak'}
               </span>
 
               <span className="px-3 py-1 bg-card/90 backdrop-blur-md text-text text-[11px] font-bold rounded-full border border-border/60 shadow-xs flex items-center gap-1">

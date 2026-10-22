@@ -71,7 +71,9 @@ import { InteractiveWorldMap } from '@/components/InteractiveWorldMap';
 import { InteractiveRelationshipGraph } from '@/components/InteractiveRelationshipGraph';
 import { UniverseSearchDrawer, type UniverseSearchResultItem } from '@/components/UniverseSearchDrawer';
 import { UniverseOnboardingChecklist } from '@/components/UniverseOnboardingChecklist';
+import { UniverseCodexModal } from '@/components/UniverseCodexModal';
 import { UniverseNavigationTabs } from './UniverseNavigationTabs';
+import { UniverseMysticArtsTab } from './UniverseMysticArtsTab';
 import { 
   useAuthStore, 
   getUniverseById, 
@@ -118,6 +120,9 @@ import {
   createUniversePowerSystem,
   updateUniversePowerSystem,
   deleteUniversePowerSystem,
+  getUniverseDivinations,
+  getUniverseSpells,
+  getUniverseRituals,
   getUniverseRaces,
   createUniverseRace,
   updateUniverseRace,
@@ -305,6 +310,7 @@ type ActiveUniverseTab =
   | 'organizations' 
   | 'items' 
   | 'powers' 
+  | 'mystic_arts'
   | 'cultures'
   | 'media'
   | 'soundtracks'
@@ -329,6 +335,9 @@ export default function UniverseDetailPage() {
 
   // Global Evren Arama Çekmecesi (PRD Bölüm 50 & 51)
   const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
+
+  // Evren Defteri & Kadim Kodeks Modalı
+  const [isCodexOpen, setIsCodexOpen] = useState(false);
 
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -404,6 +413,7 @@ export default function UniverseDetailPage() {
   const [organizations, setOrganizations] = useState<UniverseOrganization[]>([]);
   const [items, setItems] = useState<UniverseItem[]>([]);
   const [powerSystems, setPowerSystems] = useState<UniversePowerSystem[]>([]);
+  const [mysticCount, setMysticCount] = useState<number>(0);
   const [races, setRaces] = useState<UniverseRace[]>([]);
   const [creatures, setCreatures] = useState<UniverseCreature[]>([]);
   const [cultures, setCultures] = useState<UniverseCulture[]>([]);
@@ -766,7 +776,10 @@ export default function UniverseDetailPage() {
         mediaRes,
         soundtrackRes,
         canonRes,
-        threadsRes
+        threadsRes,
+        divList,
+        spellList,
+        ritualList
       ] = await Promise.all([
         getUniverseLocations(universeId),
         getUniverseTimelineEvents(universeId),
@@ -784,6 +797,9 @@ export default function UniverseDetailPage() {
         getUniverseSoundtracks(universeId),
         getUniverseCanonRules(universeId),
         getUniversePlotThreads(universeId),
+        getUniverseDivinations(universeId),
+        getUniverseSpells(universeId),
+        getUniverseRituals(universeId),
       ]);
 
       setLocations(locs);
@@ -802,6 +818,7 @@ export default function UniverseDetailPage() {
       setSoundtracks(soundtrackRes);
       setCanonRules(canonRes);
       setPlotThreads(threadsRes);
+      setMysticCount((divList?.length || 0) + (spellList?.length || 0) + (ritualList?.length || 0));
       if (mapList.length > 0 && !selectedMapId) {
         setSelectedMapId(mapList[0].id);
       }
@@ -2606,6 +2623,20 @@ export default function UniverseDetailPage() {
           </kbd>
         </button>
 
+        {/* Evren Defteri (Kadim Kodeks) Butonu */}
+        <button
+          type="button"
+          onClick={() => setIsCodexOpen(true)}
+          className="flex items-center gap-2 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-600/10 to-amber-700/15 hover:from-amber-500/25 hover:to-amber-700/25 border border-amber-500/40 text-amber-800 dark:text-amber-300 text-xs font-bold transition-all shadow-xs group cursor-pointer active:scale-95"
+          title="Tüm evreni fantastik bir yazar defteri / kadim kodeks olarak açıp oku"
+        >
+          <BookOpen size={14} className="text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform" />
+          <span className="font-bold">Evren Defteri</span>
+          <span className="hidden sm:inline text-[10px] bg-amber-500/20 text-amber-800 dark:text-amber-200 px-1.5 py-0.5 rounded-md border border-amber-500/30 font-serif">
+            Kodeks
+          </span>
+        </button>
+
         <div className="flex items-center gap-2">
           {visibility === 'draft' ? (
             <button
@@ -2764,6 +2795,7 @@ export default function UniverseDetailPage() {
       <UniverseNavigationTabs
         activeTab={activeTab}
         onSelectTab={setActiveTab}
+        onOpenCodex={() => setIsCodexOpen(true)}
         counts={{
           overview: connectedStories.length,
           characters: characters.length,
@@ -2775,6 +2807,7 @@ export default function UniverseDetailPage() {
           organizations: organizations.length,
           items: items.length,
           powers: powerSystems.length,
+          mystic_arts: mysticCount,
           cultures: cultures.length,
           media: mediaList.length,
           soundtracks: soundtracks.length,
@@ -4235,6 +4268,15 @@ export default function UniverseDetailPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* ── 10. SEKME: Mistik Sanatlar (Fal, Kehanet, Büyü Kitabı & Ritüeller) ── */}
+      {activeTab === 'mystic_arts' && (
+        <UniverseMysticArtsTab
+          universeId={universeId}
+          isAuthorized={canEditLore}
+          onCountChange={(cnt) => setMysticCount(cnt)}
+        />
       )}
 
       {/* ── 10.5 SEKME: Kültür, İnanç, Mitoloji & Toplum Düzeni ── */}
@@ -9182,6 +9224,37 @@ export default function UniverseDetailPage() {
           seriesList={connectedSeries}
           onSelectResult={handleSelectSearchResult}
           onQuickAdd={handleQuickAdd}
+        />
+      )}
+
+      {/* ── EVREN DEFTERİ & KADİM KODEKS MODALI ── */}
+      {isCodexOpen && universe && (
+        <UniverseCodexModal
+          isOpen={isCodexOpen}
+          onClose={() => setIsCodexOpen(false)}
+          universe={{ 
+            ...universe, 
+            title: title || universe.title, 
+            description: description ?? universe.description, 
+            coverImage: coverImage ?? universe.coverImage, 
+            genre: genre ?? universe.genre 
+          }}
+          characters={characters}
+          locations={locations}
+          timelineEvents={timelineEvents}
+          glossaryTerms={glossaryTerms}
+          loreList={loreList}
+          maps={maps}
+          organizations={organizations}
+          items={items}
+          powerSystems={powerSystems}
+          races={races}
+          creatures={creatures}
+          cultures={cultures}
+          canonRules={canonRules}
+          plotThreads={plotThreads}
+          stories={connectedStories}
+          onNavigateTab={(tab) => setActiveTab(tab as ActiveUniverseTab)}
         />
       )}
     </div>
