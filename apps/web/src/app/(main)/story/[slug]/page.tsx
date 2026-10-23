@@ -967,6 +967,38 @@ export default function StoryDetailPage() {
             {/* ── Hero Aksiyonları (Ana CTA + Kompakt 4'lü Bar) ── */}
             <div className="w-full max-w-md md:max-w-lg space-y-2.5">
               
+              {/* Kitap Ayracı Varsa Özel Ayraç Kartı */}
+              {readingProgress?.bookmark && story.format !== 'webtoon' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const bm = readingProgress.bookmark!;
+                    router.push(`/read/${storyId}/${bm.chapterId}?p=${bm.paragraphIndex}`);
+                  }}
+                  className="w-full p-3 sm:p-3.5 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 flex items-center justify-between gap-3 text-left transition-all active:scale-[0.99] group shadow-sm"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-xl bg-amber-500 text-black flex items-center justify-center shrink-0 shadow-md">
+                      <Bookmark size={17} className="fill-black" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-amber-500">
+                        <span>Kitap Ayracınız</span>
+                        <span className="text-[10px] font-normal opacity-75">
+                          • {readingProgress.bookmark.chapterTitle || `Bölüm ${readingProgress.bookmark.chapterOrder || ''}`}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground truncate italic">
+                        {readingProgress.bookmark.paragraphIndex + 1}. Paragraf: &ldquo;{readingProgress.bookmark.snippet || 'Kaldığınız yer'}&rdquo;
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-amber-500 bg-amber-500/20 group-hover:bg-amber-500 group-hover:text-black px-3 py-1.5 rounded-xl shrink-0 transition-all">
+                    Ayraca Git ➔
+                  </span>
+                </button>
+              )}
+
               {/* 1. Satır: Ana Okuma Butonu (Full Width) */}
               <Button 
                 variant="primary" 
@@ -2192,18 +2224,35 @@ export default function StoryDetailPage() {
               </div>
             </div>
 
-            <Button
-              variant="primary"
-              onPress={() => handleStartReading()}
-              className="px-4 py-2 rounded-xl text-xs font-bold shrink-0 shadow-md shadow-primary/20 flex items-center gap-1.5 cursor-pointer"
-            >
-              <Play size={12} className="fill-current" />
-              <span>
-                {hasReadingHistory 
-                  ? 'Devam Et' 
-                  : (story.format === 'short_story' ? 'Hikayeyi Oku' : 'Oku')}
-              </span>
-            </Button>
+            <div className="flex items-center gap-2 shrink-0">
+              {readingProgress?.bookmark && story.format !== 'webtoon' && (
+                <Button
+                  variant="outline"
+                  onPress={() => {
+                    const bm = readingProgress.bookmark!;
+                    router.push(`/read/${storyId}/${bm.chapterId}?p=${bm.paragraphIndex}`);
+                  }}
+                  className="px-2.5 py-2 rounded-xl text-xs font-bold border-amber-500/40 text-amber-500 bg-amber-500/10 hover:bg-amber-500/20 flex items-center gap-1 cursor-pointer"
+                  title={`Kitap Ayracına Git (${readingProgress.bookmark.paragraphIndex + 1}. Paragraf)`}
+                >
+                  <Bookmark size={13} className="fill-amber-500 text-amber-500" />
+                  <span className="hidden xs:inline">Ayraç</span>
+                </Button>
+              )}
+
+              <Button
+                variant="primary"
+                onPress={() => handleStartReading()}
+                className="px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-primary/20 flex items-center gap-1.5 cursor-pointer"
+              >
+                <Play size={12} className="fill-current" />
+                <span>
+                  {hasReadingHistory 
+                    ? 'Devam Et' 
+                    : (story.format === 'short_story' ? 'Hikayeyi Oku' : 'Oku')}
+                </span>
+              </Button>
+            </div>
 
           </div>
         </aside>

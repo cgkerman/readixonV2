@@ -241,8 +241,14 @@ export default function StudioStats() {
                             <h4 className="font-bold text-xs sm:text-sm text-text truncate group-hover:text-primary transition-colors">
                               {story.title}
                             </h4>
-                            <span className="px-1.5 py-0.2 text-[9px] font-black rounded bg-primary/10 text-primary uppercase shrink-0 border border-primary/20">
-                              {story.format === 'webtoon' ? 'Webtoon' : 'Roman'}
+                            <span className={`px-1.5 py-0.2 text-[9px] font-black rounded uppercase shrink-0 border ${
+                              story.format === 'short_story'
+                                ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                                : story.format === 'webtoon'
+                                  ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                  : 'bg-primary/10 text-primary border-primary/20'
+                            }`}>
+                              {story.format === 'webtoon' ? 'Webtoon' : story.format === 'short_story' ? 'Kısa Hikaye' : 'Roman'}
                             </span>
                           </div>
 

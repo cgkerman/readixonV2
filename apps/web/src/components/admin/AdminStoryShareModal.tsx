@@ -1,25 +1,25 @@
 'use client';
 
 import React, { useState, useRef, useCallback } from 'react';
-import { 
-  Story, 
-  User, 
+import {
+  Story,
+  User,
   Chapter,
   getUniverseGenreLabel
 } from '@readixon/core';
 import { Capacitor, registerPlugin } from '@capacitor/core';
-import { 
-  X, 
-  Sparkles, 
-  Download, 
-  Share2, 
-  Copy, 
-  Check, 
-  Smartphone, 
-  Square, 
-  Tv, 
-  Palette, 
-  BookOpen, 
+import {
+  X,
+  Sparkles,
+  Download,
+  Share2,
+  Copy,
+  Check,
+  Smartphone,
+  Square,
+  Tv,
+  Palette,
+  BookOpen,
   Heart,
   MessageCircle,
   Send,
@@ -249,153 +249,84 @@ export const AdminStoryShareModal: React.FC<AdminStoryShareModalProps> = ({
   };
 
   /**
-   * Referans Görseldeki Birebir 3D Kitap Çizimi (Canvas 2D)
-   * - Zemin Mor Ambiyans Işığı (Theme Glow)
-   * - Zemin Kontak Gölgesi
-   * - Sağ Taraf Temiz Beyaz/Krem Sayfa Bloğu + Arka Kapak Kumaş Trim'i
-   * - Ön Kapak Resmi + Sol Sırt Kavis Gölgelendirmesi + Menteşe Oluğu + Yüzey Işık Yansıması
+   * Merkez Kitap Kapağı Çizimi (Sadece Kapak - 3D Mockup Olmadan)
+   * - Zemin Ambiyans Glow'u (Theme Glow)
+   * - Yumuşak Düşen Gölge (Elevation Drop Shadow)
+   * - Yuvarlatılmış Köşeli Kapak Görseli
+   * - İnce Parlak Kenarlık Çerçevesi
    */
-  const drawReference3DBook = (
+  const drawBookCoverCard = (
     ctx: CanvasRenderingContext2D,
     bookImg: HTMLImageElement,
     centerX: number,
     centerY: number,
-    bookW: number,
-    bookH: number,
+    coverW: number,
+    coverH: number,
     cfg: typeof currentTheme
   ) => {
     ctx.save();
 
-    const bookX = Math.round(centerX - bookW / 2);
-    const bookY = Math.round(centerY - bookH / 2);
-    const pageThickness = Math.round(bookW * 0.09); // ~32px sayfa kalınlığı
-    const clothThickness = Math.max(4, Math.round(pageThickness * 0.16)); // ~5px kumaş kenarı
-    const bottomSlant = Math.round(pageThickness * 0.55); // ~18px perspektif eğimi
+    const coverX = Math.round(centerX - coverW / 2);
+    const coverY = Math.round(centerY - coverH / 2);
+    const radius = 24;
 
-    // 1. Zemin Ambiyans Renk Glow'u (Referans görseldeki mor ışık süzmesi)
+    // 1. Zemin Ambiyans Glow'u
     ctx.save();
     const glowGrad = ctx.createRadialGradient(
-      centerX + pageThickness * 0.5, bookY + bookH + 25, 20,
-      centerX + pageThickness * 0.5, bookY + bookH + 25, bookW * 0.75
+      centerX, centerY + coverH * 0.1, 30,
+      centerX, centerY + coverH * 0.1, coverW * 0.95
     );
     glowGrad.addColorStop(0, cfg.canvasGlow);
-    glowGrad.addColorStop(0.5, cfg.canvasGlow.replace(/[\d.]+\)$/, '0.2)'));
+    glowGrad.addColorStop(0.5, cfg.canvasGlow.replace(/[\d.]+\)$/, '0.15)'));
     glowGrad.addColorStop(1, 'transparent');
     ctx.fillStyle = glowGrad;
     ctx.beginPath();
-    ctx.ellipse(centerX + pageThickness * 0.5, bookY + bookH + 30, bookW * 0.75, 45, 0, 0, Math.PI * 2);
+    ctx.ellipse(centerX, centerY + coverH * 0.1, coverW * 0.95, coverH * 0.65, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
-    // 2. Zemin Kontak Gölgesi (Kitabın bastığı yerdeki koyu gölge)
+    // 2. Yumuşak Zemin Düşen Gölgesi (Deep Drop Shadow)
     ctx.save();
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
-    ctx.beginPath();
-    ctx.ellipse(centerX + pageThickness * 0.3, bookY + bookH + 12, bookW * 0.55, 14, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.75)';
+    ctx.shadowBlur = 45;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 24;
 
-    // 3. Arka Kapak Kumaş Çıkıntısı (Referans görselde sağ kenarda görünen mavi/mor kapak payı)
-    ctx.save();
+    // 3. Kapak Görseli (Yuvarlatılmış Köşeler)
     ctx.beginPath();
-    ctx.moveTo(bookX + bookW + pageThickness, bookY + 2 + bottomSlant);
-    ctx.lineTo(bookX + bookW + pageThickness + clothThickness, bookY + 2 + bottomSlant);
-    ctx.lineTo(bookX + bookW + pageThickness + clothThickness, bookY + bookH + bottomSlant);
-    ctx.lineTo(bookX + bookW + pageThickness, bookY + bookH + bottomSlant);
+    ctx.moveTo(coverX + radius, coverY);
+    ctx.lineTo(coverX + coverW - radius, coverY);
+    ctx.arcTo(coverX + coverW, coverY, coverX + coverW, coverY + radius, radius);
+    ctx.lineTo(coverX + coverW, coverY + coverH - radius);
+    ctx.arcTo(coverX + coverW, coverY + coverH, coverX + coverW - radius, coverY + coverH, radius);
+    ctx.lineTo(coverX + radius, coverY + coverH);
+    ctx.arcTo(coverX, coverY + coverH, coverX, coverY + coverH - radius, radius);
+    ctx.lineTo(coverX, coverY + radius);
+    ctx.arcTo(coverX, coverY, coverX + radius, coverY, radius);
     ctx.closePath();
-    ctx.fillStyle = cfg.canvasCloth;
+    ctx.fillStyle = '#18181b';
     ctx.fill();
-    ctx.restore();
-
-    // 4. Sağ Sayfa Kenarı (Page Block - Temiz, Net Beyaz/Krem Sayfa Bloğu)
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(bookX + bookW, bookY + 4);
-    ctx.lineTo(bookX + bookW + pageThickness, bookY + 4 + bottomSlant);
-    ctx.lineTo(bookX + bookW + pageThickness, bookY + bookH + bottomSlant);
-    ctx.lineTo(bookX + bookW, bookY + bookH);
-    ctx.closePath();
-    const rightPageGrad = ctx.createLinearGradient(bookX + bookW, 0, bookX + bookW + pageThickness, 0);
-    rightPageGrad.addColorStop(0, '#c8c2b5');
-    rightPageGrad.addColorStop(0.25, '#faf7f0');
-    rightPageGrad.addColorStop(0.7, '#e8e2d5');
-    rightPageGrad.addColorStop(1, '#b5aba0');
-    ctx.fillStyle = rightPageGrad;
-    ctx.fill();
-
-    // İnce Sayfa Yaprak Çizgileri
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.08)';
-    ctx.lineWidth = 1;
-    for (let py = bookY + 12; py < bookY + bookH - 4; py += 8) {
-      ctx.beginPath();
-      ctx.moveTo(bookX + bookW + 2, py);
-      ctx.lineTo(bookX + bookW + pageThickness - 2, py + bottomSlant);
-      ctx.stroke();
-    }
-    ctx.restore();
-
-    // 5. Ön Cilt Kapağı (Görsel ve Sert Cilt Kenarları)
-    ctx.save();
-    // Hafif sol-alt gölge
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-    ctx.shadowBlur = 35;
-    ctx.shadowOffsetX = -10;
-    ctx.shadowOffsetY = 20;
-
-    // Kapak köşe yuvarlatma
-    const radius = 6;
-    ctx.beginPath();
-    ctx.moveTo(bookX + radius, bookY);
-    ctx.lineTo(bookX + bookW, bookY);
-    ctx.lineTo(bookX + bookW, bookY + bookH);
-    ctx.lineTo(bookX + radius, bookY + bookH);
-    ctx.arcTo(bookX, bookY + bookH, bookX, bookY, radius);
-    ctx.arcTo(bookX, bookY, bookX + bookW, bookY, radius);
-    ctx.closePath();
     ctx.clip();
 
-    ctx.drawImage(bookImg, bookX, bookY, bookW, bookH);
+    ctx.drawImage(bookImg, coverX, coverY, coverW, coverH);
     ctx.restore();
 
-    // 6. Sol Cilt Sırtı Kavis ve Işık/Gölge Efektleri
+    // 4. İnce Parlak Kenarlık Çerçevesi
     ctx.save();
-    const spineWidth = Math.max(18, Math.round(bookW * 0.12));
-    const spineGrad = ctx.createLinearGradient(bookX, 0, bookX + spineWidth, 0);
-    spineGrad.addColorStop(0, 'rgba(0, 0, 0, 0.85)');
-    spineGrad.addColorStop(0.25, 'rgba(0, 0, 0, 0.45)');
-    spineGrad.addColorStop(0.55, 'rgba(255, 255, 255, 0.18)');
-    spineGrad.addColorStop(1, 'transparent');
-    ctx.fillStyle = spineGrad;
-    ctx.fillRect(bookX, bookY, spineWidth, bookH);
-
-    // Menteşe Çizgisi (Hinge Groove)
-    const grooveX = bookX + spineWidth * 0.85;
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.16)';
+    ctx.lineWidth = 2.5;
     ctx.beginPath();
-    ctx.moveTo(grooveX, bookY);
-    ctx.lineTo(grooveX, bookY + bookH);
+    ctx.moveTo(coverX + radius, coverY);
+    ctx.lineTo(coverX + coverW - radius, coverY);
+    ctx.arcTo(coverX + coverW, coverY, coverX + coverW, coverY + radius, radius);
+    ctx.lineTo(coverX + coverW, coverY + coverH - radius);
+    ctx.arcTo(coverX + coverW, coverY + coverH, coverX + coverW - radius, coverY + coverH, radius);
+    ctx.lineTo(coverX + radius, coverY + coverH);
+    ctx.arcTo(coverX, coverY + coverH, coverX, coverY + coverH - radius, radius);
+    ctx.lineTo(coverX, coverY + radius);
+    ctx.arcTo(coverX, coverY, coverX + radius, coverY, radius);
+    ctx.closePath();
     ctx.stroke();
-
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(grooveX + 1.5, bookY);
-    ctx.lineTo(grooveX + 1.5, bookY + bookH);
-    ctx.stroke();
-
-    // 7. Yüzey Işık Yansıması (Specular Sheen)
-    const sheenGrad = ctx.createLinearGradient(bookX, bookY, bookX + bookW, bookY + bookH);
-    sheenGrad.addColorStop(0.35, 'transparent');
-    sheenGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.12)');
-    sheenGrad.addColorStop(0.65, 'transparent');
-    ctx.fillStyle = sheenGrad;
-    ctx.fillRect(bookX, bookY, bookW, bookH);
-
-    // 8. İnce Kapak Kenarlığı
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(bookX, bookY, bookW, bookH);
     ctx.restore();
 
     ctx.restore();
@@ -502,36 +433,36 @@ export const AdminStoryShareModal: React.FC<AdminStoryShareModalProps> = ({
     ctx.textAlign = 'right';
     ctx.fillText('•••', width - padX, iconY + 14);
 
-    // 3. MERKEZ 3D KİTAP MOCKUP
-    let bookW = 380;
-    let bookH = 550;
-    let bookCenterY = Math.round(topY + (bottomLimit - topY) * 0.44);
+    // 3. MERKEZ KİTAP KAPAĞI (Sadece Kapak Görseli)
+    let coverW = 380;
+    let coverH = 570; // 2:3 standart kapak oranı
+    let coverCenterY = Math.round(topY + (bottomLimit - topY) * 0.44);
 
     if (ratio === 'story') {
-      bookW = 420;
-      bookH = 610;
-      bookCenterY = 900;
+      coverW = 440;
+      coverH = 660;
+      coverCenterY = 900;
     } else if (ratio === 'square') {
-      bookW = 320;
-      bookH = 460;
-      bookCenterY = height * 0.45;
+      coverW = 320;
+      coverH = 480;
+      coverCenterY = height * 0.45;
     } else if (ratio === 'landscape') {
-      bookW = 240;
-      bookH = 350;
-      bookCenterY = height * 0.46;
+      coverW = 240;
+      coverH = 360;
+      coverCenterY = height * 0.46;
     }
 
     if (story.coverImage) {
       try {
         const coverImg = await loadImage(story.coverImage);
-        drawReference3DBook(ctx, coverImg, width / 2, bookCenterY, bookW, bookH, cfg);
+        drawBookCoverCard(ctx, coverImg, width / 2, coverCenterY, coverW, coverH, cfg);
       } catch (err) {
         console.warn('Kapak resmi yüklenemedi:', err);
       }
     }
 
     // 4. ALT BİLGİ ALANI: BAŞLIK + YAZAR + ÖZET + SAĞDA TÜR ROZETİ
-    const infoY = Math.round(bookCenterY + bookH / 2 + 50);
+    const infoY = Math.round(coverCenterY + coverH / 2 + 50);
     const rightPillWidth = 240;
     const titleMaxWidth = width - padX * 2 - rightPillWidth - 30;
 
@@ -606,11 +537,11 @@ export const AdminStoryShareModal: React.FC<AdminStoryShareModalProps> = ({
     ctx.fillStyle = '#a1a1aa';
     ctx.fillText(`💬  ${chapterCountDisplay}`, padX + 160, footerY);
 
-    // Paylaşım Butonu / readixon.com (✈ Share)
+    // Paylaşım Butonu / readixon.com (✈ Paylaş)
     ctx.textAlign = 'right';
     ctx.fillStyle = cfg.canvasPillText;
     ctx.font = 'bold 24px "Inter", sans-serif';
-    ctx.fillText('✈  Share', width - padX, footerY);
+    ctx.fillText('✈  Paylaş', width - padX, footerY);
 
     return canvas;
   };
@@ -750,7 +681,7 @@ export const AdminStoryShareModal: React.FC<AdminStoryShareModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-xl animate-in fade-in duration-300 overflow-y-auto">
-      <div 
+      <div
         className="w-full max-w-5xl bg-[#0b0c13] border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto"
         onClick={(e) => e.stopPropagation()}
       >
@@ -795,11 +726,10 @@ export const AdminStoryShareModal: React.FC<AdminStoryShareModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setRatio('post')}
-                  className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer ${
-                    ratio === 'post'
+                  className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer ${ratio === 'post'
                       ? 'bg-purple-500/20 border-purple-500 text-purple-200 font-bold shadow-xs'
                       : 'bg-white/[0.03] border-white/10 text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05]'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <Smartphone size={15} className="text-purple-400" />
@@ -812,11 +742,10 @@ export const AdminStoryShareModal: React.FC<AdminStoryShareModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setRatio('story')}
-                  className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer ${
-                    ratio === 'story'
+                  className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer ${ratio === 'story'
                       ? 'bg-purple-500/20 border-purple-500 text-purple-200 font-bold shadow-xs'
                       : 'bg-white/[0.03] border-white/10 text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05]'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <Smartphone size={15} className="text-purple-400" />
@@ -829,11 +758,10 @@ export const AdminStoryShareModal: React.FC<AdminStoryShareModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setRatio('square')}
-                  className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer ${
-                    ratio === 'square'
+                  className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer ${ratio === 'square'
                       ? 'bg-purple-500/20 border-purple-500 text-purple-200 font-bold shadow-xs'
                       : 'bg-white/[0.03] border-white/10 text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05]'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <Square size={15} className="text-purple-400" />
@@ -846,11 +774,10 @@ export const AdminStoryShareModal: React.FC<AdminStoryShareModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setRatio('landscape')}
-                  className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer ${
-                    ratio === 'landscape'
+                  className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer ${ratio === 'landscape'
                       ? 'bg-purple-500/20 border-purple-500 text-purple-200 font-bold shadow-xs'
                       : 'bg-white/[0.03] border-white/10 text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05]'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <Tv size={15} className="text-purple-400" />
@@ -873,13 +800,12 @@ export const AdminStoryShareModal: React.FC<AdminStoryShareModalProps> = ({
                     key={key}
                     type="button"
                     onClick={() => setTheme(key as AdminThemePreset)}
-                    className={`p-2.5 rounded-xl border text-left flex items-center gap-2.5 transition-all cursor-pointer ${
-                      theme === key
+                    className={`p-2.5 rounded-xl border text-left flex items-center gap-2.5 transition-all cursor-pointer ${theme === key
                         ? 'border-purple-500 bg-purple-500/15 shadow-xs'
                         : 'border-white/10 bg-white/[0.03] hover:bg-white/[0.06] text-zinc-400'
-                    }`}
+                      }`}
                   >
-                    <div 
+                    <div
                       className="w-3.5 h-3.5 rounded-full shrink-0 shadow-sm"
                       style={{ background: cfg.accent }}
                     />
@@ -897,7 +823,7 @@ export const AdminStoryShareModal: React.FC<AdminStoryShareModalProps> = ({
               <label className="text-xs font-bold text-zinc-200 block flex items-center gap-1.5">
                 <Type size={14} className="text-purple-400" /> 3. Kart İçeriği & Spot
               </label>
-              
+
               <div>
                 <span className="text-[10px] font-semibold text-zinc-400 block mb-1">Üst Marka Sloganı</span>
                 <input
@@ -989,17 +915,15 @@ export const AdminStoryShareModal: React.FC<AdminStoryShareModalProps> = ({
             {/* DOM Canlı Önizleme Çerçevesi (Referans Görsel Tasarımı) */}
             <div
               ref={previewRef}
-              className={`w-full max-w-[360px] rounded-3xl overflow-hidden border border-white/15 shadow-[0_25px_60px_rgba(0,0,0,0.9)] relative flex flex-col justify-between select-none transition-all duration-300 bg-[#0d0e15] ${
-                ratio === 'story' ? 'p-6 py-12' : 'p-5'
-              } ${
-                ratio === 'post'
+              className={`w-full max-w-[360px] rounded-3xl overflow-hidden border border-white/15 shadow-[0_25px_60px_rgba(0,0,0,0.9)] relative flex flex-col justify-between select-none transition-all duration-300 bg-[#0d0e15] ${ratio === 'story' ? 'p-6 py-12' : 'p-5'
+                } ${ratio === 'post'
                   ? 'aspect-[4/5]'
                   : ratio === 'story'
-                  ? 'aspect-[9/16]'
-                  : ratio === 'square'
-                  ? 'aspect-square'
-                  : 'aspect-[16/9]'
-              }`}
+                    ? 'aspect-[9/16]'
+                    : ratio === 'square'
+                      ? 'aspect-square'
+                      : 'aspect-[16/9]'
+                }`}
             >
               {/* 1. ÜST BAR: Squircle Logo + Readixon + Slogan + Üç Nokta */}
               <div className="flex items-center justify-between w-full relative z-10">
@@ -1021,104 +945,31 @@ export const AdminStoryShareModal: React.FC<AdminStoryShareModalProps> = ({
                 </div>
               </div>
 
-              {/* 2. MERKEZ 3D KİTAP MOCKUP (Referans Görsel ile Birebir) */}
-              <div 
-                className="relative my-auto py-2 flex items-center justify-center select-none"
-                style={{ perspective: '1200px' }}
-              >
-                {/* Zemin Ambiyans Işık Süzmesi (Referans görseldeki mor/renkli zemin ışıltısı) */}
-                <div 
-                  className="absolute -bottom-4 w-44 sm:w-52 h-10 rounded-full blur-xl pointer-events-none transition-all duration-300"
+              {/* 2. MERKEZ KİTAP KAPAĞI (Sadece Kapak - Mockup Olmadan) */}
+              <div className="relative my-auto py-3 flex items-center justify-center select-none">
+                {/* Zemin Ambiyans Işık Süzmesi */}
+                <div
+                  className="absolute inset-0 m-auto w-44 sm:w-56 h-48 sm:h-64 rounded-full blur-2xl pointer-events-none transition-all duration-300"
                   style={{ background: currentTheme.glowColor }}
                 />
 
-                {/* Zemin Kontak Gölgesi */}
-                <div 
-                  className="absolute -bottom-1 w-32 sm:w-36 h-3 rounded-full blur-xs pointer-events-none bg-black/85"
-                />
-
-                {/* 3D Kitap Yapısı */}
-                <div
-                  className="relative transition-transform duration-300"
-                  style={{
-                    transform: 'rotateY(-15deg) rotateX(2deg)',
-                    transformStyle: 'preserve-3d',
-                  }}
-                >
-                  {/* Arka Kapak Kumaş Trim'i (Hardcover Cloth Trim) */}
-                  <div 
-                    className="absolute top-0 bottom-0 -right-[15px] sm:-right-[18px] w-[4px] pointer-events-none rounded-r-xs"
-                    style={{
-                      background: currentTheme.clothColor,
-                      transform: 'skewY(-5deg)',
-                      transformOrigin: 'left center',
-                    }}
-                  />
-
-                  {/* Sağ Sayfa Bloğu (Temiz, Beyaz/Krem Sayfa Kalınlığı) */}
-                  <div 
-                    className="absolute top-[2px] bottom-[2px] -right-[13px] sm:-right-[15px] w-[14px] sm:w-[16px] pointer-events-none rounded-r-[1px]"
-                    style={{
-                      background: 'linear-gradient(to right, #c8c2b5, #faf7f0 30%, #e8e2d5 75%, #b5aba0)',
-                      boxShadow: 'inset 0 1px 1px rgba(0,0,0,0.15), inset 0 -1px 1px rgba(0,0,0,0.15), 3px 0 6px rgba(0,0,0,0.4)',
-                      transform: 'skewY(-5deg)',
-                      transformOrigin: 'left center',
-                    }}
-                  >
-                    {/* Sayfa Çizgileri */}
-                    <div 
-                      className="w-full h-full opacity-20"
-                      style={{
-                        backgroundImage: 'repeating-linear-gradient(to bottom, transparent, transparent 3px, rgba(0,0,0,0.2) 3px, rgba(0,0,0,0.2) 4px)',
-                      }}
+                {/* Kapak Kartı */}
+                <div className="relative w-32 sm:w-40 aspect-[2/3] rounded-2xl overflow-hidden border border-white/20 shadow-[0_20px_45px_rgba(0,0,0,0.85)] z-10 transition-transform duration-300 hover:scale-[1.02]">
+                  {story.coverImage ? (
+                    <img
+                      src={story.coverImage}
+                      alt={story.title}
+                      crossOrigin="anonymous"
+                      className="w-full h-full object-cover"
                     />
-                  </div>
-
-                  {/* Ön Cilt Kapağı */}
-                  <div
-                    className="w-28 sm:w-36 h-40 sm:h-52 rounded-r-sm rounded-l-[1px] overflow-hidden relative"
-                    style={{
-                      boxShadow: '0 20px 40px -10px rgba(0,0,0,0.9), -6px 0 15px rgba(0,0,0,0.5)',
-                    }}
-                  >
-                    {story.coverImage ? (
-                      <img
-                        src={story.coverImage}
-                        alt={story.title}
-                        crossOrigin="anonymous"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-zinc-900 flex items-center justify-center text-zinc-500">
-                        <BookOpen size={32} />
-                      </div>
-                    )}
-
-                    {/* Sol Sırt Kavis Gölgelendirmesi */}
-                    <div className="absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-black/85 via-black/30 to-transparent pointer-events-none" />
-                    
-                    {/* Cilt Menteşe Oluğu */}
-                    <div className="absolute inset-y-0 left-[12px] sm:left-[14px] w-[1px] bg-black/60 shadow-[1px_0_1px_rgba(255,255,255,0.15)] pointer-events-none" />
-
-                    {/* Yüzey Işık Yansıması (Specular Sheen) */}
-                    <div 
-                      className="absolute inset-0 pointer-events-none"
-                      style={{
-                        background: 'linear-gradient(115deg, transparent 40%, rgba(255,255,255,0.12) 50%, transparent 65%)',
-                      }}
-                    />
-
-                    {/* Kapak Kenar Çizgisi */}
-                    <div className="absolute inset-0 border border-white/15 rounded-r-sm pointer-events-none" />
-                  </div>
-
-                  {/* Sol Sırt Borusu (Spine Round Highlight) */}
-                  <div 
-                    className="absolute top-0 bottom-0 -left-[5px] w-[6px] rounded-l-xs pointer-events-none"
-                    style={{
-                      background: 'linear-gradient(to right, rgba(0,0,0,0.9), rgba(255,255,255,0.25) 30%, rgba(0,0,0,0.6))',
-                    }}
-                  />
+                  ) : (
+                    <div className="w-full h-full bg-zinc-900 flex flex-col items-center justify-center p-3 text-center text-zinc-500">
+                      <BookOpen size={36} className="mb-2" />
+                      <span className="text-xs font-bold text-white line-clamp-2">{story.title}</span>
+                    </div>
+                  )}
+                  {/* İnce Yüzey Yansıması */}
+                  <div className="absolute inset-0 bg-gradient-to-tr from-black/20 via-transparent to-white/10 pointer-events-none" />
                 </div>
               </div>
 
@@ -1161,7 +1012,7 @@ export const AdminStoryShareModal: React.FC<AdminStoryShareModalProps> = ({
 
                   <div className={`flex items-center gap-1 text-[11px] font-bold ${currentTheme.pillText}`}>
                     <Send size={12} />
-                    <span>Share</span>
+                    <span>Paylaş</span>
                   </div>
                 </div>
               </div>

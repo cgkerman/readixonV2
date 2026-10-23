@@ -414,6 +414,17 @@ export interface Review {
 // 3.5. Okuma Ä°lerlemesi (/users/{userId}/readingProgress/{storyId})
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+export interface StoryBookmark {
+  chapterId: string;
+  chapterTitle?: string;
+  chapterOrder?: number;
+  paragraphIndex: number;
+  blockId?: string;
+  snippet?: string;
+  createdAt?: Timestamp | any;
+  updatedAt?: Timestamp | any;
+}
+
 export interface ReadingProgress {
   userId: string;
   storyId: string;
@@ -423,6 +434,7 @@ export interface ReadingProgress {
   pathHistory?: string[]; // İnteraktif hikayede izlenen karar rotası (bölüm ID listesi)
   discoveredEndings?: string[]; // Okuyucunun ulaştığı sonların bölüm ID'leri
   isAdultContentAccepted?: boolean; // Yetişkin içerik okuma onayı
+  bookmark?: StoryBookmark; // Kullanıcının bilinçli olarak bıraktığı kitap ayracı
   updatedAt: Timestamp;
 }
 

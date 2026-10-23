@@ -21,6 +21,8 @@ export interface ContentRendererProps {
   inlineEntities?: InlineUniverseEntity[];
   enableLoreAnnotations?: boolean;
   onEntityClick?: (entity: InlineUniverseEntity, rect: DOMRect) => void;
+  activeBookmarkParagraphIndex?: number | null;
+  onBookmarkToggle?: (paragraphIndex?: number, snippet?: string, blockId?: string) => void | Promise<void>;
 }
 
 export const ContentRenderer: React.FC<ContentRendererProps> = ({ 
@@ -37,7 +39,9 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
   isWebtoon = false,
   inlineEntities,
   enableLoreAnnotations = true,
-  onEntityClick
+  onEntityClick,
+  activeBookmarkParagraphIndex = null,
+  onBookmarkToggle
 }) => {
   let globalParagraphIndex = 0;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -126,6 +130,29 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
     }
   };
 
+  const handleBookmarkFromSelection = () => {
+    if (!selection || !onBookmarkToggle) return;
+    const sel = window.getSelection();
+    let targetIndex = 0;
+    let blockId: string | undefined = undefined;
+
+    if (sel && sel.rangeCount > 0) {
+      let node: Node | null = sel.getRangeAt(0).startContainer;
+      while (node && node !== containerRef.current) {
+        if (node instanceof HTMLElement && node.hasAttribute('data-paragraph-index')) {
+          targetIndex = Number(node.getAttribute('data-paragraph-index'));
+          blockId = node.getAttribute('data-block-id') || undefined;
+          break;
+        }
+        node = node.parentNode;
+      }
+    }
+
+    onBookmarkToggle(targetIndex, selection.text, blockId);
+    setSelection(null);
+    window.getSelection()?.removeAllRanges();
+  };
+
   const fontClass = fontFamily === 'serif' ? 'font-serif' : fontFamily === 'mono' ? 'font-mono' : 'font-sans';
   const computedLineHeight = lineHeight === 'tight' ? 1.45 : lineHeight === 'relaxed' ? 2.05 : 1.75;
   const textAlignClass = textAlign === 'justify' ? 'text-justify [text-align-last:left] [hyphens:auto]' : 'text-left';
@@ -153,7 +180,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
       ` }} />
       
       {/* ── Masaüstü Yüzen Alıntı Menüsü ── */}
-      {selection && (onQuoteSave || onQuoteShare) && (
+      {selection && (onQuoteSave || onQuoteShare || (!isWebtoon && onBookmarkToggle)) && (
         <div 
           className="absolute z-50 hidden sm:flex items-center bg-card shadow-xl border border-border rounded-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 select-none"
           style={{
@@ -162,6 +189,15 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
             transform: 'translateX(-50%)',
           }}
         >
+          {!isWebtoon && onBookmarkToggle && (
+            <button 
+              onClick={handleBookmarkFromSelection}
+              className="px-4 py-2 text-xs font-semibold hover:bg-muted/15 transition-colors flex items-center gap-1.5 border-r border-border text-amber-500 hover:text-amber-400"
+              title="Bu paragrafa ayraç bırak"
+            >
+              <Bookmark size={14} className="fill-amber-500/30 text-amber-500" /> Ayraç
+            </button>
+          )}
           {onQuoteSave && (
             <button 
               onClick={handleSave}
@@ -182,11 +218,11 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
       )}
 
       {/* ── Mobilde Altta Sabit Alıntı Kartı (Parmakla seçimi engellemez, ekran altına zarifçe yerleşir) ── */}
-      {selection && (onQuoteSave || onQuoteShare) && (
+      {selection && (onQuoteSave || onQuoteShare || (!isWebtoon && onBookmarkToggle)) && (
         <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-card/95 backdrop-blur-md border-t border-border shadow-2xl flex flex-col gap-2.5 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] animate-in slide-in-from-bottom duration-200 sm:hidden">
           <div className="flex items-center justify-between text-xs">
             <span className="font-bold text-primary flex items-center gap-1.5">
-              <Sparkles size={14} /> Seçilen Alıntı
+              <Sparkles size={14} /> Seçilen Bölüm
             </span>
             <button
               onClick={() => {
@@ -202,23 +238,32 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
           <p className="text-xs text-foreground/80 line-clamp-2 italic border-l-2 border-primary/50 pl-2 leading-relaxed">
             &ldquo;{selection.text}&rdquo;
           </p>
-          <div className="grid grid-cols-2 gap-2 pt-0.5">
+          <div className="flex flex-wrap gap-2 pt-0.5">
+            {!isWebtoon && onBookmarkToggle && (
+              <button
+                onClick={handleBookmarkFromSelection}
+                className="flex-1 min-w-[100px] py-2.5 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-500 font-bold text-xs flex items-center justify-center gap-1.5 border border-amber-500/30 active:scale-95 transition-all shadow-sm"
+              >
+                <Bookmark size={14} className="fill-amber-500/40 text-amber-500" />
+                <span>Ayraç Koy</span>
+              </button>
+            )}
             {onQuoteSave && (
               <button
                 onClick={handleSave}
-                className="py-2.5 px-3 rounded-xl bg-muted/20 hover:bg-muted/30 text-foreground font-semibold text-xs flex items-center justify-center gap-1.5 border border-border active:scale-95 transition-all shadow-sm"
+                className="flex-1 min-w-[110px] py-2.5 px-3 rounded-xl bg-muted/20 hover:bg-muted/30 text-foreground font-semibold text-xs flex items-center justify-center gap-1.5 border border-border active:scale-95 transition-all shadow-sm"
               >
                 <Bookmark size={14} className="text-primary" />
-                <span>Kütüphaneye Kaydet</span>
+                <span>Kaydet</span>
               </button>
             )}
             {onQuoteShare && (
               <button
                 onClick={handleShare}
-                className="py-2.5 px-3 rounded-xl bg-primary text-black font-bold text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
+                className="flex-1 min-w-[110px] py-2.5 px-3 rounded-xl bg-primary text-black font-bold text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
               >
                 <Share2 size={14} />
-                <span>Readix'te Paylaş</span>
+                <span>Paylaş</span>
               </button>
             )}
           </div>
@@ -258,9 +303,30 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                     const rawText = match[1];
                     const currentIndex = globalParagraphIndex++;
                     const commentCount = paragraphCommentCounts[currentIndex] || 0;
+                    const isBookmarked = activeBookmarkParagraphIndex === currentIndex;
                     
                     return (
-                      <div key={currentIndex} className="relative group pr-9 sm:pr-10">
+                      <div 
+                        key={currentIndex} 
+                        id={`readixon-p-${currentIndex}`}
+                        data-paragraph-index={currentIndex}
+                        data-block-id={block.id || ''}
+                        className={`relative group transition-all duration-300 rounded-xl ${
+                          !isWebtoon && onBookmarkToggle && onParagraphCommentClick
+                            ? 'pr-16 sm:pr-20'
+                            : 'pr-9 sm:pr-10'
+                        } ${
+                          isBookmarked 
+                            ? 'border-l-4 border-amber-500 bg-amber-500/[0.04] pl-3 py-1 shadow-xs' 
+                            : 'pl-0'
+                        }`}
+                      >
+                        {isBookmarked && (
+                          <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-500 dark:text-amber-400 bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 rounded-full w-fit mb-1.5 shadow-xs select-none animate-in fade-in slide-in-from-left-2 duration-200">
+                            <Bookmark size={12} className="fill-amber-500 text-amber-500" />
+                            <span>Kitap Ayracı</span>
+                          </div>
+                        )}
                         <Typography 
                           variant="body" 
                           className={textAlignClass}
@@ -272,23 +338,37 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                           dangerouslySetInnerHTML={{ __html: innerHtml }}
                         />
                         
-                        {onParagraphCommentClick && (
-                          <div className="absolute top-0.5 right-0 flex items-center">
+                        <div className="absolute top-0.5 right-0 flex items-center gap-1.5">
+                          {!isWebtoon && onBookmarkToggle && (
+                            <button
+                              type="button"
+                              onClick={() => onBookmarkToggle(currentIndex, rawText, block.id)}
+                              className={`transition-all flex items-center justify-center active:scale-90 ${
+                                isBookmarked
+                                  ? 'w-7 h-7 rounded-full bg-amber-500 text-black shadow-md opacity-100 scale-100 ring-2 ring-amber-500/30'
+                                  : 'w-7 h-7 rounded-full bg-muted/20 hover:bg-amber-500/20 text-muted-foreground/80 hover:text-amber-500 border border-border/50 opacity-40 hover:opacity-100 sm:opacity-20 sm:group-hover:opacity-100'
+                              }`}
+                              title={isBookmarked ? "Ayracı Kaldır / Burada" : "Buraya Ayraç Bırak"}
+                            >
+                              <Bookmark size={14} className={isBookmarked ? "fill-black text-black" : ""} />
+                            </button>
+                          )}
+                          {onParagraphCommentClick && (
                             <button 
                               type="button"
                               onClick={() => onParagraphCommentClick(currentIndex, rawText, block.id)}
                               className={`transition-all flex items-center justify-center active:scale-90 ${
                                 commentCount > 0
                                   ? 'h-7 px-2.5 rounded-full bg-primary/20 hover:bg-primary/30 text-primary border border-primary/40 shadow-sm gap-1.5 opacity-100 scale-100'
-                                  : 'w-7 h-7 rounded-full bg-muted/20 hover:bg-primary/20 text-muted-foreground/80 hover:text-primary border border-border/50 opacity-40 hover:opacity-100 sm:opacity-25 sm:group-hover:opacity-100'
+                                  : 'w-7 h-7 rounded-full bg-muted/20 hover:bg-primary/20 text-muted-foreground/80 hover:text-primary border border-border/50 opacity-40 hover:opacity-100 sm:opacity-20 sm:group-hover:opacity-100'
                               }`}
                               title="Satır arası yorum"
                             >
                               <MessageSquare size={15} className={commentCount > 0 ? "fill-primary/30 text-primary" : ""} />
                               {commentCount > 0 && <span className="text-xs font-extrabold leading-none">{commentCount}</span>}
                             </button>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -299,8 +379,29 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
             // Fallback: Eğer <p> etiketi yoksa tüm bloğu tek bir paragraf say
             const currentIndex = globalParagraphIndex++;
             const commentCount = paragraphCommentCounts[currentIndex] || 0;
+            const isBookmarked = activeBookmarkParagraphIndex === currentIndex;
             return (
-              <div key={blockIndex} className="relative group pr-9 sm:pr-10">
+              <div 
+                key={blockIndex} 
+                id={`readixon-p-${currentIndex}`}
+                data-paragraph-index={currentIndex}
+                data-block-id={block.id || ''}
+                className={`relative group transition-all duration-300 rounded-xl ${
+                  !isWebtoon && onBookmarkToggle && onParagraphCommentClick
+                    ? 'pr-16 sm:pr-20'
+                    : 'pr-9 sm:pr-10'
+                } ${
+                  isBookmarked 
+                    ? 'border-l-4 border-amber-500 bg-amber-500/[0.04] pl-3 py-1 shadow-xs' 
+                    : 'pl-0'
+                }`}
+              >
+                {isBookmarked && (
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-500 dark:text-amber-400 bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 rounded-full w-fit mb-1.5 shadow-xs select-none animate-in fade-in slide-in-from-left-2 duration-200">
+                    <Bookmark size={12} className="fill-amber-500 text-amber-500" />
+                    <span>Kitap Ayracı</span>
+                  </div>
+                )}
                 <Typography 
                   variant="body" 
                   className={textAlignClass}
@@ -312,23 +413,37 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                   dangerouslySetInnerHTML={{ __html: htmlContent }}
                 />
                 
-                {onParagraphCommentClick && (
-                  <div className="absolute top-0.5 right-0 flex items-center">
+                <div className="absolute top-0.5 right-0 flex items-center gap-1.5">
+                  {!isWebtoon && onBookmarkToggle && (
+                    <button
+                      type="button"
+                      onClick={() => onBookmarkToggle(currentIndex, block.text || '', block.id)}
+                      className={`transition-all flex items-center justify-center active:scale-90 ${
+                        isBookmarked
+                          ? 'w-7 h-7 rounded-full bg-amber-500 text-black shadow-md opacity-100 scale-100 ring-2 ring-amber-500/30'
+                          : 'w-7 h-7 rounded-full bg-muted/20 hover:bg-amber-500/20 text-muted-foreground/80 hover:text-amber-500 border border-border/50 opacity-40 hover:opacity-100 sm:opacity-20 sm:group-hover:opacity-100'
+                      }`}
+                      title={isBookmarked ? "Ayracı Kaldır / Burada" : "Buraya Ayraç Bırak"}
+                    >
+                      <Bookmark size={14} className={isBookmarked ? "fill-black text-black" : ""} />
+                    </button>
+                  )}
+                  {onParagraphCommentClick && (
                     <button 
                       type="button"
                       onClick={() => onParagraphCommentClick(currentIndex, block.text || '', block.id)}
                       className={`transition-all flex items-center justify-center active:scale-90 ${
                         commentCount > 0
                           ? 'h-7 px-2.5 rounded-full bg-primary/20 hover:bg-primary/30 text-primary border border-primary/40 shadow-sm gap-1.5 opacity-100 scale-100'
-                          : 'w-7 h-7 rounded-full bg-muted/20 hover:bg-primary/20 text-muted-foreground/80 hover:text-primary border border-border/50 opacity-40 hover:opacity-100 sm:opacity-25 sm:group-hover:opacity-100'
+                          : 'w-7 h-7 rounded-full bg-muted/20 hover:bg-primary/20 text-muted-foreground/80 hover:text-primary border border-border/50 opacity-40 hover:opacity-100 sm:opacity-20 sm:group-hover:opacity-100'
                       }`}
                       title="Satır arası yorum"
                     >
                       <MessageSquare size={15} className={commentCount > 0 ? "fill-primary/30 text-primary" : ""} />
                       {commentCount > 0 && <span className="text-xs font-extrabold leading-none">{commentCount}</span>}
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             );
           }

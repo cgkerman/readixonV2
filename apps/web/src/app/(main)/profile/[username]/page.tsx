@@ -105,7 +105,7 @@ export default function ProfilePage() {
 
   // Sekme Durumları
   const [activeTab, setActiveTab] = useState<ProfileTab>('stories');
-  const [activeStoryFormat, setActiveStoryFormat] = useState<'all' | 'novels' | 'webtoons'>('all');
+  const [activeStoryFormat, setActiveStoryFormat] = useState<'all' | 'novels' | 'short_stories' | 'webtoons'>('all');
   const [activeReadixTab, setActiveReadixTab] = useState<'shared' | 'mentions'>('shared');
 
   // Takip Durumları
@@ -556,11 +556,55 @@ export default function ProfilePage() {
     setShareModalOpen(true);
   };
 
+  // Eser Format Varlığı Kontrolleri
+  const hasShortStories = useMemo(() => stories.some(s => s.format === 'short_story'), [stories]);
+  const hasWebtoons = useMemo(() => stories.some(s => s.format === 'webtoon'), [stories]);
+  const hasNovels = useMemo(() => stories.some(s => !s.format || s.format === 'novel'), [stories]);
+
+  // Eser formatı rozet ve etiket yapılandırması
+  const getFormatBadgeConfig = (format?: string) => {
+    switch (format) {
+      case 'short_story':
+        return {
+          label: 'Kısa Hikaye',
+          badgeClass: 'bg-amber-500/90 text-white shadow-xs',
+          pillClass: 'bg-amber-500/15 text-amber-500 border border-amber-500/30'
+        };
+      case 'webtoon':
+        return {
+          label: 'Webtoon',
+          badgeClass: 'bg-emerald-600/90 text-white shadow-xs',
+          pillClass: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+        };
+      case 'chat':
+        return {
+          label: 'Sohbet',
+          badgeClass: 'bg-sky-600/90 text-white shadow-xs',
+          pillClass: 'bg-sky-500/15 text-sky-400 border border-sky-500/30'
+        };
+      case 'interactive':
+        return {
+          label: 'İnteraktif',
+          badgeClass: 'bg-indigo-600/90 text-white shadow-xs',
+          pillClass: 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30'
+        };
+      case 'novel':
+      default:
+        return {
+          label: 'Roman',
+          badgeClass: 'bg-black/70 backdrop-blur-md text-white',
+          pillClass: 'bg-muted/20 text-muted-foreground'
+        };
+    }
+  };
+
   // Filtrelenmiş Eserler
   const filteredStories = useMemo(() => {
     if (activeStoryFormat === 'all') return stories;
-    if (activeStoryFormat === 'novels') return stories.filter(s => s.format !== 'webtoon');
-    return stories.filter(s => s.format === 'webtoon');
+    if (activeStoryFormat === 'novels') return stories.filter(s => !s.format || s.format === 'novel');
+    if (activeStoryFormat === 'short_stories') return stories.filter(s => s.format === 'short_story');
+    if (activeStoryFormat === 'webtoons') return stories.filter(s => s.format === 'webtoon');
+    return stories;
   }, [stories, activeStoryFormat]);
 
   // Vitrin Hikayesi (Gözde Eser)
@@ -996,8 +1040,8 @@ export default function ProfilePage() {
                           <Star size={11} fill="currentColor" /> {pinnedStory.stats.rating.toFixed(1)}
                         </span>
                       ) : null}
-                      <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-muted/20 text-muted-foreground">
-                        {pinnedStory.format === 'webtoon' ? 'Webtoon' : 'Roman'}
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${getFormatBadgeConfig(pinnedStory.format).pillClass}`}>
+                        {getFormatBadgeConfig(pinnedStory.format).label}
                       </span>
                     </div>
 
@@ -1029,7 +1073,9 @@ export default function ProfilePage() {
                     </Button>
 
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1"><Layers size={13} /> {pinnedStory.stats?.chapterCount || 0} Bölüm</span>
+                      <span className="flex items-center gap-1">
+                        <Layers size={13} /> {pinnedStory.format === 'short_story' ? 'Tek Bölüm' : `${pinnedStory.stats?.chapterCount || 0} Bölüm`}
+                      </span>
                       <span className="flex items-center gap-1"><Eye size={13} /> {pinnedStory.stats?.views || 0}</span>
                       <span className="flex items-center gap-1"><Heart size={13} /> {pinnedStory.stats?.likes || 0}</span>
                     </div>
@@ -1039,41 +1085,56 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* Eser Format Filtresi (Tümü / Romanlar / Webtoonlar) */}
-          <div className="flex items-center justify-between gap-4 border-b border-border/30 pb-3">
+          {/* Eser Format Filtresi (Tümü / Romanlar / Kısa Hikayeler / Webtoonlar) */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/30 pb-3">
             <h3 className="font-bold text-base sm:text-lg text-foreground flex items-center gap-2">
               <BookOpen size={18} className="text-primary" />
               <span>Yayınlanan Tüm Eserler ({filteredStories.length})</span>
             </h3>
 
-            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-card border border-border/40 text-xs font-semibold">
+            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-card border border-border/40 text-xs font-semibold overflow-x-auto max-w-full scrollbar-hide">
               <button
                 type="button"
                 onClick={() => setActiveStoryFormat('all')}
-                className={`px-3 py-1 rounded-lg transition-all ${
+                className={`px-3 py-1 rounded-lg transition-all shrink-0 cursor-pointer ${
                   activeStoryFormat === 'all' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 Tümü
               </button>
-              <button
-                type="button"
-                onClick={() => setActiveStoryFormat('novels')}
-                className={`px-3 py-1 rounded-lg transition-all ${
-                  activeStoryFormat === 'novels' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Romanlar
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveStoryFormat('webtoons')}
-                className={`px-3 py-1 rounded-lg transition-all ${
-                  activeStoryFormat === 'webtoons' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Webtoonlar
-              </button>
+              {(hasNovels || (!hasShortStories && !hasWebtoons)) && (
+                <button
+                  type="button"
+                  onClick={() => setActiveStoryFormat('novels')}
+                  className={`px-3 py-1 rounded-lg transition-all shrink-0 cursor-pointer ${
+                    activeStoryFormat === 'novels' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Romanlar
+                </button>
+              )}
+              {hasShortStories && (
+                <button
+                  type="button"
+                  onClick={() => setActiveStoryFormat('short_stories')}
+                  className={`px-3 py-1 rounded-lg transition-all shrink-0 cursor-pointer ${
+                    activeStoryFormat === 'short_stories' ? 'bg-amber-500 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Kısa Hikayeler
+                </button>
+              )}
+              {hasWebtoons && (
+                <button
+                  type="button"
+                  onClick={() => setActiveStoryFormat('webtoons')}
+                  className={`px-3 py-1 rounded-lg transition-all shrink-0 cursor-pointer ${
+                    activeStoryFormat === 'webtoons' ? 'bg-emerald-500 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Webtoonlar
+                </button>
+              )}
             </div>
           </div>
 
@@ -1094,6 +1155,7 @@ export default function ProfilePage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
               {filteredStories.map(story => {
                 const slug = (story as any).slug || story.storyId;
+                const badgeCfg = getFormatBadgeConfig(story.format);
                 return (
                   <div
                     key={story.storyId}
@@ -1106,8 +1168,8 @@ export default function ProfilePage() {
                       <img src={story.coverImage} alt={story.title} className="w-full h-full object-cover" />
 
                       {/* Format Rozeti */}
-                      <div className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md text-white text-[10px] font-bold z-10">
-                        {story.format === 'webtoon' ? 'Webtoon' : 'Roman'}
+                      <div className={`absolute top-2 right-2 px-2 py-0.5 rounded-md text-[10px] font-bold z-10 ${badgeCfg.badgeClass}`}>
+                        {badgeCfg.label}
                       </div>
                     </div>
 
@@ -1117,7 +1179,9 @@ export default function ProfilePage() {
                         {story.title}
                       </h4>
                       <div className="flex items-center justify-center sm:justify-start gap-2.5 mt-1 text-[11px] text-muted-foreground">
-                        <span>{story.stats?.chapterCount || 0} Bölüm</span>
+                        <span className={story.format === 'short_story' ? 'text-amber-500 font-semibold' : ''}>
+                          {story.format === 'short_story' ? 'Tek Bölüm' : `${story.stats?.chapterCount || 0} Bölüm`}
+                        </span>
                         <span>•</span>
                         <span className="flex items-center gap-1"><Eye size={11} /> {story.stats?.views || 0}</span>
                       </div>
@@ -1639,7 +1703,7 @@ export default function ProfilePage() {
                     <option value="">-- Vitrin Kullanmak İstemiyorum --</option>
                     {stories.map(story => (
                       <option key={story.storyId} value={story.storyId}>
-                        {story.title} {story.format === 'webtoon' ? '(Webtoon)' : '(Roman)'}
+                        {story.title} ({getFormatBadgeConfig(story.format).label})
                       </option>
                     ))}
                   </select>

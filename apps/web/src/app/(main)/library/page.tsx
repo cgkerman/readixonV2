@@ -20,7 +20,7 @@ import {
   getUserLikedReadingLists,
   ReadingList,
 } from '@readixon/core';
-import type { Story, SavedQuote, Readix, User } from '@readixon/core';
+import type { Story, SavedQuote, Readix, User, StoryBookmark } from '@readixon/core';
 import { ReadingListCard } from '@/components/reading-list/ReadingListCard';
 import { CreateReadingListModal } from '@/components/reading-list/CreateReadingListModal';
 import { toast } from 'sonner';
@@ -31,7 +31,7 @@ export default function LibraryPage() {
   const [savedSubTab, setSavedSubTab] = useState<'novels' | 'webtoons'>('novels');
   const [listsSubTab, setListsSubTab] = useState<'myLists' | 'likedLists'>('myLists');
   const [loading, setLoading] = useState(true);
-  const [readingStories, setReadingStories] = useState<(Story & { progress?: number })[]>([]);
+  const [readingStories, setReadingStories] = useState<(Story & { progress?: number; bookmark?: StoryBookmark })[]>([]);
   const [savedStories, setSavedStories] = useState<Story[]>([]);
   const [savedQuotes, setSavedQuotes] = useState<SavedQuote[]>([]);
   const [savedReadixes, setSavedReadixes] = useState<Readix[]>([]);
@@ -72,12 +72,13 @@ export default function LibraryPage() {
               }
             }
             
-            // İlerlemeyi birleştir
+            // İlerlemeyi ve ayracı birleştir
             const merged = publishedStories.map(story => {
               const prog = progresses.find(p => p.storyId === story.storyId);
               return {
                 ...story,
-                progress: prog ? prog.scrollPercentage : 0
+                progress: prog ? prog.scrollPercentage : 0,
+                bookmark: prog?.bookmark
               };
             });
             setReadingStories(merged);
@@ -424,11 +425,25 @@ export default function LibraryPage() {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 sm:gap-5 md:gap-6 mt-6 sm:mt-8">
         {items.map((item) => {
-          const story = item as Story;
-          const progress = 'progress' in story ? (story as any).progress : undefined;
+          const story = item as Story & { progress?: number; bookmark?: StoryBookmark };
+          const progress = story.progress;
+          const bookmark = story.bookmark;
           
           return (
             <div key={story.storyId} className="relative group transition-transform duration-300 hover:-translate-y-1.5 active:scale-[0.98]">
+              {bookmark && activeTab === 'reading' && story.format !== 'webtoon' && (
+                <div 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push(`/read/${story.storyId}/${bookmark.chapterId}?p=${bookmark.paragraphIndex}`);
+                  }}
+                  className="absolute -top-2 left-2 z-20 bg-amber-500 text-black font-extrabold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-md hover:bg-amber-400 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                  title={`Kitap Ayracı: ${bookmark.paragraphIndex + 1}. Paragrafta (Gitmek için tıkla)`}
+                >
+                  <Bookmark size={11} className="fill-black" />
+                  <span>Ayraç: {bookmark.paragraphIndex + 1}. P</span>
+                </div>
+              )}
               <StoryCard
                 title={story.title}
                 authorName={story.authorName || `Yazar: ${story.authorId.substring(0, 6)}`}

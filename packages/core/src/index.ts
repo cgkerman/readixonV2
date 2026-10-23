@@ -39,6 +39,7 @@ export type {
   Contributor,
   Genre,
   ReadingProgress,
+  StoryBookmark,
   Readix,
   ReadixComment,
   NotificationType,

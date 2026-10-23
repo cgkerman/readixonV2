@@ -1,6 +1,6 @@
 import { collection, query, orderBy, limit, startAfter, getDocs, DocumentSnapshot, doc, setDoc, updateDoc, serverTimestamp, where, getDoc, onSnapshot, deleteDoc, documentId, getCountFromServer, deleteField } from 'firebase/firestore';
 import { db } from '../firebase';
-import type { Story, StoryWithLatestChapter, Chapter, ReadingProgress, Review, ReviewAuthorReply } from '../types';
+import type { Story, StoryWithLatestChapter, Chapter, ReadingProgress, StoryBookmark, Review, ReviewAuthorReply } from '../types';
 import { getUserProfile, getUserFollowerIds } from './userService';
 import { createNotification } from './notificationService';
 
@@ -887,6 +887,70 @@ export const acceptAdultContent = async (userId: string, storyId: string) => {
     }, { merge: true });
   } catch (error) {
     console.error("Yetişkin içerik onayı kaydedilirken hata:", error);
+    throw error;
+  }
+};
+
+/**
+ * Kullanıcının hikayedeki kitap ayracını kaydeder veya günceller.
+ */
+export const saveStoryBookmark = async (
+  userId: string,
+  storyId: string,
+  bookmarkData: {
+    chapterId: string;
+    chapterTitle?: string;
+    chapterOrder?: number;
+    paragraphIndex: number;
+    blockId?: string;
+    snippet?: string;
+  }
+): Promise<StoryBookmark> => {
+  try {
+    const progressRef = doc(db, 'users', userId, 'readingProgress', storyId);
+    const snap = await getDoc(progressRef);
+    const fullBookmark: StoryBookmark = {
+      ...bookmarkData,
+      snippet: bookmarkData.snippet ? bookmarkData.snippet.slice(0, 160) : undefined,
+      updatedAt: serverTimestamp() as any,
+    };
+
+    if (!snap.exists()) {
+      await setDoc(progressRef, {
+        userId,
+        storyId,
+        currentChapterId: bookmarkData.chapterId,
+        scrollPercentage: 0,
+        completedChapters: [],
+        bookmark: fullBookmark,
+        updatedAt: serverTimestamp(),
+      });
+    } else {
+      await updateDoc(progressRef, {
+        bookmark: fullBookmark,
+        updatedAt: serverTimestamp(),
+      });
+    }
+
+    return fullBookmark;
+  } catch (error) {
+    console.error("Kitap ayracı kaydedilirken hata:", error);
+    throw error;
+  }
+};
+
+/**
+ * Kullanıcının hikayedeki kitap ayracını kaldırır.
+ */
+export const removeStoryBookmark = async (userId: string, storyId: string): Promise<void> => {
+  try {
+    const progressRef = doc(db, 'users', userId, 'readingProgress', storyId);
+    await updateDoc(progressRef, {
+      bookmark: deleteField(),
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("Kitap ayracı kaldırılırken hata:", error);
     throw error;
   }
 };

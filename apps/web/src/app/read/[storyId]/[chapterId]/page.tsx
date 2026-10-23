@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { 
   fetchChapter, 
@@ -14,6 +14,8 @@ import {
   getAllChapterComments, 
   getStoryById, 
   getReadingProgress,
+  saveStoryBookmark,
+  removeStoryBookmark,
   saveQuote, 
   getUserProfile, 
   trackInteraction, 
@@ -31,10 +33,10 @@ import {
   type InlineUniverseEntity,
   type UniversePlotThread
 } from '@readixon/core';
-import type { Chapter, Comment, Story, User, Series, ReadingProgress, ChapterChoice, ChapterEndingType } from '@readixon/core';
+import type { Chapter, Comment, Story, User, Series, ReadingProgress, StoryBookmark, ChapterChoice, ChapterEndingType } from '@readixon/core';
 import { useReaderStore, useAuthStore } from '@readixon/core';
 import { ContentRenderer, ReadingSettingsPanel, Button, Typography } from '@readixon/ui';
-import { ArrowLeft, Settings, List, ChevronLeft, ChevronRight, ChevronDown, CheckCircle, X, Heart, MessageSquare, Eye, Reply, Clock, Sparkles, Star, Award, BookOpen, Layers, Globe, PencilLine, GitFork, Trophy, Skull, Compass, Gamepad2, Undo2, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Settings, List, ChevronLeft, ChevronRight, ChevronDown, CheckCircle, X, Heart, MessageSquare, Eye, Reply, Clock, Sparkles, Star, Award, BookOpen, Layers, Globe, PencilLine, GitFork, Trophy, Skull, Compass, Gamepad2, Undo2, RotateCcw, Bookmark } from 'lucide-react';
 import { toast } from 'sonner';
 import { ChapterEndActivity } from '@/components/ChapterEndActivity';
 import { ChapterReactions } from '@/components/ChapterReactions';
@@ -140,6 +142,7 @@ const readerThemeStyles: Record<string, {
 export default function ReadPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const storyId = params.storyId as string;
   const chapterId = params.chapterId as string;
@@ -207,6 +210,11 @@ export default function ReadPage() {
   // İnteraktif Hikaye (CYOA / Bandersnatch) State'leri
   const [readingProgressData, setReadingProgressData] = useState<ReadingProgress | null>(null);
 
+  // Kitap Ayracı (Bookmark) State'leri
+  const [showBookmarkModal, setShowBookmarkModal] = useState(false);
+  const [showBookmarkToastBanner, setShowBookmarkToastBanner] = useState(false);
+  const bookmark = readingProgressData?.bookmark;
+
   const {
     theme,
     fontSize,
@@ -253,7 +261,13 @@ export default function ReadPage() {
     return true;
   }, showUniverseDrawer);
 
-  // 6. Hiçbir modal açık değilken okuma sayfasında geri tuşuna basılırsa doğrudan hikaye detayına dönsün (uygulamadan çıkmasın!)
+  // 6. Kitap ayracı modalı açıkken geri tuşu modalı kapatsın
+  useBackButton(() => {
+    setShowBookmarkModal(false);
+    return true;
+  }, showBookmarkModal);
+
+  // 7. Hiçbir modal açık değilken okuma sayfasında geri tuşuna basılırsa doğrudan hikaye detayına dönsün (uygulamadan çıkmasın!)
   useBackButton(() => {
     if (story) {
       const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
@@ -262,7 +276,7 @@ export default function ReadPage() {
       router.back();
     }
     return true;
-  }, !showSettings && !showChapterList && !showUniverseDrawer && selectedParagraphIndex === null && activePopoverEntity === null);
+  }, !showSettings && !showChapterList && !showUniverseDrawer && !showBookmarkModal && selectedParagraphIndex === null && activePopoverEntity === null);
 
   // Kelime sayısı ve tahmini okuma süresi hesaplama (~200 kelime/dk)
   const wordCount = React.useMemo(() => {
@@ -383,6 +397,105 @@ export default function ReadPage() {
     flushReadingAnalytics();
     window.scrollTo({ top: 0, behavior: 'instant' });
     router.push(`/read/${storyId}/${targetChapterId}`);
+  };
+
+  // Paragraf Çapasına Yumuşak Kaydırma ve Vurgulama
+  const scrollToParagraph = (paragraphIndex: number, shouldFlash = true) => {
+    const el = document.getElementById(`readixon-p-${paragraphIndex}`);
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      const topOffset = window.scrollY + rect.top - 100;
+      window.scrollTo({ top: Math.max(0, topOffset), behavior: 'smooth' });
+      if (shouldFlash) {
+        el.classList.add('readixon-paragraph-highlight');
+        setTimeout(() => {
+          el.classList.remove('readixon-paragraph-highlight');
+        }, 2500);
+      }
+    }
+  };
+
+  // Kitap Ayracı Ekle / Kaldır / Konum Değiştir
+  const handleBookmarkToggle = async (paragraphIndex?: number, snippetText?: string, blockId?: string) => {
+    if (!firebaseUser) {
+      toast.info("Kitap ayracı kullanabilmek için giriş yapmalısınız.");
+      return;
+    }
+
+    // Üst barda kurdeleye tıklandığında: Eğer zaten bu hikayede kayıtlı bir ayraç varsa modalı aç
+    if (paragraphIndex === undefined) {
+      if (bookmark) {
+        setShowBookmarkModal(true);
+        return;
+      }
+
+      // Henüz ayraç yok, viewport'ta ekranda görünen en üstteki paragrafı tespit et
+      let foundIndex = 0;
+      let foundSnippet = '';
+      let foundBlockId: string | undefined = undefined;
+
+      const pElements = Array.from(document.querySelectorAll('[data-paragraph-index]'));
+      for (const el of pElements) {
+        const rect = el.getBoundingClientRect();
+        if (rect.top >= 70 && rect.top <= window.innerHeight * 0.7) {
+          foundIndex = parseInt(el.getAttribute('data-paragraph-index') || '0', 10);
+          foundBlockId = el.getAttribute('data-block-id') || undefined;
+          foundSnippet = el.textContent?.trim() || '';
+          break;
+        }
+      }
+
+      paragraphIndex = foundIndex;
+      snippetText = foundSnippet;
+      blockId = foundBlockId;
+    }
+
+    // Tıklanan paragraf zaten aktif ayraç ise: Ayracı kaldır
+    if (bookmark && bookmark.chapterId === chapterId && bookmark.paragraphIndex === paragraphIndex) {
+      try {
+        await removeStoryBookmark(firebaseUser.uid, storyId);
+        setReadingProgressData(prev => prev ? { ...prev, bookmark: undefined } : null);
+        toast.success("Kitap ayracı kaldırıldı.");
+      } catch (e) {
+        toast.error("Ayraç kaldırılırken bir hata oluştu.");
+      }
+      return;
+    }
+
+    // Yeni ayraç oluştur / güncelle
+    try {
+      const cleanSnippet = (snippetText || '')
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 100);
+
+      const savedBm = await saveStoryBookmark(firebaseUser.uid, storyId, {
+        chapterId,
+        chapterTitle: chapter?.title || 'Bölüm',
+        chapterOrder: chapter?.order,
+        paragraphIndex,
+        blockId,
+        snippet: cleanSnippet
+      });
+
+      setReadingProgressData(prev => prev ? { ...prev, bookmark: savedBm } : null);
+      toast.success(`🔖 Kitap ayracı ${paragraphIndex + 1}. paragrafa bırakıldı!`);
+    } catch (e) {
+      toast.error("Ayraç kaydedilirken bir hata oluştu.");
+    }
+  };
+
+  const handleRemoveBookmark = async () => {
+    if (!firebaseUser) return;
+    try {
+      await removeStoryBookmark(firebaseUser.uid, storyId);
+      setReadingProgressData(prev => prev ? { ...prev, bookmark: undefined } : null);
+      setShowBookmarkModal(false);
+      toast.success("Kitap ayracı kaldırıldı.");
+    } catch (e) {
+      toast.error("Ayraç kaldırılırken hata oluştu.");
+    }
   };
 
   // İnteraktif Hikaye Karar ve Dallanma Eylemleri
@@ -523,6 +636,9 @@ export default function ReadPage() {
         if (userProgress && chap?.isRevised && userProgress.completedChapters?.includes(chapterId)) {
           setShowRevisionNoticeBanner(true);
         }
+        if (userProgress?.bookmark?.chapterId === chapterId) {
+          setShowBookmarkToastBanner(true);
+        }
       }
 
       setChapters(chaps);
@@ -634,6 +750,21 @@ export default function ReadPage() {
       document.title = `${chapter.title} - ${story.title} | Readixon`;
     }
   }, [chapter?.title, story?.title]);
+
+  // URL parametresinde (?p=...) gelen paragraf çapasına otomatik kaydırma
+  useEffect(() => {
+    if (loading || !chapter) return;
+    const pParam = searchParams.get('p');
+    if (pParam !== null) {
+      const pIndex = parseInt(pParam, 10);
+      if (!isNaN(pIndex)) {
+        const timer = setTimeout(() => {
+          scrollToParagraph(pIndex, true);
+        }, 500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [loading, chapter, searchParams]);
 
   // Okuma sayfasındayken genel site temasından tamamen izole ol: Sadece seçili okuyucu temasını yansıt
   useEffect(() => {
@@ -1101,6 +1232,36 @@ export default function ReadPage() {
             {story?.format !== 'webtoon' && (
               <button
                 type="button"
+                onClick={() => handleBookmarkToggle()}
+                className={`w-11 h-11 rounded-2xl active:scale-90 flex items-center justify-center transition-all border shadow-sm relative ${
+                  bookmark?.chapterId === chapterId
+                    ? 'bg-amber-500/20 text-amber-500 border-amber-500/40 shadow-amber-500/10'
+                    : bookmark
+                    ? 'bg-muted/15 hover:bg-amber-500/15 text-foreground hover:text-amber-500 border-border/40'
+                    : 'bg-muted/15 hover:bg-muted/25 border-border/40'
+                }`}
+                style={{ color: bookmark?.chapterId === chapterId ? '#f59e0b' : currentThemeStyle.text }}
+                title={
+                  bookmark?.chapterId === chapterId
+                    ? `Kitap Ayracı: ${bookmark.paragraphIndex + 1}. Paragrafta (Yönetmek için tıkla)`
+                    : bookmark
+                    ? `Kitap Ayracı: Bölüm ${bookmark.chapterOrder || ''} üzerinde`
+                    : "Kitap Ayracı Bırak"
+                }
+                aria-label="Kitap Ayracı"
+              >
+                <Bookmark
+                  size={21}
+                  className={bookmark?.chapterId === chapterId ? "fill-amber-500 text-amber-500" : ""}
+                />
+                {bookmark && bookmark.chapterId !== chapterId && (
+                  <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                )}
+              </button>
+            )}
+            {story?.format !== 'webtoon' && (
+              <button
+                type="button"
                 onClick={() => setShowSettings(!showSettings)}
                 className="w-11 h-11 rounded-2xl bg-muted/15 hover:bg-muted/25 active:scale-90 flex items-center justify-center transition-all border border-border/40 shadow-sm"
                 style={{ color: currentThemeStyle.text }}
@@ -1293,6 +1454,14 @@ export default function ReadPage() {
               setActivePopoverEntity(ent);
               setPopoverAnchorRect(rect);
             }}
+            activeBookmarkParagraphIndex={
+              story?.format !== 'webtoon' && bookmark?.chapterId === chapterId
+                ? bookmark.paragraphIndex
+                : null
+            }
+            onBookmarkToggle={
+              story?.format !== 'webtoon' ? handleBookmarkToggle : undefined
+            }
           />
         </div>
 
@@ -2105,6 +2274,189 @@ export default function ReadPage() {
           }}
         />
       )}
+
+      {/* ── Kitap Ayracı Sayfa İçi Bildirimi (Ayracınız Bu Bölümde) ── */}
+      {showBookmarkToastBanner && bookmark && bookmark.chapterId === chapterId && (
+        <div className="fixed bottom-24 right-4 sm:right-6 z-40 max-w-sm bg-card/95 backdrop-blur-md border border-amber-500/30 text-card-foreground shadow-2xl rounded-2xl p-3.5 flex items-center gap-3 animate-in slide-in-from-bottom-5 duration-300">
+          <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0 shadow-inner">
+            <Bookmark size={20} className="fill-amber-500/40 text-amber-500" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-xs font-bold text-amber-500 flex items-center gap-1">
+              <span>Kitap Ayracınız Bu Bölümde</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground truncate">
+              {bookmark.paragraphIndex + 1}. Paragraf • &ldquo;{bookmark.snippet || 'Kaldığınız yer'}&rdquo;
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setShowBookmarkToastBanner(false);
+                scrollToParagraph(bookmark.paragraphIndex, true);
+              }}
+              className="px-3 py-1.5 rounded-xl bg-amber-500 text-black text-xs font-bold hover:bg-amber-400 active:scale-95 transition-all shadow-sm"
+            >
+              Git
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowBookmarkToastBanner(false)}
+              className="w-7 h-7 rounded-xl bg-muted/20 hover:bg-muted/30 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Kapat"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Kitap Ayracı Yönetim Modalı ── */}
+      {showBookmarkModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setShowBookmarkModal(false)}
+        >
+          <div
+            className="w-full max-w-md bg-card border border-border/40 rounded-3xl p-5 sm:p-6 shadow-2xl animate-in zoom-in-95 duration-200 space-y-4"
+            onClick={e => e.stopPropagation()}
+            style={{ backgroundColor: currentThemeStyle.bg, color: currentThemeStyle.text }}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-border/10">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center">
+                  <Bookmark size={18} className="fill-amber-500/40" />
+                </div>
+                <Typography variant="h3" className="text-base sm:text-lg font-bold" style={{ color: currentThemeStyle.text }}>
+                  Kitap Ayracı
+                </Typography>
+              </div>
+              <Button variant="ghost" onPress={() => setShowBookmarkModal(false)} className="p-1.5 rounded-full">
+                <X size={18} color={currentThemeStyle.text} />
+              </Button>
+            </div>
+
+            {bookmark ? (
+              <div className="space-y-4">
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-amber-500">
+                      {bookmark.chapterTitle ? `Bölüm ${bookmark.chapterOrder || ''}: ${bookmark.chapterTitle}` : `Bölüm ${bookmark.chapterOrder || ''}`}
+                    </span>
+                    <span className="font-mono font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px]">
+                      {bookmark.paragraphIndex + 1}. Paragraf
+                    </span>
+                  </div>
+                  {bookmark.snippet && (
+                    <blockquote className="text-xs italic opacity-85 border-l-2 border-amber-500/40 pl-2.5 py-0.5 leading-relaxed">
+                      &ldquo;{bookmark.snippet}&rdquo;
+                    </blockquote>
+                  )}
+                  <div className="text-[10px] opacity-50 text-right pt-1">
+                    {bookmark.updatedAt?.seconds && (
+                      <span>Son güncelleme: {new Date(bookmark.updatedAt.seconds * 1000).toLocaleDateString('tr-TR')}</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-1">
+                  {bookmark.chapterId === chapterId ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowBookmarkModal(false);
+                          scrollToParagraph(bookmark.paragraphIndex, true);
+                        }}
+                        className="w-full py-3 px-4 rounded-2xl bg-amber-500 text-black font-bold text-sm flex items-center justify-center gap-2 shadow-md hover:bg-amber-400 active:scale-95 transition-all"
+                      >
+                        <Bookmark size={16} className="fill-black" />
+                        <span>Ayraca Git ({bookmark.paragraphIndex + 1}. Paragraf)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowBookmarkModal(false);
+                          handleBookmarkToggle();
+                        }}
+                        className="w-full py-2.5 px-4 rounded-2xl bg-muted/20 hover:bg-muted/30 text-foreground font-semibold text-xs flex items-center justify-center gap-2 border border-border/40 active:scale-95 transition-all"
+                        style={{ color: currentThemeStyle.text }}
+                      >
+                        <span>Ayracı Şu Anki Konumuma Taşı</span>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowBookmarkModal(false);
+                          router.push(`/read/${storyId}/${bookmark.chapterId}?p=${bookmark.paragraphIndex}`);
+                        }}
+                        className="w-full py-3 px-4 rounded-2xl bg-amber-500 text-black font-bold text-sm flex items-center justify-center gap-2 shadow-md hover:bg-amber-400 active:scale-95 transition-all"
+                      >
+                        <Bookmark size={16} className="fill-black" />
+                        <span>Ayracın Bulunduğu Bölüme Git ➔</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowBookmarkModal(false);
+                          handleBookmarkToggle();
+                        }}
+                        className="w-full py-2.5 px-4 rounded-2xl bg-muted/20 hover:bg-muted/30 text-foreground font-semibold text-xs flex items-center justify-center gap-2 border border-border/40 active:scale-95 transition-all"
+                        style={{ color: currentThemeStyle.text }}
+                      >
+                        <span>Ayracı Bu Bölüme ve Şu Anki Konuma Taşı</span>
+                      </button>
+                    </>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleRemoveBookmark}
+                    className="w-full py-2 px-4 rounded-2xl text-red-400 hover:bg-red-500/10 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    <X size={14} />
+                    <span>Ayracı Kaldır</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="py-6 text-center space-y-4">
+                <p className="text-xs opacity-70">
+                  Bu hikayede henüz bir kitap ayracınız bulunmuyor. Dilediğiniz zaman üst bardaki kurdeleye basarak veya bir paragrafın yanındaki ayraç ikonuna dokunarak ayraç bırakabilirsiniz.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowBookmarkModal(false);
+                    handleBookmarkToggle();
+                  }}
+                  className="py-3 px-5 rounded-2xl bg-amber-500 text-black font-bold text-sm inline-flex items-center gap-2 shadow-md hover:bg-amber-400 active:scale-95 transition-all"
+                >
+                  <Bookmark size={16} className="fill-black" />
+                  <span>Şu Anki Ekrana Ayraç Bırak</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Paragraf Vurgulama Animasyon Stili ── */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes bookmarkFlash {
+          0% { background-color: rgba(245, 158, 11, 0.4); box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.5); }
+          50% { background-color: rgba(245, 158, 11, 0.2); box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3); }
+          100% { background-color: transparent; box-shadow: none; }
+        }
+        .readixon-paragraph-highlight {
+          animation: bookmarkFlash 2.5s ease-out forwards;
+          border-radius: 0.75rem;
+        }
+      ` }} />
     </div>
   );
 }

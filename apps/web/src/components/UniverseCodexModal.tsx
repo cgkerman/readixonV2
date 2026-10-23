@@ -27,7 +27,8 @@ import {
   Calendar,
   Volume2,
   VolumeX,
-  ListOrdered
+  ListOrdered,
+  Download
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -424,84 +425,86 @@ export function UniverseCodexModal({
   };
 
   // ══════════════════════════════════════════════════════════════════
-  // PDF İNDİRME & BASKI MOTORU (14 SAYFALIK TAM EVREN KİTABI)
+  // PDF İNDİRME & BASKI MOTORU (9 SAYFALIK TAM EVREN KİTABI)
+  // Web, Mobil (Capacitor WebView) ve PC (Tauri WebView2) Tam Uyumlu
   // ══════════════════════════════════════════════════════════════════
-  const handleExportPdf = () => {
-    toast.info('Evren Defteriniz PDF olarak hazırlanıyor... Lütfen bekleyin.');
 
-    const printWindow = window.open('', '_blank', 'width=960,height=1000');
-
-    const contentHtml = `
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-  <meta charset="utf-8" />
-  <title>${escapeHtml(universe.title)} - Evren Defteri (Readixon)</title>
-  <style>
+  // A4 Baskı ve PDF Stilleri (Sayfa kırılımlarını ve renkleri korur)
+  const getCodexPrintCss = () => `
     @page {
       size: A4 portrait;
-      margin: 18mm 16mm 20mm 16mm;
+      margin: 12mm 10mm 14mm 10mm;
     }
-    * {
+    *, *::before, *::after {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
     }
-    body {
+    html, body {
+      width: 100% !important;
+      height: auto !important;
+      min-height: 100% !important;
+      overflow: visible !important;
+      background: #ffffff !important;
+      color: #24160a !important;
       font-family: 'Georgia', 'Cambria', 'Times New Roman', serif;
-      color: #24160a;
-      background: #ffffff;
-      line-height: 1.6;
-      font-size: 11pt;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
+      line-height: 1.55;
+      font-size: 10pt;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
     .print-sheet {
-      page-break-after: always;
-      break-after: page;
-      min-height: 92vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      border: 3px double #b8860b;
-      padding: 32px 30px;
-      margin-bottom: 24px;
-      background: #fdfbf7;
+      display: block !important;
+      position: relative !important;
+      page-break-before: auto !important;
+      break-before: auto !important;
+      page-break-after: always !important;
+      break-after: page !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+      min-height: 250mm !important;
+      width: 100% !important;
+      border: 2px solid #b8860b !important;
+      padding: 24px 22px !important;
+      margin-bottom: 24px !important;
+      background: #fdfbf7 !important;
+      box-sizing: border-box !important;
     }
+    .print-sheet:last-of-type,
     .print-sheet:last-child {
-      page-break-after: auto;
-      break-after: auto;
-      margin-bottom: 0;
+      page-break-after: auto !important;
+      break-after: auto !important;
+      margin-bottom: 0 !important;
     }
     .sheet-header {
-      display: flex;
-      justify-content: space-between;
-      border-bottom: 1px solid #d4af37;
-      padding-bottom: 8px;
-      margin-bottom: 18px;
-      font-size: 9pt;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      color: #7d5232;
+      display: flex !important;
+      justify-content: space-between !important;
+      border-bottom: 1px solid #d4af37 !important;
+      padding-bottom: 8px !important;
+      margin-bottom: 16px !important;
+      font-size: 8.5pt !important;
+      text-transform: uppercase !important;
+      letter-spacing: 1.5px !important;
+      color: #7d5232 !important;
     }
     .sheet-footer {
-      display: flex;
-      justify-content: space-between;
-      border-top: 1px solid #d4af37;
-      padding-top: 8px;
-      margin-top: 18px;
-      font-size: 9pt;
-      color: #7d5232;
+      display: flex !important;
+      justify-content: space-between !important;
+      border-top: 1px solid #d4af37 !important;
+      padding-top: 8px !important;
+      margin-top: 24px !important;
+      font-size: 8.5pt !important;
+      color: #7d5232 !important;
     }
-    h1 { font-size: 26pt; font-weight: bold; margin-bottom: 8px; color: #1e0e04; }
-    h2 { font-size: 16pt; font-weight: bold; margin-bottom: 12px; color: #2b1404; border-bottom: 1px solid #eedcba; padding-bottom: 6px; }
-    h3 { font-size: 12pt; font-weight: bold; margin-bottom: 6px; color: #3d1d06; }
+    h1 { font-size: 24pt; font-weight: bold; margin-bottom: 8px; color: #1e0e04; }
+    h2 { font-size: 15pt; font-weight: bold; margin-bottom: 12px; color: #2b1404; border-bottom: 1px solid #eedcba; padding-bottom: 6px; }
+    h3 { font-size: 11pt; font-weight: bold; margin-bottom: 6px; color: #3d1d06; }
     p { margin-bottom: 10px; text-align: justify; }
     .drop-cap::first-letter {
-      font-size: 42pt;
+      font-size: 38pt;
       float: left;
       line-height: 0.85;
-      margin-right: 12px;
+      margin-right: 10px;
       color: #8b3a0f;
       font-weight: bold;
     }
@@ -509,16 +512,17 @@ export function UniverseCodexModal({
       background: #f6efe1;
       border: 1px solid #d8c6a5;
       border-radius: 8px;
-      padding: 12px 14px;
-      margin-bottom: 12px;
-      break-inside: avoid;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
     }
     .badge {
       display: inline-block;
-      font-size: 8pt;
+      font-size: 7.5pt;
       font-family: sans-serif;
       font-weight: bold;
-      padding: 2px 8px;
+      padding: 2px 7px;
       border-radius: 999px;
       background: #e6dac0;
       color: #3b220c;
@@ -529,20 +533,20 @@ export function UniverseCodexModal({
       color: #72421a;
       border-left: 3px solid #b8860b;
       padding-left: 10px;
-      margin: 8px 0;
+      margin: 6px 0;
     }
     .grid-2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin: 12px 0;
+      gap: 10px;
+      margin: 10px 0;
     }
     .seal-box {
-      width: 130px;
-      height: 130px;
-      margin: 20px auto;
+      width: 115px;
+      height: 115px;
+      margin: 16px auto;
       border-radius: 50%;
-      border: 4px solid #b8860b;
+      border: 3.5px solid #b8860b;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -552,407 +556,512 @@ export function UniverseCodexModal({
       color: #8b4513;
       background: #fcf6e8;
     }
-    .no-print-bar {
-      background: #18181b;
-      color: #f4f4f5;
-      padding: 12px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-family: sans-serif;
-      font-size: 13px;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-    .print-btn {
-      background: #d97706;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-weight: bold;
-      cursor: pointer;
-    }
     @media print {
       .no-print-bar { display: none !important; }
-      body { background: white !important; }
-      .print-sheet { border: 2px solid #b8860b; margin: 0; box-shadow: none; }
+      html, body {
+        background: #ffffff !important;
+        overflow: visible !important;
+        height: auto !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      .print-sheet {
+        border: 2px solid #b8860b !important;
+        margin: 0 0 20px 0 !important;
+        box-shadow: none !important;
+        page-break-before: auto !important;
+        break-before: auto !important;
+        page-break-after: always !important;
+        break-after: page !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        min-height: 250mm !important;
+        height: auto !important;
+        display: block !important;
+      }
+      .print-sheet:last-of-type,
+      .print-sheet:last-child {
+        page-break-after: auto !important;
+        break-after: auto !important;
+        margin-bottom: 0 !important;
+      }
     }
+  `;
+
+  // 9 Sayfalık Tüm Kodeks İçeriği
+  const generateCodexSheetsHtml = () => `
+    <!-- SAYFA 1: KAPAK & RESMÎ MÜHÜR -->
+    <div class="print-sheet">
+      <div class="sheet-header">
+        <span>Readixon Kadim Arşivi</span>
+        <span>Resmî Evren Sicili</span>
+      </div>
+      <div style="text-align: center; margin: 40px 0;">
+        <div class="seal-box">
+          <span style="font-size: 26px;">⚜️</span>
+          <span style="font-size: 10px; margin-top: 4px;">KANON MÜHÜRLÜ</span>
+        </div>
+        <span class="badge" style="margin-bottom: 12px;">${escapeHtml(getUniverseGenreLabel(universe.genre)).toUpperCase()} EVRENİ</span>
+        <h1>${escapeHtml(universe.title)}</h1>
+        <p style="text-align: center; font-style: italic; color: #7d5232; max-width: 500px; margin: 0 auto 20px auto;">
+          Bu defter, yazar ${escapeHtml(universe.authorName || 'Bilinmeyen Vakayinüvis')} tarafından yaratılan evrenin resmî kanonik kayıtlarını barındırır.
+        </p>
+        <div class="grid-2" style="max-width: 480px; margin: 0 auto; text-align: left;">
+          <div class="card">
+            <strong style="font-size: 9pt; opacity: 0.7; display: block;">Yaratıcı:</strong>
+            <span>${escapeHtml(universe.authorName || 'Vakayinüvis')}</span>
+          </div>
+          <div class="card">
+            <strong style="font-size: 9pt; opacity: 0.7; display: block;">Kanon Durumu:</strong>
+            <span>${escapeHtml(getCodexVisibilityLabel(universe.visibility))}</span>
+          </div>
+          <div class="card">
+            <strong style="font-size: 9pt; opacity: 0.7; display: block;">Bağlı Eserler:</strong>
+            <span>${stories.length} Eser</span>
+          </div>
+          <div class="card">
+            <strong style="font-size: 9pt; opacity: 0.7; display: block;">Sicil Kodu:</strong>
+            <span style="font-family: monospace;">#${escapeHtml((universe.universeId || '0000').slice(0, 8))}</span>
+          </div>
+        </div>
+      </div>
+      <div class="sheet-footer">
+        <span>❖ Readixon Evren Kodeksi</span>
+        <span>Sayfa 1</span>
+      </div>
+    </div>
+
+    <!-- SAYFA 2: ÖNSÖZ & KOZMOLOJİ -->
+    <div class="print-sheet">
+      <div class="sheet-header">
+        <span>Bölüm I: Kozmoloji &amp; Yaratılış</span>
+        <span>Vakayinüvisin Önsözü</span>
+      </div>
+      <div>
+        <h2>Vakayinüvisin Önsözü</h2>
+        <p class="drop-cap">
+          ${escapeHtml(universe.description || 'Bu evrenin yaratılış efsanesi henüz kağıda dökülmedi. Yazar, bu toprakların kökenini, gök kubbenin altındaki ilk kıvılcımı ve medeniyetlerin doğuşunu burada fısıldayacak.')}
+        </p>
+        <div class="card" style="margin-top: 24px;">
+          <h3>Bu Evrenin Ruhu</h3>
+          <p style="margin: 0;">
+            Burada bulunan her karakter, büyü ve diyar birbirine görünmez kader bağlarıyla bağlıdır. Yazarın zihnindeki tüm kurgusal elementler bu defterde kalıcı bir mirasa dönüşür.
+          </p>
+        </div>
+      </div>
+      <div class="sheet-footer">
+        <span>❖ Readixon Evren Kodeksi</span>
+        <span>Sayfa 2</span>
+      </div>
+    </div>
+
+    <!-- SAYFA 3: DEĞİŞTİRİLEMEZ KANON KURALLARI (SERİ BIBLE) -->
+    <div class="print-sheet">
+      <div class="sheet-header">
+        <span>Bölüm II: Kanon &amp; Seri Bible</span>
+        <span>Sarsılmaz Temel Yasalar</span>
+      </div>
+      <div>
+        <h2>Değiştirilemez Temel Kanunlar (§ Seri Bible)</h2>
+        <p style="font-size: 10pt; color: #664422; margin-bottom: 16px;">
+          Evrenin fizik, doğaüstü ve ahlaki sınırlarını çizen değiştirilemez kanon kuralları.
+        </p>
+        ${canonRules.length === 0 ? `
+          <div class="card" style="text-align: center; padding: 24px;">
+            <em>Bu evren için henüz kayıtlı bir kanon kuralı bulunmamaktadır.</em>
+          </div>
+        ` : canonRules.map((rule, idx) => `
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <strong>§ ${idx + 1}. ${escapeHtml(rule.title)}</strong>
+              <span class="badge">${escapeHtml(CANON_RULE_CATEGORY_LABELS[rule.category] || rule.category)}</span>
+            </div>
+            <p style="margin: 0; font-size: 10pt;">${escapeHtml(rule.description || rule.ruleDescription || '')}</p>
+            ${rule.exceptions ? `<div class="quote" style="font-size: 9.5pt; margin-top: 6px;">İstisna: ${escapeHtml(rule.exceptions)}</div>` : ''}
+          </div>
+        `).join('')}
+      </div>
+      <div class="sheet-footer">
+        <span>❖ Readixon Evren Kodeksi</span>
+        <span>Sayfa 3</span>
+      </div>
+    </div>
+
+    <!-- SAYFA 4: VAKAYİNAME & ÇAĞLAR (ZAMAN ÇİZELGESİ) -->
+    <div class="print-sheet">
+      <div class="sheet-header">
+        <span>Bölüm III: Vakayiname &amp; Tarihçe</span>
+        <span>Zamanın Kırılma Noktaları</span>
+      </div>
+      <div>
+        <h2>Tarihçe, Çağlar &amp; Vakayiname</h2>
+        <p style="font-size: 10pt; color: #664422; margin-bottom: 16px;">
+          Zamanın akışında vuku bulan büyük kırılmalar, savaşlar, taç giymeler ve felaketler.
+        </p>
+        ${timelineEvents.length === 0 ? `
+          <div class="card" style="text-align: center; padding: 24px;">
+            <em>Zaman çizelgesine henüz bir tarihsel olay işlenmedi.</em>
+          </div>
+        ` : timelineEvents.map((evt, idx) => `
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <strong>${escapeHtml(evt.title)}</strong>
+              <span class="badge" style="font-family: monospace;">${escapeHtml(evt.customDate || evt.era || `Çağ ${idx + 1}`)}</span>
+            </div>
+            <p style="margin: 0; font-size: 10pt;">${escapeHtml(evt.summary)}</p>
+          </div>
+        `).join('')}
+      </div>
+      <div class="sheet-footer">
+        <span>❖ Readixon Evren Kodeksi</span>
+        <span>Sayfa 4</span>
+      </div>
+    </div>
+
+    <!-- SAYFA 5: DRAMATIS PERSONAE (KARAKTERLER) -->
+    <div class="print-sheet">
+      <div class="sheet-header">
+        <span>Bölüm IV: Dramatis Personae</span>
+        <span>Şahsiyetler &amp; Aktörler</span>
+      </div>
+      <div>
+        <h2>Dramatis Personae: Karakterler</h2>
+        <p style="font-size: 10pt; color: #664422; margin-bottom: 16px;">
+          Evrenin kaderine yön veren önemli kahramanlar, yoldaşlar ve düşmanlar.
+        </p>
+        ${characters.length === 0 ? `
+          <div class="card" style="text-align: center; padding: 24px;">
+            <em>Kayıtlı karakter profili bulunmamaktadır.</em>
+          </div>
+        ` : `
+          <div class="grid-2">
+            ${characters.map((char) => `
+              <div class="card" style="margin-bottom: 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <strong style="font-size: 11pt;">${escapeHtml(char.name)}</strong>
+                  <span class="badge">${escapeHtml(getCharacterRoleLabel(char.role))}</span>
+                </div>
+                <p style="font-size: 9.5pt; margin-bottom: 6px;">
+                  ${escapeHtml(char.coreMotivation || char.occupation || char.authorNotes || 'Karakter profili kaydı.')}
+                </p>
+                ${char.rpgStats ? `
+                  <div style="font-size: 8.5pt; font-family: monospace; color: #664422;">
+                    Güç: ${char.rpgStats.strength || 10} | Zeka: ${char.rpgStats.intelligence || 10} | Çeviklik: ${char.rpgStats.agility || 10}
+                  </div>
+                ` : ''}
+              </div>
+            `).join('')}
+          </div>
+        `}
+      </div>
+      <div class="sheet-footer">
+        <span>❖ Readixon Evren Kodeksi</span>
+        <span>Sayfa 5</span>
+      </div>
+    </div>
+
+    <!-- SAYFA 6: HALKLAR, IRKLAR & BESTIARY -->
+    <div class="print-sheet">
+      <div class="sheet-header">
+        <span>Bölüm V: Halklar &amp; Bestiary</span>
+        <span>Irklar ve Yaratıklar</span>
+      </div>
+      <div>
+        <h2>Kadim Halklar &amp; Bestiary (Canavarlar Günlüğü)</h2>
+        
+        <h3 style="margin-top: 14px;">Irklar &amp; Türler</h3>
+        ${races.length === 0 ? `
+          <p style="font-style: italic; font-size: 10pt; color: #775533;">Henüz tanımlanmış bir ırk kaydı yok.</p>
+        ` : races.map((race) => `
+          <div class="card">
+            <div style="display: flex; justify-content: space-between;">
+              <strong>${escapeHtml(race.name)}</strong>
+              <span style="font-size: 9pt; font-family: monospace;">Ömür: ${escapeHtml(race.lifespan || 'Belirtilmedi')}</span>
+            </div>
+            <p style="font-size: 9.5pt; margin: 4px 0 0 0;">${escapeHtml(race.physicalTraits || race.origin || race.culture || '')}</p>
+          </div>
+        `).join('')}
+
+        <h3 style="margin-top: 18px;">Bestiary: Efsanevi Varlıklar</h3>
+        ${creatures.length === 0 ? `
+          <p style="font-style: italic; font-size: 10pt; color: #775533;">Henüz kaydedilmiş bir canavar bulunmuyor.</p>
+        ` : creatures.map((creature) => `
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <strong>✦ ${escapeHtml(creature.name)}</strong>
+              <span class="badge">${escapeHtml(getCreatureDangerLabel(creature.dangerLevel)).toUpperCase()}</span>
+            </div>
+            <p style="font-size: 9.5pt; margin: 4px 0 0 0;">${escapeHtml(creature.appearance || creature.behavior || creature.lore || '')}</p>
+          </div>
+        `).join('')}
+      </div>
+      <div class="sheet-footer">
+        <span>❖ Readixon Evren Kodeksi</span>
+        <span>Sayfa 6</span>
+      </div>
+    </div>
+
+    <!-- SAYFA 7: ATLAS & COĞRAFYA -->
+    <div class="print-sheet">
+      <div class="sheet-header">
+        <span>Bölüm VI: Coğrafi Atlas</span>
+        <span>Diyarlar, Kaleler &amp; Mekânlar</span>
+      </div>
+      <div>
+        <h2>Coğrafi Atlas &amp; Mekânlar</h2>
+        <p style="font-size: 10pt; color: #664422; margin-bottom: 16px;">
+          Sınırları çizilmiş topraklar, başkentler, tapınaklar ve kadim anıtlar.
+        </p>
+        ${locations.length === 0 ? `
+          <div class="card" style="text-align: center; padding: 24px;">
+            <em>Atlas henüz haritalanmadı; mekanlar boş.</em>
+          </div>
+        ` : `
+          <div class="grid-2">
+            ${locations.map((loc) => `
+              <div class="card" style="margin-bottom: 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <strong>${escapeHtml(loc.name)}</strong>
+                  <span class="badge">${escapeHtml(LOCATION_TYPE_LABELS[loc.type] || loc.type)}</span>
+                </div>
+                <p style="font-size: 9.5pt; margin-bottom: 4px;">${escapeHtml(loc.description || 'Mekân tasviri belirtilmedi.')}</p>
+                ${loc.climate ? `<span style="font-size: 8.5pt; color: #7d5232; display: block;">İklim: ${escapeHtml(loc.climate)}</span>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        `}
+      </div>
+      <div class="sheet-footer">
+        <span>❖ Readixon Evren Kodeksi</span>
+        <span>Sayfa 7</span>
+      </div>
+    </div>
+
+    <!-- SAYFA 8: MİSTİK SANATLAR, BÜYÜLER & KEHANETLER -->
+    <div class="print-sheet">
+      <div class="sheet-header">
+        <span>Bölüm VII: Mistik Sanatlar</span>
+        <span>Grimoire &amp; Kehanetler</span>
+      </div>
+      <div>
+        <h2>Kadim Grimoire, Büyüler &amp; Fal Desteleri</h2>
+        
+        <h3 style="margin-top: 14px;">Büyü Kitabı &amp; Efsunlar (Kadim Grimoire)</h3>
+        ${spells.length === 0 ? `
+          <p style="font-style: italic; font-size: 10pt; color: #775533;">Bu evren için henüz kayıtlı büyü bulunmuyor.</p>
+        ` : spells.map((spell) => {
+          const tier = SPELL_TIER_LABELS[spell.tier];
+          return `
+            <div class="card">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <strong>✦ ${escapeHtml(spell.name)}</strong>
+                <span class="badge">${escapeHtml(tier?.label || spell.tier)}</span>
+              </div>
+              ${spell.incantation ? `<div class="quote">&ldquo;${escapeHtml(spell.incantation)}&rdquo;</div>` : ''}
+              <p style="font-size: 9.5pt; margin: 4px 0 0 0;">${escapeHtml(spell.effects)}</p>
+              ${spell.costsAndBackfire ? `<div style="font-size: 8.5pt; color: #881111; margin-top: 4px;">Bedel / Risk: ${escapeHtml(spell.costsAndBackfire)}</div>` : ''}
+            </div>
+          `;
+        }).join('')}
+
+        <h3 style="margin-top: 18px;">Kehanetler &amp; Fal Desteleri</h3>
+        ${divinations.length === 0 ? `
+          <p style="font-style: italic; font-size: 10pt; color: #775533;">Tanımlı kehanet veya fal destesi bulunmuyor.</p>
+        ` : divinations.map((div) => `
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <strong>🔮 ${escapeHtml(div.name)}</strong>
+              <span class="badge">${div.cardsOrSymbols?.length || 0} Kart</span>
+            </div>
+            <p style="font-size: 9.5pt; margin: 4px 0 0 0;">${escapeHtml(div.description)}</p>
+          </div>
+        `).join('')}
+      </div>
+      <div class="sheet-footer">
+        <span>❖ Readixon Evren Kodeksi</span>
+        <span>Sayfa 8</span>
+      </div>
+    </div>
+
+    <!-- SAYFA 9: ÖRGÜTLER, EMANETLER & KURGUSAL SIRLAR -->
+    <div class="print-sheet">
+      <div class="sheet-header">
+        <span>Bölüm VIII: Hanedanlar &amp; Sırlar</span>
+        <span>Örgütler, Kutsal Eşyalar &amp; Terimler</span>
+      </div>
+      <div>
+        <h2>Hanedanlar, Kutsal Emanetler &amp; Kadim Sözlük</h2>
+        
+        <h3 style="margin-top: 14px;">Hanedanlar &amp; Örgütler</h3>
+        ${organizations.length === 0 ? `
+          <p style="font-style: italic; font-size: 10pt; color: #775533;">Kayıtlı hanedan veya örgüt yok.</p>
+        ` : organizations.map((org) => `
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <strong>${escapeHtml(org.name)}</strong>
+              <span class="badge">${escapeHtml(getCodexOrgTypeLabel(org.type))}</span>
+            </div>
+            <p style="font-size: 9.5pt; margin: 4px 0 0 0;">${escapeHtml(org.description)}</p>
+            ${org.motto ? `<div class="quote">Slogan: &ldquo;${escapeHtml(org.motto)}&rdquo;</div>` : ''}
+          </div>
+        `).join('')}
+
+        <h3 style="margin-top: 18px;">Emanetler &amp; Güç Sistemleri</h3>
+        ${items.length === 0 ? `
+          <p style="font-style: italic; font-size: 10pt; color: #775533;">Kayıtlı efsanevi eşya yok.</p>
+        ` : items.map((it) => `
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <strong>⚔️ ${escapeHtml(it.name)}</strong>
+              <span class="badge">${escapeHtml(getCodexItemTypeLabel(it.type))}</span>
+            </div>
+            <p style="font-size: 9.5pt; margin: 4px 0 0 0;">${escapeHtml(it.description)}</p>
+          </div>
+        `).join('')}
+
+        <div style="text-align: center; margin-top: 36px; padding-top: 20px; border-top: 2px dashed #b8860b;">
+          <span style="font-size: 20px; color: #b8860b;">⚜️ ❖ ⚜️</span>
+          <h4 style="font-size: 11pt; text-transform: uppercase; letter-spacing: 2px; color: #7d5232; margin-top: 8px;">
+            Burada yazılanlar resmî evren kanonudur.
+          </h4>
+          <p style="text-align: center; font-size: 9pt; color: #997755; margin-top: 4px;">
+            Readixon Yazarlık İşletim Sistemi • Kadim Kodeks Arşivi
+          </p>
+        </div>
+      </div>
+      <div class="sheet-footer">
+        <span>❖ Readixon Evren Kodeksi</span>
+        <span>Sayfa 9</span>
+      </div>
+    </div>
+  `;
+
+  // Dokümanın tamamı (Çevrimdışı ve İframe için)
+  const generateCodexDocumentHtml = () => `<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(universe.title)} - Evren Defteri (Readixon)</title>
+  <style>
+    ${getCodexPrintCss()}
   </style>
 </head>
 <body>
-  <div class="no-print-bar">
-    <span>📖 <strong>${escapeHtml(universe.title)}</strong> - Evren Defteri Baskı &amp; PDF Önizlemesi</span>
-    <button class="print-btn" onclick="window.print()">🖨️ PDF Olarak Kaydet / Yazdır</button>
-  </div>
-
-  <!-- SAYFA 1: KAPAK & RESMÎ MÜHÜR -->
-  <div class="print-sheet">
-    <div class="sheet-header">
-      <span>Readixon Kadim Arşivi</span>
-      <span>Resmî Evren Sicili</span>
-    </div>
-    <div style="text-align: center; margin: auto 0;">
-      <div class="seal-box">
-        <span style="font-size: 26px;">⚜️</span>
-        <span style="font-size: 10px; margin-top: 4px;">KANON MÜHÜRLÜ</span>
-      </div>
-      <span class="badge" style="margin-bottom: 12px;">${escapeHtml(getUniverseGenreLabel(universe.genre)).toUpperCase()} EVRENİ</span>
-      <h1>${escapeHtml(universe.title)}</h1>
-      <p style="text-align: center; font-style: italic; color: #7d5232; max-width: 500px; margin: 0 auto 20px auto;">
-        Bu defter, yazar ${escapeHtml(universe.authorName || 'Bilinmeyen Vakayinüvis')} tarafından yaratılan evrenin resmî kanonik kayıtlarını barındırır.
-      </p>
-      <div class="grid-2" style="max-width: 480px; margin: 0 auto; text-align: left;">
-        <div class="card">
-          <strong style="font-size: 9pt; opacity: 0.7; display: block;">Yaratıcı:</strong>
-          <span>${escapeHtml(universe.authorName || 'Vakayinüvis')}</span>
-        </div>
-        <div class="card">
-          <strong style="font-size: 9pt; opacity: 0.7; display: block;">Kanon Durumu:</strong>
-          <span>${escapeHtml(getCodexVisibilityLabel(universe.visibility))}</span>
-        </div>
-        <div class="card">
-          <strong style="font-size: 9pt; opacity: 0.7; display: block;">Bağlı Eserler:</strong>
-          <span>${stories.length} Eser</span>
-        </div>
-        <div class="card">
-          <strong style="font-size: 9pt; opacity: 0.7; display: block;">Sicil Kodu:</strong>
-          <span style="font-family: monospace;">#${escapeHtml((universe.universeId || '0000').slice(0, 8))}</span>
-        </div>
-      </div>
-    </div>
-    <div class="sheet-footer">
-      <span>❖ Readixon Evren Kodeksi</span>
-      <span>Sayfa 1</span>
-    </div>
-  </div>
-
-  <!-- SAYFA 2: ÖNSÖZ & KOZMOLOJİ -->
-  <div class="print-sheet">
-    <div class="sheet-header">
-      <span>Bölüm I: Kozmoloji &amp; Yaratılış</span>
-      <span>Vakayinüvisin Önsözü</span>
-    </div>
-    <div>
-      <h2>Vakayinüvisin Önsözü</h2>
-      <p class="drop-cap">
-        ${escapeHtml(universe.description || 'Bu evrenin yaratılış efsanesi henüz kağıda dökülmedi. Yazar, bu toprakların kökenini, gök kubbenin altındaki ilk kıvılcımı ve medeniyetlerin doğuşunu burada fısıldayacak.')}
-      </p>
-      <div class="card" style="margin-top: 24px;">
-        <h3>Bu Evrenin Ruhu</h3>
-        <p style="margin: 0;">
-          Burada bulunan her karakter, büyü ve diyar birbirine görünmez kader bağlarıyla bağlıdır. Yazarın zihnindeki tüm kurgusal elementler bu defterde kalıcı bir mirasa dönüşür.
-        </p>
-      </div>
-    </div>
-    <div class="sheet-footer">
-      <span>❖ Readixon Evren Kodeksi</span>
-      <span>Sayfa 2</span>
-    </div>
-  </div>
-
-  <!-- SAYFA 3: DEĞİŞTİRİLEMEZ KANON KURALLARI (SERİ BIBLE) -->
-  <div class="print-sheet">
-    <div class="sheet-header">
-      <span>Bölüm II: Kanon &amp; Seri Bible</span>
-      <span>Sarsılmaz Temel Yasalar</span>
-    </div>
-    <div>
-      <h2>Değiştirilemez Temel Kanunlar (§ Seri Bible)</h2>
-      <p style="font-size: 10pt; color: #664422; margin-bottom: 16px;">
-        Evrenin fizik, doğaüstü ve ahlaki sınırlarını çizen değiştirilemez kanon kuralları.
-      </p>
-      ${canonRules.length === 0 ? `
-        <div class="card" style="text-align: center; padding: 24px;">
-          <em>Bu evren için henüz kayıtlı bir kanon kuralı bulunmamaktadır.</em>
-        </div>
-      ` : canonRules.map((rule, idx) => `
-        <div class="card">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-            <strong>§ ${idx + 1}. ${escapeHtml(rule.title)}</strong>
-            <span class="badge">${escapeHtml(CANON_RULE_CATEGORY_LABELS[rule.category] || rule.category)}</span>
-          </div>
-          <p style="margin: 0; font-size: 10pt;">${escapeHtml(rule.description || rule.ruleDescription || '')}</p>
-          ${rule.exceptions ? `<div class="quote" style="font-size: 9.5pt; margin-top: 6px;">İstisna: ${escapeHtml(rule.exceptions)}</div>` : ''}
-        </div>
-      `).join('')}
-    </div>
-    <div class="sheet-footer">
-      <span>❖ Readixon Evren Kodeksi</span>
-      <span>Sayfa 3</span>
-    </div>
-  </div>
-
-  <!-- SAYFA 4: VAKAYİNAME & ÇAĞLAR (ZAMAN ÇİZELGESİ) -->
-  <div class="print-sheet">
-    <div class="sheet-header">
-      <span>Bölüm III: Vakayiname &amp; Tarihçe</span>
-      <span>Zamanın Kırılma Noktaları</span>
-    </div>
-    <div>
-      <h2>Tarihçe, Çağlar &amp; Vakayiname</h2>
-      <p style="font-size: 10pt; color: #664422; margin-bottom: 16px;">
-        Zamanın akışında vuku bulan büyük kırılmalar, savaşlar, taç giymeler ve felaketler.
-      </p>
-      ${timelineEvents.length === 0 ? `
-        <div class="card" style="text-align: center; padding: 24px;">
-          <em>Zaman çizelgesine henüz bir tarihsel olay işlenmedi.</em>
-        </div>
-      ` : timelineEvents.map((evt, idx) => `
-        <div class="card">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-            <strong>${escapeHtml(evt.title)}</strong>
-            <span class="badge" style="font-family: monospace;">${escapeHtml(evt.customDate || evt.era || `Çağ ${idx + 1}`)}</span>
-          </div>
-          <p style="margin: 0; font-size: 10pt;">${escapeHtml(evt.summary)}</p>
-        </div>
-      `).join('')}
-    </div>
-    <div class="sheet-footer">
-      <span>❖ Readixon Evren Kodeksi</span>
-      <span>Sayfa 4</span>
-    </div>
-  </div>
-
-  <!-- SAYFA 5: DRAMATIS PERSONAE (KARAKTERLER) -->
-  <div class="print-sheet">
-    <div class="sheet-header">
-      <span>Bölüm IV: Dramatis Personae</span>
-      <span>Şahsiyetler &amp; Aktörler</span>
-    </div>
-    <div>
-      <h2>Dramatis Personae: Karakterler</h2>
-      <p style="font-size: 10pt; color: #664422; margin-bottom: 16px;">
-        Evrenin kaderine yön veren önemli kahramanlar, yoldaşlar ve düşmanlar.
-      </p>
-      ${characters.length === 0 ? `
-        <div class="card" style="text-align: center; padding: 24px;">
-          <em>Kayıtlı karakter profili bulunmamaktadır.</em>
-        </div>
-      ` : `
-        <div class="grid-2">
-          ${characters.map((char) => `
-            <div class="card" style="margin-bottom: 0;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <strong style="font-size: 11pt;">${escapeHtml(char.name)}</strong>
-                <span class="badge">${escapeHtml(getCharacterRoleLabel(char.role))}</span>
-              </div>
-              <p style="font-size: 9.5pt; margin-bottom: 6px;">
-                ${escapeHtml(char.coreMotivation || char.occupation || char.authorNotes || 'Karakter profili kaydı.')}
-              </p>
-              ${char.rpgStats ? `
-                <div style="font-size: 8.5pt; font-family: monospace; color: #664422;">
-                  Güç: ${char.rpgStats.strength || 10} | Zeka: ${char.rpgStats.intelligence || 10} | Çeviklik: ${char.rpgStats.agility || 10}
-                </div>
-              ` : ''}
-            </div>
-          `).join('')}
-        </div>
-      `}
-    </div>
-    <div class="sheet-footer">
-      <span>❖ Readixon Evren Kodeksi</span>
-      <span>Sayfa 5</span>
-    </div>
-  </div>
-
-  <!-- SAYFA 6: HALKLAR, IRKLAR & BESTIARY -->
-  <div class="print-sheet">
-    <div class="sheet-header">
-      <span>Bölüm V: Halklar &amp; Bestiary</span>
-      <span>Irklar ve Yaratıklar</span>
-    </div>
-    <div>
-      <h2>Kadim Halklar &amp; Bestiary (Canavarlar Günlüğü)</h2>
-      
-      <h3 style="margin-top: 14px;">Irklar &amp; Türler</h3>
-      ${races.length === 0 ? `
-        <p style="font-style: italic; font-size: 10pt; color: #775533;">Henüz tanımlanmış bir ırk kaydı yok.</p>
-      ` : races.map((race) => `
-        <div class="card">
-          <div style="display: flex; justify-content: space-between;">
-            <strong>${escapeHtml(race.name)}</strong>
-            <span style="font-size: 9pt; font-family: monospace;">Ömür: ${escapeHtml(race.lifespan || 'Belirtilmedi')}</span>
-          </div>
-          <p style="font-size: 9.5pt; margin: 4px 0 0 0;">${escapeHtml(race.physicalTraits || race.origin || race.culture || '')}</p>
-        </div>
-      `).join('')}
-
-      <h3 style="margin-top: 18px;">Bestiary: Efsanevi Varlıklar</h3>
-      ${creatures.length === 0 ? `
-        <p style="font-style: italic; font-size: 10pt; color: #775533;">Henüz kaydedilmiş bir canavar bulunmuyor.</p>
-      ` : creatures.map((creature) => `
-        <div class="card">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <strong>✦ ${escapeHtml(creature.name)}</strong>
-            <span class="badge">${escapeHtml(getCreatureDangerLabel(creature.dangerLevel)).toUpperCase()}</span>
-          </div>
-          <p style="font-size: 9.5pt; margin: 4px 0 0 0;">${escapeHtml(creature.appearance || creature.behavior || creature.lore || '')}</p>
-        </div>
-      `).join('')}
-    </div>
-    <div class="sheet-footer">
-      <span>❖ Readixon Evren Kodeksi</span>
-      <span>Sayfa 6</span>
-    </div>
-  </div>
-
-  <!-- SAYFA 7: ATLAS & COĞRAFYA -->
-  <div class="print-sheet">
-    <div class="sheet-header">
-      <span>Bölüm VI: Coğrafi Atlas</span>
-      <span>Diyarlar, Kaleler &amp; Mekânlar</span>
-    </div>
-    <div>
-      <h2>Coğrafi Atlas &amp; Mekânlar</h2>
-      <p style="font-size: 10pt; color: #664422; margin-bottom: 16px;">
-        Sınırları çizilmiş topraklar, başkentler, tapınaklar ve kadim anıtlar.
-      </p>
-      ${locations.length === 0 ? `
-        <div class="card" style="text-align: center; padding: 24px;">
-          <em>Atlas henüz haritalanmadı; mekanlar boş.</em>
-        </div>
-      ` : `
-        <div class="grid-2">
-          ${locations.map((loc) => `
-            <div class="card" style="margin-bottom: 0;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <strong>${escapeHtml(loc.name)}</strong>
-                <span class="badge">${escapeHtml(LOCATION_TYPE_LABELS[loc.type] || loc.type)}</span>
-              </div>
-              <p style="font-size: 9.5pt; margin-bottom: 4px;">${escapeHtml(loc.description || 'Mekân tasviri belirtilmedi.')}</p>
-              ${loc.climate ? `<span style="font-size: 8.5pt; color: #7d5232; display: block;">İklim: ${escapeHtml(loc.climate)}</span>` : ''}
-            </div>
-          `).join('')}
-        </div>
-      `}
-    </div>
-    <div class="sheet-footer">
-      <span>❖ Readixon Evren Kodeksi</span>
-      <span>Sayfa 7</span>
-    </div>
-  </div>
-
-  <!-- SAYFA 8: MİSTİK SANATLAR, BÜYÜLER & KEHANETLER -->
-  <div class="print-sheet">
-    <div class="sheet-header">
-      <span>Bölüm VII: Mistik Sanatlar</span>
-      <span>Grimoire &amp; Kehanetler</span>
-    </div>
-    <div>
-      <h2>Kadim Grimoire, Büyüler &amp; Fal Desteleri</h2>
-      
-      <h3 style="margin-top: 14px;">Büyü Kitabı &amp; Efsunlar (Kadim Grimoire)</h3>
-      ${spells.length === 0 ? `
-        <p style="font-style: italic; font-size: 10pt; color: #775533;">Bu evren için henüz kayıtlı büyü bulunmuyor.</p>
-      ` : spells.map((spell) => {
-        const tier = SPELL_TIER_LABELS[spell.tier];
-        return `
-          <div class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <strong>✦ ${escapeHtml(spell.name)}</strong>
-              <span class="badge">${escapeHtml(tier?.label || spell.tier)}</span>
-            </div>
-            ${spell.incantation ? `<div class="quote">&ldquo;${escapeHtml(spell.incantation)}&rdquo;</div>` : ''}
-            <p style="font-size: 9.5pt; margin: 4px 0 0 0;">${escapeHtml(spell.effects)}</p>
-            ${spell.costsAndBackfire ? `<div style="font-size: 8.5pt; color: #881111; margin-top: 4px;">Bedel / Risk: ${escapeHtml(spell.costsAndBackfire)}</div>` : ''}
-          </div>
-        `;
-      }).join('')}
-
-      <h3 style="margin-top: 18px;">Kehanetler &amp; Fal Desteleri</h3>
-      ${divinations.length === 0 ? `
-        <p style="font-style: italic; font-size: 10pt; color: #775533;">Tanımlı kehanet veya fal destesi bulunmuyor.</p>
-      ` : divinations.map((div) => `
-        <div class="card">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <strong>🔮 ${escapeHtml(div.name)}</strong>
-            <span class="badge">${div.cardsOrSymbols?.length || 0} Kart</span>
-          </div>
-          <p style="font-size: 9.5pt; margin: 4px 0 0 0;">${escapeHtml(div.description)}</p>
-        </div>
-      `).join('')}
-    </div>
-    <div class="sheet-footer">
-      <span>❖ Readixon Evren Kodeksi</span>
-      <span>Sayfa 8</span>
-    </div>
-  </div>
-
-  <!-- SAYFA 9: ÖRGÜTLER, EMANETLER & KURGUSAL SIRLAR -->
-  <div class="print-sheet">
-    <div class="sheet-header">
-      <span>Bölüm VIII: Hanedanlar &amp; Sırlar</span>
-      <span>Örgütler, Kutsal Eşyalar &amp; Terimler</span>
-    </div>
-    <div>
-      <h2>Hanedanlar, Kutsal Emanetler &amp; Kadim Sözlük</h2>
-      
-      <h3 style="margin-top: 14px;">Hanedanlar &amp; Örgütler</h3>
-      ${organizations.length === 0 ? `
-        <p style="font-style: italic; font-size: 10pt; color: #775533;">Kayıtlı hanedan veya örgüt yok.</p>
-      ` : organizations.map((org) => `
-        <div class="card">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <strong>${escapeHtml(org.name)}</strong>
-            <span class="badge">${escapeHtml(getCodexOrgTypeLabel(org.type))}</span>
-          </div>
-          <p style="font-size: 9.5pt; margin: 4px 0 0 0;">${escapeHtml(org.description)}</p>
-          ${org.motto ? `<div class="quote">Slogan: &ldquo;${escapeHtml(org.motto)}&rdquo;</div>` : ''}
-        </div>
-      `).join('')}
-
-      <h3 style="margin-top: 18px;">Emanetler &amp; Güç Sistemleri</h3>
-      ${items.length === 0 ? `
-        <p style="font-style: italic; font-size: 10pt; color: #775533;">Kayıtlı efsanevi eşya yok.</p>
-      ` : items.map((it) => `
-        <div class="card">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <strong>⚔️ ${escapeHtml(it.name)}</strong>
-            <span class="badge">${escapeHtml(getCodexItemTypeLabel(it.type))}</span>
-          </div>
-          <p style="font-size: 9.5pt; margin: 4px 0 0 0;">${escapeHtml(it.description)}</p>
-        </div>
-      `).join('')}
-
-      <div style="text-align: center; margin-top: 36px; padding-top: 20px; border-top: 2px dashed #b8860b;">
-        <span style="font-size: 20px; color: #b8860b;">⚜️ ❖ ⚜️</span>
-        <h4 style="font-size: 11pt; text-transform: uppercase; letter-spacing: 2px; color: #7d5232; margin-top: 8px;">
-          Burada yazılanlar resmî evren kanonudur.
-        </h4>
-        <p style="text-align: center; font-size: 9pt; color: #997755; margin-top: 4px;">
-          Readixon Yazarlık İşletim Sistemi • Kadim Kodeks Arşivi
-        </p>
-      </div>
-    </div>
-    <div class="sheet-footer">
-      <span>❖ Readixon Evren Kodeksi</span>
-      <span>Sayfa 9</span>
-    </div>
-  </div>
+  ${generateCodexSheetsHtml()}
 </body>
-</html>
+</html>`;
+
+  // PDF İndirme & Baskı Motoru
+  const handleExportPdf = () => {
+    toast.info('Evren Defteriniz PDF olarak hazırlanıyor... Lütfen bekleyin.');
+
+    const sheetsHtml = generateCodexSheetsHtml();
+    const printStyles = getCodexPrintCss();
+    const fullHtml = generateCodexDocumentHtml();
+
+    // 1. Ana sayfadaki global @media print portalını hazırla
+    // (Mobilde ve WebView print'inin ana sayfaya bağlandığı durumlarda tüm sayfaların eksiksiz çıkmasını sağlar)
+    let portal = document.getElementById('codex-global-print-portal');
+    if (!portal) {
+      portal = document.createElement('div');
+      portal.id = 'codex-global-print-portal';
+      document.body.appendChild(portal);
+    }
+    portal.innerHTML = `
+      <style id="codex-portal-styles">
+        @media screen {
+          #codex-global-print-portal { display: none !important; }
+        }
+        @media print {
+          body > *:not(#codex-global-print-portal) { display: none !important; }
+          html, body {
+            overflow: visible !important;
+            height: auto !important;
+            min-height: 100% !important;
+            background: #ffffff !important;
+            color: #24160a !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          #codex-global-print-portal {
+            display: block !important;
+            position: static !important;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+            background: #ffffff !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+        }
+        ${printStyles}
+      </style>
+      ${sheetsHtml}
     `;
 
-    if (!printWindow) {
-      window.print();
-      return;
+    // 2. İframe ile izole yazdırma motoru (PC App / Web için popup engelleyicilere takılmaz)
+    const oldIframe = document.getElementById('codex-print-iframe');
+    if (oldIframe) oldIframe.remove();
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'codex-print-iframe';
+    iframe.setAttribute(
+      'style',
+      'position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;pointer-events:none;z-index:-9999;'
+    );
+    document.body.appendChild(iframe);
+
+    const frameDoc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (frameDoc) {
+      frameDoc.open();
+      frameDoc.write(fullHtml);
+      frameDoc.close();
     }
 
-    try {
-      printWindow.document.open();
-      printWindow.document.write(contentHtml);
-      printWindow.document.close();
-      printWindow.focus();
+    // 3. Yazdırma Tetikleme (Iframe öncelikli, başarısız olursa Window.print fallback)
+    setTimeout(() => {
+      let printed = false;
+      try {
+        if (iframe.contentWindow) {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+          printed = true;
+          toast.success('Yazdırma penceresi açıldı. "Hedef" kısmından "PDF Olarak Kaydet" seçeneğini seçebilirsiniz.', { duration: 6000 });
+        }
+      } catch (iframeErr) {
+        console.warn('Iframe print failed or blocked, falling back to window.print:', iframeErr);
+      }
 
-      setTimeout(() => {
-        printWindow.print();
-        toast.success('Yazdırma penceresi açıldı. "Hedef" kısmından "PDF Olarak Kaydet" seçeneğini seçebilirsiniz.', { duration: 5000 });
-      }, 500);
-    } catch (err) {
-      console.error('PDF export error:', err);
-      window.print();
+      if (!printed) {
+        try {
+          window.print();
+          toast.success('Yazdırma penceresi açıldı. "Hedef" kısmından "PDF Olarak Kaydet" seçeneğini seçebilirsiniz.', { duration: 6000 });
+        } catch (winErr) {
+          console.error('window.print failed:', winErr);
+          toast.error('Yazdırma penceresi açılamadı. Fihrist menüsünden Çevrimdışı HTML olarak indirmeyi deneyebilirsiniz.');
+        }
+      }
+    }, 450);
+  };
+
+  // Çevrimdışı Kodeks İndirme (.html)
+  const handleDownloadOfflineHtml = () => {
+    try {
+      const fullHtml = generateCodexDocumentHtml();
+      const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${(universe.title || 'Evren').replace(/[\s/\\?%*:|"<>]/g, '_')}_Evren_Defteri.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Çevrimdışı Evren Defteri (.html) indirildi! İstediğiniz cihazda açıp doğrudan PDF olarak kaydedebilirsiniz.');
+    } catch (e) {
+      console.error('Download offline HTML error:', e);
+      toast.error('Dosya indirilemedi.');
     }
   };
 
@@ -1297,7 +1406,7 @@ export function UniverseCodexModal({
           </div>
 
           {/* Fihrist İçi PDF İndir Butonu */}
-          <div className="pt-2.5 mt-2.5 border-t border-white/10">
+          <div className="pt-2.5 mt-2.5 border-t border-white/10 space-y-2">
             <button
               onClick={() => {
                 setShowToc(false);
@@ -1307,6 +1416,16 @@ export function UniverseCodexModal({
             >
               <Printer size={14} />
               <span>Tüm Defteri PDF Olarak İndir / Yazdır</span>
+            </button>
+            <button
+              onClick={() => {
+                setShowToc(false);
+                handleDownloadOfflineHtml();
+              }}
+              className="w-full py-1.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-amber-200 hover:text-white font-medium text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              <Download size={13} />
+              <span>Çevrimdışı Defteri İndir (.html)</span>
             </button>
           </div>
         </div>

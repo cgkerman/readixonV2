@@ -1328,8 +1328,14 @@ export default function PublicUniversePage() {
                         <div className="min-w-0 flex-1 flex flex-col justify-between">
                           <div>
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                                {st.format === 'webtoon' ? 'Webtoon' : 'Roman'}
+                              <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                                st.format === 'short_story' 
+                                  ? 'bg-amber-500/15 text-amber-500' 
+                                  : st.format === 'webtoon' 
+                                    ? 'bg-emerald-500/15 text-emerald-500' 
+                                    : 'bg-primary/10 text-primary'
+                              }`}>
+                                {st.format === 'webtoon' ? 'Webtoon' : st.format === 'short_story' ? 'Kısa Hikaye' : 'Roman'}
                               </span>
                               <span className="text-[10px] text-muted font-medium">
                                 {st.status === 'completed' ? 'Tamamlandı' : 'Devam Ediyor'}
