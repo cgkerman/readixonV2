@@ -172,16 +172,35 @@ export async function getClubs(options?: {
 }): Promise<Club[]> {
   const maxLimit = options?.limitCount || 30;
   const clubsRef = collection(db, CLUBS_COLLECTION);
-  let q = query(clubsRef, orderBy('createdAt', 'desc'), limit(maxLimit));
 
-  if (options?.tag) {
-    q = query(clubsRef, where('tags', 'array-contains', options.tag), limit(maxLimit));
-  } else if (options?.isAuthorOfficial !== undefined) {
-    q = query(clubsRef, where('isAuthorOfficial', '==', options.isAuthorOfficial), limit(maxLimit));
+  try {
+    let q = query(clubsRef, orderBy('createdAt', 'desc'), limit(maxLimit));
+
+    if (options?.tag) {
+      q = query(clubsRef, where('tags', 'array-contains', options.tag), limit(maxLimit));
+    } else if (options?.isAuthorOfficial !== undefined) {
+      q = query(clubsRef, where('isAuthorOfficial', '==', options.isAuthorOfficial), limit(maxLimit));
+    }
+
+    const snap = await getDocs(q);
+    return snap.docs.map((docSnap) => ({ ...docSnap.data(), id: docSnap.id } as Club));
+  } catch (err) {
+    console.warn('getClubs indexed query hatası, fallback uygulanıyor:', err);
+    try {
+      const fallbackSnap = await getDocs(clubsRef);
+      let list = fallbackSnap.docs.map((d) => ({ ...d.data(), id: d.id } as Club));
+      if (options?.tag) {
+        list = list.filter((c) => c.tags?.includes(options.tag!));
+      }
+      if (options?.isAuthorOfficial !== undefined) {
+        list = list.filter((c) => Boolean(c.isAuthorOfficial) === options.isAuthorOfficial);
+      }
+      return list.slice(0, maxLimit);
+    } catch (fallbackErr) {
+      console.error('getClubs fallback hatası:', fallbackErr);
+      return [];
+    }
   }
-
-  const snap = await getDocs(q);
-  return snap.docs.map((docSnap) => ({ ...docSnap.data(), id: docSnap.id } as Club));
 }
 
 

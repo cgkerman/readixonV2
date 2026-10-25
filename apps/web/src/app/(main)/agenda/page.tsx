@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { AgendaFooter } from './components/AgendaFooter';
 import { PlatformFeedback } from './components/PlatformFeedback';
 import { ExcellentStoriesSection } from './components/ExcellentStoriesSection';
+import { AgendaClubsSection } from './components/AgendaClubsSection';
 import { PowerOfWordsBanner } from '@/components/PowerOfWordsBanner';
 
 function formatNewsDate(createdAt: any): string {
@@ -558,6 +559,9 @@ export default function AgendaPage() {
             </div>
           </section>
         )}
+
+        {/* ── Kitap Kulüpleri & Canlı Okuma Seferleri ── */}
+        <AgendaClubsSection />
 
         {/* Trending Tags Section (Modern Compact Grid) */}
         {trendingTags.length > 0 && (
