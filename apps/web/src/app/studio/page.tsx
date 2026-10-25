@@ -22,7 +22,8 @@ import {
   PenTool,
   Gamepad2,
   Feather,
-  MessageSquare
+  MessageSquare,
+  Users
 } from 'lucide-react';
 import { subscribeToAuthorStories, createStory, useAuthStore, syncStoryChapterCount, type Story } from '@readixon/core';
 import { GenreSelector } from '@/components/story/GenreSelector';
@@ -273,8 +274,8 @@ export default function StudioDashboard() {
         </div>
       </div>
 
-      {/* ── 2.5. Seri & Evren Hızlı Erişim Şeritleri ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 sm:mb-8">
+      {/* ── 2.5. Seri, Evren & Kulüp Hızlı Erişim Şeritleri ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6 sm:mb-8">
         <Link
           href="/studio/series"
           className="p-4 rounded-2xl bg-gradient-to-r from-card/80 to-card/40 border border-border/50 hover:border-amber-500/40 transition-all flex items-center justify-between group shadow-xs hover:shadow-md"
@@ -313,6 +314,26 @@ export default function StudioDashboard() {
             </div>
           </div>
           <ChevronRight size={18} className="text-muted group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+        </Link>
+
+        <Link
+          href="/clubs"
+          className="p-4 rounded-2xl bg-gradient-to-r from-card/80 to-card/40 border border-border/50 hover:border-amber-500/40 transition-all flex items-center justify-between group shadow-xs hover:shadow-md"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+              <Users size={20} />
+            </div>
+            <div>
+              <span className="font-bold text-sm text-foreground group-hover:text-amber-500 transition-colors block">
+                Yazar Kulüplerim & AMA
+              </span>
+              <span className="text-[11px] text-muted block mt-0.5">
+                Eserleriniz için resmi kulüp kurun, canlı soru-cevap yönetin.
+              </span>
+            </div>
+          </div>
+          <ChevronRight size={18} className="text-muted group-hover:text-amber-500 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
         </Link>
       </div>
 

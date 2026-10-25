@@ -30,6 +30,7 @@ import {
   getUniverseCreatures,
   getUniversePlotThreads,
   extractMentionedEntities,
+  syncClubReadingProgress,
   type InlineUniverseEntity,
   type UniversePlotThread
 } from '@readixon/core';
@@ -193,6 +194,30 @@ export default function ReadPage() {
     chapterId,
     isCompleted: isChapterCompleted
   });
+
+  // Kulüp İlerlemesi & Spoiler Kilit Açma Otomasyonu
+  useEffect(() => {
+    if (!isChapterCompleted || !firebaseUser || !storyId || !chapter) return;
+
+    const chapterIndex = chapter.order || 1;
+
+    syncClubReadingProgress(firebaseUser.uid, storyId, chapterIndex, Boolean(chapter.isEnding)).then((unlockedRooms) => {
+      if (unlockedRooms && unlockedRooms.length > 0) {
+        for (const room of unlockedRooms) {
+          toast.success(
+            `🔓 Tebrikler! "${room.clubName}" kulübündeki "${room.channelTitle}" odasının kilidi açıldı!`,
+            {
+              action: {
+                label: 'Odaya Git',
+                onClick: () => router.push(`/clubs/${room.clubSlug}`),
+              },
+              duration: 8000,
+            }
+          );
+        }
+      }
+    });
+  }, [isChapterCompleted, firebaseUser?.uid, storyId, chapter?.chapterId]);
 
   // Yanıt (Reply) State'leri
   const [replyingToComment, setReplyingToComment] = useState<Comment | null>(null);

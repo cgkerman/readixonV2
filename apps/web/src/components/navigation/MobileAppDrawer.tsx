@@ -27,6 +27,7 @@ import {
   GalleryVertical,
   Sun,
   Moon,
+  Users,
 } from 'lucide-react';
 import { useAuthStore, signOut, useThemeStore, isDarkTheme } from '@readixon/core';
 import { useBackButton } from '@/hooks/useBackButton';
@@ -320,6 +321,7 @@ export function MobileAppDrawer({ isOpen, onClose, onBecomeAuthor }: MobileAppDr
               Topluluk & Gündem
             </span>
 
+            <DrawerLink href="/clubs" label="Kitap Kulüpleri" icon={Users} active={isLinkActive('/clubs')} onClose={onClose} />
             <DrawerLink href="/agenda" label="Gündem & Trendler" icon={Flame} active={isLinkActive('/agenda')} onClose={onClose} />
             <DrawerLink href="/reviews" label="Editöryel İncelemeler" icon={Award} active={isLinkActive('/reviews')} onClose={onClose} />
           </div>

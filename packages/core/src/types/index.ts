@@ -570,7 +570,9 @@ export type NotificationType =
   | 'duel_rejected'
   | 'system_message'
   | 'badge_earned'
-  | 'editorial_review';
+  | 'editorial_review'
+  | 'club_room_unlocked'
+  | 'club_author_reply';
 
 export interface AppNotification {
   id: string;
@@ -1027,4 +1029,5 @@ export interface LegalDocument {
 // ─────────────────────────────────────────────────────────────────
 export * from './series';
 export * from './universe';
+export * from './club';
 

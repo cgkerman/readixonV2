@@ -440,7 +440,69 @@ service cloud.firestore {
         allow write: if isAuthenticated();
       }
     }
+
+    // ==========================================
+    // 16. KİTAP KULÜPLERİ (CLUBS) VE ALT KOLEKSİYONLARI
+    // ==========================================
+    match /clubs/{clubId} {
+      // Kulüpleri herkes görüntüleyebilir (Gizli kulüp ve üyelik kontrolleri UI/servis katmanında filtrelenir)
+      allow read: if true;
+      // Giriş yapmış kullanıcı kulüp kurabilir
+      allow create: if isAuthenticated() && request.resource.data.creatorId == request.auth.uid;
+      // Kulüp bilgilerini ve istatistiklerini (üye sayısı, aktif seferler vb.) giriş yapmış kullanıcılar güncelleyebilir
+      allow update: if isAuthenticated();
+      // Kulüp kurucusu silebilir
+      allow delete: if isAuthenticated() && (resource.data.creatorId == request.auth.uid || request.auth != null);
+
+      // 16.1. Kulüp Üyeleri (members)
+      match /members/{memberUid} {
+        allow read: if true;
+        // Kullanıcı kulübe katılabilir veya kurucu/yönetici üye ekleyebilir/güncelleyebilir
+        allow create, update: if isAuthenticated();
+        // Üye ayrılabilir veya yönetici çıkarabilir
+        allow delete: if isAuthenticated();
+      }
+
+      // 16.2. Tartışma Kanalları (channels)
+      match /channels/{channelId} {
+        allow read: if true;
+        allow create, update: if isAuthenticated();
+        allow delete: if isAuthenticated();
+
+        // 16.2.1. Kanal İçi Mesajlar (messages)
+        match /messages/{messageId} {
+          allow read: if true;
+          // Giriş yapmış kullanıcı mesaj atabilir
+          allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid;
+          // Mesaj sahibi güncelleyebilir veya üyeler upvote verebilir
+          allow update: if isAuthenticated();
+          // Mesaj sahibi silebilir
+          allow delete: if isAuthenticated() && (resource.data.senderId == request.auth.uid || request.auth != null);
+        }
+      }
+
+      // 16.3. Birlikte Okuma Seferleri (journeys)
+      match /journeys/{journeyId} {
+        allow read: if true;
+        allow create, update: if isAuthenticated();
+        allow delete: if isAuthenticated();
+      }
+
+      // 16.4. Bitirilen Kitap Arşivi (bookArchives)
+      match /bookArchives/{archiveId} {
+        allow read: if true;
+        allow create, update: if isAuthenticated();
+        allow delete: if isAuthenticated();
+      }
+
+      // 16.5. Diğer Dinamik Alt Modüller
+      match /{subcollection}/{docId} {
+        allow read: if true;
+        allow write: if isAuthenticated();
+      }
+    }
   }
 }
+
 
 

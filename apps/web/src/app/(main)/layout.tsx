@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { BookOpen, Compass, Search, User, LogOut, PenTool, Hash, Settings, Bell, MessageCircle, Menu, X, LifeBuoy, Feather, ShieldAlert, Crown, Info, TrendingUp, Sun, Moon } from 'lucide-react';
+import { BookOpen, Compass, Search, User, LogOut, PenTool, Hash, Settings, Bell, MessageCircle, Menu, X, LifeBuoy, Feather, ShieldAlert, Crown, Info, TrendingUp, Sun, Moon, Users } from 'lucide-react';
 import { Typography, Button } from '@readixon/ui';
 import { useAuthStore, signOut, becomeAuthor, sendVerificationEmail, subscribeToChats, useThemeStore, isDarkTheme } from '@readixon/core';
 import { toast } from "sonner";
@@ -192,6 +192,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   const topNavItems: NavItem[] = [
     { name: 'Keşfet', href: '/feed', icon: Compass },
+    { name: 'Kulüpler', href: '/clubs', icon: Users },
     { name: 'Gündem', href: '/agenda', icon: TrendingUp },
     { name: 'Arena', href: '/arena', icon: Feather },
     { name: 'Readix', href: '/readix', icon: Hash },
