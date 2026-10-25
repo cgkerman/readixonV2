@@ -93,6 +93,22 @@ export async function createNotification(
           bodyText = `${actor} seni bir edebi düelloya davet etti!`;
           route = data.entityId ? `/arena/duel/${data.entityId}` : '/arena';
           break;
+        case 'club_room_unlocked':
+          bodyText = data.subEntityTitle 
+            ? `🔓 Tebrikler! "${data.entityTitle}" kulübündeki "${data.subEntityTitle}" odasının kilidi açıldı!` 
+            : 'Kulübünüzde yeni bir tartışma odasının kilidi açıldı!';
+          route = data.actorUsername ? `/clubs/${data.actorUsername}` : '/clubs';
+          break;
+        case 'club_author_reply':
+          bodyText = `${actor}, "${data.entityTitle}" kulübündeki sorunu yanıtladı!`;
+          route = data.actorUsername ? `/clubs/${data.actorUsername}` : '/clubs';
+          break;
+        case 'club_deleted':
+          bodyText = data.entityTitle 
+            ? `"${data.entityTitle}" kulübü yönetici kararıyla kapatıldı. Gerekçe: ${data.message || 'Topluluk kuralları'}` 
+            : 'Üyesi olduğunuz bir kulüp yönetici kararıyla kapatıldı.';
+          route = '/notifications';
+          break;
         default:
           bodyText = `${actor} sana bir bildirim gönderdi.`;
       }

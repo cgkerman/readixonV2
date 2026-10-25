@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from "sonner";
 import { useRouter } from 'next/navigation';
-import { Bell, Heart, MessageCircle, UserPlus, CheckCircle2, Circle, Loader2, BookOpen, Feather, XCircle, Award, Sparkles, PencilLine } from 'lucide-react';
+import { Bell, Heart, MessageCircle, UserPlus, CheckCircle2, Circle, Loader2, BookOpen, Feather, XCircle, Award, Sparkles, PencilLine, ShieldAlert, Users, AlertCircle } from 'lucide-react';
 import { Typography, Button } from '@readixon/ui';
 import { 
   useAuthStore, 
@@ -19,6 +19,7 @@ export default function NotificationsPage() {
   const { firebaseUser, unreadNotificationCount } = useAuthStore();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDeletedClubNotif, setSelectedDeletedClubNotif] = useState<AppNotification | null>(null);
 
   useEffect(() => {
     if (!firebaseUser) {
@@ -104,6 +105,17 @@ export default function NotificationsPage() {
           router.push('/reviews');
         }
         break;
+      case 'club_room_unlocked':
+      case 'club_author_reply':
+        if (notif.actorUsername) {
+          router.push(`/clubs/${notif.actorUsername}`);
+        } else {
+          router.push('/clubs');
+        }
+        break;
+      case 'club_deleted':
+        setSelectedDeletedClubNotif(notif);
+        break;
     }
   };
 
@@ -152,6 +164,11 @@ export default function NotificationsPage() {
         return <div className="w-10 h-10 rounded-full bg-yellow-500/20 text-yellow-500 flex items-center justify-center shrink-0"><Award size={20} /></div>;
       case 'editorial_review':
         return <div className="w-10 h-10 rounded-full bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0"><Sparkles size={20} /></div>;
+      case 'club_room_unlocked':
+      case 'club_author_reply':
+        return <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center shrink-0"><Users size={20} /></div>;
+      case 'club_deleted':
+        return <div className="w-10 h-10 rounded-full bg-rose-500/20 text-rose-500 flex items-center justify-center shrink-0"><ShieldAlert size={20} /></div>;
       default:
         return <div className="w-10 h-10 rounded-full bg-muted/20 text-muted flex items-center justify-center shrink-0"><Bell size={20} /></div>;
     }
@@ -203,6 +220,24 @@ export default function NotificationsPage() {
         return <span>Tebrikler! <span className="font-semibold text-yellow-500">"{notif.entityTitle}"</span> rozetini kazandın.</span>;
       case 'editorial_review':
         return <>{actor}, {entity} adlı eseriniz için kapsamlı bir editör değerlendirmesi yayınladı!</>;
+      case 'club_room_unlocked':
+        return <span>🔓 Tebrikler! {entity} kulübündeki <strong className="text-primary">"{notif.subEntityTitle}"</strong> odasının kilidi açıldı!</span>;
+      case 'club_author_reply':
+        return <span>{actor}, {entity} kulübündeki sorunuzu yanıtladı!</span>;
+      case 'club_deleted':
+        return (
+          <div>
+            <span className="font-bold text-rose-500 block">
+              "{notif.entityTitle}" kulübü yönetici kararıyla kapatıldı.
+            </span>
+            <span className="block text-xs text-muted mt-0.5 line-clamp-1">
+              Gerekçe: {notif.message || 'Topluluk kuralları nedeniyle kapatılmıştır.'}
+            </span>
+            <span className="text-[11px] text-primary font-semibold underline mt-1 inline-block">
+              Gerekçeyi ve detayları incele →
+            </span>
+          </div>
+        );
       default:
         console.warn('Bilinmeyen bildirim tipi:', notif.type, notif);
         return <span>Yeni bir bildiriminiz var.</span>;
@@ -302,6 +337,59 @@ export default function NotificationsPage() {
               )}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* ── Kapatılan Kulüp Gerekçesi Modalı ── */}
+      {selectedDeletedClubNotif && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-card border border-rose-500/30 rounded-3xl max-w-md w-full overflow-hidden shadow-2xl p-6 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-500 flex items-center justify-center shrink-0">
+                <ShieldAlert size={24} />
+              </div>
+              <div>
+                <h3 className="font-bold text-lg text-foreground">Kulüp Kapatıldı</h3>
+                <span className="text-xs text-rose-400 font-medium">Resmi Yönetici Bildirimi</span>
+              </div>
+            </div>
+
+            <div className="space-y-3.5 my-4">
+              <div className="bg-background/60 p-3.5 rounded-2xl border border-border/50">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-muted block mb-1">
+                  Kapatılan Kulüp
+                </span>
+                <p className="font-bold text-base text-foreground">
+                  "{selectedDeletedClubNotif.entityTitle}"
+                </p>
+                <span className="text-[11px] text-muted block mt-1">
+                  Kapatılma Zamanı: {formatTimeAgo(selectedDeletedClubNotif.createdAt)}
+                </span>
+              </div>
+
+              <div className="bg-rose-500/10 border border-rose-500/20 p-4 rounded-2xl">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-rose-400 block mb-1.5 flex items-center gap-1.5">
+                  <AlertCircle size={14} /> Kapatılma Gerekçesi / Açıklama
+                </span>
+                <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap font-medium">
+                  {selectedDeletedClubNotif.message || 'Topluluk kurallarına veya yasal gereksinimlere uyum sağlanmadığı için kulüp yönetici tarafından kapatılmıştır.'}
+                </p>
+              </div>
+
+              <p className="text-[11px] text-muted leading-relaxed">
+                Bu işlem Readixon yönetimi tarafından platform güvenliği ve topluluk kuralları gözetilerek gerçekleştirilmiştir. Sorularınız veya itirazlarınız için destek ekibimizle iletişime geçebilirsiniz.
+              </p>
+            </div>
+
+            <div className="pt-2">
+              <Button
+                className="w-full bg-primary hover:bg-primary/90 text-background font-bold py-3 rounded-xl"
+                onPress={() => setSelectedDeletedClubNotif(null)}
+              >
+                Anladım
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

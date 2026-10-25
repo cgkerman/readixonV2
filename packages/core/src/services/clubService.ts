@@ -184,25 +184,6 @@ export async function getClubs(options?: {
   return snap.docs.map((docSnap) => ({ ...docSnap.data(), id: docSnap.id } as Club));
 }
 
-/**
- * Kulüp bilgilerini günceller (Sadece owner veya admin yapabilir).
- */
-export async function updateClub(
-  clubId: string,
-  userId: string,
-  data: Partial<Omit<Club, 'id' | 'createdAt' | 'creatorId' | 'stats'>>
-): Promise<void> {
-  const membership = await getClubMembership(clubId, userId);
-  if (!membership || (membership.role !== 'owner' && membership.role !== 'admin')) {
-    throw new Error('Bu kulübü güncelleme yetkiniz yok.');
-  }
-
-  const clubRef = doc(db, CLUBS_COLLECTION, clubId);
-  await updateDoc(clubRef, {
-    ...data,
-    updatedAt: serverTimestamp(),
-  });
-}
 
 // ─────────────────────────────────────────────────────────────────
 // 2. ÜYELİK İŞLEMLERİ (MEMBERSHIP)
@@ -299,6 +280,78 @@ export async function getClubMembers(clubId: string, limitCount = 50): Promise<C
 }
 
 /**
+ * Kulüp üyesinin rolünü günceller (Yalnızca Kurucu / Admin).
+ */
+export async function updateClubMemberRole(
+  clubId: string,
+  operatorUserId: string,
+  targetUserId: string,
+  newRole: ClubMemberRole
+): Promise<void> {
+  const operatorMembership = await getClubMembership(clubId, operatorUserId);
+  if (!operatorMembership || (operatorMembership.role !== 'owner' && operatorMembership.role !== 'admin')) {
+    throw new Error('Üye rolü değiştirme yetkiniz yok.');
+  }
+
+  // Kurucunun rolü değiştirilemez
+  const targetMemberRef = doc(db, CLUBS_COLLECTION, clubId, 'members', targetUserId);
+  const targetSnap = await getDoc(targetMemberRef);
+  if (!targetSnap.exists()) {
+    throw new Error('Üye bulunamadı.');
+  }
+
+  const targetData = targetSnap.data() as ClubMember;
+  if (targetData.role === 'owner') {
+    throw new Error('Kulüp kurucusunun yetkisi değiştirilemez.');
+  }
+
+  // Adminler başka birini owner yapamaz veya başka adminin rolünü değiştiremez
+  if (operatorMembership.role === 'admin' && (newRole === 'owner' || targetData.role === 'admin')) {
+    throw new Error('Yöneticiler diğer yöneticilerin rolünü değiştiremez veya liderlik atayamaz.');
+  }
+
+  await updateDoc(targetMemberRef, {
+    role: newRole,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Üyeyi kulüpten çıkarır (Yalnızca Kurucu / Admin).
+ */
+export async function removeClubMember(
+  clubId: string,
+  operatorUserId: string,
+  targetUserId: string
+): Promise<void> {
+  const operatorMembership = await getClubMembership(clubId, operatorUserId);
+  if (!operatorMembership || (operatorMembership.role !== 'owner' && operatorMembership.role !== 'admin')) {
+    throw new Error('Üye çıkarma yetkiniz yok.');
+  }
+
+  const targetMemberRef = doc(db, CLUBS_COLLECTION, clubId, 'members', targetUserId);
+  const targetSnap = await getDoc(targetMemberRef);
+  if (!targetSnap.exists()) return;
+
+  const targetData = targetSnap.data() as ClubMember;
+  if (targetData.role === 'owner') {
+    throw new Error('Kulüp kurucusu kulüpten çıkarılamaz.');
+  }
+
+  if (operatorMembership.role === 'admin' && targetData.role === 'admin') {
+    throw new Error('Yöneticiler diğer yöneticileri kulüpten çıkaramaz.');
+  }
+
+  await deleteDoc(targetMemberRef);
+
+  const clubRef = doc(db, CLUBS_COLLECTION, clubId);
+  await updateDoc(clubRef, {
+    'stats.membersCount': increment(-1),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
  * Üyenin aktif kitaptaki ilerlemesini günceller (Okuyucu ile entegre çalışır).
  */
 export async function updateMemberProgress(
@@ -323,6 +376,8 @@ export interface CreateJourneyInput {
   storyId: string;
   storyTitle: string;
   storyCoverUrl?: string;
+  authorName?: string;
+  authorId?: string;
   totalChapters: number;
   title: string;
   description?: string;
@@ -346,9 +401,34 @@ export async function createClubJourney(
   userId: string,
   input: CreateJourneyInput
 ): Promise<ClubJourney> {
-  const membership = await getClubMembership(clubId, userId);
+  const [membership, clubSnap] = await Promise.all([
+    getClubMembership(clubId, userId),
+    getDoc(doc(db, CLUBS_COLLECTION, clubId)),
+  ]);
+
   if (!membership || (membership.role !== 'owner' && membership.role !== 'admin' && membership.role !== 'moderator')) {
     throw new Error('Yalnızca kulüp yöneticileri yeni bir okuma yolculuğu başlatabilir.');
+  }
+
+  const club = clubSnap.exists() ? (clubSnap.data() as Club) : null;
+
+  // Yazar kendi hikayelerine sadece bunu yapabilmeli. Diğer hikayelere yapmamalı koruması
+  const storySnap = await getDoc(doc(db, 'stories', input.storyId));
+  if (!storySnap.exists()) {
+    throw new Error('Seçilen eser bulunamadı.');
+  }
+  const storyData = storySnap.data();
+
+  if (club?.isAuthorOfficial) {
+    const targetAuthorId = club.linkedAuthorId || club.creatorId;
+    if (storyData.authorId !== targetAuthorId && storyData.authorId !== userId) {
+      throw new Error('Resmi yazar kulübünde yalnızca yazarın kendi yayınlanmış eserleri için okuma seferi başlatılabilir.');
+    }
+  } else {
+    // Normal kulüpte de seferi başlatan yazar yalnızca kendi eserini seçebilmeli
+    if (storyData.authorId !== userId && storyData.authorId !== club?.creatorId) {
+      throw new Error('Yalnızca kendi yayınlanmış eserleriniz için okuma seferi başlatabilirsiniz. Başka yazarların eserlerine sefer başlatılamaz.');
+    }
   }
 
   const now = Timestamp.now();
@@ -380,7 +460,8 @@ export async function createClubJourney(
     title: input.storyTitle,
     coverUrl: input.storyCoverUrl || '',
     totalChapters: input.totalChapters,
-    authorName: '',
+    authorName: input.authorName || '',
+    authorId: input.authorId || '',
     startedAt: now,
   };
 
@@ -670,6 +751,7 @@ export async function archiveCompletedBook(
   clubId: string,
   userId: string,
   data: {
+    journeyId?: string;
     storyId: string;
     title: string;
     coverUrl?: string;
@@ -703,6 +785,19 @@ export async function archiveCompletedBook(
   };
 
   await setDoc(archiveRef, archiveItem);
+
+  // Eğer bir journeyId varsa sefer durumunu 'completed' yap
+  if (data.journeyId) {
+    try {
+      const journeyRef = doc(db, CLUBS_COLLECTION, clubId, 'journeys', data.journeyId);
+      await updateDoc(journeyRef, {
+        status: 'completed',
+        completedAt: now,
+      });
+    } catch (err) {
+      console.warn('Sefer durumu güncellenemedi:', err);
+    }
+  }
 
   // Kulüp istatistiklerini güncelle (Tamamlanan kitap sayısı +1, aktif kitabı sıfırla)
   const clubRef = doc(db, CLUBS_COLLECTION, clubId);
@@ -817,3 +912,280 @@ export async function syncClubReadingProgress(
     return [];
   }
 }
+
+// ─────────────────────────────────────────────────────────────────
+// 9. KULÜP SİLME & ADMIN YÖNETİMİ
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Tüm kulüpleri listeler (Admin paneli için).
+ */
+export async function getAllClubs(): Promise<Club[]> {
+  try {
+    const q = query(collection(db, CLUBS_COLLECTION), orderBy('createdAt', 'desc'), limit(100));
+    const snap = await getDocs(q);
+    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Club));
+  } catch (err) {
+    console.error('getAllClubs hatası:', err);
+    return [];
+  }
+}
+
+/**
+ * Normal kulüp kurucusu tarafından kulübün silinmesi.
+ */
+export async function deleteClub(clubId: string, userId: string): Promise<void> {
+  const clubRef = doc(db, CLUBS_COLLECTION, clubId);
+  const clubSnap = await getDoc(clubRef);
+
+  if (!clubSnap.exists()) {
+    throw new Error('Kulüp bulunamadı.');
+  }
+
+  const club = clubSnap.data() as Club;
+  const membership = await getClubMembership(clubId, userId);
+  const isCreatorOrAuthor =
+    club.creatorId === userId ||
+    (club.isAuthorOfficial && club.linkedAuthorId === userId) ||
+    membership?.role === 'owner';
+
+  if (!isCreatorOrAuthor) {
+    throw new Error('Yalnızca kulüp kurucusu veya yazar kulübü silebilir.');
+  }
+
+  await deleteDoc(clubRef);
+}
+
+/**
+ * Admin tarafından kulübün gerekçe belirtilerek kapatılması/silinmesi.
+ * Kulüp sahibine ve tüm üyelere kapanma gerekçesini içeren resmi sistem bildirimi gönderir.
+ */
+export async function adminDeleteClub(
+  clubId: string,
+  adminId: string,
+  adminName: string,
+  reason: string
+): Promise<void> {
+  const clubRef = doc(db, CLUBS_COLLECTION, clubId);
+  const clubSnap = await getDoc(clubRef);
+
+  if (!clubSnap.exists()) {
+    throw new Error('Silinecek kulüp bulunamadı.');
+  }
+
+  const club = clubSnap.data() as Club;
+
+  // 1. Kulübün tüm üyelerini çek
+  const membersRef = collection(db, CLUBS_COLLECTION, clubId, 'members');
+  const membersSnap = await getDocs(membersRef);
+  const memberUserIds = membersSnap.docs.map(d => d.id);
+
+  // Kurucuyu ve üyeleri tekilleştir
+  const targetUserIds = Array.from(new Set([...memberUserIds, club.creatorId]));
+
+  // 2. Her bir üyeye ve kulüp kurucusuna resmi kapatma bildirimi gönder
+  const notificationPromises = targetUserIds.map((targetUserId) => {
+    // Admin kendi kendine bildirim göndermesin
+    if (targetUserId === adminId) return Promise.resolve(null);
+
+    return createNotification({
+      userId: targetUserId,
+      actorId: adminId,
+      actorName: 'Readixon Yönetimi',
+      actorUsername: 'admin',
+      type: 'club_deleted',
+      entityId: club.id,
+      entityTitle: club.name,
+      message: reason.trim(),
+    }).catch((notifErr) => {
+      console.warn(`Kulüp kapatma bildirimi gönderilemedi (${targetUserId}):`, notifErr);
+    });
+  });
+
+  await Promise.allSettled(notificationPromises);
+
+  // 3. Kulüp ana belgesini sil
+  await deleteDoc(clubRef);
+}
+
+/**
+ * Kulüp bilgilerini günceller (Yalnızca Kurucu / İlgili Yazar).
+ */
+export async function updateClub(
+  clubId: string,
+  userId: string,
+  data: {
+    name?: string;
+    description?: string;
+    coverUrl?: string;
+    avatarUrl?: string;
+    tags?: string[];
+    isPrivate?: boolean;
+  }
+): Promise<Club> {
+  const clubRef = doc(db, CLUBS_COLLECTION, clubId);
+  const snap = await getDoc(clubRef);
+  if (!snap.exists()) {
+    throw new Error('Kulüp bulunamadı.');
+  }
+
+  const club = snap.data() as Club;
+  const membership = await getClubMembership(clubId, userId);
+  const isCreatorOrAuthor =
+    club.creatorId === userId ||
+    (club.isAuthorOfficial && club.linkedAuthorId === userId) ||
+    membership?.role === 'owner';
+
+  if (!isCreatorOrAuthor) {
+    throw new Error('Yalnızca kulüp kurucusu veya yazar kulüp bilgilerini düzenleyebilir.');
+  }
+
+  const updates: any = {
+    updatedAt: serverTimestamp(),
+  };
+
+  if (data.name !== undefined && data.name.trim()) {
+    updates.name = data.name.trim();
+  }
+  if (data.description !== undefined) {
+    updates.description = data.description.trim();
+  }
+  if (data.coverUrl !== undefined) {
+    updates.coverUrl = data.coverUrl.trim();
+  }
+  if (data.avatarUrl !== undefined) {
+    updates.avatarUrl = data.avatarUrl.trim();
+  }
+  if (data.tags !== undefined) {
+    updates.tags = data.tags;
+  }
+  if (data.isPrivate !== undefined) {
+    updates.isPrivate = data.isPrivate;
+  }
+
+  await updateDoc(clubRef, updates);
+
+  return {
+    ...club,
+    ...updates,
+  };
+}
+
+/**
+ * Tartışma mesajını siler.
+ * Mesajı gönderen kişi veya kulüp yöneticisi/moderatörü silebilir.
+ */
+export async function deleteClubMessage(
+  clubId: string,
+  channelId: string,
+  messageId: string,
+  operatorUserId: string
+): Promise<void> {
+  const messageRef = doc(db, CLUBS_COLLECTION, clubId, 'channels', channelId, 'messages', messageId);
+  const msgSnap = await getDoc(messageRef);
+  if (!msgSnap.exists()) return;
+
+  const msgData = msgSnap.data();
+  const membership = await getClubMembership(clubId, operatorUserId);
+
+  const isOwnMessage = msgData.senderId === operatorUserId;
+  const isLeader =
+    membership &&
+    (membership.role === 'owner' || membership.role === 'admin' || membership.role === 'moderator');
+
+  if (!isOwnMessage && !isLeader) {
+    throw new Error('Bu mesajı silme yetkiniz yok.');
+  }
+
+  await deleteDoc(messageRef);
+
+  // Kanal mesaj sayısını azalt
+  const channelRef = doc(db, CLUBS_COLLECTION, clubId, 'channels', channelId);
+  await updateDoc(channelRef, {
+    messagesCount: increment(-1),
+  });
+}
+
+/**
+ * Tartışma odasını siler (Genel Sohbet hariç).
+ * Yalnızca Kurucu ve Yöneticiler silebilir.
+ */
+export async function deleteClubChannel(
+  clubId: string,
+  channelId: string,
+  operatorUserId: string
+): Promise<void> {
+  const membership = await getClubMembership(clubId, operatorUserId);
+  if (!membership || (membership.role !== 'owner' && membership.role !== 'admin')) {
+    throw new Error('Tartışma odasını silme yetkiniz yok.');
+  }
+
+  const channelRef = doc(db, CLUBS_COLLECTION, clubId, 'channels', channelId);
+  const channelSnap = await getDoc(channelRef);
+  if (!channelSnap.exists()) return;
+
+  const channelData = channelSnap.data() as ClubChannel;
+  if (channelData.type === 'general' || channelData.title === 'Genel Sohbet') {
+    throw new Error('Varsayılan Genel Sohbet odası silinemez.');
+  }
+
+  await deleteDoc(channelRef);
+
+  // Kulüp tartışma sayısını azalt
+  const clubRef = doc(db, CLUBS_COLLECTION, clubId);
+  await updateDoc(clubRef, {
+    'stats.discussionsCount': increment(-1),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Kulüp liderliğini başka bir üyeye devreder (Yalnızca Mevcut Kurucu).
+ */
+export async function transferClubOwnership(
+  clubId: string,
+  currentOwnerId: string,
+  newOwnerId: string
+): Promise<void> {
+  if (currentOwnerId === newOwnerId) {
+    throw new Error('Zaten kulüp kurucususunuz.');
+  }
+
+  const currentMembership = await getClubMembership(clubId, currentOwnerId);
+  if (!currentMembership || currentMembership.role !== 'owner') {
+    throw new Error('Yalnızca mevcut kulüp kurucusu liderliği devredebilir.');
+  }
+
+  const newOwnerRef = doc(db, CLUBS_COLLECTION, clubId, 'members', newOwnerId);
+  const newOwnerSnap = await getDoc(newOwnerRef);
+  if (!newOwnerSnap.exists()) {
+    throw new Error('Liderliğin devredileceği üye bulunamadı.');
+  }
+
+  const newOwnerProfile = await getUserProfile(newOwnerId);
+  const currentOwnerRef = doc(db, CLUBS_COLLECTION, clubId, 'members', currentOwnerId);
+
+  // 1. Yeni lideri 'owner' yap
+  await updateDoc(newOwnerRef, {
+    role: 'owner',
+    updatedAt: serverTimestamp(),
+  });
+
+  // 2. Eski lideri 'admin' (yönetici) yap
+  await updateDoc(currentOwnerRef, {
+    role: 'admin',
+    updatedAt: serverTimestamp(),
+  });
+
+  // 3. Kulüp ana belgesindeki kurucu bilgilerini güncelle
+  const clubRef = doc(db, CLUBS_COLLECTION, clubId);
+  await updateDoc(clubRef, {
+    creatorId: newOwnerId,
+    creatorName: newOwnerProfile?.displayName || newOwnerProfile?.username || 'Lider',
+    creatorUsername: newOwnerProfile?.username || '',
+    creatorAvatar: newOwnerProfile?.avatarUrl || '',
+    updatedAt: serverTimestamp(),
+  });
+}
+
+

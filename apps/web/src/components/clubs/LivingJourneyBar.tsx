@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Calendar, BookOpen, Flag, CheckCircle2, ChevronRight, Sparkles, Plus } from 'lucide-react';
+import { Calendar, BookOpen, Flag, CheckCircle2, ChevronRight, Sparkles, Plus, Award } from 'lucide-react';
 import type { ClubJourney, ClubMember, ClubJourneyMilestone } from '@readixon/core';
 
 interface LivingJourneyBarProps {
@@ -10,6 +10,7 @@ interface LivingJourneyBarProps {
   userMembership: ClubMember | null;
   isLeader: boolean;
   onStartNewJourney?: () => void;
+  onArchiveJourney?: () => void;
 }
 
 export function LivingJourneyBar({
@@ -17,6 +18,7 @@ export function LivingJourneyBar({
   userMembership,
   isLeader,
   onStartNewJourney,
+  onArchiveJourney,
 }: LivingJourneyBarProps) {
   if (!journey) {
     return (
@@ -85,15 +87,31 @@ export function LivingJourneyBar({
           </div>
         </div>
 
-        {isLeader && onStartNewJourney && (
-          <button
-            type="button"
-            onClick={onStartNewJourney}
-            className="text-xs font-semibold text-muted hover:text-primary transition-colors flex items-center gap-1 shrink-0"
-          >
-            <span>Seferi Güncelle</span>
-            <ChevronRight size={14} />
-          </button>
+        {isLeader && (
+          <div className="flex items-center gap-2.5 shrink-0">
+            {onArchiveJourney && (
+              <button
+                type="button"
+                onClick={onArchiveJourney}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500 text-amber-500 hover:text-black font-bold text-xs transition-all shadow-xs active:scale-95 border border-amber-500/30"
+                title="Seferi Tamamla ve Arşive Taşı"
+              >
+                <Award size={13} />
+                <span>Seferi Tamamla & Arşivle</span>
+              </button>
+            )}
+
+            {onStartNewJourney && (
+              <button
+                type="button"
+                onClick={onStartNewJourney}
+                className="text-xs font-semibold text-muted hover:text-primary transition-colors flex items-center gap-1"
+              >
+                <span>Seferi Güncelle</span>
+                <ChevronRight size={14} />
+              </button>
+            )}
+          </div>
         )}
       </div>
 

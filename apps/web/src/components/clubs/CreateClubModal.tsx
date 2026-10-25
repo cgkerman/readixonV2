@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { X, Sparkles, Feather, Image as ImageIcon, Lock, Globe } from 'lucide-react';
 import { Button } from '@readixon/ui';
-import { createClub, useAuthStore } from '@readixon/core';
+import { createClub, getAuthorPublishedStories, useAuthStore } from '@readixon/core';
 import { toast } from 'sonner';
 
 interface CreateClubModalProps {
@@ -24,7 +24,19 @@ export function CreateClubModal({ isOpen, onClose }: CreateClubModalProps) {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isPrivate, setIsPrivate] = useState(false);
   const [isAuthorOfficial, setIsAuthorOfficial] = useState(false);
+  const [hasAuthorStories, setHasAuthorStories] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !firebaseUser) return;
+    getAuthorPublishedStories(firebaseUser.uid)
+      .then((stories) => {
+        if (stories.length > 0) setHasAuthorStories(true);
+      })
+      .catch(() => {});
+  }, [isOpen, firebaseUser]);
+
+  const isAuthor = Boolean(userProfile?.isAuthor || hasAuthorStories);
 
   if (!isOpen) return null;
 
@@ -57,8 +69,8 @@ export function CreateClubModal({ isOpen, onClose }: CreateClubModalProps) {
         coverUrl: coverUrl.trim() || undefined,
         tags: selectedTags,
         isPrivate,
-        isAuthorOfficial: userProfile?.isAuthor ? isAuthorOfficial : false,
-        linkedAuthorId: isAuthorOfficial ? firebaseUser.uid : undefined,
+        isAuthorOfficial: isAuthor ? isAuthorOfficial : false,
+        linkedAuthorId: (isAuthor && isAuthorOfficial) ? firebaseUser.uid : undefined,
       });
 
       toast.success('Kitap Kulübü başarıyla kuruldu!');
@@ -170,7 +182,7 @@ export function CreateClubModal({ isOpen, onClose }: CreateClubModalProps) {
           </div>
 
           {/* Yazar Özel Rozeti */}
-          {userProfile?.isAuthor && (
+          {isAuthor && (
             <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
                 <Feather size={16} className="text-amber-500 shrink-0" />

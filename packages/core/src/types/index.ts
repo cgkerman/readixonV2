@@ -572,7 +572,8 @@ export type NotificationType =
   | 'badge_earned'
   | 'editorial_review'
   | 'club_room_unlocked'
-  | 'club_author_reply';
+  | 'club_author_reply'
+  | 'club_deleted';
 
 export interface AppNotification {
   id: string;

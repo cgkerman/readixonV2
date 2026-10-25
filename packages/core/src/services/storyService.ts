@@ -467,6 +467,29 @@ export const subscribeToPublishedAuthorStories = (authorId: string, onUpdate: (s
 };
 
 /**
+ * Belirli bir yazarın yayında olan hikayelerini tek seferde çeker.
+ */
+export const getAuthorPublishedStories = async (authorId: string): Promise<Story[]> => {
+  try {
+    const q = query(
+      collection(db, 'stories'),
+      where('authorId', '==', authorId),
+      where('status', 'in', ['ongoing', 'completed']),
+      orderBy('createdAt', 'desc')
+    );
+    const snap = await getDocs(q);
+    const stories: Story[] = [];
+    snap.forEach((docSnap) => {
+      stories.push({ storyId: docSnap.id, ...docSnap.data() } as Story);
+    });
+    return stories;
+  } catch (error) {
+    console.error("Yazarın yayındaki hikayeleri çekilirken hata:", error);
+    return [];
+  }
+};
+
+/**
  * Belirli bir yazarın kendi hikayelerini getirir.
  */
 export const getAuthorStories = async (authorId: string) => {
