@@ -77,6 +77,29 @@ const playPopSound = () => {
   }
 };
 
+// Saate dakika ekleme/çıkarma (24 saatlik formatı korur: örn. 23:55 + 10 dk -> 00:05)
+const addMinutesToTimeStr = (timeStr: string, minutesToAdd: number): string => {
+  const [hStr, mStr] = (timeStr || '12:00').split(':');
+  let h = parseInt(hStr, 10);
+  let m = parseInt(mStr, 10);
+  if (isNaN(h)) h = 12;
+  if (isNaN(m)) m = 0;
+
+  let totalMinutes = h * 60 + m + minutesToAdd;
+  totalMinutes = ((totalMinutes % 1440) + 1440) % 1440;
+
+  const newH = Math.floor(totalMinutes / 60);
+  const newM = totalMinutes % 60;
+  return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
+};
+
+// İki saat arasındaki dakika farkını hesapla
+const getTimeDiffMinutes = (fromTime: string, toTime: string): number => {
+  const [h1, m1] = (fromTime || '12:00').split(':').map((v) => parseInt(v, 10) || 0);
+  const [h2, m2] = (toTime || '12:00').split(':').map((v) => parseInt(v, 10) || 0);
+  return (h2 * 60 + m2) - (h1 * 60 + m1);
+};
+
 const DEFAULT_CHARACTERS: ChatStoryCharacter[] = [
   { id: 'c1', name: 'Ben', isSelf: true, color: '#10b981' },
   { id: 'c2', name: 'Gizemli Kişi', isSelf: false, color: '#6366f1' }
@@ -123,6 +146,40 @@ export const ChatStoryEditor: React.FC<ChatStoryEditorProps> = ({
   // Mesaj Satır İçi Düzenleme (Inline Edit)
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
+  const [editingTime, setEditingTime] = useState('');
+
+  // Kurgusal Zaman Yönetimi (Hikaye Saati)
+  const [storyTime, setStoryTime] = useState<string>(() => {
+    if (chapter.chatMessages && chapter.chatMessages.length > 0) {
+      const last = chapter.chatMessages[chapter.chatMessages.length - 1];
+      if (last.time && /^\d{2}:\d{2}$/.test(last.time)) {
+        return last.time;
+      }
+    }
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  });
+
+  // Her mesajda otomatik +1 dk ilerleme modu
+  const [autoAdvanceTime, setAutoAdvanceTime] = useState<boolean>(false);
+
+  // Readixon Özel Saat Seçici Modalı (Hikaye Saati ve Mesaj Zamanı)
+  const [timePicker, setTimePicker] = useState<{
+    isOpen: boolean;
+    target: 'story' | 'message';
+    messageId?: string;
+    originalTime: string;
+    hours: number;
+    minutes: number;
+    shiftRemaining: boolean;
+  }>({
+    isOpen: false,
+    target: 'story',
+    originalTime: '12:00',
+    hours: 12,
+    minutes: 0,
+    shiftRemaining: false,
+  });
 
   // Görsel Yükleme / URL Modalı
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
@@ -167,9 +224,14 @@ export const ChatStoryEditor: React.FC<ChatStoryEditorProps> = ({
   }, previewImage !== null);
 
   useBackButton(() => {
+    setTimePicker((prev) => ({ ...prev, isOpen: false }));
+    return true;
+  }, timePicker.isOpen && previewImage === null);
+
+  useBackButton(() => {
     setIsCharModalOpen(false);
     return true;
-  }, isCharModalOpen && previewImage === null);
+  }, isCharModalOpen && !timePicker.isOpen && previewImage === null);
 
   useBackButton(() => {
     setIsImageModalOpen(false);
@@ -283,6 +345,10 @@ export const ChatStoryEditor: React.FC<ChatStoryEditorProps> = ({
           setPreviewImage(null);
           return;
         }
+        if (timePicker.isOpen) {
+          setTimePicker((prev) => ({ ...prev, isOpen: false }));
+          return;
+        }
         if (editingMessageId) setEditingMessageId(null);
         if (isCharModalOpen) setIsCharModalOpen(false);
         if (isImageModalOpen) setIsImageModalOpen(false);
@@ -312,15 +378,14 @@ export const ChatStoryEditor: React.FC<ChatStoryEditorProps> = ({
 
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [messages, characters, chapterTitle, chapterStatus, editingMessageId, isCharModalOpen, isImageModalOpen, isChapterMenuOpen]);
+  }, [messages, characters, chapterTitle, chapterStatus, editingMessageId, isCharModalOpen, isImageModalOpen, isChapterMenuOpen, timePicker.isOpen]);
 
   // Yeni Mesaj Ekleme
   const handleSendMessage = () => {
     const trimmed = inputText.trim();
     if (!trimmed) return;
 
-    const now = new Date();
-    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const timeStr = storyTime;
 
     const newMsg: ChatStoryMessage = {
       id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
@@ -334,6 +399,10 @@ export const ChatStoryEditor: React.FC<ChatStoryEditorProps> = ({
     setInputText('');
     setIsSystemMode(false);
     if (soundEnabled) playPopSound();
+
+    if (autoAdvanceTime) {
+      setStoryTime((prev) => addMinutesToTimeStr(prev, 1));
+    }
 
     // Mesaj kutusuna yeniden odaklan ve en son mesaja kaydır
     setTimeout(() => {
@@ -354,8 +423,7 @@ export const ChatStoryEditor: React.FC<ChatStoryEditorProps> = ({
   const handleAddImageMessage = (url: string) => {
     if (!url.trim()) return;
 
-    const now = new Date();
-    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const timeStr = storyTime;
 
     const newMsg: ChatStoryMessage = {
       id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
@@ -369,6 +437,10 @@ export const ChatStoryEditor: React.FC<ChatStoryEditorProps> = ({
     setIsImageModalOpen(false);
     setImageUrlInput('');
     if (soundEnabled) playPopSound();
+
+    if (autoAdvanceTime) {
+      setStoryTime((prev) => addMinutesToTimeStr(prev, 1));
+    }
 
     setTimeout(() => {
       scrollToBottom('smooth');
@@ -514,10 +586,129 @@ export const ChatStoryEditor: React.FC<ChatStoryEditorProps> = ({
     setMessages(copy);
   };
 
+  // Hikaye Saati Hızlı Ayarları
+  const handleAdjustStoryTime = (deltaMinutes: number) => {
+    setStoryTime((prev) => addMinutesToTimeStr(prev, deltaMinutes));
+  };
+
+  const handleResetToCurrentTime = () => {
+    const now = new Date();
+    const nowStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    setStoryTime(nowStr);
+    toast.info(`Hikaye saati şimdiki zamana (${nowStr}) eşitlendi.`);
+  };
+
+  // Readixon Özel Saat Seçici Fonksiyonları
+  const handleOpenStoryTimePicker = () => {
+    const [hStr, mStr] = (storyTime || '12:00').split(':');
+    const h = Math.min(23, Math.max(0, parseInt(hStr, 10) || 0));
+    const m = Math.min(59, Math.max(0, parseInt(mStr, 10) || 0));
+    setTimePicker({
+      isOpen: true,
+      target: 'story',
+      originalTime: storyTime,
+      hours: h,
+      minutes: m,
+      shiftRemaining: false,
+    });
+  };
+
+  const handleOpenMessageTimePicker = (msg: ChatStoryMessage) => {
+    const msgTime = msg.time || storyTime || '12:00';
+    const [hStr, mStr] = msgTime.split(':');
+    const h = Math.min(23, Math.max(0, parseInt(hStr, 10) || 0));
+    const m = Math.min(59, Math.max(0, parseInt(mStr, 10) || 0));
+    setTimePicker({
+      isOpen: true,
+      target: 'message',
+      messageId: msg.id,
+      originalTime: msgTime,
+      hours: h,
+      minutes: m,
+      shiftRemaining: false,
+    });
+  };
+
+  const changeHour = (delta: number) => {
+    setTimePicker((prev) => ({
+      ...prev,
+      hours: (prev.hours + delta + 24) % 24,
+    }));
+  };
+
+  const changeMinute = (delta: number) => {
+    setTimePicker((prev) => {
+      const total = prev.hours * 60 + prev.minutes + delta;
+      const normalized = ((total % 1440) + 1440) % 1440;
+      return {
+        ...prev,
+        hours: Math.floor(normalized / 60),
+        minutes: normalized % 60,
+      };
+    });
+  };
+
+  const setExactTime = (h: number, m: number) => {
+    setTimePicker((prev) => ({
+      ...prev,
+      hours: Math.min(23, Math.max(0, h)),
+      minutes: Math.min(59, Math.max(0, m)),
+    }));
+  };
+
+  const handleApplyTimePicker = () => {
+    const formattedTime = `${String(timePicker.hours).padStart(2, '0')}:${String(timePicker.minutes).padStart(2, '0')}`;
+
+    if (timePicker.target === 'story') {
+      setStoryTime(formattedTime);
+      setTimePicker((prev) => ({ ...prev, isOpen: false }));
+      toast.success(`Hikaye saati ${formattedTime} olarak ayarlandı.`);
+      return;
+    }
+
+    if (!timePicker.messageId) {
+      setTimePicker((prev) => ({ ...prev, isOpen: false }));
+      return;
+    }
+
+    const targetIndex = messages.findIndex((m) => m.id === timePicker.messageId);
+    if (targetIndex === -1) {
+      setTimePicker((prev) => ({ ...prev, isOpen: false }));
+      return;
+    }
+
+    const originalTime = messages[targetIndex].time || '12:00';
+    const diffMinutes = getTimeDiffMinutes(originalTime, formattedTime);
+
+    setMessages((prev) =>
+      prev.map((m, idx) => {
+        if (idx === targetIndex) {
+          return { ...m, time: formattedTime };
+        }
+        if (timePicker.shiftRemaining && idx > targetIndex && diffMinutes !== 0) {
+          return { ...m, time: addMinutesToTimeStr(m.time || formattedTime, diffMinutes) };
+        }
+        return m;
+      })
+    );
+
+    if (targetIndex === messages.length - 1) {
+      setStoryTime(formattedTime);
+    }
+
+    setTimePicker((prev) => ({ ...prev, isOpen: false }));
+    toast.success(
+      timePicker.shiftRemaining && diffMinutes !== 0
+        ? `Mesaj saati ${formattedTime} yapıldı ve sonraki mesajlar ${diffMinutes > 0 ? '+' : ''}${diffMinutes} dk ötelendi.`
+        : `Mesaj saati ${formattedTime} olarak güncellendi.`
+    );
+  };
+
   // Mesaj Düzenleme (Inline Edit)
   const handleStartEdit = (msg: ChatStoryMessage) => {
     setEditingMessageId(msg.id);
     setEditingText(msg.text || '');
+    setEditingTime(msg.time || storyTime);
   };
 
   const handleSaveEdit = (msgId: string) => {
@@ -526,10 +717,15 @@ export const ChatStoryEditor: React.FC<ChatStoryEditorProps> = ({
       return;
     }
     setMessages((prev) =>
-      prev.map((m) => (m.id === msgId ? { ...m, text: editingText.trim() } : m))
+      prev.map((m) =>
+        m.id === msgId
+          ? { ...m, text: editingText.trim(), time: editingTime.trim() || m.time || storyTime }
+          : m
+      )
     );
     setEditingMessageId(null);
     setEditingText('');
+    setEditingTime('');
     toast.success('Mesaj güncellendi.');
   };
 
@@ -976,13 +1172,19 @@ export const ChatStoryEditor: React.FC<ChatStoryEditorProps> = ({
                             >
                               {isSystem ? 'Zaman / Olay Bildirimi' : sender?.name || 'Bilinmeyen'}
                             </span>
-                            <span className="text-[10px] text-muted">
-                              {msg.time}
-                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenMessageTimePicker(msg)}
+                              className="text-[10px] font-mono text-muted hover:text-emerald-500 bg-muted/15 hover:bg-emerald-500/10 border border-border/50 px-1.5 py-0.5 rounded-md transition-colors flex items-center gap-1 cursor-pointer"
+                              title="Mesaj saatini değiştirmek için tıklayın"
+                            >
+                              <Clock size={10} className="text-emerald-500 shrink-0" />
+                              <span>{msg.time || '12:00'}</span>
+                            </button>
                           </div>
 
                           {isEditing ? (
-                            <div className="flex items-center gap-2 my-1">
+                            <div className="flex items-center gap-2 my-1 flex-wrap">
                               <input
                                 type="text"
                                 value={editingText}
@@ -991,9 +1193,18 @@ export const ChatStoryEditor: React.FC<ChatStoryEditorProps> = ({
                                   if (e.key === 'Enter') handleSaveEdit(msg.id);
                                   if (e.key === 'Escape') setEditingMessageId(null);
                                 }}
-                                className="flex-1 bg-background border border-emerald-500/60 rounded-xl px-2.5 py-1.5 text-xs text-foreground focus:outline-none"
+                                className="flex-1 min-w-[180px] bg-background border border-emerald-500/60 rounded-xl px-2.5 py-1.5 text-xs text-text focus:outline-none"
                                 autoFocus
                               />
+                              <button
+                                type="button"
+                                onClick={() => handleOpenMessageTimePicker(msg)}
+                                className="flex items-center gap-1.5 bg-background hover:bg-card border border-border rounded-xl px-2.5 py-1.5 text-xs text-text transition-colors cursor-pointer"
+                                title="Saati değiştirmek için tıklayın"
+                              >
+                                <Clock size={11} className="text-emerald-500 shrink-0" />
+                                <span className="font-mono font-bold">{msg.time || storyTime}</span>
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => handleSaveEdit(msg.id)}
@@ -1005,7 +1216,7 @@ export const ChatStoryEditor: React.FC<ChatStoryEditorProps> = ({
                               <button
                                 type="button"
                                 onClick={() => setEditingMessageId(null)}
-                                className="p-1.5 rounded-lg bg-muted/20 text-muted hover:text-foreground transition-colors"
+                                className="p-1.5 rounded-lg bg-muted/20 text-muted hover:text-text transition-colors"
                                 title="Vazgeç (Esc)"
                               >
                                 <X size={14} />
@@ -1125,6 +1336,139 @@ export const ChatStoryEditor: React.FC<ChatStoryEditorProps> = ({
                   <span>Fotoğraf Ekle</span>
                 </button>
               </div>
+
+              {/* ── Kurgusal Zaman Çubuğu (Story Time Controls) ── */}
+              <div className="flex flex-wrap items-center justify-between gap-1.5 p-1.5 px-2.5 rounded-2xl bg-card border border-border shadow-xs text-xs">
+                {/* Sol: Saat Tetikleyici & Sıfırlama */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleOpenStoryTimePicker}
+                    className="flex items-center gap-1.5 bg-background hover:bg-card border border-border hover:border-emerald-500/60 px-2.5 py-1 rounded-xl transition-all shadow-2xs group cursor-pointer"
+                    title="Hikaye saatini detaylı ayarlamak için tıklayın"
+                  >
+                    <Clock size={13} className="text-emerald-500 group-hover:scale-110 transition-transform shrink-0" />
+                    <span className="text-[11px] font-semibold text-muted select-none hidden sm:inline">Hikaye Saati:</span>
+                    <span className="font-mono font-black text-xs text-text group-hover:text-emerald-500 transition-colors">
+                      {storyTime}
+                    </span>
+                    <ChevronDown size={12} className="text-muted group-hover:text-text transition-colors shrink-0" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleResetToCurrentTime}
+                    className="p-1.5 rounded-lg text-muted hover:text-text hover:bg-muted/15 transition-colors cursor-pointer"
+                    title="Şimdiki gerçek zamana eşitle"
+                  >
+                    <RotateCcw size={12} />
+                  </button>
+                </div>
+
+                {/* Sağ: Hızlı İleri / Geri Adımlar (Mobilde yatay kaydırılabilir) */}
+                <div className="flex items-center gap-1 overflow-x-auto py-0.5 scrollbar-none max-w-full">
+                  <span className="text-[10px] font-semibold text-muted mr-0.5 hidden lg:inline select-none">Kaydır:</span>
+                  <button
+                    type="button"
+                    onClick={() => handleAdjustStoryTime(-5)}
+                    className="px-1.5 py-0.5 rounded-lg bg-background hover:bg-muted/20 border border-border text-muted hover:text-text font-mono text-[10px] font-bold transition-all active:scale-95 cursor-pointer"
+                    title="5 dakika geri al"
+                  >
+                    -5 dk
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAdjustStoryTime(-1)}
+                    className="px-1.5 py-0.5 rounded-lg bg-background hover:bg-muted/20 border border-border text-muted hover:text-text font-mono text-[10px] font-bold transition-all active:scale-95 cursor-pointer"
+                    title="1 dakika geri al"
+                  >
+                    -1 dk
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAdjustStoryTime(1)}
+                    className="px-2 py-0.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-500 font-mono text-[10px] font-black border border-emerald-500/30 transition-all active:scale-95 cursor-pointer"
+                    title="1 dakika ileri al"
+                  >
+                    +1 dk
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAdjustStoryTime(5)}
+                    className="px-1.5 py-0.5 rounded-lg bg-background hover:bg-muted/20 border border-border text-muted hover:text-text font-mono text-[10px] font-bold transition-all active:scale-95 cursor-pointer"
+                    title="5 dakika ileri al"
+                  >
+                    +5 dk
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAdjustStoryTime(15)}
+                    className="px-1.5 py-0.5 rounded-lg bg-background hover:bg-muted/20 border border-border text-muted hover:text-text font-mono text-[10px] font-bold transition-all active:scale-95 cursor-pointer"
+                    title="15 dakika ileri al"
+                  >
+                    +15 dk
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAdjustStoryTime(60)}
+                    className="px-1.5 py-0.5 rounded-lg bg-background hover:bg-muted/20 border border-border text-muted hover:text-text font-mono text-[10px] font-bold transition-all active:scale-95 cursor-pointer"
+                    title="1 saat ileri al"
+                  >
+                    +1 sa
+                  </button>
+
+                  <div className="w-[1px] h-3.5 bg-border mx-1 shrink-0 hidden sm:block" />
+
+                  {/* Otomatik +1 dk İlerleme Aç/Kapa */}
+                  <button
+                    type="button"
+                    onClick={() => setAutoAdvanceTime((prev) => !prev)}
+                    className={`px-2 py-0.5 rounded-lg font-mono text-[10px] font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer active:scale-95 ${
+                      autoAdvanceTime
+                        ? 'bg-primary/15 text-primary border border-primary/40'
+                        : 'bg-background hover:bg-muted/20 border border-border text-muted hover:text-text'
+                    }`}
+                    title="Her mesaj gönderildiğinde saati otomatik +1 dakika ilerlet"
+                  >
+                    <Sparkles size={10} />
+                    <span>Oto +1dk: {autoAdvanceTime ? 'Açık' : 'Kapalı'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Hızlı Zaman Atlama Şablonları (Sistem Mesajı Modunda) */}
+              {isSystemMode && (
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs animate-in fade-in slide-in-from-top-1 duration-150 scrollbar-none">
+                  <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wider shrink-0 flex items-center gap-1">
+                    <Clock size={11} /> Şablonlar:
+                  </span>
+                  {[
+                    { label: '15 Dk Sonra', text: '15 dakika sonra...', addMins: 15 },
+                    { label: '30 Dk Sonra', text: 'Yarım saat sonra...', addMins: 30 },
+                    { label: '1 Saat Sonra', text: '1 saat sonra...', addMins: 60 },
+                    { label: '3 Saat Sonra', text: '3 saat sonra...', addMins: 180 },
+                    { label: 'Ertesi Sabah (08:30)', text: 'Ertesi sabah...', setTime: '08:30' },
+                    { label: 'Gece Yarısı (00:00)', text: 'Gece yarısı...', setTime: '00:00' },
+                  ].map((preset, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setInputText(preset.text);
+                        if (preset.addMins) {
+                          setStoryTime((prev) => addMinutesToTimeStr(prev, preset.addMins));
+                        } else if (preset.setTime) {
+                          setStoryTime(preset.setTime);
+                        }
+                        messageInputRef.current?.focus();
+                      }}
+                      className="px-2.5 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px] font-medium shrink-0 transition-colors cursor-pointer"
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               <div className="flex items-end gap-2 bg-background border border-border/60 focus-within:border-emerald-500/70 rounded-2xl p-2 transition-colors shadow-sm">
                 <textarea
@@ -1594,6 +1938,206 @@ export const ChatStoryEditor: React.FC<ChatStoryEditorProps> = ({
                 className="px-4 py-1.5 rounded-xl bg-emerald-500 text-black text-xs font-extrabold hover:bg-emerald-400 transition-all disabled:opacity-40 cursor-pointer"
               >
                 Gönder
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: READIXON ÖZEL HİKAYE VE MESAJ SAATİ SEÇİCİ ── */}
+      {timePicker.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-3xl max-w-sm w-full p-5 sm:p-6 space-y-4 shadow-2xl shadow-black/40 animate-in zoom-in-95 duration-200 text-text">
+            {/* Başlık & Kapat */}
+            <div className="flex items-center justify-between border-b border-border/50 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center shrink-0">
+                  <Clock size={18} />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm text-text">
+                    {timePicker.target === 'story' ? 'Hikaye Saatini Ayarla' : 'Mesaj Saatini Düzenle'}
+                  </h3>
+                  <p className="text-[11px] text-muted">
+                    {timePicker.target === 'story' ? 'Kurgudaki anlık sohbet zamanı' : 'Bu mesajın kurgusal zamanı'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTimePicker((prev) => ({ ...prev, isOpen: false }))}
+                className="w-8 h-8 rounded-xl bg-muted/10 hover:bg-muted/20 flex items-center justify-center text-muted hover:text-text transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Dijital Saat Göstergesi & Stepper'lar */}
+            <div className="p-4 rounded-2xl bg-background border border-border flex items-center justify-center gap-4 select-none">
+              {/* Saat Sütunu */}
+              <div className="flex flex-col items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => changeHour(1)}
+                  className="w-16 h-8 rounded-xl bg-card hover:bg-muted/20 text-muted hover:text-text flex items-center justify-center transition-all active:scale-95 cursor-pointer border border-border"
+                  title="1 saat ileri"
+                >
+                  <ChevronUp size={16} />
+                </button>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={2}
+                  value={String(timePicker.hours).padStart(2, '0')}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value.replace(/\D/g, ''), 10);
+                    if (!isNaN(val)) setTimePicker((prev) => ({ ...prev, hours: Math.min(23, Math.max(0, val)) }));
+                    else if (e.target.value === '') setTimePicker((prev) => ({ ...prev, hours: 0 }));
+                  }}
+                  className="w-16 h-16 rounded-2xl bg-card border-2 border-border focus:border-emerald-500 text-center font-mono text-3xl font-black text-text focus:outline-none transition-colors shadow-inner"
+                />
+                <button
+                  type="button"
+                  onClick={() => changeHour(-1)}
+                  className="w-16 h-8 rounded-xl bg-card hover:bg-muted/20 text-muted hover:text-text flex items-center justify-center transition-all active:scale-95 cursor-pointer border border-border"
+                  title="1 saat geri"
+                >
+                  <ChevronDown size={16} />
+                </button>
+                <span className="text-[10px] font-extrabold text-muted tracking-wider uppercase mt-0.5">Saat</span>
+              </div>
+
+              {/* İki Nokta (Yanıp sönen şık ayrım) */}
+              <div className="flex flex-col items-center justify-center pb-6">
+                <span className="text-3xl font-black text-emerald-500 animate-pulse">:</span>
+              </div>
+
+              {/* Dakika Sütunu */}
+              <div className="flex flex-col items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => changeMinute(1)}
+                  className="w-16 h-8 rounded-xl bg-card hover:bg-muted/20 text-muted hover:text-text flex items-center justify-center transition-all active:scale-95 cursor-pointer border border-border"
+                  title="1 dakika ileri"
+                >
+                  <ChevronUp size={16} />
+                </button>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={2}
+                  value={String(timePicker.minutes).padStart(2, '0')}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value.replace(/\D/g, ''), 10);
+                    if (!isNaN(val)) setTimePicker((prev) => ({ ...prev, minutes: Math.min(59, Math.max(0, val)) }));
+                    else if (e.target.value === '') setTimePicker((prev) => ({ ...prev, minutes: 0 }));
+                  }}
+                  className="w-16 h-16 rounded-2xl bg-card border-2 border-border focus:border-emerald-500 text-center font-mono text-3xl font-black text-text focus:outline-none transition-colors shadow-inner"
+                />
+                <button
+                  type="button"
+                  onClick={() => changeMinute(-1)}
+                  className="w-16 h-8 rounded-xl bg-card hover:bg-muted/20 text-muted hover:text-text flex items-center justify-center transition-all active:scale-95 cursor-pointer border border-border"
+                  title="1 dakika geri"
+                >
+                  <ChevronDown size={16} />
+                </button>
+                <span className="text-[10px] font-extrabold text-muted tracking-wider uppercase mt-0.5">Dakika</span>
+              </div>
+            </div>
+
+            {/* Hızlı Dakika Adımları */}
+            <div>
+              <span className="text-[10px] font-extrabold text-muted uppercase tracking-wider block mb-1.5">
+                Hızlı Adımlar:
+              </span>
+              <div className="grid grid-cols-4 gap-1.5">
+                {[-15, -5, -1, 1, 5, 10, 15, 30].map((mins) => (
+                  <button
+                    key={mins}
+                    type="button"
+                    onClick={() => changeMinute(mins)}
+                    className={`py-1.5 rounded-xl font-mono text-[11px] font-bold transition-all active:scale-95 cursor-pointer border ${
+                      mins > 0
+                        ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border-emerald-500/30'
+                        : 'bg-background hover:bg-muted/20 text-muted hover:text-text border-border'
+                    }`}
+                  >
+                    {mins > 0 ? `+${mins}` : mins} dk
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Kurgusal Atmosfer Şablonları */}
+            <div>
+              <span className="text-[10px] font-extrabold text-muted uppercase tracking-wider block mb-1.5">
+                Kurgusal Atmosfer Şablonları:
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { label: '🌅 08:00 Sabah', h: 8, m: 0 },
+                  { label: '☀️ 13:00 Öğlen', h: 13, m: 0 },
+                  { label: '🌇 18:30 Akşamüstü', h: 18, m: 30 },
+                  { label: '🌃 21:30 Gece', h: 21, m: 30 },
+                  { label: '🕯️ 00:00 Gece Yarısı', h: 0, m: 0 },
+                  { label: '👻 03:30 Tekinsiz', h: 3, m: 30 },
+                ].map((preset, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setExactTime(preset.h, preset.m)}
+                    className="px-2.5 py-1 rounded-xl bg-background hover:bg-card text-text border border-border text-[11px] font-medium transition-all active:scale-95 cursor-pointer"
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const now = new Date();
+                    setExactTime(now.getHours(), now.getMinutes());
+                  }}
+                  className="px-2.5 py-1 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 text-[11px] font-bold transition-all active:scale-95 cursor-pointer"
+                >
+                  ⚡ Şu Anki Saat
+                </button>
+              </div>
+            </div>
+
+            {/* Mesaj Modu İçin Zincirleme Öteleme Seçeneği */}
+            {timePicker.target === 'message' && (
+              <label className="flex items-start gap-2.5 p-3 rounded-2xl bg-muted/10 border border-border cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={timePicker.shiftRemaining}
+                  onChange={(e) => setTimePicker((prev) => ({ ...prev, shiftRemaining: e.target.checked }))}
+                  className="mt-0.5 rounded text-emerald-500 focus:ring-emerald-500 accent-emerald-500 cursor-pointer"
+                />
+                <div className="flex-1 text-xs">
+                  <span className="font-extrabold text-text block">Sonraki mesajları da bu fark kadar ötele</span>
+                  <span className="text-[11px] text-muted leading-tight block mt-0.5">
+                    Sohbet akışının temposunu korumak için sonraki tüm mesajlar zincirleme güncellenir.
+                  </span>
+                </div>
+              </label>
+            )}
+
+            {/* Aksiyon Butonları */}
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/50">
+              <button
+                type="button"
+                onClick={() => setTimePicker((prev) => ({ ...prev, isOpen: false }))}
+                className="px-4 py-2 rounded-xl bg-card hover:bg-muted/20 border border-border text-xs font-bold text-muted hover:text-text transition-all cursor-pointer"
+              >
+                Vazgeç
+              </button>
+              <button
+                type="button"
+                onClick={handleApplyTimePicker}
+                className="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black transition-all shadow-md active:scale-95 cursor-pointer"
+              >
+                Uygula ({String(timePicker.hours).padStart(2, '0')}:{String(timePicker.minutes).padStart(2, '0')})
               </button>
             </div>
           </div>
