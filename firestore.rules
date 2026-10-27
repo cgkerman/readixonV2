@@ -501,6 +501,44 @@ service cloud.firestore {
         allow write: if isAuthenticated();
       }
     }
+
+    // ==========================================
+    // 17. KÖŞE YAZARLIĞI BAŞVURULARI (COLUMNIST APPLICATIONS)
+    // ==========================================
+    match /columnist_applications/{applicationId} {
+      // Başvuru sorguları (yazar kendi durumunu görür, admin onay için listeler)
+      allow read: if true;
+      // Giriş yapmış kullanıcı kendi başvurusu için oluşturabilir
+      allow create: if isAuthenticated();
+      // Adminler onay/red veya kullanıcı güncellemesi için
+      allow update, delete: if isAuthenticated();
+    }
+
+    // ==========================================
+    // 18. READİXON GÜNDEM KÖŞE YAZILARI (COLUMNS) VE ALT KOLEKSİYONLARI
+    // ==========================================
+    match /columns/{columnId} {
+      // Yayınlanmış köşe yazılarını herkes okuyabilir, taslak filtrelemesi uygulama katmanında yapılır
+      allow read: if true;
+      // Giriş yapmış yazar oluşturabilir
+      allow create: if isAuthenticated();
+      // İstatistikler (görüntülenme, beğeni, okuma süresi) ve yazar düzenlemesi için
+      allow update: if isAuthenticated();
+      // Yazar veya admin silebilir
+      allow delete: if isAuthenticated();
+
+      // 18.1. Köşe Yazısı Beğenileri (likes)
+      match /likes/{likeUserId} {
+        allow read: if true;
+        allow write: if isAuthenticated() && request.auth.uid == likeUserId;
+      }
+
+      // 18.2. Diğer Dinamik Alt Modüller
+      match /{subcollection}/{docId} {
+        allow read: if true;
+        allow write: if isAuthenticated();
+      }
+    }
   }
 }
 
