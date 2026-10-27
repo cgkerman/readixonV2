@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Typography, AuthorCard } from '@readixon/ui';
 import { getFeaturedAuthors, followUser, unfollowUser, useAuthStore } from '@readixon/core';
@@ -10,6 +10,11 @@ import { toast } from "sonner";
 
 export default function ExploreAuthorsPage() {
   const router = useRouter();
+
+  // Sayfa açıldığında doğrudan en üste odaklan
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, []);
 
   const { data: authors = [], isLoading } = useQuery({
     queryKey: ['explore', 'authors'],
@@ -86,8 +91,22 @@ export default function ExploreAuthorsPage() {
         )}
         
         {!isLoading && authors.length === 0 && (
-          <div className="w-full py-12 flex justify-center items-center">
-            <Typography variant="caption" className="text-muted">Henüz yazar bulunmuyor.</Typography>
+          <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-card border border-border/60 flex items-center justify-center text-muted mb-4 shadow-inner">
+              <Users size={32} className="text-muted/60" />
+            </div>
+            <Typography variant="h3" className="font-extrabold text-lg sm:text-xl mb-1.5 text-text">
+              Henüz öne çıkan yazar bulunamadı
+            </Typography>
+            <p className="text-muted text-xs sm:text-sm max-w-md mb-6 leading-relaxed">
+              Yazarlarımız kurgularını üretmeye devam ediyor, yakında burada listelenecekler.
+            </p>
+            <button
+              onClick={() => router.push('/feed')}
+              className="px-5 py-2.5 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs transition-all shadow-md cursor-pointer"
+            >
+              Keşfete Dön
+            </button>
           </div>
         )}
       </div>

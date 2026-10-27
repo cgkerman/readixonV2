@@ -12,6 +12,7 @@ import { AgendaFooter } from './components/AgendaFooter';
 import { PlatformFeedback } from './components/PlatformFeedback';
 import { ExcellentStoriesSection } from './components/ExcellentStoriesSection';
 import { AgendaClubsSection } from './components/AgendaClubsSection';
+import { AgendaColumnsSection } from './components/AgendaColumnsSection';
 import { PowerOfWordsBanner } from '@/components/PowerOfWordsBanner';
 
 function formatNewsDate(createdAt: any): string {
@@ -432,6 +433,9 @@ export default function AgendaPage() {
             )}
           </section>
         )}
+
+        {/* ── Gündem Kalemleri & Köşe Yazıları ── */}
+        <AgendaColumnsSection />
 
         {/* ── Kelimelerin Gücü (Canlı Kolektif Edebiyat Arşivi) ── */}
         <section className="w-full">

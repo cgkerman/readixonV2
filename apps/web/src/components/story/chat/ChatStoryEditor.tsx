@@ -33,9 +33,11 @@ import {
   ZoomOut,
   PlusCircle,
   FileText,
-  Users
+  Users,
+  FileDown
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { exportChapterToDocx } from '@/utils/docxExport';
 import type { 
   Story, 
   Chapter, 
@@ -213,6 +215,30 @@ export const ChatStoryEditor: React.FC<ChatStoryEditorProps> = ({
 
   const [chapterTitle, setChapterTitle] = useState(chapter.title || 'Sohbet 1');
   const [chapterStatus, setChapterStatus] = useState<'draft' | 'published' | 'scheduled'>(chapter.status || 'draft');
+  const [isExportingWord, setIsExportingWord] = useState(false);
+
+  const handleExportWord = async () => {
+    setIsExportingWord(true);
+    const toastId = toast.loading('Word belgesi (.docx) hazırlanıyor...');
+    try {
+      await exportChapterToDocx({
+        story,
+        chapter: {
+          ...chapter,
+          title: chapterTitle,
+          status: chapterStatus,
+          chatMessages: messages,
+        },
+        authorName: story.authorName,
+      });
+      toast.success('Sohbet hikayesi başarıyla Word (.docx) olarak hazırlandı!', { id: toastId });
+    } catch (err: any) {
+      console.error('Word export error:', err);
+      toast.error(err.message || 'Word belgesi oluşturulurken hata oluştu.', { id: toastId });
+    } finally {
+      setIsExportingWord(false);
+    }
+  };
 
   // Tam Ekran Görsel Önizleme (Lightbox)
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -966,6 +992,22 @@ export const ChatStoryEditor: React.FC<ChatStoryEditorProps> = ({
             title={isFullscreen ? 'Tam ekrandan çık' : 'Tam ekrana geç (Masaüstü Odak Modu)'}
           >
             {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+          </button>
+
+          {/* Word (.docx) İndir */}
+          <button
+            type="button"
+            onClick={handleExportWord}
+            disabled={isExportingWord}
+            className="flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-400 font-bold text-xs transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+            title="Sohbet hikayesini Word (.docx) olarak indir veya paylaş"
+          >
+            {isExportingWord ? (
+              <span className="w-3.5 h-3.5 border-2 border-sky-400 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <FileDown size={14} />
+            )}
+            <span className="hidden sm:inline">Word İndir</span>
           </button>
 
           {/* Kaydet Butonu */}

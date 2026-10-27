@@ -36,7 +36,9 @@ export default function WebtoonDetailAdminPage() {
   const [title, setTitle] = useState('');
   const [summary, setSummary] = useState('');
   const [mainGenre, setMainGenre] = useState<string | undefined>(undefined);
+  const [secondaryGenres, setSecondaryGenres] = useState<string[]>([]);
   const [subGenres, setSubGenres] = useState<string[]>([]);
+  const [customSubGenres, setCustomSubGenres] = useState<string[]>([]);
   const [coverImage, setCoverImage] = useState('');
   const [status, setStatus] = useState<StoryStatus>('draft');
   const [contributors, setContributors] = useState<Contributor[]>([]);
@@ -60,7 +62,9 @@ export default function WebtoonDetailAdminPage() {
         setTitle(realStory.title || '');
         setSummary(realStory.summary || '');
         setMainGenre(realStory.mainGenre);
+        setSecondaryGenres(realStory.secondaryGenres || []);
         setSubGenres(realStory.subGenres || []);
+        setCustomSubGenres(realStory.customSubGenres || []);
         setCoverImage(realStory.coverImage || '');
         setStatus(realStory.status || 'draft');
 
@@ -88,12 +92,21 @@ export default function WebtoonDetailAdminPage() {
     setSaving(true);
     try {
       const validContributors = contributors.filter(c => c.name.trim().length > 0);
-      const combinedTags = Array.from(new Set([mainGenre, ...(subGenres || [])])).filter(Boolean) as string[];
+      const combinedTags = Array.from(
+        new Set([
+          mainGenre,
+          ...(secondaryGenres || []),
+          ...(subGenres || []),
+          ...(customSubGenres || [])
+        ].filter(Boolean))
+      ) as string[];
       await updateStory(storyId, {
         title,
         summary,
         mainGenre,
+        secondaryGenres,
         subGenres,
+        customSubGenres,
         tags: combinedTags,
         coverImage,
         status,
@@ -111,12 +124,21 @@ export default function WebtoonDetailAdminPage() {
     setAutoSaveStatus('saving');
     try {
       const validContributors = contributors.filter(c => c.name.trim().length > 0);
-      const combinedTags = Array.from(new Set([mainGenre, ...(subGenres || [])])).filter(Boolean) as string[];
+      const combinedTags = Array.from(
+        new Set([
+          mainGenre,
+          ...(secondaryGenres || []),
+          ...(subGenres || []),
+          ...(customSubGenres || [])
+        ].filter(Boolean))
+      ) as string[];
       await updateStory(storyId, {
         title,
         summary,
         mainGenre,
+        secondaryGenres,
         subGenres,
+        customSubGenres,
         tags: combinedTags,
         coverImage,
         status,
@@ -143,7 +165,7 @@ export default function WebtoonDetailAdminPage() {
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [title, summary, mainGenre, subGenres, coverImage, status, contributors, loading, story]);
+  }, [title, summary, mainGenre, secondaryGenres, subGenres, customSubGenres, coverImage, status, contributors, loading, story]);
 
   const handleAddChapter = async () => {
     try {
@@ -306,14 +328,18 @@ export default function WebtoonDetailAdminPage() {
               className="w-full bg-background border border-border/50 rounded-xl p-4 text-text focus:outline-none focus:border-primary resize-y min-h-[120px]"
             />
 
-            {/* Readixon Tür Defteri: 1 Ana Tür + Sınırsız Alt Tür */}
+            {/* Readixon Tür Defteri: 1 Birincil Ana Tür + İkincil Türler + Alt Türler */}
             <div className="pt-2 border-t border-border/40">
               <GenreSelector
                 selectedMainGenre={mainGenre}
+                selectedSecondaryGenres={secondaryGenres}
                 selectedSubGenres={subGenres}
-                onChange={(m, s) => {
+                customSubGenres={customSubGenres}
+                onChange={(m, s, sec, custom) => {
                   setMainGenre(m);
                   setSubGenres(s);
+                  if (sec !== undefined) setSecondaryGenres(sec);
+                  if (custom !== undefined) setCustomSubGenres(custom);
                 }}
               />
             </div>

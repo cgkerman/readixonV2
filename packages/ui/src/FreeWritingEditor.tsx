@@ -20,6 +20,15 @@ export interface FreeWritingEditorProps {
   onSwitchToBlocks?: () => void;
 }
 
+/**
+ * Editör içeriğinin görsel olarak tamamen boş olup olmadığını denetler.
+ */
+function checkIsEmpty(html: string): boolean {
+  if (!html) return true;
+  const stripped = html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+  return stripped.length === 0 && !html.includes('<img');
+}
+
 export function FreeWritingEditor({
   initialHtml = '',
   initialBlocks = [],
@@ -28,24 +37,58 @@ export function FreeWritingEditor({
   onSwitchToBlocks,
 }: FreeWritingEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
-  const [content, setContent] = useState<string>(initialHtml);
-  const [wordCount, setWordCount] = useState(0);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [estimatedBlocks, setEstimatedBlocks] = useState(0);
+  const isInitializedRef = useRef(false);
+  const lastEmittedHtmlRef = useRef<string>(initialHtml || '');
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Başlangıç HTML'ini ayarla
+  const [isEmpty, setIsEmpty] = useState<boolean>(() => checkIsEmpty(initialHtml));
+  const [wordCount, setWordCount] = useState<number>(() => countWordsInHtml(initialHtml || ''));
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [estimatedBlocks, setEstimatedBlocks] = useState<number>(() => {
+    if (!initialHtml) return 0;
+    return htmlToContentBlocks(initialHtml).length;
+  });
+
+  // Başlangıç HTML'ini ayarla (Cursor / Caret korumalı)
   useEffect(() => {
-    if (editorRef.current && initialHtml) {
-      if (editorRef.current.innerHTML !== initialHtml) {
-        editorRef.current.innerHTML = initialHtml;
-        setContent(initialHtml);
-        const wc = countWordsInHtml(initialHtml);
-        setWordCount(wc);
-        const parsed = htmlToContentBlocks(initialHtml);
-        setEstimatedBlocks(parsed.length);
-      }
+    if (!editorRef.current) return;
+
+    // 1. Kural: Eğer editör odaklanmışsa (kullanıcı yazıyor veya siliyorsa) ASLA DOM'u ezme!
+    const isFocused =
+      typeof document !== 'undefined' &&
+      (editorRef.current === document.activeElement || editorRef.current.contains(document.activeElement));
+    
+    if (isFocused) {
+      return;
+    }
+
+    // 2. Kural: Eğer dışarıdan gelen HTML, editörün en son yaydığı (emitted) HTML ile aynıysa tekrar atama yapma
+    if (isInitializedRef.current && initialHtml === lastEmittedHtmlRef.current) {
+      return;
+    }
+
+    // 3. Yalnızca ilk montajda veya editör odaklı değilken dışarıdan gelen gerçek veri değişiminde yükle
+    if (!isInitializedRef.current || editorRef.current.innerHTML !== initialHtml) {
+      const safeHtml = initialHtml || '';
+      editorRef.current.innerHTML = safeHtml;
+      lastEmittedHtmlRef.current = safeHtml;
+      isInitializedRef.current = true;
+      setIsEmpty(checkIsEmpty(safeHtml));
+      const wc = countWordsInHtml(safeHtml);
+      setWordCount(wc);
+      const parsed = htmlToContentBlocks(safeHtml);
+      setEstimatedBlocks(parsed.length);
     }
   }, [initialHtml]);
+
+  // Temizleme (Unmount durumunda debounce zamanlayıcısını iptal et)
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
 
   // Fullscreen modunda Escape tuşu dinleyicisi
   useEffect(() => {
@@ -58,20 +101,39 @@ export function FreeWritingEditor({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isFullscreen]);
 
-  // Yazım anında canlı sayaçları güncelle
+  // Yazım anında canlı girdi işleyicisi (Akıcı ve Cursor Korunmalı)
   const handleInput = useCallback(() => {
-    if (editorRef.current) {
-      const html = editorRef.current.innerHTML;
-      setContent(html);
+    if (!editorRef.current) return;
+    const html = editorRef.current.innerHTML;
+    lastEmittedHtmlRef.current = html;
+
+    // Placeholder durumunu anlık güncelle
+    const empty = checkIsEmpty(html);
+    setIsEmpty(empty);
+
+    // Ağır işlemleri (kelime sayımı, blok parse ve parent state güncellemesi) debounce et
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
       const wc = countWordsInHtml(html);
       setWordCount(wc);
       onChangeHtml?.(html);
 
-      // Tahmini blok sayısını hesapla
       const parsed = htmlToContentBlocks(html);
       setEstimatedBlocks(parsed.length);
-    }
+    }, 120);
   }, [onChangeHtml]);
+
+  // Klavye tuş yakalayıcı (Tab tuşu ile girinti desteği)
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      document.execCommand('insertText', false, '    ');
+      handleInput();
+    }
+  };
 
   // Format komutları yürütücüsü
   const executeCommand = (command: string, value: string | undefined = undefined) => {
@@ -94,7 +156,8 @@ export function FreeWritingEditor({
 
       if (editorRef.current) {
         editorRef.current.innerHTML = docxHtml;
-        setContent(docxHtml);
+        lastEmittedHtmlRef.current = docxHtml;
+        setIsEmpty(checkIsEmpty(docxHtml));
         const wc = countWordsInHtml(docxHtml);
         setWordCount(wc);
         onChangeHtml?.(docxHtml);
@@ -111,7 +174,11 @@ export function FreeWritingEditor({
 
   // Bloklara Dönüştür ve Gönder
   const handleConvert = () => {
-    const currentHtml = editorRef.current?.innerHTML || content;
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    const currentHtml = editorRef.current?.innerHTML || '';
+    onChangeHtml?.(currentHtml);
     const blocks = htmlToContentBlocks(currentHtml);
     onConvertToBlocks(blocks);
   };
@@ -284,7 +351,7 @@ export function FreeWritingEditor({
         <div className="bg-card rounded-2xl border border-border/40 shadow-inner p-6 sm:p-10 md:p-14 min-h-[500px] relative transition-all focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/10">
           
           {/* Boşken gösterilen Wattpad tarzı placeholder */}
-          {!content && (
+          {isEmpty && (
             <div className="absolute top-10 sm:top-14 left-6 sm:left-10 md:left-14 text-muted/40 pointer-events-none select-none text-base sm:text-lg leading-relaxed font-serif max-w-xl">
               Bölümünüzü buraya bir roman gibi arka arkaya yazın veya dışarıdan kopyalayıp yapıştırın...
               <br /><br />
@@ -298,6 +365,7 @@ export function FreeWritingEditor({
             ref={editorRef}
             contentEditable
             onInput={handleInput}
+            onKeyDown={handleKeyDown}
             className="w-full h-full min-h-[420px] outline-none text-base sm:text-lg leading-relaxed sm:leading-loose text-foreground/90 font-serif selection:bg-primary/20 space-y-4 [&_p]:mb-4 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:text-foreground [&_h2]:mb-3 [&_h2]:mt-6 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:text-foreground [&_h3]:mb-2 [&_blockquote]:border-l-4 [&_blockquote]:border-primary/40 [&_blockquote]:pl-4 [&_blockquote]:py-1 [&_blockquote]:my-4 [&_blockquote]:italic [&_blockquote]:text-foreground/80 [&_hr]:my-6 [&_hr]:border-border/50 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:space-y-1 [&_b]:font-bold [&_strong]:font-bold"
           />
         </div>

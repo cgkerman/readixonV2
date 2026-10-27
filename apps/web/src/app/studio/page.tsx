@@ -46,7 +46,9 @@ export default function StudioDashboard() {
   const [storyFormat, setStoryFormat] = useState<'novel' | 'interactive' | 'short_story' | 'chat'>('novel');
   const [newTitle, setNewTitle] = useState('');
   const [newMainGenre, setNewMainGenre] = useState<string | undefined>(undefined);
+  const [newSecondaryGenres, setNewSecondaryGenres] = useState<string[]>([]);
   const [newSubGenres, setNewSubGenres] = useState<string[]>([]);
+  const [newCustomSubGenres, setNewCustomSubGenres] = useState<string[]>([]);
   const [isAdultContent, setIsAdultContent] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [creationMode, setCreationMode] = useState<'wizard' | 'classic'>('wizard');
@@ -143,14 +145,24 @@ export default function StudioDashboard() {
 
     setIsCreating(true);
     try {
-      const combinedTags = Array.from(new Set([newMainGenre, ...newSubGenres]));
+      const combinedTags = Array.from(
+        new Set([
+          newMainGenre,
+          ...newSecondaryGenres,
+          ...newSubGenres,
+          ...newCustomSubGenres
+        ].filter(Boolean))
+      ) as string[];
+
       const newStoryId = await createStory(firebaseUser.uid, {
         title: newTitle.trim(),
         summary: '',
         coverImage: '',
         format: storyFormat,
         mainGenre: newMainGenre,
+        secondaryGenres: newSecondaryGenres,
         subGenres: newSubGenres,
+        customSubGenres: newCustomSubGenres,
         tags: combinedTags,
         isAdultContent,
         status: 'draft'
@@ -168,7 +180,9 @@ export default function StudioDashboard() {
       setIsModalOpen(false);
       setNewTitle('');
       setNewMainGenre(undefined);
+      setNewSecondaryGenres([]);
       setNewSubGenres([]);
+      setNewCustomSubGenres([]);
       setStoryFormat('novel');
       
       if (isWizardEligible) {
@@ -887,13 +901,17 @@ export default function StudioDashboard() {
                 />
               </div>
               
-              {/* Readixon Tür Defteri: 1 Ana Tür + Sınırsız Alt Tür */}
+              {/* Readixon Tür Defteri: 1 Birincil Ana Tür + İkincil Türler + Alt Türler */}
               <GenreSelector
                 selectedMainGenre={newMainGenre}
+                selectedSecondaryGenres={newSecondaryGenres}
                 selectedSubGenres={newSubGenres}
-                onChange={(main, subs) => {
+                customSubGenres={newCustomSubGenres}
+                onChange={(main, subs, secondary, custom) => {
                   setNewMainGenre(main);
                   setNewSubGenres(subs);
+                  if (secondary !== undefined) setNewSecondaryGenres(secondary);
+                  if (custom !== undefined) setNewCustomSubGenres(custom);
                 }}
               />
 

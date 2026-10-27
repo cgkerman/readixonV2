@@ -14,6 +14,7 @@ import {
   MessageSquare, 
   ChevronRight, 
   ChevronLeft, 
+  ChevronDown,
   Sparkles, 
   Check, 
   CheckCheck, 
@@ -54,6 +55,16 @@ interface ChatStoryReaderProps {
   onToggleLike?: () => void;
   commentsCount?: number;
 }
+
+// Mesaj Hikayesi Otomatik Oynatma Hızları
+export const PLAY_SPEEDS = [
+  { value: 0.25, label: '0.25x', title: 'Çok Yavaş', desc: 'Derin okuma & detaylı inceleme' },
+  { value: 0.5, label: '0.50x', title: 'Yavaş', desc: 'Rahat ve sindirerek okuma' },
+  { value: 0.75, label: '0.75x', title: 'Sakin', desc: 'Huzurlu ve telaşsız tempo' },
+  { value: 1, label: '1x', title: 'Normal', desc: 'Standart sohbet akış hızı' },
+  { value: 1.5, label: '1.5x', title: 'Hızlı', desc: 'Seri ve tempolu akış' },
+  { value: 2, label: '2x', title: 'Çok Hızlı', desc: 'Maksimum hızda hızlıca geçiş' },
+] as const;
 
 // Mobil dokunmatik titreşim (Haptic Feedback) tetikleyici
 const triggerHaptic = (duration = 8) => {
@@ -128,9 +139,35 @@ export const ChatStoryReader: React.FC<ChatStoryReaderProps> = ({
   // Dokunarak Açığa Çıkarılan Mesaj Sayısı (En az 1 mesajla başlar, eğer mesaj varsa)
   const [revealedCount, setRevealedCount] = useState<number>(messages.length > 0 ? 1 : 0);
 
-  // Otomatik Oynatma & Hız
+  // Otomatik Oynatma & Hız (0.25x - 2x)
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
-  const [playSpeed, setPlaySpeed] = useState<number>(1.5); // 1x, 1.5x, 2x
+  const [playSpeed, setPlaySpeed] = useState<number>(1); // Varsayılan 1x
+  const [isSpeedMenuOpen, setIsSpeedMenuOpen] = useState(false);
+  const [speedToast, setSpeedToast] = useState<{ label: string; title: string } | null>(null);
+  const speedToastTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const currentSpeedObj = useMemo(() => {
+    return PLAY_SPEEDS.find(s => s.value === playSpeed) || PLAY_SPEEDS[3];
+  }, [playSpeed]);
+
+  const currentSpeedLabel = currentSpeedObj.label;
+
+  const handleSpeedSelect = useCallback((item: (typeof PLAY_SPEEDS)[number]) => {
+    setPlaySpeed(item.value);
+    setIsSpeedMenuOpen(false);
+    triggerHaptic(10);
+    setSpeedToast({ label: item.label, title: item.title });
+    if (speedToastTimerRef.current) clearTimeout(speedToastTimerRef.current);
+    speedToastTimerRef.current = setTimeout(() => {
+      setSpeedToast(null);
+    }, 1300);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (speedToastTimerRef.current) clearTimeout(speedToastTimerRef.current);
+    };
+  }, []);
 
   // Ses Durumu
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -160,19 +197,25 @@ export const ChatStoryReader: React.FC<ChatStoryReaderProps> = ({
     return true;
   }, lightboxImage !== null);
 
-  // 2. Yorumlar açıkken geri tuşu sadece yorumları kapatsın
+  // 2. Hız menüsü açıkken geri tuşu menüyü kapatsın
+  useBackButton(() => {
+    setIsSpeedMenuOpen(false);
+    return true;
+  }, isSpeedMenuOpen);
+
+  // 3. Yorumlar açıkken geri tuşu sadece yorumları kapatsın
   useBackButton(() => {
     setIsCommentsOpen(false);
     return true;
   }, isCommentsOpen);
 
-  // 3. Bölümler çekmecesi açıkken geri tuşu sadece bölümleri kapatsın
+  // 4. Bölümler çekmecesi açıkken geri tuşu sadece bölümleri kapatsın
   useBackButton(() => {
     setIsChapterDrawerOpen(false);
     return true;
   }, isChapterDrawerOpen);
 
-  // 4. Hiçbir modal açık değilken ve otomatik oynatma aktifken geri tuşu önce oynatmayı durdursun
+  // 5. Hiçbir modal açık değilken ve otomatik oynatma aktifken geri tuşu önce oynatmayı durdursun
   useBackButton(() => {
     if (isAutoPlaying) {
       setIsAutoPlaying(false);
@@ -182,7 +225,7 @@ export const ChatStoryReader: React.FC<ChatStoryReaderProps> = ({
     const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
     router.push(`/story/${slug}`);
     return true;
-  }, !isCommentsOpen && !isChapterDrawerOpen && lightboxImage === null);
+  }, !isCommentsOpen && !isChapterDrawerOpen && !isSpeedMenuOpen && lightboxImage === null);
 
   // Karakter Eşleştirme Yardımcıları
   const getCharacter = useCallback((id?: string) => {
@@ -270,7 +313,7 @@ export const ChatStoryReader: React.FC<ChatStoryReaderProps> = ({
   // Otomatik Oynatma Zamanlayıcısı
   useEffect(() => {
     if (!isAutoPlaying) {
-      if (autoPlayTimerRef.current) clearInterval(autoPlayTimerRef.current);
+      if (autoPlayTimerRef.current) clearTimeout(autoPlayTimerRef.current);
       return;
     }
 
@@ -293,12 +336,16 @@ export const ChatStoryReader: React.FC<ChatStoryReaderProps> = ({
     };
   }, [isAutoPlaying, revealedCount, messages, playSpeed, handleRevealNext]);
 
-  // Klavye Kontrolleri (Spacebar, Sağ Ok, Aşağı Ok, Esc)
+  // Klavye Kontrolleri (Spacebar, Sağ/Aşağı Ok, P, M, -/+, Esc)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
 
       if (e.key === 'Escape') {
+        if (isSpeedMenuOpen) {
+          setIsSpeedMenuOpen(false);
+          return;
+        }
         if (lightboxImage) {
           setLightboxImage(null);
           return;
@@ -318,14 +365,28 @@ export const ChatStoryReader: React.FC<ChatStoryReaderProps> = ({
         handleRevealNext();
       } else if (e.key === 'p' || e.key === 'P') {
         setIsAutoPlaying(prev => !prev);
+        triggerHaptic(10);
       } else if (e.key === 'm' || e.key === 'M') {
         setSoundEnabled(prev => !prev);
+        triggerHaptic(8);
+      } else if (e.key === '+' || e.key === '=' || e.key === ']' || e.key === '>') {
+        e.preventDefault();
+        const currentIdx = PLAY_SPEEDS.findIndex(s => s.value === playSpeed);
+        if (currentIdx < PLAY_SPEEDS.length - 1) {
+          handleSpeedSelect(PLAY_SPEEDS[currentIdx + 1]);
+        }
+      } else if (e.key === '-' || e.key === '_' || e.key === '[' || e.key === '<') {
+        e.preventDefault();
+        const currentIdx = PLAY_SPEEDS.findIndex(s => s.value === playSpeed);
+        if (currentIdx > 0) {
+          handleSpeedSelect(PLAY_SPEEDS[currentIdx - 1]);
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleRevealNext, lightboxImage, isCommentsOpen, isChapterDrawerOpen]);
+  }, [handleRevealNext, lightboxImage, isCommentsOpen, isChapterDrawerOpen, isSpeedMenuOpen, playSpeed, handleSpeedSelect]);
 
   // Yorumları Yükleme
   const handleOpenComments = async () => {
@@ -489,41 +550,118 @@ export const ChatStoryReader: React.FC<ChatStoryReaderProps> = ({
           </div>
         </div>
 
-        {/* Sağ: Ergonomik Kontroller (Otomatik Oynat, Hız, Ses, Bölümler, Yorumlar) */}
+        {/* Sağ: Ergonomik Kontroller (Birleşik Oynatıcı Kapsülü, Ses, Bölümler, Yorumlar) */}
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-          {/* Otomatik Oynatma Butonu */}
-          <button
-            type="button"
-            onClick={() => {
-              setIsAutoPlaying(prev => !prev);
-              triggerHaptic(10);
-            }}
-            className={`flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-90 ${
+          {/* ── Birleşik Otomatik Oynat & Hız Kapsülü (Responsive UX Pill) ── */}
+          <div className="relative">
+            <div className={`flex items-center rounded-full p-0.5 border transition-all duration-200 ${
               isAutoPlaying
-                ? 'bg-emerald-500 text-black shadow-emerald-500/25 animate-pulse'
-                : 'bg-white/10 text-zinc-200 hover:bg-white/15'
-            }`}
-            title={isAutoPlaying ? 'Durdur' : 'Otomatik Oynat'}
-            aria-label="Otomatik Oynat"
-          >
-            {isAutoPlaying ? <Pause size={13} /> : <Play size={13} className="fill-current" />}
-            <span className="hidden xs:inline">{isAutoPlaying ? 'Durdur' : 'Otomatik'}</span>
-          </button>
+                ? 'bg-emerald-500/15 border-emerald-500/40 shadow-sm shadow-emerald-500/20'
+                : 'bg-white/10 border-white/15 hover:border-white/25'
+            }`}>
+              {/* Oynat / Durdur Butonu */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAutoPlaying(prev => !prev);
+                  triggerHaptic(10);
+                }}
+                className={`flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer active:scale-95 ${
+                  isAutoPlaying
+                    ? 'bg-emerald-500 text-black shadow-xs font-black'
+                    : 'text-zinc-200 hover:text-white hover:bg-white/10'
+                }`}
+                title={isAutoPlaying ? 'Otomatik Oynatmayı Durdur (Kısayol: P)' : 'Otomatik Oynat (Kısayol: P)'}
+                aria-label="Otomatik Oynat"
+              >
+                {isAutoPlaying ? (
+                  <>
+                    <Pause size={13} className="fill-current animate-pulse" />
+                    <span className="hidden xs:inline text-[11px] font-black">Durdur</span>
+                  </>
+                ) : (
+                  <>
+                    <Play size={13} className="fill-current text-emerald-400" />
+                    <span className="hidden xs:inline text-[11px] font-extrabold">Otomatik</span>
+                  </>
+                )}
+              </button>
 
-          {/* Hız Seçici (Sadece Otomatik Oynatma sırasında görünür) */}
-          {isAutoPlaying && (
-            <button
-              type="button"
-              onClick={() => {
-                setPlaySpeed(prev => (prev === 1 ? 1.5 : prev === 1.5 ? 2 : 1));
-                triggerHaptic(8);
-              }}
-              className="px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-black cursor-pointer hover:bg-emerald-500/30 active:scale-90 transition-all"
-              title="Oynatma Hızı"
-            >
-              {playSpeed}x
-            </button>
-          )}
+              {/* Ayrıcı Çizgi */}
+              <div className={`w-[1px] h-3.5 mx-0.5 ${isAutoPlaying ? 'bg-emerald-500/30' : 'bg-white/15'}`} />
+
+              {/* Hız Seçici & Menü Açıcı Buton */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSpeedMenuOpen(prev => !prev);
+                  triggerHaptic(8);
+                }}
+                className={`flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-full text-[11px] font-black transition-all cursor-pointer active:scale-95 ${
+                  isSpeedMenuOpen
+                    ? 'bg-emerald-400 text-black shadow-xs'
+                    : isAutoPlaying
+                    ? 'text-emerald-300 hover:bg-emerald-500/20'
+                    : 'text-zinc-300 hover:text-white hover:bg-white/10'
+                }`}
+                title={`Oynatma Hızı: ${currentSpeedLabel} (Tıkla veya [-] / [+] tuşları)`}
+                aria-label="Oynatma Hızı"
+              >
+                <span>{currentSpeedLabel}</span>
+                <ChevronDown size={11} className={`transition-transform duration-200 ${isSpeedMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+            </div>
+
+            {/* ── MASAÜSTÜ & TABLET POPOVER MENÜSÜ (sm ve üzerinde açılır) ── */}
+            {isSpeedMenuOpen && (
+              <div className="hidden sm:block">
+                {/* Arka plan tıklama yakalayıcı */}
+                <div
+                  className="fixed inset-0 z-40 cursor-default"
+                  onClick={() => setIsSpeedMenuOpen(false)}
+                />
+
+                {/* Lüks Açılır Hız Menüsü */}
+                <div className="absolute top-full right-0 mt-2 z-50 bg-zinc-950/95 backdrop-blur-xl border border-white/15 p-3 rounded-2xl shadow-2xl min-w-[270px] flex flex-col gap-1.5 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-2 py-1 border-b border-white/10 mb-1 flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 flex items-center gap-1">
+                      <Zap size={12} className="text-emerald-400" />
+                      <span>Oynatma Hızı</span>
+                    </span>
+                    <span className="text-[9px] font-bold text-zinc-400 bg-white/10 px-1.5 py-0.5 rounded">
+                      Kısayollar: [ - ] [ + ]
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {PLAY_SPEEDS.map(speedItem => {
+                      const isSelected = playSpeed === speedItem.value;
+                      return (
+                        <button
+                          key={speedItem.value}
+                          type="button"
+                          onClick={() => handleSpeedSelect(speedItem)}
+                          className={`px-3 py-2 rounded-xl text-left transition-all flex flex-col cursor-pointer border ${
+                            isSelected
+                              ? 'bg-emerald-500 text-black border-emerald-400 shadow-sm font-black'
+                              : 'bg-white/5 hover:bg-white/10 border-white/10 text-zinc-300 hover:text-white'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-black">{speedItem.label}</span>
+                            {isSelected && <Check size={12} className="stroke-[3]" />}
+                          </div>
+                          <span className={`text-[10px] font-semibold leading-tight mt-0.5 ${isSelected ? 'text-black/85' : 'text-zinc-400'}`}>
+                            {speedItem.title}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Ses Aç / Kapat */}
           <button
@@ -861,7 +999,113 @@ export const ChatStoryReader: React.FC<ChatStoryReaderProps> = ({
             </div>
           </div>
         )}
+
+        {/* ── OTOMATİK OYNATMA AKTİFKEN ALT DURUM BİLGİSİ (SAFE AREA UYUMLU) ── */}
+        {isAutoPlaying && !isCompleted && (
+          <div className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom,0px))] left-1/2 -translate-x-1/2 pointer-events-none z-20 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/80 backdrop-blur-md border border-emerald-500/30 text-emerald-400 text-[11px] font-bold shadow-lg shadow-emerald-500/10">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              <span>Otomatik Oynatılıyor ({currentSpeedLabel} • {currentSpeedObj.title})</span>
+            </div>
+          </div>
+        )}
       </main>
+
+      {/* ── EKRAN ÜSTÜ HIZ BİLGİLENDİRME HUD ROZETİ (SPEED TOAST) ── */}
+      {speedToast && (
+        <div className="fixed top-18 sm:top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-in fade-in slide-in-from-top-4 duration-150">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-900/95 text-white border border-emerald-500/40 shadow-2xl backdrop-blur-xl text-xs font-bold">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            <span className="text-emerald-400 font-extrabold">{speedToast.label}</span>
+            <span className="text-zinc-500">•</span>
+            <span>{speedToast.title}</span>
+          </div>
+        </div>
+      )}
+
+      {/* ── MOBİL HIZ SEÇİMİ ALT ÇEKMECESİ (BOTTOM SHEET - sm altında açılır) ── */}
+      {isSpeedMenuOpen && (
+        <div className="sm:hidden fixed inset-0 z-50 flex flex-col justify-end">
+          {/* Karartma arka planı */}
+          <div
+            className="fixed inset-0 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
+            onClick={() => setIsSpeedMenuOpen(false)}
+          />
+
+          {/* Alt Çekmece */}
+          <div 
+            className="relative w-full bg-zinc-950/95 backdrop-blur-2xl border-t border-white/15 rounded-t-3xl pt-3 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] px-5 z-10 shadow-2xl animate-in slide-in-from-bottom duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Tutamaç */}
+            <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-4" />
+
+            {/* Başlık & Kapat */}
+            <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-3">
+              <div>
+                <h3 className="text-sm font-extrabold text-white flex items-center gap-1.5">
+                  <Zap size={16} className="text-emerald-400" />
+                  <span>Otomatik Oynatma Hızı</span>
+                </h3>
+                <p className="text-[11px] text-zinc-400 mt-0.5">
+                  Mesaj akış temposunu okuma alışkanlığınıza göre seçin.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSpeedMenuOpen(false)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/15 flex items-center justify-center text-zinc-300 hover:text-white transition-all cursor-pointer active:scale-90 shrink-0 ml-2"
+                aria-label="Kapat"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* 6 Hız Seçeneği Listesi (Rahat dokunma kartları) */}
+            <div className="grid grid-cols-1 gap-2 max-h-[60vh] overflow-y-auto py-1">
+              {PLAY_SPEEDS.map(speedItem => {
+                const isSelected = playSpeed === speedItem.value;
+                return (
+                  <button
+                    key={speedItem.value}
+                    type="button"
+                    onClick={() => handleSpeedSelect(speedItem)}
+                    className={`w-full flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer active:scale-[0.98] ${
+                      isSelected
+                        ? 'bg-emerald-500/15 border-emerald-500/50 shadow-sm shadow-emerald-500/20'
+                        : 'bg-white/5 border-white/10 hover:bg-white/10'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className={`w-14 py-1.5 rounded-xl text-center text-xs font-black shrink-0 ${
+                        isSelected
+                          ? 'bg-emerald-500 text-black'
+                          : 'bg-white/10 text-zinc-200'
+                      }`}>
+                        {speedItem.label}
+                      </span>
+                      <div className="text-left">
+                        <p className={`text-xs font-bold leading-tight ${isSelected ? 'text-emerald-400' : 'text-zinc-200'}`}>
+                          {speedItem.title}
+                        </p>
+                        <p className="text-[10px] text-zinc-400 leading-tight mt-0.5">
+                          {speedItem.desc}
+                        </p>
+                      </div>
+                    </div>
+
+                    {isSelected && (
+                      <span className="w-6 h-6 rounded-full bg-emerald-500 text-black flex items-center justify-center shrink-0">
+                        <Check size={14} className="stroke-[3]" />
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── BÖLÜMLER LİSTESİ ÇEKMECESİ (DRAWER - SAFE AREA UYUMLU) ── */}
       {isChapterDrawerOpen && (

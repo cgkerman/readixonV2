@@ -1118,7 +1118,7 @@ export default function FeedPage() {
               subtitle="Editörlerimiz tarafından özenle seçilmiş ve mutlaka okumanız gereken başyapıtlar."
               icon={<Award className="text-primary" size={24} />}
               stories={editorPicks}
-              seeAllHref="/reviews"
+              seeAllHref="/explore/editor-picks"
               onStoryClick={(story) => {
                 const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
                 router.push(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
@@ -1150,6 +1150,7 @@ export default function FeedPage() {
               subtitle="Kararlarınla dallanan kurgular, alternatif yollar ve çoklu sonlar! Hikayenin sonunu sen belirle."
               icon={<Gamepad2 className="text-indigo-400" size={24} />}
               stories={interactiveStories}
+              seeAllHref="/explore/interactive"
               onStoryClick={(story) => {
                 const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
                 router.push(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
@@ -1171,6 +1172,7 @@ export default function FeedPage() {
               subtitle="Zamanınız az mı? Tek bir bölümde tamamlanan, vurucu ve sürükleyici kısa romanlar."
               icon={<Feather className="text-amber-400" size={24} />}
               stories={shortStories}
+              seeAllHref="/explore/short-stories"
               onStoryClick={(story) => {
                 const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
                 router.push(story.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
@@ -1214,6 +1216,7 @@ export default function FeedPage() {
               subtitle="WhatsApp konuşması gibi akan, ekrana her dokunuşunda yeni bir mesajın belirdiği sürükleyici sohbet kurguları."
               icon={<MessageSquare className="text-emerald-400" size={24} />}
               stories={chatStories}
+              seeAllHref="/explore/chat-stories"
               onStoryClick={(story) => {
                 const slug = (story as any).slug || generateStorySlug(story.title, story.storyId);
                 router.push(`/story/${slug}`);
@@ -1433,9 +1436,14 @@ function CarouselRow({ title, subtitle, icon, stories, progresses, seeAllHref, s
           )}
         </div>
         {seeAllHref && (
-          <button onClick={() => router.push(seeAllHref)} className="text-primary text-sm font-semibold hover:underline flex items-center">
-            Tümünü Gör <ChevronRight size={16} />
-          </button>
+          <Link
+            href={seeAllHref}
+            scroll={true}
+            className="text-primary text-sm font-semibold hover:underline flex items-center gap-0.5 group"
+          >
+            <span>Tümünü Gör</span>
+            <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+          </Link>
         )}
       </div>
 
@@ -1551,9 +1559,14 @@ function HorizontalCarouselRow({ title, subtitle, icon, stories, seeAllHref, onS
           )}
         </div>
         {seeAllHref && (
-          <button onClick={() => router.push(seeAllHref)} className="text-primary text-sm font-semibold hover:underline flex items-center">
-            Tümünü Gör <ChevronRight size={16} />
-          </button>
+          <Link
+            href={seeAllHref}
+            scroll={true}
+            className="text-primary text-sm font-semibold hover:underline flex items-center gap-0.5 group"
+          >
+            <span>Tümünü Gör</span>
+            <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+          </Link>
         )}
       </div>
 
@@ -1660,9 +1673,14 @@ function AuthorCarouselRow({ title, subtitle, icon, authors, seeAllHref, onAutho
           )}
         </div>
         {seeAllHref && (
-          <button onClick={() => router.push(seeAllHref)} className="text-primary text-sm font-semibold hover:underline flex items-center">
-            Tümünü Gör <ChevronRight size={16} />
-          </button>
+          <Link
+            href={seeAllHref}
+            scroll={true}
+            className="text-primary text-sm font-semibold hover:underline flex items-center gap-0.5 group"
+          >
+            <span>Tümünü Gör</span>
+            <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+          </Link>
         )}
       </div>
 

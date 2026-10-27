@@ -67,6 +67,9 @@ export interface User {
   stats: UserStats;
   createdAt: Timestamp;
   isAuthor?: boolean;
+  isColumnist?: boolean; // Köşe Yazarı / Onaylı Kalem yetkisi
+  columnistTitle?: string; // Örn: "Edebiyat Eleştirmeni", "Kültür-Sanat Yazarı"
+  columnistApprovedAt?: Timestamp;
   isAdmin?: boolean;
   isEditor?: boolean;
   status?: 'free' | 'premium' | 'pro'; // Premium status for features like Character Book
@@ -194,9 +197,11 @@ export interface Story {
   updatedAt: Timestamp;
   format?: 'novel' | 'webtoon' | 'interactive' | 'short_story' | 'chat';
 
-  // Readixon Tür Defteri (1 Ana Tür + Sınırsız Alt Tür)
+  // Readixon Tür Defteri (1 Birincil Ana Tür + Opsiyonel İkincil Ana Türler + Alt Türler)
   mainGenre?: string;
-  subGenres?: string[];
+  secondaryGenres?: string[]; // İkincil Ana Türler (Maksimum 2 adet)
+  subGenres?: string[]; // Resmi Alt Türler
+  customSubGenres?: string[]; // Yazar tanımlı serbest alt türler / trope'lar
 
   // Mesaj Hikayesi (Chat Story) Karakterleri
   chatCharacters?: ChatStoryCharacter[];
@@ -1031,4 +1036,5 @@ export interface LegalDocument {
 export * from './series';
 export * from './universe';
 export * from './club';
+export * from './column';
 

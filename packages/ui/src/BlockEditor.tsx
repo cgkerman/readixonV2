@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -61,9 +61,21 @@ export function BlockEditor({
     contentBlocksToHtml(initialBlocks)
   );
 
+  const freewriteDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (freewriteDebounceRef.current) {
+        clearTimeout(freewriteDebounceRef.current);
+      }
+    };
+  }, []);
+
   // initialBlocks dışarıdan değiştiğinde senkronize et
   useEffect(() => {
-    if (initialBlocks && initialBlocks.length > 0) {
+    // EĞER aktif mod 'freewrite' ise blokların uzunluğu değişse bile manuscriptHtml'i ezme!
+    // Çünkü freewrite modunda yazarın yazdığı HTML tek gerçektir.
+    if (activeMode !== 'freewrite' && initialBlocks && initialBlocks.length > 0) {
       const formatted = initialBlocks.map(b => ({
         id: b.id || generateBlockId(),
         block: ensureBlockId(b)
@@ -71,7 +83,7 @@ export function BlockEditor({
       setItems(formatted);
       setManuscriptHtml(contentBlocksToHtml(initialBlocks));
     }
-  }, [initialBlocks.length]);
+  }, [initialBlocks.length, activeMode]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -164,6 +176,9 @@ export function BlockEditor({
 
   // Word modundan gelen metni bloklara çevirip Blok Editörüne aktar
   const handleConvertFromFreeWriting = (blocks: ContentBlock[]) => {
+    if (freewriteDebounceRef.current) {
+      clearTimeout(freewriteDebounceRef.current);
+    }
     if (blocks.length === 0) {
       // Boşsa en az bir boş paragraf koy
       blocks = [{ id: generateBlockId(), type: 'paragraph', text: '', url: '' }];
@@ -266,12 +281,23 @@ export function BlockEditor({
           initialBlocks={items.map(i => i.block)}
           onChangeHtml={(html) => {
             setManuscriptHtml(html);
-            // Canlı arka plan güncellemesi
-            const raw = htmlToContentBlocks(html);
-            onChange(raw);
+            // Canlı arka plan güncellemesini debounce et (akıcı yazım & sıfır takılma)
+            if (freewriteDebounceRef.current) {
+              clearTimeout(freewriteDebounceRef.current);
+            }
+            freewriteDebounceRef.current = setTimeout(() => {
+              const raw = htmlToContentBlocks(html);
+              onChange(raw);
+            }, 300);
           }}
           onConvertToBlocks={(blocks) => handleConvertFromFreeWriting(blocks)}
-          onSwitchToBlocks={() => setActiveMode('blocks')}
+          onSwitchToBlocks={() => {
+            if (freewriteDebounceRef.current) {
+              clearTimeout(freewriteDebounceRef.current);
+            }
+            const raw = htmlToContentBlocks(manuscriptHtml);
+            handleConvertFromFreeWriting(raw);
+          }}
         />
       ) : (
         /* ── 2. MOD: Blok Editörü (Gelişmiş Mod) ── */

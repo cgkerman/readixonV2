@@ -2331,3 +2331,87 @@ export function getSubGenreNames(mainGenreId?: string | null, subGenreIds?: stri
     return sub ? sub.name : sid;
   });
 }
+
+/**
+ * Hibrit / Çoklu Tür Sabitleri
+ */
+export const MAX_SECONDARY_GENRES = 2;
+export const MAX_MAIN_GENRES = 3; // 1 Birincil + 2 İkincil
+export const MAX_CUSTOM_SUB_GENRES = 8; // Eser başına serbest alt tür limiti
+
+/**
+ * Birden fazla ana tür ID'si için alt tür gruplarını döner.
+ */
+export function getSubGenresForMainGenres(mainGenreIds: (string | undefined | null)[]): {
+  mainGenre: MainGenreItem;
+  subGenres: SubGenreItem[];
+}[] {
+  const cleanIds = Array.from(new Set(mainGenreIds.filter(Boolean))) as string[];
+  return cleanIds
+    .map((id) => {
+      const main = getMainGenreById(id);
+      return main ? { mainGenre: main, subGenres: main.subGenres } : null;
+    })
+    .filter(Boolean) as { mainGenre: MainGenreItem; subGenres: SubGenreItem[] }[];
+}
+
+/**
+ * Bir alt tür ID'sini seçilen ana türler veya genel tür defterinden arar.
+ */
+export function findSubGenreById(
+  subGenreId?: string | null,
+  mainGenreIds?: (string | undefined | null)[]
+): { subGenre: SubGenreItem; mainGenre?: MainGenreItem } | undefined {
+  if (!subGenreId) return undefined;
+  const clean = subGenreId.trim().toLowerCase();
+
+  // 1. Önce belirtilen ana türlerin alt türlerinde ara
+  if (mainGenreIds && mainGenreIds.length > 0) {
+    for (const mId of mainGenreIds) {
+      const main = getMainGenreById(mId);
+      if (main) {
+        const found = main.subGenres.find((s) => s.id === clean || s.name.toLowerCase() === clean);
+        if (found) return { subGenre: found, mainGenre: main };
+      }
+    }
+  }
+
+  // 2. Bulunamadıysa tüm 30 ana tür içerisinde ara
+  for (const main of MAIN_GENRES) {
+    const found = main.subGenres.find((s) => s.id === clean || s.name.toLowerCase() === clean);
+    if (found) return { subGenre: found, mainGenre: main };
+  }
+
+  return undefined;
+}
+
+/**
+ * Birincil ve ikincil ana türlerdeki tüm alt türlerin ve özel alt türlerin okunabilir adlarını döner.
+ */
+export function getAllSelectedSubGenreNames(
+  primaryMainId?: string | null,
+  secondaryMainIds?: string[] | null,
+  subGenreIds?: string[] | null,
+  customSubGenres?: string[] | null
+): string[] {
+  const mainIds = [primaryMainId, ...(secondaryMainIds || [])].filter(Boolean) as string[];
+  const result: string[] = [];
+
+  if (subGenreIds && subGenreIds.length > 0) {
+    for (const sId of subGenreIds) {
+      const match = findSubGenreById(sId, mainIds);
+      result.push(match ? match.subGenre.name : sId);
+    }
+  }
+
+  if (customSubGenres && customSubGenres.length > 0) {
+    for (const c of customSubGenres) {
+      if (c && !result.includes(c)) {
+        result.push(c);
+      }
+    }
+  }
+
+  return result;
+}
+

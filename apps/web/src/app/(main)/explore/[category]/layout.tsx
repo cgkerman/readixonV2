@@ -31,6 +31,30 @@ const STATIC_CATEGORY_META: Record<string, CategoryMetadataConfig> = {
     title: 'En Çok Beğenilen Hikayeler',
     description: 'Okurlardan en yüksek beğeni ve övgü alan Readixon\'ın en gözde eserleri.',
   },
+  'trending': {
+    title: 'Günün Trend Hikayeleri',
+    description: 'Readixon topluluğunun şu anda en çok okuduğu ve etkileşimde bulunduğu güncel trendler.',
+  },
+  'discussions': {
+    title: 'Son Tartışılan Hikayeler',
+    description: 'Okurların en çok yorum yaptığı, tartıştığı ve hakkında konuştuğu popüler eserler.',
+  },
+  'editor-picks': {
+    title: 'Editörün Seçimi Başyapıtlar',
+    description: 'Readixon editörleri tarafından özenle incelenmiş ve tam not almış edebi eserler.',
+  },
+  'interactive': {
+    title: 'İnteraktif Hikayeler (Kaderini Sen Seç)',
+    description: 'Kararlarınızla hikayenin gidişatını ve sonunu değiştirdiğiniz interaktif kurgular.',
+  },
+  'short-stories': {
+    title: 'Tek Oturuşta Biten Kısa Hikayeler',
+    description: 'Tek bir bölümde tamamlanan, vurucu ve hızlı okunabilen kısa romanlar.',
+  },
+  'chat-stories': {
+    title: 'Mesaj Hikayeleri (Dokunarak Oku)',
+    description: 'WhatsApp ve sohbet formatında ekrana dokunarak okunan sürükleyici kurgular.',
+  },
   'all': {
     title: 'Tüm Hikayeler & Kitap Kataloğu',
     description: 'Readixon\'daki binlerce orijinal kurguyu, romanı ve webtoonu filtreleyerek keşfedin.',

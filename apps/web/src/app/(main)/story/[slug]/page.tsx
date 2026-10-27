@@ -33,7 +33,9 @@ import {
   generateSeriesSlug,
   generateUniverseSlug,
   generateStorySlug,
-  getUniverseGenreLabel
+  getUniverseGenreLabel,
+  getMainGenreName,
+  findSubGenreById
 } from '@readixon/core';
 import type { Story, User, Chapter, Review, Character, EditorialReview, ReadingProgress, Series, Universe } from '@readixon/core';
 import { 
@@ -42,7 +44,7 @@ import {
   Lock, Calendar, Bell, Info, X, Sparkles, ChevronRight, Bookmark, Check,
   ListPlus, Share2, ArrowUpDown, Layers, Globe, Reply, Trash2, Send, PencilLine,
   Gamepad2, GitFork, Trophy,
-  Feather
+  Feather, Tag
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from "sonner";
@@ -828,10 +830,33 @@ export default function StoryDetailPage() {
               </Link>
             )}
 
+            {/* Edebi Tür Rozetleri (Birincil & İkincil) */}
+            {(story.mainGenre || (story.secondaryGenres && story.secondaryGenres.length > 0)) && (
+              <div className="flex flex-wrap items-center gap-1.5 mb-2.5 justify-center md:justify-start">
+                {story.mainGenre && (
+                  <Link
+                    href={`/search?genre=${story.mainGenre}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/15 hover:bg-primary/25 border border-primary/30 text-primary text-xs font-bold transition-all shadow-2xs backdrop-blur-md"
+                  >
+                    <span>👑 {getMainGenreName(story.mainGenre)}</span>
+                  </Link>
+                )}
+                {story.secondaryGenres?.map((sec) => (
+                  <Link
+                    key={sec}
+                    href={`/search?genre=${sec}`}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-400 text-xs font-semibold transition-all backdrop-blur-md"
+                  >
+                    <span>✨ {getMainGenreName(sec)}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+
             {/* Etiketler (Tags) */}
             {story.tags && story.tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mb-3.5 justify-center md:justify-start max-w-md md:max-w-none">
-                {story.tags.slice(0, 5).map(t => (
+                {story.tags.slice(0, 6).map(t => (
                   <Link href={`/search?tag=${t}`} key={t}>
                     <span className="px-2.5 py-0.5 bg-card/60 backdrop-blur-md border border-border/40 text-muted hover:text-text hover:border-primary/40 transition-all rounded-md text-[10px] font-bold uppercase tracking-wider block">
                       #{t}
@@ -1420,6 +1445,93 @@ export default function StoryDetailPage() {
                     </button>
                   )}
                 </div>
+
+                {/* Edebi Tür Defteri & Trope'lar */}
+                {(story.mainGenre || (story.secondaryGenres && story.secondaryGenres.length > 0) || (story.subGenres && story.subGenres.length > 0) || (story.customSubGenres && story.customSubGenres.length > 0)) && (
+                  <div className="bg-card/50 border border-border/50 p-5 sm:p-7 rounded-2xl shadow-xs space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Sparkles size={18} className="text-primary" />
+                        <Typography variant="h3" className="text-base sm:text-lg font-bold text-text">
+                          Tür Defteri & Edebi Trope'lar
+                        </Typography>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground font-bold px-2 py-0.5 rounded-full bg-muted/20 border border-border/40">
+                        Readixon Taksonomisi
+                      </span>
+                    </div>
+
+                    <div className="space-y-3.5">
+                      {/* Birincil ve İkincil Ana Türler */}
+                      <div>
+                        <span className="text-[11px] font-bold text-muted-foreground block mb-1.5 uppercase tracking-wider">
+                          Eser Rafları (Ana Türler)
+                        </span>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {story.mainGenre && (
+                            <Link href={`/search?genre=${story.mainGenre}`}>
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-primary/15 border border-primary/35 text-primary text-xs font-bold hover:bg-primary/25 transition-all cursor-pointer">
+                                👑 Birincil: {getMainGenreName(story.mainGenre)}
+                              </span>
+                            </Link>
+                          )}
+                          {story.secondaryGenres?.map((sec) => (
+                            <Link key={sec} href={`/search?genre=${sec}`}>
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-indigo-500/15 border border-indigo-500/35 text-indigo-400 text-xs font-bold hover:bg-indigo-500/25 transition-all cursor-pointer">
+                                ✨ İkincil: {getMainGenreName(sec)}
+                              </span>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Resmi Alt Türler */}
+                      {story.subGenres && story.subGenres.length > 0 && (
+                        <div>
+                          <span className="text-[11px] font-bold text-muted-foreground block mb-1.5 uppercase tracking-wider">
+                            Resmi Alt Türler ({story.subGenres.length})
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {story.subGenres.map((subId) => {
+                              const match = findSubGenreById(subId, [story.mainGenre, ...(story.secondaryGenres || [])]);
+                              const displayName = match ? match.subGenre.name : subId;
+                              return (
+                                <Link key={subId} href={`/search?tag=${subId}`}>
+                                  <span 
+                                    className="px-2.5 py-1 rounded-lg bg-muted/15 hover:bg-muted/30 border border-border/50 hover:border-primary/40 text-xs font-medium text-foreground transition-all cursor-pointer block"
+                                    title={match?.subGenre.description}
+                                  >
+                                    {displayName}
+                                  </span>
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Yazar Özel Alt Türleri / Trope'lar */}
+                      {story.customSubGenres && story.customSubGenres.length > 0 && (
+                        <div>
+                          <span className="text-[11px] font-bold text-purple-400 block mb-1.5 uppercase tracking-wider flex items-center gap-1">
+                            <Tag size={12} />
+                            <span>Yazar Tanımlı Özel Trope'lar ({story.customSubGenres.length})</span>
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {story.customSubGenres.map((customTag) => (
+                              <Link key={customTag} href={`/search?tag=${encodeURIComponent(customTag)}`}>
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/35 text-purple-300 text-xs font-bold transition-all cursor-pointer">
+                                  <Sparkles size={11} className="text-purple-400" />
+                                  <span>{customTag}</span>
+                                </span>
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Mesaj Hikayesi Konuşmacıları (Varsa) */}
                 {story.format === 'chat' && story.chatCharacters && story.chatCharacters.length > 0 && (

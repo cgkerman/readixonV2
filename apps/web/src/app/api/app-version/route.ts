@@ -16,18 +16,18 @@ export interface AppVersionResponse {
 
 export async function GET() {
   const versionData: AppVersionResponse = {
-    latestVersion: '1.9',
-    latestBuild: 3,
+    latestVersion: '2.8',
+    latestBuild: 4,
     minRequiredBuild: 1, // Build 1 (v1.0) can continue, but is strongly prompted to upgrade
     apkUrl: 'https://www.readixon.com/downloads/readixon.apk',
-    releaseDate: '2026-10-12',
-    title: 'Yeni Readixon Güncellemesi Mevcut!',
-    description: 'En son yeniliklerden ve performans geliştirmelerinden faydalanmak için uygulamanızı güncelleyin.',
+    releaseDate: '2026-10-27',
+    title: 'Yeni Readixon Güncellemesi Mevcut (v2.8)!',
+    description: 'Bölümleri Word (.docx) olarak indirme, Readixon Gündem köşe yazarlığı ve yeni yazar araçlarından faydalanmak için uygulamanızı güncelleyin.',
     releaseNotes: [
-      'Kurgusal Evrenler ve Seri Kitaplar oluşturma ve ana sayfa keşfet vitrini',
-      'Evren içi global hızlı arama ve kategorize gezinme (Cmd+K)',
-      'Yazar Akademisi evren entegrasyonu ve hazır kurgu şablonları',
-      'Gelişmiş evren yayın/taslak yönetimi ve kararlılık iyileştirmeleri'
+      'Yazar Stüdyosu: Bölümleri yapısı bozulmadan Word (.docx) olarak indirme ve paylaşma',
+      'Readixon Gündem: Köşe Yazarlığı ekosistemi, 4 adımlı yazar başvurusu ve yayın yönetimi',
+      'Mesaj Hikayeleri: 0.25x, 0.50x ve 0.75x erişilebilir yavaş okuma hızları',
+      'Keşfet Vitrini ve sayfa geçişlerindeki scroll sıfırlama optimizasyonları'
     ],
     isMandatory: false,
   };

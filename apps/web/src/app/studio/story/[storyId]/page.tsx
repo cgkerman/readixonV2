@@ -31,13 +31,15 @@ import {
   Film,
   Pencil,
   Feather,
-  Check
+  Check,
+  FileDown
 } from 'lucide-react';
 import {
   getStoryById,
   updateStory,
   createChapter,
   deleteChapter,
+  fetchChapter,
   fetchChapters,
   syncStoryChapterCount,
   getSeriesByAuthorId,
@@ -58,6 +60,7 @@ import {
 import { uploadFile } from '@readixon/core/src/services/storageService';
 import { StoryHighlightsModal } from '@/components/story/StoryHighlightsModal';
 import { GenreSelector } from '@/components/story/GenreSelector';
+import { exportChapterToDocx } from '@/utils/docxExport';
 import { toast } from "sonner";
 
 export default function StoryDetailAdminPage() {
@@ -80,7 +83,9 @@ export default function StoryDetailAdminPage() {
   const [title, setTitle] = useState('');
   const [summary, setSummary] = useState('');
   const [mainGenre, setMainGenre] = useState<string | undefined>(undefined);
+  const [secondaryGenres, setSecondaryGenres] = useState<string[]>([]);
   const [subGenres, setSubGenres] = useState<string[]>([]);
+  const [customSubGenres, setCustomSubGenres] = useState<string[]>([]);
   const [coverImage, setCoverImage] = useState('');
   const [status, setStatus] = useState<StoryStatus>('draft');
   const [foreword, setForeword] = useState('');
@@ -134,7 +139,9 @@ export default function StoryDetailAdminPage() {
         setTitle(realStory.title || '');
         setSummary(realStory.summary || '');
         setMainGenre(realStory.mainGenre);
+        setSecondaryGenres(realStory.secondaryGenres || []);
         setSubGenres(realStory.subGenres || []);
+        setCustomSubGenres(realStory.customSubGenres || []);
         setCoverImage(realStory.coverImage || '');
         const initialStatus = (realStory.format === 'short_story' && realStory.status === 'ongoing') ? 'completed' : (realStory.status || 'draft');
         setStatus(initialStatus);
@@ -204,12 +211,21 @@ export default function StoryDetailAdminPage() {
       }
 
       const validContributors = contributors.filter(c => c.name.trim().length > 0);
-      const combinedTags = Array.from(new Set([mainGenre, ...(subGenres || [])])).filter(Boolean) as string[];
+      const combinedTags = Array.from(
+        new Set([
+          mainGenre,
+          ...(secondaryGenres || []),
+          ...(subGenres || []),
+          ...(customSubGenres || [])
+        ].filter(Boolean))
+      ) as string[];
       await updateStory(storyId, {
         title,
         summary,
         mainGenre,
+        secondaryGenres,
         subGenres,
+        customSubGenres,
         tags: combinedTags,
         coverImage,
         status: (story?.format === 'short_story' && status === 'ongoing') ? 'completed' : status,
@@ -244,12 +260,21 @@ export default function StoryDetailAdminPage() {
     setAutoSaveStatus('saving');
     try {
       const validContributors = contributors.filter(c => c.name.trim().length > 0);
-      const combinedTags = Array.from(new Set([mainGenre, ...(subGenres || [])])).filter(Boolean) as string[];
+      const combinedTags = Array.from(
+        new Set([
+          mainGenre,
+          ...(secondaryGenres || []),
+          ...(subGenres || []),
+          ...(customSubGenres || [])
+        ].filter(Boolean))
+      ) as string[];
       await updateStory(storyId, {
         title,
         summary,
         mainGenre,
+        secondaryGenres,
         subGenres,
+        customSubGenres,
         tags: combinedTags,
         coverImage,
         status: (story?.format === 'short_story' && status === 'ongoing') ? 'completed' : status,
@@ -280,7 +305,7 @@ export default function StoryDetailAdminPage() {
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [title, summary, mainGenre, subGenres, coverImage, status, foreword, backCover, contributors, trailerVideoUrl, highlights, loading, story]);
+  }, [title, summary, mainGenre, secondaryGenres, subGenres, customSubGenres, coverImage, status, foreword, backCover, contributors, trailerVideoUrl, highlights, loading, story]);
 
   // ── Öne Çıkanlar (Story / Dikey Teaser) Metotları ──
   const handleSelectHighlightVideo = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -981,6 +1006,34 @@ export default function StoryDetailAdminPage() {
                       </div>
                       <p className="text-xs text-muted mt-0.5">Düzenlemek için dokunun</p>
                     </div>
+                    {/* Word İndir Butonu */}
+                    <button
+                      type="button"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        const toastId = toast.loading(`"${chap.title}" Word belgesi hazırlanıyor...`);
+                        try {
+                          let fullChapter = chap;
+                          if (!chap.contentBlocks || chap.contentBlocks.length === 0) {
+                            const fetched = await fetchChapter(storyId, chap.chapterId);
+                            if (fetched) fullChapter = fetched;
+                          }
+                          await exportChapterToDocx({
+                            story,
+                            chapter: fullChapter,
+                            authorName: story?.authorName,
+                          });
+                          toast.success('Bölüm başarıyla Word (.docx) olarak indirildi!', { id: toastId });
+                        } catch (err: any) {
+                          console.error(err);
+                          toast.error('Word belgesi oluşturulurken bir hata oluştu.', { id: toastId });
+                        }
+                      }}
+                      className="w-8 h-8 rounded-lg text-muted/50 hover:text-sky-400 hover:bg-sky-500/10 flex items-center justify-center transition-colors shrink-0"
+                      title="Bölümü Word (.docx) olarak indir veya paylaş"
+                    >
+                      <FileDown size={15} />
+                    </button>
                     <button
                       type="button"
                       onClick={async (e) => {
@@ -1283,14 +1336,18 @@ export default function StoryDetailAdminPage() {
                   />
                 </div>
 
-                {/* Readixon Tür Defteri: 1 Ana Tür + Sınırsız Alt Tür */}
+                {/* Readixon Tür Defteri: 1 Birincil Ana Tür + İkincil Türler + Alt Türler */}
                 <div className="pt-2 border-t border-border/40">
                   <GenreSelector
                     selectedMainGenre={mainGenre}
+                    selectedSecondaryGenres={secondaryGenres}
                     selectedSubGenres={subGenres}
-                    onChange={(m, s) => {
+                    customSubGenres={customSubGenres}
+                    onChange={(m, s, sec, custom) => {
                       setMainGenre(m);
                       setSubGenres(s);
+                      if (sec !== undefined) setSecondaryGenres(sec);
+                      if (custom !== undefined) setCustomSubGenres(custom);
                     }}
                   />
                 </div>

@@ -154,8 +154,26 @@ interface TimelineItem {
 
 const TIMELINE_DATA: TimelineItem[] = [
   {
-    version: 'v2.7',
+    version: 'v2.8',
     badge: 'En Son Güncelleme',
+    date: '27 Ekim 2026',
+    title: 'Gelişmiş Yazar Araçları: Word (.docx) Dışa Aktarma, Readixon Gündem Köşe Yazarlığı & Erişilebilir Mesaj Okuma Hızları',
+    desc: 'Yazarlarımızın edebi üretkenliğini ve platform deneyimini zenginleştiren kapsamlı bir güncelleme! Bölümlerin yapısı, alıntıları ve tipografisi bozulmadan tek dokunuşla Word (.docx) belgesi olarak indirilmesi, Readixon Gündem Köşe Yazarlığı ekosistemi, 4 adımlı yazar başvuru ve editoryal yönetim akışı, mesaj hikayeleri için 0.25x - 0.75x yavaş okuma hızları ve Keşfet vitrini optimizasyonları Readixon v2.8 ile yayında.',
+    highlights: [
+      'Bölümleri Word (.docx) Olarak İndirme: Yazar Stüdyosu\'nda yazılan bölümlerin başlık, yazar bilgisi, sayfa numaralandırmaları (Page X of Y), alıntı şeritleri, ortalanmış ayırıcılar ve özel diyaloglarıyla temiz bir Microsoft Word belgesi olarak tek dokunuşla dışa aktarılması',
+      'HTML Temizleme & Doğal Tipografi Motoru: Zengin metin editöründen gelen tüm HTML etiketlerini ve varlıklarını (&nbsp;, <p>, <strong>, <em>, <u>) çözümleyerek saf Word OpenXML nesnelerine dönüştüren istemci taraflı dönüştürme mimarisi',
+      'Mobil & Masaüstü Çift Yönlü İndirme / Paylaşım Deneyimi: Mobil cihazlarda (iOS / Android) yerel Web Share API ile doğrudan Microsoft Word, Google Docs veya WhatsApp üzerinden paylaşma; PC / Mac masaüstünde ise doğrudan dosya indirme desteği',
+      'Çok Noktalı Hızlı Erişim: Bölüm Editörü araç çubuğunda, Sohbet Hikayesi Editöründe ve Hikaye Yönetim Paneli bölüm listesinde anlık Word dışa aktarma butonları',
+      'Readixon Gündem: Köşe Yazarlığı Ekosistemi: Gündem sayfasında bağımsız köşe yazıları vitrini (/gundem/kose-yazilari) ve yetkilendirilmiş yazarlar için özel Köşe Yazısı Stüdyosu (/studio/columns)',
+      '4 Aşamalı Profesyonel Yazar Başvuru Sistemi: Kişisel Bilgiler, Köşe Yazarlığı Alanları & Motivasyon, Edebi Geçmiş & Referans Yazılar ile Readixon Yayın İlkeleri & Yazar Sözleşmesi onayını içeren kapsamlı başvuru ve editoryal onay paneli (/admin/columns)',
+      'Mesaj Hikayelerinde Erişilebilir Yavaş Okuma Hızları: Otomatik oynatma paneline eklenen 0.25x, 0.50x, 0.75x yavaş okuma hız seçenekleri ile her yaş ve okuma temposuna uygun erişilebilir deneyim',
+      'Keşfet Vitrini & Sayfa Geçiş Düzeltmeleri: Keşfet sayfalarında "Tümünü Gör" rotalarındaki içerik yükleme optimizasyonları ve sayfa geçişlerinde otomatik scroll sıfırlama iyileştirmesi',
+    ],
+    icon: FileText,
+  },
+  {
+    version: 'v2.7',
+    badge: 'Sosyal Okuma',
     date: '25 Ekim 2026',
     title: 'Yeni Nesil Sosyal Okuma: Readixon Kitap Kulüpleri, Birlikte Okuma Seferleri & Spoiler Korumalı Odalar',
     desc: 'Kitaplar yalnız okunmak zorunda değil! Readixon\'un mevcut kütüphane ve evren özellikleriyle bütünleşen yeni nesil edebi sosyal topluluklar devri başladı. Web, Masaüstü ve Mobil (iOS / Android) platformlarında eşzamanlı çalışan Kitap Kulüpleri; yazar onaylı resmi odalar, bölüm eşikli spoiler korumalı tartışma kanalları, yaşayan birlikte okuma seferleri ve canlı yazar buluşmalarıyla (AMA) Readixon v2.7\'de.',
@@ -199,7 +217,7 @@ const TIMELINE_DATA: TimelineItem[] = [
     title: 'Sürükleyici Mesaj Hikayeleri (Chat Stories), Çerçevesiz Medya & İstemci Tarafı Görsel Optimizasyonu',
     desc: 'WhatsApp ve mesajlaşma hissiyatında ilerleyen, okurun her dokunuşunda (Tap-to-Reveal) yeni bir mesajın belirdiği yenilikçi "Mesaj Hikayeleri" formatı yayına alındı! Çerçevesiz doğal medya balonları, tam ekran görsel inceleme (Lightbox), sunucuyu yormayan istemci tarafı akıllı görsel sıkıştırma motoru, çoklu konuşmacı destekli dinamik üst bar ve yazar stüdyosu canlı telefon simülatörü Readixon\'da.',
     highlights: [
-      'Mesaj Hikayeleri Formatı (Chat Story Mode): Ekrana her dokunulduğunda sıradaki mesajın belirdiği (Tap-to-Reveal), çift taraflı balonlar, otomatik oynatma (1x, 1.5x, 2x), ses efektleri ve haptik titreşimlerle WhatsApp gerçekçiliğinde sürükleyici okuma deneyimi',
+      'Mesaj Hikayeleri Formatı (Chat Story Mode): Ekrana her dokunulduğunda sıradaki mesajın belirdiği (Tap-to-Reveal), çift taraflı balonlar, genişletilmiş yavaş/hızlı otomatik oynatma (0.25x, 0.50x, 0.75x, 1x, 1.5x, 2x), ses efektleri ve haptik titreşimlerle WhatsApp gerçekçiliğinde sürükleyici okuma deneyimi',
       'Akıllı Çoklu Konuşmacı & Üst Bar Başlığı: Birebir konuşmalarda karşı tarafın ismi ve çevrimiçi durumu; grup sohbetlerinde ise konuşan tüm karakterlerin listesi ve sıra kime geldiyse dinamik olarak `${Karakter} yazıyor...` animasyonu',
       'Çerçevesiz & Doğal Görsel Baloncukları: Resim mesajlarının etrafındaki kaba arka plan ve çerçevelerin kaldırılarak, modern WhatsApp/Telegram standardında tam oturan çerçevesiz görsel kartları ve köşe saat rozetleri',
       'Tam Ekran Görsel Önizleme (Lightbox) & Kolay Geri Dönüş: Sohbet içindeki görsellere tıklandığında açılan tam ekran görsel inceleme modu, "Sohbete Dön" butonu, Esc tuşu ve Android fiziksel geri tuşu entegrasyonu',

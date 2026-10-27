@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Typography, Button, BlockEditor, Input, ContentRenderer } from '@readixon/ui';
-import { ArrowLeft, Save, PlusCircle, CheckCircle, CheckCircle2, FileText, Globe, Calendar, GripVertical, Trash2, Sparkles, Wand2, Eye, EyeOff, Info, X, HelpCircle, BarChart2, Plus, Music, Volume2, ExternalLink, ChevronDown, ChevronRight, BookOpen, Layers, PencilLine, Bell, AlertCircle, GitFork, Trophy, Skull, Compass, Gamepad2, Check } from 'lucide-react';
+import { ArrowLeft, Save, PlusCircle, CheckCircle, CheckCircle2, FileText, Globe, Calendar, GripVertical, Trash2, Sparkles, Wand2, Eye, EyeOff, Info, X, HelpCircle, BarChart2, Plus, Music, Volume2, ExternalLink, ChevronDown, ChevronRight, BookOpen, Layers, PencilLine, Bell, AlertCircle, GitFork, Trophy, Skull, Compass, Gamepad2, Check, FileDown } from 'lucide-react';
 import { fetchChapter, updateChapter, compressImage, fetchChapters, createChapter, deleteChapter, createNotification, getUserFollowerIds, getStoryById, updateStory, useAuthStore, trackWordCount, trackInteraction, parseAudioTrack, getAudioPlatformLabel, notifyChapterRevision, type Chapter, type ChapterAudioTrack, type Story, type ChapterChoice, type ChapterEndingType } from '@readixon/core';
 import { ReadixonAIAssistant } from '@/components/ReadixonAIAssistant';
 import { uploadFile } from '@readixon/core/src/services/storageService';
@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { PlannerSidebar } from './PlannerSidebar';
 import { UniverseSidebar } from './UniverseSidebar';
 import { ChatStoryEditor } from '@/components/story/chat';
+import { exportChapterToDocx } from '@/utils/docxExport';
 
 export default function ChapterEditorPage() {
   const params = useParams();
@@ -34,6 +35,7 @@ export default function ChapterEditorPage() {
   const [isAudioSectionOpen, setIsAudioSectionOpen] = useState(false);
   const [previewAudio, setPreviewAudio] = useState(false);
   const [isChapterDrawerOpen, setIsChapterDrawerOpen] = useState(false);
+  const [isExportingDocx, setIsExportingDocx] = useState(false);
 
   // Revizyon & Düzenleme Yönetimi
   const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
@@ -324,6 +326,25 @@ export default function ChapterEditorPage() {
     }, 0);
   };
 
+  const handleExportDocx = async () => {
+    if (!chapter) return;
+    setIsExportingDocx(true);
+    const toastId = toast.loading('Word belgesi (.docx) hazırlanıyor...');
+    try {
+      await exportChapterToDocx({
+        story,
+        chapter,
+        authorName: userProfile?.displayName || userProfile?.username || story?.authorName,
+      });
+      toast.success('Bölüm başarıyla Word (.docx) olarak hazırlandı!', { id: toastId });
+    } catch (err: any) {
+      console.error('Word export error:', err);
+      toast.error(err.message || 'Word belgesi oluşturulurken bir hata oluştu.', { id: toastId });
+    } finally {
+      setIsExportingDocx(false);
+    }
+  };
+
   if (loading || !chapter) {
     return <div className="p-8 text-center"><Typography variant="body">Yükleniyor...</Typography></div>;
   }
@@ -601,6 +622,22 @@ export default function ChapterEditorPage() {
                 >
                   {isPreviewMode ? <EyeOff size={13} /> : <Eye size={13} />}
                   <span>{isPreviewMode ? 'Düzenle' : 'Ön İzleme'}</span>
+                </button>
+
+                {/* Word (.docx) İndir Butonu */}
+                <button
+                  type="button"
+                  onClick={handleExportDocx}
+                  disabled={isExportingDocx}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 font-semibold text-xs transition-all cursor-pointer active:scale-95 disabled:opacity-50 shrink-0"
+                  title="Bölümü Microsoft Word (.docx) olarak indir veya paylaş"
+                >
+                  {isExportingDocx ? (
+                    <span className="w-3 h-3 border-2 border-sky-400 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <FileDown size={13} />
+                  )}
+                  <span>Word İndir</span>
                 </button>
               </div>
 

@@ -14,7 +14,9 @@ export default function CreateWebtoonPage() {
   const { firebaseUser } = useAuthStore();
   const [newTitle, setNewTitle] = useState('');
   const [mainGenre, setMainGenre] = useState<string | undefined>(undefined);
+  const [secondaryGenres, setSecondaryGenres] = useState<string[]>([]);
   const [subGenres, setSubGenres] = useState<string[]>([]);
+  const [customSubGenres, setCustomSubGenres] = useState<string[]>([]);
   const [isAdultContent, setIsAdultContent] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -36,13 +38,22 @@ export default function CreateWebtoonPage() {
 
     setIsCreating(true);
     try {
-      const combinedTags = Array.from(new Set([mainGenre, ...subGenres]));
+      const combinedTags = Array.from(
+        new Set([
+          mainGenre,
+          ...secondaryGenres,
+          ...subGenres,
+          ...customSubGenres
+        ].filter(Boolean))
+      ) as string[];
       const newStoryId = await createStory(firebaseUser.uid, {
         title: newTitle.trim(),
         summary: '',
         coverImage: '',
         mainGenre,
+        secondaryGenres,
         subGenres,
+        customSubGenres,
         tags: combinedTags,
         isAdultContent,
         status: 'draft',
@@ -88,14 +99,18 @@ export default function CreateWebtoonPage() {
             />
           </div>
 
-          {/* Readixon Tür Defteri: 1 Ana Tür + Sınırsız Alt Tür */}
+          {/* Readixon Tür Defteri: 1 Birincil Ana Tür + İkincil Türler + Alt Türler */}
           <div className="pt-2">
             <GenreSelector
               selectedMainGenre={mainGenre}
+              selectedSecondaryGenres={secondaryGenres}
               selectedSubGenres={subGenres}
-              onChange={(m, s) => {
+              customSubGenres={customSubGenres}
+              onChange={(m, s, sec, custom) => {
                 setMainGenre(m);
                 setSubGenres(s);
+                if (sec !== undefined) setSecondaryGenres(sec);
+                if (custom !== undefined) setCustomSubGenres(custom);
               }}
             />
           </div>

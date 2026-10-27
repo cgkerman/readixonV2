@@ -1128,10 +1128,11 @@ export const searchStories = async (
     const querySnapshot = await getDocs(q);
     let stories: Story[] = await enrichStories(querySnapshot.docs);
 
-    // Ana tür filtresi varsa kesin eşleşme kontrolü
+    // Ana tür filtresi varsa birincil, ikincil veya etiket eşleşmesi kontrolü
     if (mainGenre) {
       stories = stories.filter(story => 
         story.mainGenre === mainGenre || 
+        story.secondaryGenres?.includes(mainGenre) ||
         story.tags?.includes(mainGenre)
       );
     }
@@ -1140,7 +1141,9 @@ export const searchStories = async (
     if (selectedTags.length > 0) {
       stories = stories.filter(story => 
         selectedTags.some(tag => 
-          story.subGenres?.includes(tag) || story.tags?.includes(tag)
+          story.subGenres?.includes(tag) || 
+          story.customSubGenres?.includes(tag) || 
+          story.tags?.includes(tag)
         )
       );
     }
