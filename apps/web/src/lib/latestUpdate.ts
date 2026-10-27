@@ -12,20 +12,19 @@ export interface SystemUpdateInfo {
  * Hem /about zaman çizelgesi hem de Yazar Stüdyosu ilk açılış ekranında kullanılır.
  */
 export const LATEST_SYSTEM_UPDATE: SystemUpdateInfo = {
-  version: 'v2.7',
+  version: 'v2.8',
   badge: 'En Son Güncelleme',
-  date: '25 Ekim 2026',
-  title: 'Yeni Nesil Sosyal Okuma: Readixon Kitap Kulüpleri, Birlikte Okuma Seferleri & Spoiler Korumalı Odalar',
-  desc: 'Kitaplar yalnız okunmak zorunda değil! Readixon\'un mevcut kütüphane ve evren özellikleriyle bütünleşen yeni nesil edebi sosyal topluluklar devri başladı. Web, Masaüstü ve Mobil (iOS / Android) platformlarında eşzamanlı çalışan Kitap Kulüpleri; yazar onaylı resmi odalar, bölüm eşikli spoiler korumalı tartışma kanalları, yaşayan birlikte okuma seferleri ve canlı yazar buluşmalarıyla (AMA) Readixon v2.7\'de.',
+  date: '27 Ekim 2026',
+  title: 'Gelişmiş Yazar Araçları: Word (.docx) Dışa Aktarma, Readixon Gündem Köşe Yazarlığı & Erişilebilir Mesaj Okuma Hızları',
+  desc: 'Yazarlarımızın edebi üretkenliğini ve stüdyo deneyimini zenginleştiren dev bir güncelleme! Yazdığınız bölümlerin yapısı, alıntıları ve tipografisi bozulmadan tek dokunuşla Word (.docx) belgesi olarak indirilmesi ve paylaşılması, Readixon Gündem Köşe Yazarlığı ekosistemi, 4 adımlı yazar başvuru paneli, mesaj hikayeleri için 0.25x - 0.75x yavaş okuma hızları ve Keşfet vitrini optimizasyonları Readixon v2.8 ile Yazar Stüdyosu\'nda yayında.',
   highlights: [
-    'Readixon Kitap Kulüpleri Alanı: Her kulübün kendine ait dinamik sayfası, üyeleri, yönetici kadrosu, özel veya açık katılım seçenekleri, kural listesi ve canlı topluluk istatistikleri',
-    'Yaşayan Birlikte Okuma Seferleri (Living Journeys): Kulüp üyelerinin ortak bir kitap seçip okuma hedefi (başlangıç/bitiş tarihi, haftalık bölüm eşikleri) belirlediği, kilometre taşlarına göre otomatik ilerleyen yaşayan okuma yolculuğu çubuğu',
-    'Bölüm Eşikli Spoiler Koruması (Spoiler-Gate): Henüz ilgili bölümü okumamış okuyuculara sohbeti sansürleyen veya kilitleyen, okur kitapta o bölüme geldiğinde kilidi otomatik açılan spoiler koruma motoru',
-    'Okuyucu İlerleme Senkronizasyonu & Otomatik Kilit Açma: Okuyucu Web veya Mobil\'de bir bölümü bitirdiği an, kulüpteki o bölüme ait tartışma kanalının kilidini anında açan ve tebrik bildirimi (Toast) gösteren akıllı okuma senkronizasyonu',
-    'Yazar Buluşmaları & Canlı Soru-Cevap (AMA): Yazarların kulüplere konuk olabilmesi, eserleri için resmi kulüp kurabilmesi, okuyucuların sorularını yanıtlayabilmesi ve en çok oy alan (Upvote) teorilerin öne çıktığı soru-cevap alanı',
-    'Yazar Stüdyosu Hızlı Erişim Vitrini: Yazar Stüdyosu\'nda (/studio) eserlerin yanında resmi yazar kulüplerini ve soru-cevap oturumlarını tek tıkla yönetme entegrasyonu',
-    'Bitirilen Kitap Arşivi: Kulübün geçmişte birlikte tamamladığı tüm eserlerin, topluluk ortalama puanlarının ve arşivlenmiş teorilerinin sergilendiği daimi kulüp arşivi',
-    'Çoklu Platform Senkronizasyonu (Web, PC/Tauri & Mobil): Masaüstü (Tauri), Web (Next.js) ve Mobil (Expo/React Native) üzerinde kusursuz çalışan, alt gezinme çubuğuna entegre ergonomik kulüp deneyimi',
-    'Canlı Firestore Güvenlik Kuralları: Kulüpler, üyeler, mesajlar, seferler ve arşivler için yetkilendirilmiş, prodüksiyona dağıtılmış güvenli veri mimarisi',
+    'Bölümleri Word (.docx) Olarak İndirme: Yazar Stüdyosu\'nda yazılan bölümlerin başlık, yazar bilgisi, dinamik sayfa numaraları (Sayfa X / Y), alıntı şeritleri, ortalanmış sahne ayırıcıları ve diyaloglarıyla temiz bir Microsoft Word belgesi olarak tek dokunuşla indirilmesi',
+    'HTML Temizleme & Doğal Tipografi Motoru: Zengin metin editöründen gelen tüm HTML etiketlerini ve varlıklarını (&nbsp;, <p>, <strong>, <em>, <u>) çözümleyerek saf Word OpenXML nesnelerine dönüştüren istemci taraflı dönüştürme mimarisi',
+    'Mobil & Masaüstü Çift Yönlü İndirme / Paylaşım Deneyimi: Mobil cihazlarda (iOS / Android) yerel Web Share API ile doğrudan Microsoft Word, Google Docs veya WhatsApp üzerinden paylaşma; PC / Mac masaüstünde ise doğrudan dosya indirme desteği',
+    'Çok Noktalı Hızlı Erişim: Bölüm Editörü araç çubuğunda, Sohbet Hikayesi Editöründe ve Hikaye Yönetim Paneli bölüm listesinde anlık Word dışa aktarma butonları',
+    'Readixon Gündem: Köşe Yazarlığı Ekosistemi: Gündem sayfasında bağımsız köşe yazıları vitrini (/gundem/kose-yazilari) ve yetkilendirilmiş yazarlar için özel Köşe Yazısı Stüdyosu (/studio/columns)',
+    '4 Aşamalı Profesyonel Yazar Başvuru Sistemi: Kişisel Bilgiler, Köşe Yazarlığı Alanları & Motivasyon, Edebi Geçmiş & Referans Yazılar ile Readixon Yayın İlkeleri & Yazar Sözleşmesi onayını içeren kapsamlı başvuru ve editoryal onay paneli (/admin/columns)',
+    'Mesaj Hikayelerinde Erişilebilir Yavaş Okuma Hızları: Otomatik oynatma paneline eklenen 0.25x, 0.50x, 0.75x yavaş okuma hız seçenekleri ile her yaş ve okuma temposuna uygun erişilebilir deneyim',
+    'Keşfet Vitrini & Sayfa Geçiş Düzeltmeleri: Keşfet sayfalarında "Tümünü Gör" rotalarındaki içerik yükleme optimizasyonları ve sayfa geçişlerinde otomatik scroll sıfırlama iyileştirmesi',
   ],
 };
