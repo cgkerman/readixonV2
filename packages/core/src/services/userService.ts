@@ -41,7 +41,7 @@ import {
 
 import { db, auth } from '../firebase';
 import { deleteUser } from 'firebase/auth';
-import type { User, CreateUserInput } from '../types';
+import type { User, CreateUserInput, UserPreferences } from '../types';
 import { createNotification } from './notificationService';
 
 // ─────────────────────────────────────────────
@@ -151,10 +151,22 @@ export function onUserProfileSnapshot(uid: string, callback: (profile: User | nu
  */
 export async function updateUserProfile(
   uid: string,
-  data: Partial<Pick<User, 'username' | 'displayName' | 'avatarUrl' | 'bio' | 'preferredGenres' | 'termsAcceptedAt' | 'privacyAcceptedAt'>>,
+  data: Partial<User>,
 ): Promise<void> {
   const userRef = doc(db, USERS_COLLECTION, uid);
-  await updateDoc(userRef, data);
+  await updateDoc(userRef, data as any);
+}
+
+/**
+ * Kullanıcı tercihlerini (bildirim, gizlilik, yazar, okuma ayarları) günceller.
+ * Mevcut tercihlerle güvenli bir şekilde birleştirir (merge).
+ */
+export async function updateUserPreferences(
+  uid: string,
+  preferences: Partial<UserPreferences>
+): Promise<void> {
+  const userRef = doc(db, USERS_COLLECTION, uid);
+  await setDoc(userRef, { preferences }, { merge: true });
 }
 
 // ─────────────────────────────────────────────

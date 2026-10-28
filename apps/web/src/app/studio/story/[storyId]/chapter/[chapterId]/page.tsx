@@ -168,19 +168,26 @@ export default function ChapterEditorPage() {
 
       if (userProfile) {
         if (shouldNotify) {
-          trackInteraction(userProfile.uid, 'chapter_published').catch(e => console.error("Badge error:", e));
+          trackInteraction(userProfile.uid, 'chapter_published', {
+            storyChapterCount: allChapters.length
+          }).catch(e => console.error("Badge error:", e));
           if (story?.format === 'short_story') {
             trackInteraction(userProfile.uid, 'short_story_published').catch(e => console.error("Short story badge error:", e));
           }
+          if (story?.format === 'webtoon') {
+            trackInteraction(userProfile.uid, 'webtoon_published').catch(() => {});
+          }
+          if (chapter.audioTrack?.url) {
+            trackInteraction(userProfile.uid, 'soundtrack_published').catch(() => {});
+          }
         }
 
-        if (manual) {
-          const currentWords = getWordCount();
-          if (initialWordCountRef.current !== null && currentWords > initialWordCountRef.current) {
-            const addedWords = currentWords - initialWordCountRef.current;
-            trackWordCount(userProfile.uid, addedWords).catch(e => console.error("Word tracking error:", e));
-            initialWordCountRef.current = currentWords; // Reset to new baseline
-          }
+        // Kelime takibi: Hem otomatik kaydetmede hem manuel kaydetmede kelime artışı varsa kaydet
+        const currentWords = getWordCount();
+        if (initialWordCountRef.current !== null && currentWords > initialWordCountRef.current) {
+          const addedWords = currentWords - initialWordCountRef.current;
+          trackWordCount(userProfile.uid, addedWords).catch(e => console.error("Word tracking error:", e));
+          initialWordCountRef.current = currentWords; // Yeni temel seviye
         }
       }
     } catch (error) {
@@ -280,10 +287,12 @@ export default function ChapterEditorPage() {
     }
     try {
       const titlePrefix = story?.format === 'chat' ? 'Sohbet' : story?.format === 'webtoon' ? 'Episod' : 'Bölüm';
+      const defaultNote = userProfile?.preferences?.writer?.defaultAuthorNote;
       const newChapId = await createChapter(storyId, {
         title: `${titlePrefix} ${allChapters.length + 1}`,
         order: allChapters.length + 1,
         contentBlocks: [],
+        authorNote: defaultNote ? defaultNote : undefined,
         chatMessages: story?.format === 'chat' ? [] : undefined,
         status: 'draft'
       });
@@ -925,6 +934,12 @@ export default function ChapterEditorPage() {
                 initialBlocks={chapter.contentBlocks}
                 onChange={(blocks) => setChapter({ ...chapter, contentBlocks: blocks })}
                 onUploadImage={handleUploadImage}
+                onDocxImport={() => {
+                  if (userProfile?.uid) {
+                    trackInteraction(userProfile.uid, 'word_import').catch(console.error);
+                    toast.success('Word belgesi aktarıldı (Sihirli Dokunuş başarımı güncellendi)!');
+                  }
+                }}
               />
             )}
           </div>

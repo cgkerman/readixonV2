@@ -321,7 +321,7 @@ export const StudioAnnouncementsAndUpdates: React.FC = () => {
         </div>
       )}
 
-      {/* ── SON GÜNCELLEME (v2.4) DETAY MODALI ── */}
+      {/* ── SON GÜNCELLEME (v2.9) DETAY MODALI ── */}
       {isUpdateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-card border border-border rounded-3xl max-w-lg w-full max-h-[85vh] overflow-hidden flex flex-col shadow-2xl animate-in zoom-in-95 duration-200">

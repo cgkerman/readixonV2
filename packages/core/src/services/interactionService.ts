@@ -63,6 +63,11 @@ export const toggleStoryLike = async (storyId: string, userId: string): Promise<
         'stats.likes': increment(1)
       });
       
+      // Başarım sayacını artır
+      import('./achievementService').then(({ trackInteraction }) => {
+        trackInteraction(userId, 'like_given').catch(() => {});
+      }).catch(() => {});
+      
       // Bildirim gönder
       try {
         const storySnap = await getDoc(storyRef);
@@ -137,6 +142,11 @@ export const toggleChapterLike = async (storyId: string, chapterId: string, user
       await updateDoc(storyRef, {
         'stats.likes': increment(1)
       });
+
+      // Başarım sayacını artır
+      import('./achievementService').then(({ trackInteraction }) => {
+        trackInteraction(userId, 'like_given').catch(() => {});
+      }).catch(() => {});
 
       // Bildirim gönder
       try {
@@ -238,12 +248,40 @@ export const addChapterComment = async (
       'stats.commentCount': increment(1)
     });
 
-    // Bildirim gönder
+    // Bildirim gönder & Başarımları tetikle
     try {
       const storyRef = doc(db, 'stories', storyId);
       const storySnap = await getDoc(storyRef);
       const chapterSnap = await getDoc(chapterRef); // Fetch chapter to get title
       const userProfile = await getUserProfile(userId);
+      
+      // Dinamik achievement servisi çağrısı
+      import('./achievementService').then(({ trackInteraction, awardBadge }) => {
+        // Yorum yapan kullanıcıya 'comment_given' sayacını artır
+        trackInteraction(userId, 'comment_given').catch(() => {});
+
+        if (storySnap.exists()) {
+          const storyData = storySnap.data();
+          const chapterData = chapterSnap.exists() ? chapterSnap.data() : null;
+          const currentCommentCount = (chapterData?.stats?.commentCount || 0) + 1;
+
+          // 1. İlk Ses (first_voice): Bölümün ilk yorumu mu?
+          if (currentCommentCount <= 1 && storyData.authorId !== userId) {
+            awardBadge(userId, 'first_voice').catch(() => {});
+          }
+
+          // 2. Tartışma Yaratan (controversial): Bölüm 20 veya daha fazla yorum aldı mı?
+          if (currentCommentCount >= 20 && storyData.authorId) {
+            awardBadge(storyData.authorId, 'controversial').catch(() => {});
+          }
+
+          // 3. Yazar Yanıtı & Yazarın Gözdesi
+          if (replyToId && userId === storyData.authorId) {
+            // Yazar yorumu yanıtladı -> Söz Gümüşse başarımı
+            trackInteraction(storyData.authorId, 'comment_replied').catch(() => {});
+          }
+        }
+      }).catch((e) => console.error("Achievement trigger error:", e));
       
       if (storySnap.exists() && userProfile) {
         const storyData = storySnap.data();
@@ -271,6 +309,13 @@ export const addChapterComment = async (
           
           if (parentCommentSnap.exists()) {
             const parentCommentData = parentCommentSnap.data();
+            // Eğer yanıtlayan yazar ise ve okuyucuya yanıt veriyorsa -> Yazarın Gözdesi rozeti ver!
+            if (userId === storyData.authorId && parentCommentData.userId && parentCommentData.userId !== storyData.authorId) {
+              import('./achievementService').then(({ awardBadge }) => {
+                awardBadge(parentCommentData.userId, 'authors_favorite').catch(() => {});
+              }).catch(() => {});
+            }
+
             // Kendine yanıt vermediyse ve yazar değilse (yazara zaten gitti)
             if (parentCommentData.userId !== userId && parentCommentData.userId !== storyData.authorId) {
               await createNotification({
@@ -289,7 +334,7 @@ export const addChapterComment = async (
         }
       }
     } catch (notifError) {
-      console.error("Yorum bildirimi gönderilirken hata:", notifError);
+      console.error("Yorum bildirimi veya başarımı gönderilirken hata:", notifError);
     }
 
     return newComment;
@@ -301,8 +346,9 @@ export const addChapterComment = async (
 
 /**
  * Bölüme ait tüm genel (chapter level) yorumları çeker.
+ * İsteğe bağlı olarak engellenen kullanıcıların yorumlarını filtreler.
  */
-export const getChapterComments = async (storyId: string, chapterId: string): Promise<Comment[]> => {
+export const getChapterComments = async (storyId: string, chapterId: string, blockedUsers?: string[]): Promise<Comment[]> => {
   try {
     const q = query(
       collection(db, 'stories', storyId, 'chapters', chapterId, 'comments'),
@@ -310,10 +356,15 @@ export const getChapterComments = async (storyId: string, chapterId: string): Pr
       orderBy('createdAt', 'desc')
     );
     const snap = await getDocs(q);
-    const comments: Comment[] = [];
+    let comments: Comment[] = [];
     snap.forEach((docSnap) => {
       comments.push({ ...docSnap.data(), commentId: docSnap.id } as Comment);
     });
+
+    if (blockedUsers && blockedUsers.length > 0) {
+      comments = comments.filter(c => !blockedUsers.includes(c.userId));
+    }
+
     return comments;
   } catch (error) {
     console.error("Yorumları çekerken hata:", error);
@@ -323,18 +374,24 @@ export const getChapterComments = async (storyId: string, chapterId: string): Pr
 
 /**
  * Bölüme ait tüm yorumları (genel ve paragraf) çeker.
+ * İsteğe bağlı olarak engellenen kullanıcıların yorumlarını filtreler.
  */
-export const getAllChapterComments = async (storyId: string, chapterId: string): Promise<Comment[]> => {
+export const getAllChapterComments = async (storyId: string, chapterId: string, blockedUsers?: string[]): Promise<Comment[]> => {
   try {
     const q = query(
       collection(db, 'stories', storyId, 'chapters', chapterId, 'comments'),
       orderBy('createdAt', 'desc')
     );
     const snap = await getDocs(q);
-    const comments: Comment[] = [];
+    let comments: Comment[] = [];
     snap.forEach((docSnap) => {
       comments.push({ ...docSnap.data(), commentId: docSnap.id } as Comment);
     });
+
+    if (blockedUsers && blockedUsers.length > 0) {
+      comments = comments.filter(c => !blockedUsers.includes(c.userId));
+    }
+
     return comments;
   } catch (error) {
     console.error("Tüm yorumları çekerken hata:", error);

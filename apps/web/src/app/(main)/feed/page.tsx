@@ -122,22 +122,22 @@ export default function FeedPage() {
     initialPageParam: null as any
   });
 
-  const { data: featuredAuthors = [], isLoading: authorsLoading } = useQuery({
+  const { data: rawFeaturedAuthors = [], isLoading: authorsLoading } = useQuery({
     queryKey: ['authors', 'featured'],
     queryFn: () => getFeaturedAuthors(10),
   });
 
-  const { data: recommendedStories = [], isLoading: recLoading } = useQuery({
+  const { data: rawRecommendedStories = [], isLoading: recLoading } = useQuery({
     queryKey: ['stories', 'recommended', userProfile?.uid],
     queryFn: () => getAdvancedPersonalizedStories(firebaseUser?.uid, userProfile?.preferredGenres, 10),
   });
 
-  const { data: completedStories = [], isLoading: compLoading } = useQuery({
+  const { data: rawCompletedStories = [], isLoading: compLoading } = useQuery({
     queryKey: ['stories', 'completed'],
     queryFn: () => getCompletedStories(10),
   });
 
-  const { data: mostLikedStories = [], isLoading: likedLoading } = useQuery({
+  const { data: rawMostLikedStories = [], isLoading: likedLoading } = useQuery({
     queryKey: ['stories', 'mostLiked'],
     queryFn: () => getMostLikedStories(10),
   });
@@ -146,25 +146,21 @@ export default function FeedPage() {
     queryKey: ['stories', 'webtoons', 'feed'],
     queryFn: () => getWebtoonsPaginated(10),
   });
-  const webtoons = webtoonsData?.stories || [];
 
   const { data: interactiveData, isLoading: interactiveLoading } = useQuery({
     queryKey: ['stories', 'interactive', 'feed'],
     queryFn: () => getInteractiveStoriesPaginated(10),
   });
-  const interactiveStories = interactiveData?.stories || [];
 
   const { data: shortStoriesData, isLoading: shortStoriesLoading } = useQuery({
     queryKey: ['stories', 'short_story', 'feed'],
     queryFn: () => getShortStoriesPaginated(10),
   });
-  const shortStories = shortStoriesData?.stories || [];
 
   const { data: chatStoriesData, isLoading: chatStoriesLoading } = useQuery({
     queryKey: ['stories', 'chat', 'feed'],
     queryFn: () => getChatStoriesPaginated(10),
   });
-  const chatStories = chatStoriesData?.stories || [];
 
   const { data: recentlyUpdatedStories = [], isLoading: recentlyUpdatedLoading } = useQuery({
     queryKey: ['stories', 'recentlyUpdated'],
@@ -205,7 +201,7 @@ export default function FeedPage() {
     queryFn: () => getTrendingDiscussions(10),
   });
 
-  const { data: editorPicks = [], isLoading: editorPicksLoading } = useQuery({
+  const { data: rawEditorPicks = [], isLoading: editorPicksLoading } = useQuery({
     queryKey: ['stories', 'editorPicks'],
     queryFn: async () => {
       const reviews = await getEditorialReviews(10);
@@ -227,9 +223,43 @@ export default function FeedPage() {
     queryFn: () => getPublicSeries(10),
   });
 
+  // Tercihlere Göre Hikaye Filtreleme Fonksiyonu (Engellenenler ve +18)
+  const filterStory = (story: Story) => {
+    if (!story) return false;
+    if (userProfile?.blockedUsers && userProfile.blockedUsers.includes(story.authorId)) {
+      return false;
+    }
+    const allowAdult = Boolean(userProfile?.preferences?.privacy?.allowAdultContent);
+    if (!allowAdult && story.isAdultContent) {
+      return false;
+    }
+    return true;
+  };
 
-  const recentStories = recentData?.pages.flatMap((p: any) => p.stories) || [];
-  const topStories = topData?.pages.flatMap((p: any) => p.stories) || [];
+  const featuredAuthors = useMemo(() => {
+    if (!userProfile?.blockedUsers || userProfile.blockedUsers.length === 0) return rawFeaturedAuthors;
+    return rawFeaturedAuthors.filter(a => !userProfile.blockedUsers!.includes(a.uid));
+  }, [rawFeaturedAuthors, userProfile?.blockedUsers]);
+
+  const recommendedStories = useMemo(() => rawRecommendedStories.filter(filterStory), [rawRecommendedStories, userProfile?.blockedUsers, userProfile?.preferences?.privacy?.allowAdultContent]);
+  const completedStories = useMemo(() => rawCompletedStories.filter(filterStory), [rawCompletedStories, userProfile?.blockedUsers, userProfile?.preferences?.privacy?.allowAdultContent]);
+  const mostLikedStories = useMemo(() => rawMostLikedStories.filter(filterStory), [rawMostLikedStories, userProfile?.blockedUsers, userProfile?.preferences?.privacy?.allowAdultContent]);
+  const editorPicks = useMemo(() => rawEditorPicks.filter(filterStory), [rawEditorPicks, userProfile?.blockedUsers, userProfile?.preferences?.privacy?.allowAdultContent]);
+
+  const webtoons = useMemo(() => (webtoonsData?.stories || []).filter(filterStory), [webtoonsData, userProfile?.blockedUsers, userProfile?.preferences?.privacy?.allowAdultContent]);
+  const interactiveStories = useMemo(() => (interactiveData?.stories || []).filter(filterStory), [interactiveData, userProfile?.blockedUsers, userProfile?.preferences?.privacy?.allowAdultContent]);
+  const shortStories = useMemo(() => (shortStoriesData?.stories || []).filter(filterStory), [shortStoriesData, userProfile?.blockedUsers, userProfile?.preferences?.privacy?.allowAdultContent]);
+  const chatStories = useMemo(() => (chatStoriesData?.stories || []).filter(filterStory), [chatStoriesData, userProfile?.blockedUsers, userProfile?.preferences?.privacy?.allowAdultContent]);
+
+  const recentStories = useMemo(() => {
+    const raw = recentData?.pages.flatMap((p: any) => p.stories) || [];
+    return raw.filter(filterStory);
+  }, [recentData, userProfile?.blockedUsers, userProfile?.preferences?.privacy?.allowAdultContent]);
+
+  const topStories = useMemo(() => {
+    const raw = topData?.pages.flatMap((p: any) => p.stories) || [];
+    return raw.filter(filterStory);
+  }, [topData, userProfile?.blockedUsers, userProfile?.preferences?.privacy?.allowAdultContent]);
 
   // Veriler sayfayı kilitlemeden aşamalı (progressive) olarak yüklenir
 

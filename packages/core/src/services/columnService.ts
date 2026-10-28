@@ -606,6 +606,11 @@ export async function approveAndPublishColumnAdmin(
     updatedAt: serverTimestamp(),
   });
 
+  // Başarımı tetikle (Günün Kalemi)
+  import('./achievementService').then(m => {
+    m.trackInteraction(article.authorId, 'column_published').catch(() => {});
+  }).catch(() => {});
+
   // Yazara bildirim gönder
   try {
     await createNotification({

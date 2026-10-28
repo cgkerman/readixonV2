@@ -33,13 +33,15 @@ export interface BlockEditorProps {
   onChange: (blocks: ContentBlock[]) => void;
   onUploadImage?: (file: File) => Promise<string>;
   defaultMode?: 'blocks' | 'freewrite';
+  onDocxImport?: () => void;
 }
 
 export function BlockEditor({
   initialBlocks = [],
   onChange,
   onUploadImage,
-  defaultMode = 'blocks'
+  defaultMode = 'blocks',
+  onDocxImport,
 }: BlockEditorProps) {
   // Düzenleme Modu: 'freewrite' (Word / Wattpad Serbest Yazı) veya 'blocks' (Gelişmiş Blok Editörü)
   const [activeMode, setActiveMode] = useState<'blocks' | 'freewrite'>(() => {
@@ -165,6 +167,7 @@ export function BlockEditor({
         }));
 
         updateParent([...items, ...newItems]);
+        onDocxImport?.();
       }
     } catch (error) {
       console.error("Word dosyası dönüştürülemedi:", error);
@@ -298,6 +301,7 @@ export function BlockEditor({
             const raw = htmlToContentBlocks(manuscriptHtml);
             handleConvertFromFreeWriting(raw);
           }}
+          onDocxImport={onDocxImport}
         />
       ) : (
         /* ── 2. MOD: Blok Editörü (Gelişmiş Mod) ── */

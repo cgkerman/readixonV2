@@ -465,6 +465,12 @@ export async function toggleReadixLike(userId: string, readixId: string): Promis
       
       if (readixSnap.exists() && userProfile) {
         const readixData = readixSnap.data();
+
+        // 25 beğeniye ulaştığında Trend Yaratan (viral_voice) rozeti ver
+        if ((readixData.stats?.likes || 0) + 1 >= 25 && readixData.authorId) {
+          import('./achievementService').then(m => m.awardBadge(readixData.authorId, 'viral_voice')).catch(() => {});
+        }
+
         await createNotification({
           userId: readixData.authorId,
           actorId: userId,

@@ -32,15 +32,6 @@ export function getChatId(uid1: string, uid2: string): string {
  * Creates or retrieves an existing chat between two users.
  */
 export async function createOrGetChat(currentUserId: string, targetUserId: string): Promise<string> {
-  const chatId = getChatId(currentUserId, targetUserId);
-  const chatRef = doc(db, CHATS_COLLECTION, chatId);
-  
-  const snap = await getDoc(chatRef);
-  if (snap.exists()) {
-    return chatId;
-  }
-
-  // Create new chat
   const [currentUser, targetUser] = await Promise.all([
     getUserProfile(currentUserId),
     getUserProfile(targetUserId)
@@ -48,6 +39,22 @@ export async function createOrGetChat(currentUserId: string, targetUserId: strin
 
   if (!currentUser || !targetUser) {
     throw new Error('User profiles not found');
+  }
+
+  // Engelleme kontrolü
+  if (currentUser.blockedUsers?.includes(targetUserId)) {
+    throw new Error('Bu kullanıcıyı engellediğiniz için sohbet başlatılamaz.');
+  }
+  if (targetUser.blockedUsers?.includes(currentUserId)) {
+    throw new Error('Bu kullanıcı tarafından engellendiğiniz için sohbet başlatılamaz.');
+  }
+
+  const chatId = getChatId(currentUserId, targetUserId);
+  const chatRef = doc(db, CHATS_COLLECTION, chatId);
+  
+  const snap = await getDoc(chatRef);
+  if (snap.exists()) {
+    return chatId;
   }
 
   const newChat: Omit<Chat, 'id'> = {
@@ -140,6 +147,19 @@ export async function sendMessage(chatId: string, senderId: string, text: string
   const receiverId = chatData.participants.find(id => id !== senderId);
   
   if (!receiverId) return;
+
+  // Engelleme kontrolü
+  const [senderUser, receiverUser] = await Promise.all([
+    getUserProfile(senderId),
+    getUserProfile(receiverId)
+  ]);
+
+  if (senderUser?.blockedUsers?.includes(receiverId)) {
+    throw new Error('Bu kullanıcıyı engellediğiniz için mesaj gönderemezsiniz.');
+  }
+  if (receiverUser?.blockedUsers?.includes(senderId)) {
+    throw new Error('Bu kullanıcı tarafından engellendiğiniz için mesaj gönderemezsiniz.');
+  }
 
   const messagesRef = collection(db, `${CHATS_COLLECTION}/${chatId}/messages`);
   

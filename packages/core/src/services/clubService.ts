@@ -107,6 +107,11 @@ export async function createClub(creatorId: string, input: CreateClubInput): Pro
   // 1. Kulüp ana belgesini yaz
   await setDoc(clubRef, newClub);
 
+  // Başarımı tetikle (Kulüp Lideri)
+  import('./achievementService').then(m => {
+    m.trackInteraction(creatorId, 'club_created').catch(() => {});
+  }).catch(() => {});
+
   // 2. Kurucuyu üye alt koleksiyonuna ekle (Owner)
   const memberRef = doc(db, CLUBS_COLLECTION, clubId, 'members', creatorId);
   const ownerMember: ClubMember = {
@@ -251,6 +256,16 @@ export async function joinClub(clubId: string, userId: string): Promise<ClubMemb
     'stats.membersCount': increment(1),
     updatedAt: serverTimestamp(),
   });
+
+  // Kulüp 5 üyeye ulaştıysa kurucuya Kulüp Lideri rozeti tanımla
+  getDoc(clubRef).then(snap => {
+    if (snap.exists()) {
+      const cData = snap.data() as Club;
+      if ((cData.stats?.membersCount || 0) >= 5 && cData.creatorId) {
+        import('./achievementService').then(m => m.awardBadge(cData.creatorId, 'club_leader')).catch(() => {});
+      }
+    }
+  }).catch(() => {});
 
   return newMember;
 }
@@ -695,6 +710,11 @@ export async function sendClubMessage(
   };
 
   await setDoc(messageDocRef, newMessage);
+
+  // Ateş Başı Sohbeti başarımı sayacını artır
+  import('./achievementService').then(m => {
+    m.trackInteraction(userId, 'club_message_sent').catch(() => {});
+  }).catch(() => {});
 
   // Kanalın son mesaj bilgilerini ve mesaj sayısını güncelle
   const channelRef = doc(db, CLUBS_COLLECTION, clubId, 'channels', channelId);

@@ -141,11 +141,29 @@ function SearchContent() {
     try {
       if (type === 'stories') {
         const tagsToSearch = sub ? [sub] : (genre ? [genre] : []);
-        const stories = await searchStories(term, tagsToSearch, 60, genre || undefined);
+        let stories = await searchStories(term, tagsToSearch, 60, genre || undefined);
+        
+        // 1. Engellenen Yazarların Hikayelerini Filtrele
+        if (userProfile?.blockedUsers && userProfile.blockedUsers.length > 0) {
+          stories = stories.filter(s => !userProfile.blockedUsers!.includes(s.authorId));
+        }
+
+        // 2. +18 / Yetişkin İçerik Filtresi (Açık değilse yetişkin içerikleri gizle)
+        const allowAdult = Boolean(userProfile?.preferences?.privacy?.allowAdultContent);
+        if (!allowAdult) {
+          stories = stories.filter(s => !s.isAdultContent);
+        }
+
         setResults(stories);
         setUserResults([]);
       } else {
-        const users = await searchUsers(term);
+        let users = await searchUsers(term);
+        
+        // Engellenen Kullanıcıları Arama Sonuçlarından Çıkar
+        if (userProfile?.blockedUsers && userProfile.blockedUsers.length > 0) {
+          users = users.filter(u => !userProfile.blockedUsers!.includes(u.uid));
+        }
+
         setUserResults(users);
         setResults([]);
       }

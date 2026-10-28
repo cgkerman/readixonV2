@@ -835,14 +835,24 @@ export const syncReadingProgress = async (
     if (isChapterCompleted && !completedChapters.includes(currentChapterId)) {
       completedChapters.push(currentChapterId);
       import('./achievementService').then(async (module) => {
-        module.trackRead(userId).catch(err => console.error("trackRead error:", err));
         try {
           const sSnap = await getDoc(doc(db, 'stories', storyId));
-          if (sSnap.exists() && sSnap.data().format === 'short_story') {
+          const sData = sSnap.exists() ? sSnap.data() : null;
+          const isWebtoon = sData?.format === 'webtoon';
+
+          let hasAudio = false;
+          try {
+            const chapSnap = await getDoc(doc(db, 'stories', storyId, 'chapters', currentChapterId));
+            hasAudio = !!chapSnap.data()?.audioTrack?.url;
+          } catch {}
+
+          module.trackRead(userId, { storyId, isWebtoon, hasAudio }).catch(err => console.error("trackRead error:", err));
+
+          if (sData?.format === 'short_story') {
             module.trackInteraction(userId, 'short_story_read').catch(err => console.error("trackShortStoryRead error:", err));
           }
         } catch (sErr) {
-          console.error("Story fetch for short_story achievement error:", sErr);
+          console.error("Story fetch for achievement tracking error:", sErr);
         }
       });
     }
@@ -854,11 +864,13 @@ export const syncReadingProgress = async (
         // En son adıma ekle (eğer son adım zaten o değilse)
         if (pathHistory[pathHistory.length - 1] !== interactiveData.pathHistoryStep) {
           pathHistory.push(interactiveData.pathHistoryStep);
+          import('./achievementService').then(m => m.trackInteraction(userId, 'interactive_choice')).catch(() => {});
         }
       }
 
       if (interactiveData.discoveredEndingId && !discoveredEndings.includes(interactiveData.discoveredEndingId)) {
         discoveredEndings.push(interactiveData.discoveredEndingId);
+        import('./achievementService').then(m => m.trackInteraction(userId, 'interactive_ending')).catch(() => {});
       }
     }
     
@@ -1512,6 +1524,11 @@ export const addReview = async (storyId: string, userId: string, rating: number,
       createdAt: serverTimestamp() as any,
     };
     await setDoc(reviewRef, newReview);
+
+    // Yıldız Avcısı (master_critic) başarımı sayacını artır
+    import('./achievementService').then(m => {
+      m.trackInteraction(userId, 'review_given').catch(() => {});
+    }).catch(() => {});
 
     // Hikayenin genel stats alanını güncelle
     const storyRef = doc(db, 'stories', storyId);

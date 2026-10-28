@@ -18,6 +18,7 @@ export interface FreeWritingEditorProps {
   onChangeHtml?: (html: string) => void;
   onConvertToBlocks: (blocks: ContentBlock[]) => void;
   onSwitchToBlocks?: () => void;
+  onDocxImport?: () => void;
 }
 
 /**
@@ -35,6 +36,7 @@ export function FreeWritingEditor({
   onChangeHtml,
   onConvertToBlocks,
   onSwitchToBlocks,
+  onDocxImport,
 }: FreeWritingEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const isInitializedRef = useRef(false);
@@ -163,6 +165,7 @@ export function FreeWritingEditor({
         onChangeHtml?.(docxHtml);
         const parsed = htmlToContentBlocks(docxHtml);
         setEstimatedBlocks(parsed.length);
+        onDocxImport?.();
       }
     } catch (error) {
       console.error('Word dosyası yüklenirken hata oluştu:', error);

@@ -29,7 +29,12 @@ import {
   ExternalLink,
   ShieldCheck,
   Flame,
-  Info
+  Info,
+  RotateCw,
+  Trophy,
+  ShieldAlert,
+  MoreVertical,
+  UserX
 } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 import {
@@ -73,7 +78,11 @@ import {
   getUserReadingLists,
   getPublicUserReadingLists,
   getStoriesByIds,
-  BADGES
+  BADGES,
+  BADGE_CATEGORIES,
+  getBadgeProgress,
+  syncUserAchievements,
+  unblockUser
 } from '@readixon/core';
 import type { User, Story, Readix, ReadingList } from '@readixon/core';
 import { ReadingListCard } from '@/components/reading-list/ReadingListCard';
@@ -108,9 +117,91 @@ export default function ProfilePage() {
   const [activeStoryFormat, setActiveStoryFormat] = useState<'all' | 'novels' | 'short_stories' | 'webtoons'>('all');
   const [activeReadixTab, setActiveReadixTab] = useState<'shared' | 'mentions'>('shared');
 
+  // Başarım & Rozet Durumları
+  const [badgeFilter, setBadgeFilter] = useState<'all' | 'earned' | 'locked' | 'writer' | 'reader'>('all');
+  const [isSyncingBadges, setIsSyncingBadges] = useState(false);
+
+  const handleSyncAchievements = async () => {
+    if (!profileUser?.uid) return;
+    setIsSyncingBadges(true);
+    const toastId = toast.loading('Başarımlar ve rozetler taranıyor...');
+    try {
+      const result = await syncUserAchievements(profileUser.uid);
+      setProfileUser(prev => prev ? { ...prev, achievements: result.achievements } : null);
+      if (result.newlyEarned.length > 0) {
+        toast.success(`Tebrikler! ${result.newlyEarned.length} yeni rozet açıldı!`, { id: toastId });
+      } else {
+        toast.success('Başarımlarınız güncel!', { id: toastId });
+      }
+    } catch (err) {
+      console.error('Başarım senkronizasyon hatası:', err);
+      toast.error('Senkronizasyon sırasında bir sorun oluştu.', { id: toastId });
+    } finally {
+      setIsSyncingBadges(false);
+    }
+  };
+
+  const filteredBadges = useMemo(() => {
+    const list = Object.values(BADGES);
+    const earnedSet = new Set(profileUser?.achievements?.earnedBadges || []);
+
+    return list.filter(badge => {
+      const isUnlocked = earnedSet.has(badge.id);
+
+      if (badgeFilter === 'earned') return isUnlocked;
+      if (badgeFilter === 'locked') return !isUnlocked;
+      if (badgeFilter === 'writer') {
+        return badge.category === 'writer_production' || badge.category === 'writer_publishing';
+      }
+      if (badgeFilter === 'reader') {
+        return badge.category === 'reader_consumption' || badge.category === 'reader_interaction';
+      }
+      return true;
+    });
+  }, [badgeFilter, profileUser?.achievements]);
+
   // Takip Durumları
   const [isFollowing, setIsFollowing] = useState(false);
   const [isFollowLoading, setIsFollowLoading] = useState(false);
+
+  // Profil Menüsü (Engelleme / Güvenlik)
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const isBlockedByMe = Boolean(profileUser && currentUser?.blockedUsers?.includes(profileUser.uid));
+
+  const handleBlockProfileUser = async () => {
+    if (!firebaseUser || !profileUser || !currentUser) return;
+    if (!confirm(`@${profileUser.username} kullanıcısını engellemek istediğinize emin misiniz? Bu kullanıcının hikayelerini, gönderilerini ve mesajlarını görmeyeceksiniz.`)) return;
+
+    try {
+      await blockUser(firebaseUser.uid, profileUser.uid);
+      if (isFollowing) {
+        await unfollowUser(firebaseUser.uid, profileUser.uid);
+        setIsFollowing(false);
+      }
+      useAuthStore.getState().setUserProfile({
+        ...currentUser,
+        blockedUsers: [...(currentUser.blockedUsers || []), profileUser.uid]
+      });
+      toast.success(`@${profileUser.username} engellendi.`);
+    } catch (e) {
+      toast.error('Kullanıcı engellenirken hata oluştu.');
+    }
+  };
+
+  const handleUnblockProfileUser = async () => {
+    if (!firebaseUser || !profileUser || !currentUser) return;
+    try {
+      await unblockUser(firebaseUser.uid, profileUser.uid);
+      const updatedBlocked = (currentUser.blockedUsers || []).filter(id => id !== profileUser.uid);
+      useAuthStore.getState().setUserProfile({
+        ...currentUser,
+        blockedUsers: updatedBlocked
+      });
+      toast.success(`@${profileUser.username} kullanıcısının engeli kaldırıldı.`);
+    } catch (e) {
+      toast.error('Engel kaldırılırken hata oluştu.');
+    }
+  };
 
   // Takipçi / Takip Edilen Modalı
   const [followModalType, setFollowModalType] = useState<'followers' | 'following' | null>(null);
@@ -210,8 +301,8 @@ export default function ProfilePage() {
 
         // 4. Okuma Listelerini Getir
         const isSelf = firebaseUser?.uid === user.uid;
-        const fetchedLists = isSelf 
-          ? await getUserReadingLists(user.uid) 
+        const fetchedLists = isSelf
+          ? await getUserReadingLists(user.uid)
           : await getPublicUserReadingLists(user.uid);
         setReadingLists(fetchedLists);
 
@@ -549,8 +640,8 @@ export default function ProfilePage() {
       authorUsername: author?.username || 'user',
       authorAvatarUrl: author?.avatarUrl,
       mediaUrls: readix.mediaUrls,
-      createdAtStr: readix.createdAt 
-        ? new Date((readix.createdAt as any).seconds ? (readix.createdAt as any).seconds * 1000 : (readix.createdAt as unknown as number)).toLocaleDateString() 
+      createdAtStr: readix.createdAt
+        ? new Date((readix.createdAt as any).seconds ? (readix.createdAt as any).seconds * 1000 : (readix.createdAt as unknown as number)).toLocaleDateString()
         : 'Şimdi'
     });
     setShareModalOpen(true);
@@ -647,7 +738,7 @@ export default function ProfilePage() {
 
   return (
     <div className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-10 pb-28 sm:pb-36">
-      
+
       {/* ─────────────────────────────────────────────────────────────
           1. HEADER (Kapak Görseli Olmadan, Zarif & Prestijli Tasarım)
           ───────────────────────────────────────────────────────────── */}
@@ -656,7 +747,7 @@ export default function ProfilePage() {
         <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-full max-w-3xl h-48 bg-gradient-to-b from-primary/10 via-purple-600/5 to-transparent blur-3xl pointer-events-none rounded-full" />
 
         <div className="relative flex flex-col md:flex-row items-center md:items-start gap-6 sm:gap-8">
-          
+
           {/* Avatar & Rozetler */}
           <div className="relative flex-shrink-0">
             <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-full border-4 border-card bg-card overflow-hidden shadow-2xl shadow-black/40 ring-2 ring-primary/20 flex items-center justify-center">
@@ -675,7 +766,7 @@ export default function ProfilePage() {
 
             {/* Premium Rozeti */}
             {profileUser.status === 'premium' && (
-              <div 
+              <div
                 className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 w-8 h-8 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-500 border-2 border-card flex items-center justify-center text-white shadow-lg"
                 title="Readixon Premium Üye"
               >
@@ -686,7 +777,7 @@ export default function ProfilePage() {
 
           {/* Profil Başlığı, İsim, Rozetler & Aksiyon Butonları */}
           <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left min-w-0">
-            
+
             {/* Üst Satır: İsim, Etiketler ve Aksiyon Butonları */}
             <div className="w-full flex flex-col md:flex-row items-center md:items-center justify-between gap-4 mb-2">
               <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 flex-wrap">
@@ -748,6 +839,15 @@ export default function ProfilePage() {
                     <Edit2 size={15} />
                     <span>Profili Düzenle</span>
                   </Button>
+                ) : isBlockedByMe ? (
+                  <Button
+                    variant="secondary"
+                    onPress={handleUnblockProfileUser}
+                    className="rounded-full px-5 py-2.5 text-xs sm:text-sm font-bold border-red-500/30 text-red-500 hover:bg-red-500/10 shadow-xs flex items-center gap-2"
+                  >
+                    <UserX size={15} />
+                    <span>Engeli Kaldır</span>
+                  </Button>
                 ) : (
                   <>
                     <Button
@@ -757,8 +857,8 @@ export default function ProfilePage() {
                         try {
                           const chatId = await createOrGetChat(firebaseUser.uid, profileUser.uid);
                           router.push(`/messages/${chatId}`);
-                        } catch (err) {
-                          toast.error('Sohbet başlatılamadı.');
+                        } catch (err: any) {
+                          toast.error(err.message || 'Sohbet başlatılamadı.');
                         }
                       }}
                       className="rounded-full w-10 h-10 flex items-center justify-center p-0 bg-card hover:bg-card/80 border border-border/60 text-foreground"
@@ -771,9 +871,8 @@ export default function ProfilePage() {
                       variant={isFollowing ? "outline" : "primary"}
                       onPress={handleFollowToggle}
                       disabled={isFollowLoading}
-                      className={`rounded-full px-6 py-2.5 text-xs sm:text-sm font-bold shadow-md transition-all ${
-                        isFollowing ? 'border-primary/40 text-primary' : ''
-                      }`}
+                      className={`rounded-full px-6 py-2.5 text-xs sm:text-sm font-bold shadow-md transition-all ${isFollowing ? 'border-primary/40 text-primary' : ''
+                        }`}
                     >
                       {isFollowLoading ? (
                         <Loader2 size={16} className="animate-spin" />
@@ -783,6 +882,40 @@ export default function ProfilePage() {
                         'Takip Et'
                       )}
                     </Button>
+
+                    {/* 3 Nokta Aksiyon Menüsü */}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setShowProfileMenu(prev => !prev)}
+                        className="rounded-full w-10 h-10 flex items-center justify-center p-0 bg-card hover:bg-card/80 border border-border/60 text-muted-foreground hover:text-foreground transition-all cursor-pointer active:scale-95"
+                        aria-label="Diğer İşlemler"
+                      >
+                        <MoreVertical size={18} />
+                      </button>
+
+                      {showProfileMenu && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-40"
+                            onClick={() => setShowProfileMenu(false)}
+                          />
+                          <div className="absolute right-0 top-12 z-50 w-48 rounded-2xl bg-card border border-border/60 shadow-xl p-1.5 animate-in fade-in zoom-in-95 duration-150">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowProfileMenu(false);
+                                handleBlockProfileUser();
+                              }}
+                              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-500/10 rounded-xl transition-colors cursor-pointer text-left"
+                            >
+                              <UserX size={15} />
+                              <span>Kullanıcıyı Engelle</span>
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </>
                 )}
               </div>
@@ -802,7 +935,7 @@ export default function ProfilePage() {
 
             {/* ── İstatistik Hapları (Metric Pills) ── */}
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 sm:gap-2.5 mt-4 text-xs font-semibold">
-              
+
               {/* Takipçi */}
               <button
                 type="button"
@@ -833,9 +966,9 @@ export default function ProfilePage() {
                 <span className="font-extrabold">
                   {profileUser.isAuthor
                     ? (() => {
-                        const total = stories.reduce((sum, s) => sum + (s.stats?.views || 0), 0);
-                        return total >= 1000 ? (total / 1000).toFixed(1) + 'B' : total;
-                      })()
+                      const total = stories.reduce((sum, s) => sum + (s.stats?.views || 0), 0);
+                      return total >= 1000 ? (total / 1000).toFixed(1) + 'B' : total;
+                    })()
                     : profileUser.stats?.totalReads || 0}
                 </span>
                 <span className="text-muted-foreground text-[11px] font-normal">Okunma</span>
@@ -893,28 +1026,50 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {/* ── Engellenen Kullanıcı Uyarı Şeridi ── */}
+      {isBlockedByMe && (
+        <div className="mb-6 p-4 rounded-2xl bg-red-500/10 border border-red-500/25 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-red-500/20 text-red-500 flex items-center justify-center shrink-0">
+              <ShieldAlert size={18} />
+            </div>
+            <div>
+              <span className="text-sm font-bold text-red-500 block">Bu Kullanıcıyı Engellediniz</span>
+              <span className="text-xs text-muted-foreground block mt-0.5">
+                Bu kullanıcının paylaşımları, hikayeleri ve mesajları sizin için gizlendi.
+              </span>
+            </div>
+          </div>
+          <Button
+            variant="secondary"
+            onPress={handleUnblockProfileUser}
+            className="text-xs font-bold text-red-500 border-red-500/30 hover:bg-red-500/10 shrink-0"
+          >
+            Engeli Kaldır
+          </Button>
+        </div>
+      )}
+
       {/* ─────────────────────────────────────────────────────────────
           2. ANA SEKME BAR (Unified Modern Tab Bar)
           ───────────────────────────────────────────────────────────── */}
       <div className="border-b border-border/40 mb-8 sm:mb-10">
         <div className="flex items-center gap-2 sm:gap-8 overflow-x-auto scrollbar-hide py-1 -mx-4 px-4 sm:mx-0 sm:px-0">
-          
+
           {/* 1. Eserler (Sadece yazarlarda veya hikayesi olanlarda) */}
           {(profileUser.isAuthor || stories.length > 0) && (
             <button
               type="button"
               onClick={() => setActiveTab('stories')}
-              className={`flex items-center gap-2 py-3 px-3 sm:px-1 border-b-2 font-bold text-xs sm:text-sm shrink-0 transition-all cursor-pointer ${
-                activeTab === 'stories'
+              className={`flex items-center gap-2 py-3 px-3 sm:px-1 border-b-2 font-bold text-xs sm:text-sm shrink-0 transition-all cursor-pointer ${activeTab === 'stories'
                   ? 'border-primary text-primary'
                   : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
+                }`}
             >
               <BookOpen size={16} />
               <span>Eserler</span>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                activeTab === 'stories' ? 'bg-primary/20 text-primary' : 'bg-muted/30 text-muted-foreground'
-              }`}>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${activeTab === 'stories' ? 'bg-primary/20 text-primary' : 'bg-muted/30 text-muted-foreground'
+                }`}>
                 {stories.length}
               </span>
             </button>
@@ -924,17 +1079,15 @@ export default function ProfilePage() {
           <button
             type="button"
             onClick={() => setActiveTab('readixes')}
-            className={`flex items-center gap-2 py-3 px-3 sm:px-1 border-b-2 font-bold text-xs sm:text-sm shrink-0 transition-all cursor-pointer ${
-              activeTab === 'readixes'
+            className={`flex items-center gap-2 py-3 px-3 sm:px-1 border-b-2 font-bold text-xs sm:text-sm shrink-0 transition-all cursor-pointer ${activeTab === 'readixes'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
+              }`}
           >
             <MessageCircle size={16} />
             <span>Readixler</span>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-              activeTab === 'readixes' ? 'bg-primary/20 text-primary' : 'bg-muted/30 text-muted-foreground'
-            }`}>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${activeTab === 'readixes' ? 'bg-primary/20 text-primary' : 'bg-muted/30 text-muted-foreground'
+              }`}>
               {readixes.length}
             </span>
           </button>
@@ -943,17 +1096,15 @@ export default function ProfilePage() {
           <button
             type="button"
             onClick={() => setActiveTab('lists')}
-            className={`flex items-center gap-2 py-3 px-3 sm:px-1 border-b-2 font-bold text-xs sm:text-sm shrink-0 transition-all cursor-pointer ${
-              activeTab === 'lists'
+            className={`flex items-center gap-2 py-3 px-3 sm:px-1 border-b-2 font-bold text-xs sm:text-sm shrink-0 transition-all cursor-pointer ${activeTab === 'lists'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
+              }`}
           >
             <ListMusic size={16} />
             <span>Okuma Listeleri</span>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-              activeTab === 'lists' ? 'bg-primary/20 text-primary' : 'bg-muted/30 text-muted-foreground'
-            }`}>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${activeTab === 'lists' ? 'bg-primary/20 text-primary' : 'bg-muted/30 text-muted-foreground'
+              }`}>
               {readingLists.length}
             </span>
           </button>
@@ -962,17 +1113,15 @@ export default function ProfilePage() {
           <button
             type="button"
             onClick={() => setActiveTab('achievements')}
-            className={`flex items-center gap-2 py-3 px-3 sm:px-1 border-b-2 font-bold text-xs sm:text-sm shrink-0 transition-all cursor-pointer ${
-              activeTab === 'achievements'
+            className={`flex items-center gap-2 py-3 px-3 sm:px-1 border-b-2 font-bold text-xs sm:text-sm shrink-0 transition-all cursor-pointer ${activeTab === 'achievements'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
+              }`}
           >
             <Award size={16} />
             <span>Başarımlar</span>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-              activeTab === 'achievements' ? 'bg-primary/20 text-primary' : 'bg-muted/30 text-muted-foreground'
-            }`}>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${activeTab === 'achievements' ? 'bg-primary/20 text-primary' : 'bg-muted/30 text-muted-foreground'
+              }`}>
               {profileUser.achievements?.earnedBadges?.length || 0}
             </span>
           </button>
@@ -981,11 +1130,10 @@ export default function ProfilePage() {
           <button
             type="button"
             onClick={() => setActiveTab('about')}
-            className={`flex items-center gap-2 py-3 px-3 sm:px-1 border-b-2 font-bold text-xs sm:text-sm shrink-0 transition-all cursor-pointer ${
-              activeTab === 'about'
+            className={`flex items-center gap-2 py-3 px-3 sm:px-1 border-b-2 font-bold text-xs sm:text-sm shrink-0 transition-all cursor-pointer ${activeTab === 'about'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
+              }`}
           >
             <Info size={16} />
             <span>Hakkında</span>
@@ -996,11 +1144,11 @@ export default function ProfilePage() {
       {/* ─────────────────────────────────────────────────────────────
           3. SEKME İÇERİKLERİ
           ───────────────────────────────────────────────────────────── */}
-      
+
       {/* ── SEKME 1: ESERLER ── */}
       {activeTab === 'stories' && (
         <div className="space-y-10 animate-fade-in">
-          
+
           {/* Yazarın Gözdesi (Vitrin Kitabı - Varsa) */}
           {pinnedStory && (
             <div className="relative rounded-3xl bg-gradient-to-br from-primary/10 via-card to-card border border-primary/20 p-5 sm:p-8 overflow-hidden shadow-xl">
@@ -1030,9 +1178,8 @@ export default function ProfilePage() {
                 <div className="flex-1 flex flex-col justify-between text-center sm:text-left min-w-0">
                   <div>
                     <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-2">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                        pinnedStory.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-primary/20 text-primary'
-                      }`}>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${pinnedStory.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-primary/20 text-primary'
+                        }`}>
                         {pinnedStory.status === 'completed' ? 'Tamamlandı' : 'Devam Ediyor'}
                       </span>
                       {pinnedStory.stats?.rating ? (
@@ -1045,7 +1192,7 @@ export default function ProfilePage() {
                       </span>
                     </div>
 
-                    <h2 
+                    <h2
                       onClick={() => {
                         const slug = (pinnedStory as any).slug || pinnedStory.storyId;
                         router.push(pinnedStory.format === 'webtoon' ? `/webtoons/${slug}` : `/story/${slug}`);
@@ -1096,9 +1243,8 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={() => setActiveStoryFormat('all')}
-                className={`px-3 py-1 rounded-lg transition-all shrink-0 cursor-pointer ${
-                  activeStoryFormat === 'all' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                }`}
+                className={`px-3 py-1 rounded-lg transition-all shrink-0 cursor-pointer ${activeStoryFormat === 'all' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                  }`}
               >
                 Tümü
               </button>
@@ -1106,9 +1252,8 @@ export default function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => setActiveStoryFormat('novels')}
-                  className={`px-3 py-1 rounded-lg transition-all shrink-0 cursor-pointer ${
-                    activeStoryFormat === 'novels' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                  }`}
+                  className={`px-3 py-1 rounded-lg transition-all shrink-0 cursor-pointer ${activeStoryFormat === 'novels' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                    }`}
                 >
                   Romanlar
                 </button>
@@ -1117,9 +1262,8 @@ export default function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => setActiveStoryFormat('short_stories')}
-                  className={`px-3 py-1 rounded-lg transition-all shrink-0 cursor-pointer ${
-                    activeStoryFormat === 'short_stories' ? 'bg-amber-500 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                  }`}
+                  className={`px-3 py-1 rounded-lg transition-all shrink-0 cursor-pointer ${activeStoryFormat === 'short_stories' ? 'bg-amber-500 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                    }`}
                 >
                   Kısa Hikayeler
                 </button>
@@ -1128,9 +1272,8 @@ export default function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => setActiveStoryFormat('webtoons')}
-                  className={`px-3 py-1 rounded-lg transition-all shrink-0 cursor-pointer ${
-                    activeStoryFormat === 'webtoons' ? 'bg-emerald-500 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                  }`}
+                  className={`px-3 py-1 rounded-lg transition-all shrink-0 cursor-pointer ${activeStoryFormat === 'webtoons' ? 'bg-emerald-500 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                    }`}
                 >
                   Webtoonlar
                 </button>
@@ -1197,24 +1340,22 @@ export default function ProfilePage() {
       {/* ── SEKME 2: READIXLER ── */}
       {activeTab === 'readixes' && (
         <div className="w-full max-w-2xl mx-auto space-y-6 animate-fade-in">
-          
+
           {/* Alt Sekme: Paylaşılanlar vs Bahsedilenler */}
           <div className="flex items-center justify-center gap-2 p-1 rounded-2xl bg-card border border-border/50 max-w-xs mx-auto text-xs font-semibold">
             <button
               type="button"
               onClick={() => setActiveReadixTab('shared')}
-              className={`flex-1 py-1.5 rounded-xl transition-all ${
-                activeReadixTab === 'shared' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-              }`}
+              className={`flex-1 py-1.5 rounded-xl transition-all ${activeReadixTab === 'shared' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                }`}
             >
               Paylaşılanlar ({readixes.length})
             </button>
             <button
               type="button"
               onClick={() => setActiveReadixTab('mentions')}
-              className={`flex-1 py-1.5 rounded-xl transition-all ${
-                activeReadixTab === 'mentions' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-              }`}
+              className={`flex-1 py-1.5 rounded-xl transition-all ${activeReadixTab === 'mentions' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                }`}
             >
               Bahsedilenler ({mentionedReadixes.length})
             </button>
@@ -1251,8 +1392,8 @@ export default function ProfilePage() {
                       repostOfAuthorName={reposter?.displayName}
                       content={targetReadix.content}
                       mediaUrls={targetReadix.mediaUrls}
-                      createdAtStr={targetReadix.createdAt 
-                        ? new Date((targetReadix.createdAt as any).seconds ? (targetReadix.createdAt as any).seconds * 1000 : (targetReadix.createdAt as unknown as number)).toLocaleDateString() 
+                      createdAtStr={targetReadix.createdAt
+                        ? new Date((targetReadix.createdAt as any).seconds ? (targetReadix.createdAt as any).seconds * 1000 : (targetReadix.createdAt as unknown as number)).toLocaleDateString()
                         : 'Şimdi'}
                       likesCount={targetReadix.stats?.likes || 0}
                       commentsCount={targetReadix.stats?.comments || 0}
@@ -1301,8 +1442,8 @@ export default function ProfilePage() {
                       repostOfAuthorName={reposter?.displayName}
                       content={targetReadix.content}
                       mediaUrls={targetReadix.mediaUrls}
-                      createdAtStr={targetReadix.createdAt 
-                        ? new Date((targetReadix.createdAt as any).seconds ? (targetReadix.createdAt as any).seconds * 1000 : (targetReadix.createdAt as unknown as number)).toLocaleDateString() 
+                      createdAtStr={targetReadix.createdAt
+                        ? new Date((targetReadix.createdAt as any).seconds ? (targetReadix.createdAt as any).seconds * 1000 : (targetReadix.createdAt as unknown as number)).toLocaleDateString()
                         : 'Şimdi'}
                       likesCount={targetReadix.stats?.likes || 0}
                       commentsCount={targetReadix.stats?.comments || 0}
@@ -1362,7 +1503,7 @@ export default function ProfilePage() {
               </div>
               <h4 className="font-bold text-sm text-foreground mb-1">Henüz Bir Okuma Listesi Yok</h4>
               <Typography variant="body" className="text-muted-foreground text-xs max-w-sm mx-auto mb-5">
-                {isOwnProfile 
+                {isOwnProfile
                   ? 'Hikayeleri bir araya getirerek tematik listeler oluşturabilir ve story kartı olarak arkadaşlarınızla paylaşabilirsiniz.'
                   : 'Bu kullanıcı henüz herkese açık bir okuma listesi oluşturmamış.'}
               </Typography>
@@ -1388,49 +1529,162 @@ export default function ProfilePage() {
       )}
 
       {/* ── SEKME 4: BAŞARIMLAR ── */}
-      {activeTab === 'achievements' && (
-        <div className="space-y-6 animate-fade-in">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/30 pb-4">
-            <div>
-              <h3 className="font-bold text-base sm:text-lg text-foreground flex items-center gap-2">
-                <Award size={18} className="text-primary" />
-                <span>Kazanılan ve Kilitli Başarımlar</span>
-              </h3>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Okuma, yazma ve topluluk etkinlikleriyle açılan özel madalyalar.
-              </p>
+      {activeTab === 'achievements' && (() => {
+        const earnedSet = new Set(profileUser?.achievements?.earnedBadges || []);
+        const totalBadges = Object.keys(BADGES).length;
+        const earnedCount = earnedSet.size;
+        const completionRate = Math.round((earnedCount / totalBadges) * 100);
+
+        const writerCount = Object.values(BADGES).filter(b => b.category === 'writer_production' || b.category === 'writer_publishing').length;
+        const writerEarned = Object.values(BADGES).filter(b => (b.category === 'writer_production' || b.category === 'writer_publishing') && earnedSet.has(b.id)).length;
+
+        const readerCount = Object.values(BADGES).filter(b => b.category === 'reader_consumption' || b.category === 'reader_interaction').length;
+        const readerEarned = Object.values(BADGES).filter(b => (b.category === 'reader_consumption' || b.category === 'reader_interaction') && earnedSet.has(b.id)).length;
+
+        return (
+          <div className="space-y-6 animate-fade-in">
+            {/* Üst Başlık & Senkronizasyon Aksiyonu */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card/60 border border-border/40 rounded-3xl p-5 sm:p-6 backdrop-blur-xs">
+              <div className="space-y-1">
+                <h3 className="font-black text-lg sm:text-xl text-foreground flex items-center gap-2.5">
+                  <Trophy size={22} className="text-primary" />
+                  <span>Başarımlar & Rozetler</span>
+                </h3>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  Okuma, yazma ve topluluk yolculuğunda kazandığın özel madalyalar.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                {isOwnProfile && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onPress={handleSyncAchievements}
+                    disabled={isSyncingBadges}
+                    className="flex items-center gap-1.5 text-xs font-bold border-primary/30 text-primary hover:bg-primary/10 rounded-full px-4"
+                  >
+                    <RotateCw size={14} className={isSyncingBadges ? 'animate-spin' : ''} />
+                    <span>{isSyncingBadges ? 'Taranıyor...' : 'Başarımları Senkronize Et'}</span>
+                  </Button>
+                )}
+
+                <div className="flex items-center gap-2 bg-primary/10 border border-primary/25 px-4 py-1.5 rounded-full text-xs font-black text-primary">
+                  <span>{earnedCount} / {totalBadges}</span>
+                  <span className="opacity-70 font-medium">({completionRate}%)</span>
+                </div>
+              </div>
             </div>
 
-            {/* İlerleme Çubuğu */}
-            <div className="flex items-center gap-3 bg-card border border-border/50 px-3.5 py-1.5 rounded-full text-xs font-semibold">
-              <span className="text-muted-foreground">Kazanılan:</span>
-              <span className="text-primary font-black">
-                {profileUser.achievements?.earnedBadges?.length || 0} / {Object.keys(BADGES).length}
-              </span>
-            </div>
-          </div>
+            {/* İstatistik Özet Kartları */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="bg-card/40 border border-border/40 rounded-2xl p-4 flex flex-col justify-between">
+                <span className="text-xs font-semibold text-muted-foreground">Genel Tamamlama</span>
+                <div className="flex items-baseline justify-between mt-2">
+                  <span className="text-xl font-black text-foreground">{earnedCount} <span className="text-xs font-normal text-muted-foreground">/ {totalBadges}</span></span>
+                  <span className="text-xs font-black text-primary">%{completionRate}</span>
+                </div>
+                <div className="w-full h-1.5 bg-muted/20 rounded-full mt-2 overflow-hidden">
+                  <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${completionRate}%` }} />
+                </div>
+              </div>
 
-          {/* Rozet Kartları Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Object.values(BADGES).map(badge => (
-              <BadgeCard
-                key={badge.id}
-                title={badge.title}
-                description={badge.description}
-                icon={badge.icon}
-                tier={badge.tier}
-                isUnlocked={profileUser.achievements?.earnedBadges?.includes(badge.id) || false}
-                conditionDescription={isOwnProfile ? badge.conditionDescription : undefined}
-              />
-            ))}
+              <div className="bg-card/40 border border-border/40 rounded-2xl p-4 flex flex-col justify-between">
+                <span className="text-xs font-semibold text-muted-foreground">Yazar Başarımları</span>
+                <div className="flex items-baseline justify-between mt-2">
+                  <span className="text-xl font-black text-foreground">{writerEarned} <span className="text-xs font-normal text-muted-foreground">/ {writerCount}</span></span>
+                  <span className="text-xs font-black text-amber-500">%{Math.round((writerEarned / writerCount) * 100)}</span>
+                </div>
+                <div className="w-full h-1.5 bg-muted/20 rounded-full mt-2 overflow-hidden">
+                  <div className="h-full bg-amber-500 rounded-full transition-all duration-500" style={{ width: `${Math.round((writerEarned / writerCount) * 100)}%` }} />
+                </div>
+              </div>
+
+              <div className="bg-card/40 border border-border/40 rounded-2xl p-4 flex flex-col justify-between">
+                <span className="text-xs font-semibold text-muted-foreground">Okur & Topluluk Başarımları</span>
+                <div className="flex items-baseline justify-between mt-2">
+                  <span className="text-xl font-black text-foreground">{readerEarned} <span className="text-xs font-normal text-muted-foreground">/ {readerCount}</span></span>
+                  <span className="text-xs font-black text-cyan-400">%{Math.round((readerEarned / readerCount) * 100)}</span>
+                </div>
+                <div className="w-full h-1.5 bg-muted/20 rounded-full mt-2 overflow-hidden">
+                  <div className="h-full bg-cyan-400 rounded-full transition-all duration-500" style={{ width: `${Math.round((readerEarned / readerCount) * 100)}%` }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Kategori ve Durum Filtreleri */}
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+              {[
+                { id: 'all', label: 'Tümü', count: totalBadges },
+                { id: 'earned', label: 'Kazanılanlar', count: earnedCount },
+                { id: 'locked', label: 'Kilitliler', count: totalBadges - earnedCount },
+                { id: 'writer', label: 'Yazar Rozetleri', count: writerCount },
+                { id: 'reader', label: 'Okur & Topluluk', count: readerCount },
+              ].map(f => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setBadgeFilter(f.id as any)}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 ${badgeFilter === f.id
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'bg-card border border-border/40 text-muted-foreground hover:text-foreground'
+                    }`}
+                >
+                  <span>{f.label}</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${badgeFilter === f.id ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-muted/40 text-muted-foreground'
+                    }`}>
+                    {f.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Rozet Kartları Grid */}
+            {filteredBadges.length === 0 ? (
+              <div className="text-center py-16 border border-dashed border-border/50 rounded-3xl bg-card/20 p-8">
+                <Trophy size={36} className="mx-auto text-muted-foreground/40 mb-3" />
+                <h4 className="font-bold text-foreground text-sm sm:text-base">Bu kategoride gösterilecek rozet yok</h4>
+                <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                  Okuma yapmaya veya yazarlık serüvenine devam ederek yeni rozetlerin kilidini açabilirsin.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredBadges.map(badge => {
+                  const isUnlocked = profileUser.achievements?.earnedBadges?.includes(badge.id) || false;
+                  const progress = getBadgeProgress(badge, profileUser.achievements);
+                  const earnedAt = profileUser.achievements?.badgeEarnedDates?.[badge.id];
+
+                  const categoryLabel =
+                    badge.category === 'writer_production' ? 'Yazar: Üretim' :
+                      badge.category === 'writer_publishing' ? 'Yazar: Yayın' :
+                        badge.category === 'reader_consumption' ? 'Okur: Keşif' : 'Topluluk';
+
+                  return (
+                    <BadgeCard
+                      key={badge.id}
+                      title={badge.title}
+                      description={badge.description}
+                      icon={badge.icon}
+                      tier={badge.tier}
+                      isUnlocked={isUnlocked}
+                      progress={progress}
+                      earnedAt={earnedAt}
+                      categoryLabel={categoryLabel}
+                      conditionDescription={badge.conditionDescription}
+                    />
+                  );
+                })}
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── SEKME 5: HAKKINDA & BİYOGRAFİ ── */}
       {activeTab === 'about' && (
         <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
-          
+
           {/* Biyografi Kartı */}
           <div className="rounded-3xl bg-card border border-border/50 p-6 sm:p-8 shadow-sm space-y-4">
             <h3 className="font-bold text-base text-foreground flex items-center gap-2">
@@ -1444,7 +1698,7 @@ export default function ProfilePage() {
 
           {/* Konum, İlgi Alanları ve Sosyal Bağlantılar Kartı */}
           <div className="rounded-3xl bg-card border border-border/50 p-6 sm:p-8 shadow-sm space-y-6">
-            
+
             {/* Meta Bilgiler (Konum, Dil) */}
             <div className="flex flex-wrap items-center gap-6 text-sm">
               <div className="flex items-center gap-2 text-foreground/80 font-medium">
@@ -1593,7 +1847,7 @@ export default function ProfilePage() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
-              
+
               {/* Profil Fotoğrafı Yükleme (Kapak Görseli Yok) */}
               <div className="flex flex-col items-center justify-center pb-2">
                 <div className="relative w-24 h-24 rounded-full border-4 border-card bg-muted overflow-hidden flex items-center justify-center group shadow-xl">
@@ -1833,9 +2087,9 @@ export default function ProfilePage() {
               <Typography variant="h3" className="text-base font-bold">
                 {followModalType === 'followers' ? 'Takipçiler' : 'Takip Edilenler'}
               </Typography>
-              <button 
+              <button
                 type="button"
-                onClick={() => setFollowModalType(null)} 
+                onClick={() => setFollowModalType(null)}
                 className="p-1.5 hover:bg-muted/20 rounded-full transition-colors text-muted-foreground hover:text-foreground cursor-pointer"
               >
                 <X size={18} />

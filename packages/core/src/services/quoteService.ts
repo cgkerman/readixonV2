@@ -27,6 +27,12 @@ export async function saveQuote(
   };
 
   await setDoc(quoteRef, newQuote);
+
+  // Alıntı Ustası başarımı sayacını artır
+  import('./achievementService').then(m => {
+    m.trackInteraction(userId, 'quote_shared').catch(() => {});
+  }).catch(() => {});
+
   return {
     ...newQuote,
     createdAt: Timestamp.now()

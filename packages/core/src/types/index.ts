@@ -30,19 +30,83 @@ export interface UserAchievements {
   publishedChapters: number; // Yayına alınan bölüm sayısı
   publishedShortStories?: number; // Yayına alınan tek bölümlük kısa hikaye sayısı
   completedStories: number; // Tamamlandı işaretlenen hikaye sayısı
+  maxChaptersInStory?: number; // Tek bir hikayedeki en yüksek bölüm sayısı
   commentsReplied: number; // Okuyucu yorumlarına verilen cevap sayısı
+  nightWritingHours?: number; // Gece saatlerinde (00:00-04:00) yazma seansları
+  dailyWords?: Record<string, number>; // Tarih bazlı yazılan kelime sayıları (YYYY-MM-DD -> kelime sayısı)
 
   // --- Okur İstatistikleri ---
   chaptersRead: number; // Okunan toplam bölüm sayısı
   shortStoriesRead?: number; // Okunup tamamlanan kısa hikaye sayısı
   consecutiveReadDays: number; // Peş peşe okunan gün sayısı
   lastReadDate?: string; // Son okunan tarih (YYYY-MM-DD)
+  nightChaptersRead?: number; // Gece saatlerinde okunan bölüm sayısı
+  bingeMaxCount?: number; // Tek oturuşta peş peşe okunan en fazla bölüm sayısı
 
   storiesInLibrary: number; // Kütüphaneye eklenen hikaye sayısı
   commentsGiven: number; // Yapılan toplam yorum sayısı
   likesGiven: number; // Verilen toplam beğeni/oy sayısı
 
+  // --- Evren & Dünya İnşası ---
+  universesCreated?: number;
+  charactersCreated?: number;
+  codexEntriesCreated?: number;
+
+  // --- İnteraktif, Webtoon & Müzik ---
+  interactiveChoicesMade?: number;
+  interactiveEndingsFound?: number;
+  publishedWebtoons?: number;
+  webtoonChaptersRead?: number;
+  soundtrackChaptersPublished?: number;
+  audioChaptersRead?: number;
+
+  // --- Topluluk, Kulüp & Kürasyon ---
+  quotesShared?: number;
+  publishedColumns?: number;
+  curatedListLikes?: number;
+  clubsOwned?: number;
+  clubMessagesSent?: number;
+  morningChaptersRead?: number;
+  reviewsGiven?: number;
+
   earnedBadges: string[]; // Kazanılan rozetlerin ID'leri
+  badgeEarnedDates?: Record<string, string>; // Rozetin kazanıldığı ISO tarihi
+}
+
+export interface NotificationPreferences {
+  newChapters: boolean;
+  commentsAndLikes: boolean;
+  clubActivity: boolean;
+  badgesAndAchievements: boolean;
+  emailDigest: boolean;
+}
+
+export interface PrivacyPreferences {
+  allowAdultContent: boolean; // +18 / Yetişkin İçerik Filtresi
+  isLibraryPublic: boolean; // Profilde kütüphane & okuma listeleri herkese açık mı
+  showReadingActivity: boolean; // Okuma aktiviteleri akışta paylaşılsın mı
+}
+
+export interface WriterPreferences {
+  defaultEditor: 'free' | 'block'; // 'free' (Minimalist) | 'block' (Blok Editör)
+  autoSaveIntervalSeconds: number; // 30, 60, 120
+  defaultAuthorNote?: string;
+}
+
+export interface ReaderPreferences {
+  theme?: 'light' | 'dark' | 'sepia' | 'oled';
+  fontSize?: number;
+  fontFamily?: 'sans' | 'serif' | 'mono';
+  lineHeight?: 'tight' | 'normal' | 'relaxed';
+  textAlign?: 'left' | 'justify';
+  paddingX?: 'compact' | 'normal' | 'wide';
+}
+
+export interface UserPreferences {
+  notifications?: Partial<NotificationPreferences>;
+  privacy?: Partial<PrivacyPreferences>;
+  writer?: Partial<WriterPreferences>;
+  reader?: Partial<ReaderPreferences>;
 }
 
 export interface User {
@@ -89,6 +153,7 @@ export interface User {
   likedReadixIds?: string[]; // Kullanıcının beğendiği readix (gönderi) ID'leri
   bookmarkedReadixIds?: string[]; // Kullanıcının kaydettiği readix ID'leri
   fcmTokens?: string[]; // Cihaz FCM Push bildirim token'ları
+  preferences?: UserPreferences; // Kullanıcı tercihleri (bildirim, gizlilik, okuma, stüdyo)
 }
 
 /** Yeni kullanÄ±cÄ± oluÅŸturulurken kullanÄ±lan kÄ±smi tip */
@@ -337,6 +402,7 @@ export interface Chapter {
   reactionCounts?: Record<string, number>;
   endActivity?: ChapterActivity;
   audioTrack?: ChapterAudioTrack;
+  authorNote?: string; // Bölüm yazar notu
   // Revizyon ve Şeffaflık Alanları
   isRevised?: boolean;
   revisedAt?: Timestamp;

@@ -254,7 +254,7 @@ export const toggleLikeReadingList = async (userId: string, listId: string): Pro
     await deleteDoc(likeDocRef);
     await updateDoc(listRef, {
       likesCount: increment(-1),
-    }).catch(() => {});
+    }).catch(() => { });
     return false;
   } else {
     // Beğen
@@ -264,7 +264,20 @@ export const toggleLikeReadingList = async (userId: string, listId: string): Pro
     });
     await updateDoc(listRef, {
       likesCount: increment(1),
-    }).catch(() => {});
+    }).catch(() => { });
+
+    // Usta Küratör başarımı: Liste sahibinin sayacını artır
+    getDoc(listRef).then(snap => {
+      if (snap.exists()) {
+        const listData = snap.data();
+        if (listData?.userId && listData.userId !== userId) {
+          import('./achievementService').then(m => {
+            m.trackInteraction(listData.userId, 'curated_list_liked').catch(() => { });
+          }).catch(() => { });
+        }
+      }
+    }).catch(() => { });
+
     return true;
   }
 };

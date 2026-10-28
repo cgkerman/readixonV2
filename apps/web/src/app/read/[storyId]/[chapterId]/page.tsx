@@ -148,7 +148,7 @@ export default function ReadPage() {
   const storyId = params.storyId as string;
   const chapterId = params.chapterId as string;
 
-  const { firebaseUser, isInitialized } = useAuthStore();
+  const { firebaseUser, userProfile, isInitialized } = useAuthStore();
   const [chapter, setChapter] = useState<Chapter | null>(null);
   const [story, setStory] = useState<Story | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -624,7 +624,7 @@ export default function ReadPage() {
       const [chaps, chap, fetchedComments, storyData] = await Promise.all([
         getPublishedChapters(storyId),
         fetchChapter(storyId, chapterId),
-        getAllChapterComments(storyId, chapterId),
+        getAllChapterComments(storyId, chapterId, userProfile?.blockedUsers),
         getStoryById(storyId)
       ]);
 
