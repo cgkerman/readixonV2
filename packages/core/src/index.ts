@@ -273,5 +273,6 @@ export * from './services/systemService';
 export * from './services/activityService';
 export * from './services/columnService';
 export { slugify } from './utils/slugify';
+export * from './utils/apiUrl';
 export * from './services/atelierService';
 export * from './types/atelier';

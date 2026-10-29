@@ -18,6 +18,7 @@ import {
 import { db } from '../firebase';
 import type { Chat, Message, ChatParticipant } from '../types';
 import { getUserProfile } from './userService';
+import { getBaseApiUrl } from '../utils/apiUrl';
 
 const CHATS_COLLECTION = 'chats';
 
@@ -198,9 +199,7 @@ export async function sendMessage(chatId: string, senderId: string, text: string
   const pushBody = text || (imageUrl ? '📷 Fotoğraf gönderdi' : audioUrl ? '🎙️ Sesli mesaj gönderdi' : 'Yeni bir mesaj');
 
   if (typeof window !== 'undefined') {
-    const baseUrl = window.location.origin.includes('http') && !window.location.origin.includes('localhost')
-      ? window.location.origin
-      : 'https://www.readixon.com';
+    const baseUrl = getBaseApiUrl();
 
     fetch(`${baseUrl}/api/notifications/push`, {
       method: 'POST',

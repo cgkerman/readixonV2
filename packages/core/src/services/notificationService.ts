@@ -15,6 +15,7 @@ import {
 import { db } from '../firebase';
 import { USERS_COLLECTION } from './userService';
 import type { AppNotification } from '../types';
+import { getBaseApiUrl } from '../utils/apiUrl';
 
 /**
  * Creates a new notification for a specific user.
@@ -113,9 +114,7 @@ export async function createNotification(
           bodyText = `${actor} sana bir bildirim gönderdi.`;
       }
 
-      const baseUrl = window.location.origin.includes('http') && !window.location.origin.includes('localhost')
-        ? window.location.origin
-        : 'https://www.readixon.com';
+      const baseUrl = getBaseApiUrl();
 
       fetch(`${baseUrl}/api/notifications/push`, {
         method: 'POST',

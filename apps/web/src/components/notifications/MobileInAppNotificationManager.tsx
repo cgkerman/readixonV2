@@ -8,7 +8,7 @@ import { MessageCircle, Bell, X, ChevronRight } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { collection, query, where, orderBy, limit, onSnapshot, doc, updateDoc, arrayUnion } from 'firebase/firestore';
-import { db, useAuthStore } from '@readixon/core';
+import { db, useAuthStore, getBaseApiUrl } from '@readixon/core';
 import type { Chat, AppNotification } from '@readixon/core';
 import { playNotificationSound, triggerNotificationHaptic } from '@/utils/notificationEffects';
 
@@ -41,9 +41,7 @@ export function MobileInAppNotificationManager() {
     if (prevUid && prevUid !== currentUid) {
       const savedToken = typeof window !== 'undefined' ? localStorage.getItem('readixon_fcm_token') : null;
       if (savedToken) {
-        const baseUrl = typeof window !== 'undefined' && window.location.origin.includes('http') && !window.location.origin.includes('localhost')
-          ? window.location.origin
-          : 'https://www.readixon.com';
+        const baseUrl = getBaseApiUrl();
 
         fetch(`${baseUrl}/api/notifications/unregister-token`, {
           method: 'POST',
@@ -90,9 +88,7 @@ export function MobileInAppNotificationManager() {
               localStorage.setItem('readixon_fcm_token', token.value);
             }
 
-            const baseUrl = typeof window !== 'undefined' && window.location.origin.includes('http') && !window.location.origin.includes('localhost')
-              ? window.location.origin
-              : 'https://www.readixon.com';
+            const baseUrl = getBaseApiUrl();
 
             // 1. Sunucu API üzerinden kaydet (Admin SDK tüm eski hesaplardan token'ı temizler)
             try {
