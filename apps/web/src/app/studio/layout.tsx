@@ -29,9 +29,10 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
   const { firebaseUser, userProfile, isLoading } = useAuthStore();
   const [isMoreSheetOpen, setIsMoreSheetOpen] = useState(false);
 
-  // Masaüstü Üst Barında Yer Alan Tüm 8 Öğe
+  // Masaüstü Üst Barında Yer Alan Tüm 9 Öğe
   const desktopNavItems = [
     { name: 'Romanlarım', href: '/studio', icon: BookOpen },
+    { name: 'Web Sitem', href: '/studio/atelier', icon: Globe },
     { name: 'Köşe Yazısı', href: '/studio/columns', icon: Newspaper },
     { name: 'Serilerim', href: '/studio/series', icon: Layers },
     { name: 'Evrenlerim', href: '/studio/universes', icon: Sparkles },
@@ -54,6 +55,15 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
 
   // Alt Çekmecede (Drawer / Bottom Sheet) Yer Alan Zengin Stüdyo Araçları
   const secondaryStudioTools = [
+    {
+      name: 'Atelier Web Sitesi',
+      shortName: 'Web Sitem',
+      href: '/studio/atelier',
+      icon: Globe,
+      description: 'Kendi adınıza prestijli, bağımsız yazar web sitenizi tasarlayın ve yayınlayın',
+      badge: 'v3.0 Yeni',
+      color: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
+    },
     {
       name: 'Köşe Yazısı Masası',
       shortName: 'Köşe Yazısı',

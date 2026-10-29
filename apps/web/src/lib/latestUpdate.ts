@@ -12,19 +12,20 @@ export interface SystemUpdateInfo {
  * Hem /about zaman çizelgesi hem de Yazar Stüdyosu ilk açılış ekranında kullanılır.
  */
 export const LATEST_SYSTEM_UPDATE: SystemUpdateInfo = {
-  version: 'v2.9',
-  badge: 'En Son Güncelleme',
+  version: 'v3.0.0',
+  badge: 'Büyük Sürüm',
   date: '29 Ekim 2026',
-  title: 'Kapsamlı Ayarlar Merkezi, Mobil Stüdyo Kapsül Dock, Rozetler 2.0 & Uçtan Uca Kullanıcı Engelleme',
-  desc: 'Readixon deneyimini baştan aşağı güçlendiren büyük v2.9 sürümü yayında! 7 kategorili interaktif Ayarlar Merkezi, mobil ve tabletler için iOS tarzı yüzen alt kapsül bar ve hızlı işlem çekmecesi, baştan yazılan Rozet & Başarım 2.0 ekosistemi, yetişkin içerik filtresi, uçtan uca kullanıcı engelleme güvenliği ve okuma listesi performans iyileştirmeleri Yazar Stüdyosu ve Web platformunda.',
+  title: 'Readixon Atelier: Bağımsız Yazar Web Sitesi Motoru, Prestij Şablonları & Kişisel Portfolyo Mimarisi',
+  desc: 'Readixon platformunun en büyük dönüm noktası olan v3.0.0 yayında! Yazarlarımızın sıfır kodlama ve sıfır hosting masrafıyla, 2 dakika içinde kendi adlarına bağımsız görünen lüks web sitelerini kurup yönetebildiği yeni nesil Readixon Atelier vitrin motoru.',
   highlights: [
-    'Kapsamlı Ayarlar Merkezi (Settings v2.0): 7 tam fonksiyonel kategoriyle (Hesap, Okuma Tercihleri, Görünüm, Bildirimler, Gizlilik, Yazar Tercihleri ve Tehlikeli Bölge) tüm kullanıcı ve yazar ayarlarının tek merkezden yönetimi',
-    'Canlı Okuma Tercihleri Önizlemesi: Yazı boyutu, satır yüksekliği, font ailesi (Serif, Sans, Mono) ve sayfa genişliği değişikliklerinin anlık canlı kitap önizleme kartında test edilebilmesi',
-    'Mobil & Tablet Stüdyo Kapsül Dock: Mobil ve tablet ekranlarındaki sıkışık alt çubuğun yerini alan 5 yuvalı yüzen cam efektli dock ve başparmak dostu Framer Motion hızlı araçlar çekmecesi (Quick Tools Sheet)',
-    'Rozet & Başarım Sistemi 2.0: Mantıksal hataları giderilmiş ve yeni eklenen rozetler (Gece Kuşu, Kelime Ustası, Usta Eleştirmen, Düello Fatihi, Seri Katili vb.) ile dinamik ilerleme çubuklu başarımlar vitrini',
-    'Uçtan Uca Kullanıcı Engelleme & Güvenlik: Profil menüsünden tek tıkla engelleme; engellenen kullanıcıların sohbet başlatmasının, yorumlarının ve hikayelerinin ana akış, keşfet ve bölümlerde otomatik filtrelenmesi',
-    'Engellenen Kullanıcılar Yönetimi: Ayarlar > Gizlilik sekmesinde engellenen kişilerin anlık listesi ve tek dokunuşla engeli kaldırma aksiyonu',
-    'Yazar Stüdyosu Varsayılanları: Otomatik kaydetme süresi belirleme ve yeni bölümlere otomatik eklenen varsayılan bölüm sonu yazar notu yapılandırması',
-    'Okuma Listeleri & Profil Güvenlik İyileştirmeleri: Profilde okuma listelerinin kesintisiz yüklenmesi ve gizlilik uyumlu Firestore optimizasyonları',
+    'Readixon Atelier Yazar Web Sitesi Motoru (/studio/atelier): PC, tablet ve mobil cihazlarda kusursuz çalışan split-screen canlı önizlemeli tasarım stüdyosu',
+    '4 Prestij Tasarım Şablonu: The Novelist (Zarif Edebi Klasik), The Worldbuilder (Sinematik & Epik Fantezi), The Webtoon & Pop (Modern & Dinamik) ve The Minimalist (Sade Tipografik)',
+    'Kusursuz 4\'lü Işık & Görünüm Motoru: Ziyaretçilerin ve yazarların tek dokunuşla geçiş yapabildiği Açık (Gündüz), Gece (Dark), Sepya (Kitap Parşömeni) ve OLED (Saf Siyah) modları',
+    'Kamuya Açık İzole Yazar Vitrini (/atelier/@username): Readixon genel arayüzünden tamamen arındırılmış bağımsız kişisel web sitesi hissi ("Bağımsızlık İllüzyonu")',
+    '3D Kitap Vitrini & Okuma Köprüsü: Yayınlanan romanların otomatik listelenmesi, zengin kapak ve detay modalı ile tek tıkla Readixon Reader geçişi',
+    'Evren Stüdyosu Entegrasyonu: Yazarın kurgusal evrenini, interaktif dünya haritasını ve karakter codex galerisini doğrudan kendi sitesine gömebilmesi',
+    'Edebi Bülten & Hayran Aboneliği: Okurların tek tıkla e-posta ile abone olabilmesi ve yazar için yerleşik abone yönetim paneli',
+    'Yazar Spotify Çalma Listesi & Sosyal Ağlar: Yazarken dinlenen resmi atmosfer müziklerini ve sosyal kanalları doğrudan sitede sergileme',
+    'Gelişmiş Tipografi Seçicisi: Playfair Display, Cinzel, Outfit, Lora, Merriweather ve Plus Jakarta Sans font desteği',
   ],
 };

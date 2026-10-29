@@ -154,8 +154,26 @@ interface TimelineItem {
 
 const TIMELINE_DATA: TimelineItem[] = [
   {
-    version: 'v2.9',
+    version: 'v3.0.0',
     badge: 'En Son Güncelleme',
+    date: '29 Ekim 2026',
+    title: 'Readixon Atelier: Bağımsız Yazar Web Sitesi Motoru, Prestij Şablonları & Kişisel Portfolyo Mimarisi',
+    desc: 'Yazarlarımızın hiçbir kodlama ve hosting masrafına ihtiyaç duymadan, 2 dakikada kendi adlarına bağımsız görünen lüks web sitelerini kurup yönetebildiği yeni nesil vitrin motoru Atelier yayında! 4 prestij tasarım şablonu (The Novelist, The Worldbuilder, The Webtoon & Pop, The Minimalist), kusursuz 4\'lü görünüm motoru (Açık, Gece, Sepya, OLED), 3D kitap vitrini ve Evren Stüdyosu canlı entegrasyonu.',
+    highlights: [
+      'Readixon Atelier Yazar Web Sitesi Motoru (/studio/atelier): PC, tablet ve mobilde kusursuz çalışan split-screen canlı önizlemeli tasarım stüdyosu',
+      '4 Prestij Tasarım Şablonu: The Novelist (Zarif Edebi Klasik), The Worldbuilder (Sinematik & Epik Fantezi), The Webtoon & Pop (Modern & Dinamik) ve The Minimalist (Sade Tipografik)',
+      'Kusursuz 4\'lü Işık & Görünüm Motoru: Ziyaretçilerin ve yazarların tek dokunuşla geçiş yapabildiği Açık (Gündüz), Gece (Dark), Sepya (Kitap Parşömeni) ve OLED (Saf Siyah) modları',
+      'Kamuya Açık İzole Yazar Vitrini (/atelier/@username): Readixon genel arayüzünden tamamen arındırılmış bağımsız kişisel web sitesi hissi ("Bağımsızlık İllüzyonu")',
+      '3D Kitap Vitrini & Okuma Köprüsü: Yayınlanan romanların otomatik listelenmesi, zengin kapak ve detay modalı ile tek tıkla Readixon Reader geçişi',
+      'Evren Stüdyosu Entegrasyonu: Yazarın kurgusal evrenini, interaktif dünya haritasını ve karakter codex galerisini doğrudan kendi sitesine gömebilmesi',
+      'Edebi Bülten & Hayran Aboneliği: Okurların tek tıkla e-posta ile abone olabilmesi ve yazar için yerleşik abone yönetim paneli',
+      'Gelişmiş Tipografi Seçicisi: Playfair Display, Cinzel, Outfit, Lora, Merriweather ve Plus Jakarta Sans font desteği',
+    ],
+    icon: Globe,
+  },
+  {
+    version: 'v2.9',
+    badge: 'Ayarlar & Güvenlik',
     date: '29 Ekim 2026',
     title: 'Kapsamlı Ayarlar Merkezi, Mobil Stüdyo Kapsül Dock, Rozetler 2.0 & Uçtan Uca Kullanıcı Engelleme',
     desc: 'Readixon deneyimini baştan aşağı güçlendiren büyük v2.9 sürümü yayında! 7 kategorili interaktif Ayarlar Merkezi, mobil ve tabletler için iOS tarzı yüzen alt kapsül bar ve hızlı işlem çekmecesi, baştan yazılan Rozet & Başarım 2.0 ekosistemi, yetişkin içerik filtresi, uçtan uca kullanıcı engelleme güvenliği ve okuma listesi performans iyileştirmeleri Yazar Stüdyosu ve Web platformunda.',
