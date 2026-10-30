@@ -910,7 +910,6 @@ export default function ReadPage() {
       setComments(prev => [newComment, ...prev]);
       setCommentText('');
       setReplyingToComment(null);
-      trackInteraction(firebaseUser.uid, 'comment_given').catch(console.error);
     } catch (error) {
       console.error("Yorum eklenirken hata:", error);
     } finally {
@@ -951,7 +950,6 @@ export default function ReadPage() {
 
       setParagraphCommentText('');
       setReplyingToParagraphComment(null);
-      trackInteraction(firebaseUser.uid, 'comment_given').catch(console.error);
     } catch (error) {
       console.error("Paragraf yorumu eklenirken hata:", error);
     } finally {
@@ -1466,6 +1464,9 @@ export default function ReadPage() {
             paragraphCommentCounts={paragraphCommentCounts}
             onQuoteShare={(text) => {
               if (!story) return;
+              if (firebaseUser) {
+                trackInteraction(firebaseUser.uid, 'quote_shared').catch(() => {});
+              }
               const hashtag = story.title.replace(/[^\p{L}\p{N}]/gu, '');
               const mention = story.authorUsername ? `@${story.authorUsername}` : '';
               const content = `${text}\n\n#${hashtag} ${mention}`;

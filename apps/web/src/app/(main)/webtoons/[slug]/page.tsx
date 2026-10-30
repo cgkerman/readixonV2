@@ -287,9 +287,6 @@ export default function WebtoonDetailPage() {
           likes: nowLiked ? (prev.stats.likes || 0) + 1 : Math.max(0, (prev.stats.likes || 0) - 1)
         }
       } : null);
-      if (nowLiked) {
-        trackInteraction(firebaseUser.uid, 'like_given').catch(console.error);
-      }
     } catch (err) {
       console.error("Beğenme işlemi başarısız:", err);
     } finally {

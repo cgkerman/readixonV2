@@ -20,7 +20,7 @@ export default function ChapterEditorPage() {
   const storyId = params.storyId as string;
   const chapterId = params.chapterId as string;
 
-  const { userProfile } = useAuthStore();
+  const { userProfile, firebaseUser } = useAuthStore();
   const [chapter, setChapter] = useState<Chapter | null>(null);
   const [allChapters, setAllChapters] = useState<Chapter[]>([]);
   const [story, setStory] = useState<Story | null>(null);
@@ -166,23 +166,24 @@ export default function ChapterEditorPage() {
       // Update local chapters list to reflect title changes instantly
       setAllChapters(prev => prev.map(c => c.chapterId === chapterId ? { ...c, title: chapter.title, status: chapter.status } : c));
 
-      if (userProfile) {
+      const activeUid = userProfile?.uid || firebaseUser?.uid;
+      if (activeUid) {
         if (shouldNotify) {
-          trackInteraction(userProfile.uid, 'chapter_published', {
+          trackInteraction(activeUid, 'chapter_published', {
             storyChapterCount: allChapters.length
           }).catch(e => console.error("Badge error:", e));
           if (story?.format === 'short_story') {
-            trackInteraction(userProfile.uid, 'short_story_published').catch(e => console.error("Short story badge error:", e));
+            trackInteraction(activeUid, 'short_story_published').catch(e => console.error("Short story badge error:", e));
           }
           if (story?.format === 'webtoon') {
-            trackInteraction(userProfile.uid, 'webtoon_published').catch(() => {});
+            trackInteraction(activeUid, 'webtoon_published').catch(() => {});
           }
           if (story?.format === 'interactive') {
             const endingCount = story.stats?.endingCount || (chapter.isEnding ? 1 : 0);
-            trackInteraction(userProfile.uid, 'interactive_story_published', { endingCount }).catch(() => {});
+            trackInteraction(activeUid, 'interactive_story_published', { endingCount }).catch(() => {});
           }
           if (chapter.audioTrack?.url) {
-            trackInteraction(userProfile.uid, 'soundtrack_published').catch(() => {});
+            trackInteraction(activeUid, 'soundtrack_published').catch(() => {});
           }
         }
 
@@ -190,7 +191,7 @@ export default function ChapterEditorPage() {
         const currentWords = getWordCount();
         if (initialWordCountRef.current !== null && currentWords > initialWordCountRef.current) {
           const addedWords = currentWords - initialWordCountRef.current;
-          trackWordCount(userProfile.uid, addedWords).catch(e => console.error("Word tracking error:", e));
+          trackWordCount(activeUid, addedWords).catch(e => console.error("Word tracking error:", e));
           initialWordCountRef.current = currentWords; // Yeni temel seviye
         }
       }

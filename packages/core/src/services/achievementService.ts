@@ -1,4 +1,5 @@
-import { doc, getDoc, updateDoc, collection, query, where, getDocs, getCountFromServer } from 'firebase/firestore';
+
+import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, getCountFromServer } from 'firebase/firestore';
 import { db } from '../firebase';
 import { USERS_COLLECTION } from './userService';
 import { BADGES } from '../constants/badges';
@@ -85,7 +86,14 @@ async function updateAchievements(uid: string, updates: Partial<UserAchievements
     firestoreUpdates[`achievements.${key}`] = value;
   }
 
-  await updateDoc(userRef, firestoreUpdates);
+  try {
+    await updateDoc(userRef, firestoreUpdates);
+  } catch (err: any) {
+    // Fallback: Belge veya achievements alanı mevcut değilse güvenle merge et
+    await setDoc(userRef, firestoreUpdates, { merge: true }).catch((e: any) => {
+      console.error("Başarım güncellenirken kritik hata:", e);
+    });
+  }
 }
 
 function getTodayString(): string {
@@ -730,29 +738,49 @@ export async function syncUserAchievements(uid: string): Promise<{
     // Mevcut sayacı koru
   }
 
-  // 5. Okunan toplam bölümleri ve interaktif sonları senkronize et
+  // 5. Okunan toplam bölümleri, formatları ve interaktif sonları senkronize et
   let realChaptersRead = currentAchievements.chaptersRead || 0;
   let realInteractiveEndings = currentAchievements.interactiveEndingsFound || 0;
   let realInteractiveChoices = currentAchievements.interactiveChoicesMade || 0;
+  let realShortStoriesRead = currentAchievements.shortStoriesRead || 0;
+  let realWebtoonChaptersRead = currentAchievements.webtoonChaptersRead || 0;
 
   try {
     const progressCol = collection(db, 'users', uid, 'readingProgress');
     const progressSnap = await getDocs(progressCol);
     let totalCompletedChaps = 0;
+    let completedShortStories = 0;
+    let completedWebtoonChaps = 0;
 
-    progressSnap.forEach(pDoc => {
-      const pData = pDoc.data();
-      if (Array.isArray(pData.completedChapters)) {
-        totalCompletedChaps += pData.completedChapters.length;
-      }
-      if (Array.isArray(pData.discoveredEndings)) {
-        realInteractiveEndings = Math.max(realInteractiveEndings, pData.discoveredEndings.length);
-      }
-      if (Array.isArray(pData.pathHistory)) {
-        realInteractiveChoices = Math.max(realInteractiveChoices, pData.pathHistory.length);
-      }
-    });
+    await Promise.all(
+      progressSnap.docs.map(async pDoc => {
+        const pData = pDoc.data();
+        const chapsCount = Array.isArray(pData.completedChapters) ? pData.completedChapters.length : 0;
+        if (chapsCount > 0) {
+          totalCompletedChaps += chapsCount;
+          try {
+            const sSnap = await getDoc(doc(db, 'stories', pDoc.id));
+            if (sSnap.exists()) {
+              const fmt = sSnap.data().format;
+              if (fmt === 'short_story') {
+                completedShortStories += 1;
+              } else if (fmt === 'webtoon') {
+                completedWebtoonChaps += chapsCount;
+              }
+            }
+          } catch {}
+        }
+        if (Array.isArray(pData.discoveredEndings)) {
+          realInteractiveEndings = Math.max(realInteractiveEndings, pData.discoveredEndings.length);
+        }
+        if (Array.isArray(pData.pathHistory)) {
+          realInteractiveChoices = Math.max(realInteractiveChoices, pData.pathHistory.length);
+        }
+      })
+    );
     realChaptersRead = Math.max(realChaptersRead, totalCompletedChaps);
+    realShortStoriesRead = Math.max(realShortStoriesRead, completedShortStories);
+    realWebtoonChaptersRead = Math.max(realWebtoonChaptersRead, completedWebtoonChaps);
   } catch {
     // Mevcut sayacı koru
   }
@@ -767,7 +795,61 @@ export async function syncUserAchievements(uid: string): Promise<{
     // Mevcut sayacı koru
   }
 
-  // 7. Okuma serisi kontrolü (Kopuksa sıfırla)
+  // 7. Okuma listeleri beğenilerini senkronize et (Usta Küratör)
+  let realListLikes = currentAchievements.curatedListLikes || 0;
+  try {
+    const listsQ = query(
+      collection(db, 'readingLists'),
+      where('userId', '==', uid)
+    );
+    const listsSnap = await getDocs(listsQ);
+    listsSnap.forEach(lDoc => {
+      const lData = lDoc.data();
+      const likes = lData.likesCount || 0;
+      if (likes > realListLikes) {
+        realListLikes = likes;
+      }
+    });
+  } catch {}
+
+  // 8. Kulüp sahipliği ve üye sayılarını senkronize et (Kulüp Lideri)
+  let realClubsOwned = currentAchievements.clubsOwned || 0;
+  let realMaxClubMembers = currentAchievements.maxClubMembers || 0;
+  try {
+    const clubsQ = query(
+      collection(db, 'clubs'),
+      where('creatorId', '==', uid)
+    );
+    const clubsSnap = await getDocs(clubsQ);
+    realClubsOwned = Math.max(realClubsOwned, clubsSnap.size);
+    clubsSnap.forEach(cDoc => {
+      const cData = cDoc.data();
+      const members = cData.stats?.membersCount || 1;
+      if (members > realMaxClubMembers) {
+        realMaxClubMembers = members;
+      }
+    });
+  } catch {}
+
+  // 9. Readix gönderilerini senkronize et (Trend Yaratan)
+  let reachedViralVoice = false;
+  try {
+    const readixQ = query(
+      collection(db, 'readixes'),
+      where('authorId', '==', uid)
+    );
+    const readixSnap = await getDocs(readixQ);
+    readixSnap.forEach(rDoc => {
+      const rData = rDoc.data();
+      const likes = rData.stats?.likes || 0;
+      const comments = rData.stats?.comments || 0;
+      if (likes >= 25 || comments >= 25) {
+        reachedViralVoice = true;
+      }
+    });
+  } catch {}
+
+  // 10. Okuma serisi kontrolü (Kopuksa sıfırla)
   const today = getTodayString();
   const yesterday = getYesterdayString();
   let currentReadStreak = currentAchievements.consecutiveReadDays || 0;
@@ -785,7 +867,12 @@ export async function syncUserAchievements(uid: string): Promise<{
     maxInteractiveEndingsInStory: Math.max(currentAchievements.maxInteractiveEndingsInStory || 0, realMaxInteractiveEndings),
     storiesInLibrary: realLibraryCount,
     chaptersRead: realChaptersRead,
+    shortStoriesRead: realShortStoriesRead,
+    webtoonChaptersRead: realWebtoonChaptersRead,
     quotesShared: realQuotesCount,
+    curatedListLikes: realListLikes,
+    clubsOwned: realClubsOwned,
+    maxClubMembers: realMaxClubMembers,
     consecutiveReadDays: currentReadStreak,
     universesCreated: realUniversesCount,
     charactersCreated: Math.max(currentAchievements.charactersCreated || 0, realCharactersCount),
@@ -797,10 +884,11 @@ export async function syncUserAchievements(uid: string): Promise<{
 
   await updateAchievements(uid, updates);
 
-  // Özel tekil okuma & yorum başarımlarını tanımla
+  // Özel tekil okuma, yorum & viral ses başarımlarını tanımla
   if (reached100Reads) await awardBadge(uid, 'first_crowd_100');
   if (reached1000Reads) await awardBadge(uid, 'first_crowd_1000');
   if (reached20CommentsOnChapter) await awardBadge(uid, 'controversial');
+  if (reachedViralVoice) await awardBadge(uid, 'viral_voice');
 
   // Tüm kuralları tekrar değerlendir
   const newlyEarned = await evaluateBadges(uid);

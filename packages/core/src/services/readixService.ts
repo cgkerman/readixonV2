@@ -591,6 +591,9 @@ export async function addReadixComment(
       
       // Eğer bir yoruma yanıt ise o yorumun sahibini de bulabiliriz, ancak şimdilik gönderi sahibine bildirim gidiyor
       // veya hem gönderi hem yorum sahibine gidebilir. Biz şimdilik gönderi sahibine gönderelim.
+      if (((readixData.stats?.comments || 0) + 1 >= 25 || (readixData.stats?.likes || 0) >= 25) && readixData.authorId) {
+        import('./achievementService').then(m => m.awardBadge(readixData.authorId, 'viral_voice')).catch(() => {});
+      }
       await createNotification({
         userId: readixData.authorId,
         actorId: authorId,

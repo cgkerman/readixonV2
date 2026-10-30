@@ -242,6 +242,13 @@ export default function StoryDetailAdminPage() {
           const { trackInteraction } = await import('@readixon/core');
           trackInteraction(story.authorId, 'short_story_published').catch(() => {});
         }
+        if (story.status === 'draft' && (status === 'ongoing' || status === 'completed')) {
+          const { trackInteraction } = await import('@readixon/core');
+          trackInteraction(story.authorId, 'chapter_published').catch(() => {});
+          if (story.format === 'webtoon') {
+            trackInteraction(story.authorId, 'webtoon_published').catch(() => {});
+          }
+        }
         if (status === 'completed' && story.status !== 'completed') {
           const { trackInteraction } = await import('@readixon/core');
           trackInteraction(story.authorId, 'story_completed').catch(() => {});
