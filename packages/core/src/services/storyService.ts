@@ -860,6 +860,7 @@ export const syncReadingProgress = async (
     if (interactiveData) {
       if (interactiveData.resetPathHistory) {
         pathHistory = interactiveData.resetPathHistory;
+        import('./achievementService').then(m => m.trackInteraction(userId, 'interactive_rewind')).catch(() => {});
       } else if (interactiveData.pathHistoryStep) {
         // En son adıma ekle (eğer son adım zaten o değilse)
         if (pathHistory[pathHistory.length - 1] !== interactiveData.pathHistoryStep) {
@@ -1070,6 +1071,10 @@ export const toggleSaveStory = async (userId: string, storyId: string): Promise<
         storyId,
         savedAt: serverTimestamp()
       });
+      // Kütüphaneye ekleme başarımı (Kütüphaneci)
+      import('./achievementService').then(m => {
+        m.trackInteraction(userId, 'story_library_added').catch(() => {});
+      }).catch(() => {});
       return true; // Saved
     }
   } catch (error) {

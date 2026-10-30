@@ -141,6 +141,12 @@ export const createUniverse = async (authorId: string, data: Partial<Universe>):
   }
 
   await batch.commit();
+
+  // Evren Mimarı başarımı (en az 2 hikaye bağlı evren)
+  if (authorId && (data.connectedStoryIds?.length || 0) >= 2) {
+    import('./achievementService').then(m => m.trackInteraction(authorId, 'universe_created')).catch(() => {});
+  }
+
   return universeId;
 };
 
@@ -153,6 +159,14 @@ export const updateUniverse = async (universeId: string, data: Partial<Universe>
     ...data,
     updatedAt: serverTimestamp(),
   };
+
+  if (data.connectedStoryIds && data.connectedStoryIds.length >= 2) {
+    getDoc(docRef).then(snap => {
+      if (snap.exists() && snap.data().authorId) {
+        import('./achievementService').then(m => m.trackInteraction(snap.data().authorId, 'universe_created')).catch(() => {});
+      }
+    }).catch(() => {});
+  }
 
   if (data.title) {
     updateData.slug = generateUniverseSlug(data.title.trim(), universeId);
@@ -803,6 +817,14 @@ export const createUniverseGlossaryTerm = async (
   if (data.spoilerThresholdChapter !== undefined) item.spoilerThresholdChapter = data.spoilerThresholdChapter;
 
   await setDoc(newRef, cleanFirestoreData(item));
+
+  // Codex terimi başarımı (Ansiklopedist)
+  getDoc(doc(db, 'universes', universeId)).then(uSnap => {
+    if (uSnap.exists() && uSnap.data().authorId) {
+      import('./achievementService').then(m => m.trackInteraction(uSnap.data().authorId, 'codex_created')).catch(() => {});
+    }
+  }).catch(() => {});
+
   return id;
 };
 
@@ -862,6 +884,14 @@ export const createUniverseLore = async (
   if (data.spoilerThresholdChapter !== undefined) item.spoilerThresholdChapter = data.spoilerThresholdChapter;
 
   await setDoc(newRef, cleanFirestoreData(item));
+
+  // Codex terimi başarımı (Ansiklopedist)
+  getDoc(doc(db, 'universes', universeId)).then(uSnap => {
+    if (uSnap.exists() && uSnap.data().authorId) {
+      import('./achievementService').then(m => m.trackInteraction(uSnap.data().authorId, 'codex_created')).catch(() => {});
+    }
+  }).catch(() => {});
+
   return id;
 };
 
@@ -924,6 +954,13 @@ export const createUniverseCharacter = async (
       'stats.characterCount': chars.length,
       updatedAt: serverTimestamp(),
     });
+
+    // Karakter Simyacısı başarımı
+    getDoc(doc(db, 'universes', universeId)).then(uSnap => {
+      if (uSnap.exists() && uSnap.data().authorId) {
+        import('./achievementService').then(m => m.trackInteraction(uSnap.data().authorId, 'character_created')).catch(() => {});
+      }
+    }).catch(() => {});
   } catch (err) {
     console.warn('Evren karakter istatistiği güncellenemedi:', err);
   }
@@ -953,6 +990,13 @@ export const deleteUniverseCharacter = async (
       'stats.characterCount': chars.length,
       updatedAt: serverTimestamp(),
     });
+
+    // Karakter Simyacısı başarımı
+    getDoc(doc(db, 'universes', universeId)).then(uSnap => {
+      if (uSnap.exists() && uSnap.data().authorId) {
+        import('./achievementService').then(m => m.trackInteraction(uSnap.data().authorId, 'character_created')).catch(() => {});
+      }
+    }).catch(() => {});
   } catch (err) {
     console.warn('Evren karakter silme sonrası istatistik güncellenemedi:', err);
   }
@@ -1172,6 +1216,14 @@ export const createUniverseOrganization = async (
   }
 
   await setDoc(newRef, cleanFirestoreData(item));
+
+  // Codex terimi başarımı (Ansiklopedist)
+  getDoc(doc(db, 'universes', universeId)).then(uSnap => {
+    if (uSnap.exists() && uSnap.data().authorId) {
+      import('./achievementService').then(m => m.trackInteraction(uSnap.data().authorId, 'codex_created')).catch(() => {});
+    }
+  }).catch(() => {});
+
   return id;
 };
 
@@ -1239,6 +1291,14 @@ export const createUniverseItem = async (
   }
 
   await setDoc(newRef, cleanFirestoreData(item));
+
+  // Codex terimi başarımı (Ansiklopedist)
+  getDoc(doc(db, 'universes', universeId)).then(uSnap => {
+    if (uSnap.exists() && uSnap.data().authorId) {
+      import('./achievementService').then(m => m.trackInteraction(uSnap.data().authorId, 'codex_created')).catch(() => {});
+    }
+  }).catch(() => {});
+
   return id;
 };
 
@@ -1300,6 +1360,14 @@ export const createUniversePowerSystem = async (
   };
 
   await setDoc(newRef, cleanFirestoreData(item));
+
+  // Codex terimi başarımı (Ansiklopedist)
+  getDoc(doc(db, 'universes', universeId)).then(uSnap => {
+    if (uSnap.exists() && uSnap.data().authorId) {
+      import('./achievementService').then(m => m.trackInteraction(uSnap.data().authorId, 'codex_created')).catch(() => {});
+    }
+  }).catch(() => {});
+
   return id;
 };
 
@@ -1376,6 +1444,14 @@ export const createUniverseRace = async (
   }
 
   await setDoc(newRef, cleanFirestoreData(item));
+
+  // Codex terimi başarımı (Ansiklopedist)
+  getDoc(doc(db, 'universes', universeId)).then(uSnap => {
+    if (uSnap.exists() && uSnap.data().authorId) {
+      import('./achievementService').then(m => m.trackInteraction(uSnap.data().authorId, 'codex_created')).catch(() => {});
+    }
+  }).catch(() => {});
+
   return id;
 };
 
@@ -1450,6 +1526,14 @@ export const createUniverseCreature = async (
   }
 
   await setDoc(newRef, cleanFirestoreData(item));
+
+  // Codex terimi başarımı (Ansiklopedist)
+  getDoc(doc(db, 'universes', universeId)).then(uSnap => {
+    if (uSnap.exists() && uSnap.data().authorId) {
+      import('./achievementService').then(m => m.trackInteraction(uSnap.data().authorId, 'codex_created')).catch(() => {});
+    }
+  }).catch(() => {});
+
   return id;
 };
 
@@ -1525,6 +1609,14 @@ export const createUniverseCulture = async (
   }
 
   await setDoc(newRef, cleanFirestoreData(item));
+
+  // Codex terimi başarımı (Ansiklopedist)
+  getDoc(doc(db, 'universes', universeId)).then(uSnap => {
+    if (uSnap.exists() && uSnap.data().authorId) {
+      import('./achievementService').then(m => m.trackInteraction(uSnap.data().authorId, 'codex_created')).catch(() => {});
+    }
+  }).catch(() => {});
+
   return id;
 };
 
@@ -1598,6 +1690,14 @@ export const createUniverseMedia = async (
   }
 
   await setDoc(newRef, cleanFirestoreData(item));
+
+  // Codex terimi başarımı (Ansiklopedist)
+  getDoc(doc(db, 'universes', universeId)).then(uSnap => {
+    if (uSnap.exists() && uSnap.data().authorId) {
+      import('./achievementService').then(m => m.trackInteraction(uSnap.data().authorId, 'codex_created')).catch(() => {});
+    }
+  }).catch(() => {});
+
   return id;
 };
 
@@ -1671,6 +1771,14 @@ export const createUniverseSoundtrack = async (
   }
 
   await setDoc(newRef, cleanFirestoreData(item));
+
+  // Codex terimi başarımı (Ansiklopedist)
+  getDoc(doc(db, 'universes', universeId)).then(uSnap => {
+    if (uSnap.exists() && uSnap.data().authorId) {
+      import('./achievementService').then(m => m.trackInteraction(uSnap.data().authorId, 'codex_created')).catch(() => {});
+    }
+  }).catch(() => {});
+
   return id;
 };
 
@@ -1755,6 +1863,14 @@ export const createUniverseCanonRule = async (
   }
 
   await setDoc(newRef, cleanFirestoreData(item));
+
+  // Codex terimi başarımı (Ansiklopedist)
+  getDoc(doc(db, 'universes', universeId)).then(uSnap => {
+    if (uSnap.exists() && uSnap.data().authorId) {
+      import('./achievementService').then(m => m.trackInteraction(uSnap.data().authorId, 'codex_created')).catch(() => {});
+    }
+  }).catch(() => {});
+
   return id;
 };
 
@@ -1854,6 +1970,14 @@ export const createUniversePlotThread = async (
   }
 
   await setDoc(newRef, cleanFirestoreData(item));
+
+  // Codex terimi başarımı (Ansiklopedist)
+  getDoc(doc(db, 'universes', universeId)).then(uSnap => {
+    if (uSnap.exists() && uSnap.data().authorId) {
+      import('./achievementService').then(m => m.trackInteraction(uSnap.data().authorId, 'codex_created')).catch(() => {});
+    }
+  }).catch(() => {});
+
   return id;
 };
 
@@ -1954,6 +2078,14 @@ export const createUniverseDivination = async (
   }
 
   await setDoc(newRef, cleanFirestoreData(item));
+
+  // Codex terimi başarımı (Ansiklopedist)
+  getDoc(doc(db, 'universes', universeId)).then(uSnap => {
+    if (uSnap.exists() && uSnap.data().authorId) {
+      import('./achievementService').then(m => m.trackInteraction(uSnap.data().authorId, 'codex_created')).catch(() => {});
+    }
+  }).catch(() => {});
+
   return id;
 };
 
@@ -2025,6 +2157,14 @@ export const createUniverseProphecy = async (
   }
 
   await setDoc(newRef, cleanFirestoreData(item));
+
+  // Codex terimi başarımı (Ansiklopedist)
+  getDoc(doc(db, 'universes', universeId)).then(uSnap => {
+    if (uSnap.exists() && uSnap.data().authorId) {
+      import('./achievementService').then(m => m.trackInteraction(uSnap.data().authorId, 'codex_created')).catch(() => {});
+    }
+  }).catch(() => {});
+
   return id;
 };
 
@@ -2097,6 +2237,14 @@ export const createUniverseSpell = async (
   }
 
   await setDoc(newRef, cleanFirestoreData(item));
+
+  // Codex terimi başarımı (Ansiklopedist)
+  getDoc(doc(db, 'universes', universeId)).then(uSnap => {
+    if (uSnap.exists() && uSnap.data().authorId) {
+      import('./achievementService').then(m => m.trackInteraction(uSnap.data().authorId, 'codex_created')).catch(() => {});
+    }
+  }).catch(() => {});
+
   return id;
 };
 
@@ -2165,6 +2313,14 @@ export const createUniverseRitual = async (
   }
 
   await setDoc(newRef, cleanFirestoreData(item));
+
+  // Codex terimi başarımı (Ansiklopedist)
+  getDoc(doc(db, 'universes', universeId)).then(uSnap => {
+    if (uSnap.exists() && uSnap.data().authorId) {
+      import('./achievementService').then(m => m.trackInteraction(uSnap.data().authorId, 'codex_created')).catch(() => {});
+    }
+  }).catch(() => {});
+
   return id;
 };
 

@@ -125,21 +125,26 @@ export async function setAuthorSitePublishedStatus(
   const siteRef = doc(db, SITES_COLLECTION, userId);
   const snap = await getDoc(siteRef);
 
-  if (!snap.exists()) {
-    throw new Error('Yazar web sitesi henüz oluşturulmamış.');
-  }
-
   const updates: any = {
+    userId,
     isPublished,
     updatedAt: serverTimestamp(),
   };
 
-  const existingData = snap.data();
-  if (isPublished && !existingData.publishedAt) {
-    updates.publishedAt = serverTimestamp();
+  if (!snap.exists()) {
+    updates.id = userId;
+    updates.createdAt = serverTimestamp();
+    if (isPublished) {
+      updates.publishedAt = serverTimestamp();
+    }
+  } else {
+    const existingData = snap.data();
+    if (isPublished && !existingData?.publishedAt) {
+      updates.publishedAt = serverTimestamp();
+    }
   }
 
-  await updateDoc(siteRef, updates);
+  await setDoc(siteRef, updates, { merge: true });
 }
 
 /**

@@ -177,6 +177,10 @@ export default function ChapterEditorPage() {
           if (story?.format === 'webtoon') {
             trackInteraction(userProfile.uid, 'webtoon_published').catch(() => {});
           }
+          if (story?.format === 'interactive') {
+            const endingCount = story.stats?.endingCount || (chapter.isEnding ? 1 : 0);
+            trackInteraction(userProfile.uid, 'interactive_story_published', { endingCount }).catch(() => {});
+          }
           if (chapter.audioTrack?.url) {
             trackInteraction(userProfile.uid, 'soundtrack_published').catch(() => {});
           }

@@ -42,6 +42,8 @@ export interface UserAchievements {
   lastReadDate?: string; // Son okunan tarih (YYYY-MM-DD)
   nightChaptersRead?: number; // Gece saatlerinde okunan bölüm sayısı
   bingeMaxCount?: number; // Tek oturuşta peş peşe okunan en fazla bölüm sayısı
+  lastReadStoryId?: string; // Maraton okuma için son okunan hikaye ID
+  currentStoryBingeCount?: number; // Mevcut hikayedeki peş peşe okunan bölüm sayısı
 
   storiesInLibrary: number; // Kütüphaneye eklenen hikaye sayısı
   commentsGiven: number; // Yapılan toplam yorum sayısı
@@ -55,6 +57,8 @@ export interface UserAchievements {
   // --- İnteraktif, Webtoon & Müzik ---
   interactiveChoicesMade?: number;
   interactiveEndingsFound?: number;
+  interactiveRewindsMade?: number; // İnteraktif hikayede geri dönerek farklı yolu deneme sayısı
+  maxInteractiveEndingsInStory?: number; // Yazarın interaktif hikayesinde ulaştığı en yüksek son sayısı
   publishedWebtoons?: number;
   webtoonChaptersRead?: number;
   soundtrackChaptersPublished?: number;
@@ -65,6 +69,7 @@ export interface UserAchievements {
   publishedColumns?: number;
   curatedListLikes?: number;
   clubsOwned?: number;
+  maxClubMembers?: number; // Kurulan kulüplerdeki en yüksek üye sayısı
   clubMessagesSent?: number;
   morningChaptersRead?: number;
   reviewsGiven?: number;

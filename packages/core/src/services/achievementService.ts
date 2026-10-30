@@ -27,6 +27,11 @@ async function ensureAchievements(uid: string, currentData?: UserAchievements): 
     lastReadDate: '',
     nightChaptersRead: 0,
     bingeMaxCount: 0,
+    lastReadStoryId: '',
+    currentStoryBingeCount: 0,
+    interactiveRewindsMade: 0,
+    maxInteractiveEndingsInStory: 0,
+    maxClubMembers: 0,
     storiesInLibrary: 0,
     commentsGiven: 0,
     likesGiven: 0,
@@ -157,7 +162,7 @@ export async function evaluateBadges(uid: string): Promise<string[]> {
   if ((achievements.publishedShortStories || 0) >= 1) award('short_story_debut');
   if ((achievements.publishedShortStories || 0) >= 3) award('short_story_master');
   if ((achievements.publishedWebtoons || 0) >= 1) award('webtoonist');
-  if ((achievements.interactiveEndingsFound || 0) >= 3) award('labyrinth_master');
+  if ((achievements.maxInteractiveEndingsInStory || 0) >= 3) award('labyrinth_master');
   if ((achievements.publishedColumns || 0) >= 1) award('editorial_pen');
 
   // ─────────────────────────────────────────────
@@ -179,7 +184,7 @@ export async function evaluateBadges(uid: string): Promise<string[]> {
   // İnteraktif, Webtoon & Müzikli Okuma
   if ((achievements.interactiveChoicesMade || 0) >= 1) award('fate_weaver');
   if ((achievements.interactiveEndingsFound || 0) >= 3) award('butterfly_effect');
-  if ((achievements.interactiveEndingsFound || 0) >= 2) award('time_traveler');
+  if ((achievements.interactiveRewindsMade || 0) >= 1 || (achievements.interactiveChoicesMade || 0) >= 2) award('time_traveler');
   if ((achievements.webtoonChaptersRead || 0) >= 25) award('panel_hunter');
   if ((achievements.audioChaptersRead || 0) >= 5) award('rhythm_reader');
 
@@ -195,7 +200,7 @@ export async function evaluateBadges(uid: string): Promise<string[]> {
 
   if ((achievements.quotesShared || 0) >= 10) award('quote_hunter');
   if ((achievements.curatedListLikes || 0) >= 10) award('master_curator');
-  if ((achievements.clubsOwned || 0) >= 1) award('club_leader');
+  if ((achievements.maxClubMembers || 0) >= 5) award('club_leader');
   if ((achievements.clubMessagesSent || 0) >= 20) award('campfire_chat');
   if ((achievements.reviewsGiven || 0) >= 5) award('master_critic');
 
@@ -331,17 +336,26 @@ export async function trackRead(
     : (achievements.audioChaptersRead || 0);
 
   // Tek oturuşta / seride okuma sayacı
-  const bingeMaxCount = Math.max(achievements.bingeMaxCount || 0, 1);
+  const currentStoryId = options?.storyId;
+  let currentBinge = achievements.currentStoryBingeCount || 0;
+  if (currentStoryId && currentStoryId === achievements.lastReadStoryId) {
+    currentBinge += 1;
+  } else {
+    currentBinge = 1;
+  }
+  const bingeMaxCount = Math.max(achievements.bingeMaxCount || 0, currentBinge);
 
   await updateAchievements(uid, {
     chaptersRead: (achievements.chaptersRead || 0) + 1,
     consecutiveReadDays: newConsecutive,
     lastReadDate: newLastDate,
+    lastReadStoryId: currentStoryId || achievements.lastReadStoryId || '',
+    currentStoryBingeCount: currentBinge,
+    bingeMaxCount,
     nightChaptersRead,
     morningChaptersRead,
     webtoonChaptersRead,
     audioChaptersRead,
-    bingeMaxCount,
   });
 
   return evaluateBadges(uid);
@@ -377,6 +391,12 @@ export async function trackInteraction(
     | 'club_created'
     | 'review_given'
     | 'curated_list_liked'
+    | 'universe_created'
+    | 'character_created'
+    | 'codex_created'
+    | 'interactive_rewind'
+    | 'interactive_story_published'
+    | 'club_member_joined'
     | 'viral_voice',
   metadata?: {
     storyChapterCount?: number;
@@ -473,6 +493,34 @@ export async function trackInteraction(
     case 'curated_list_liked':
       updates.curatedListLikes = (achievements.curatedListLikes || 0) + 1;
       break;
+    case 'universe_created':
+      updates.universesCreated = (achievements.universesCreated || 0) + 1;
+      break;
+    case 'character_created':
+      updates.charactersCreated = (achievements.charactersCreated || 0) + 1;
+      break;
+    case 'codex_created':
+      updates.codexEntriesCreated = (achievements.codexEntriesCreated || 0) + 1;
+      break;
+    case 'interactive_rewind':
+      updates.interactiveRewindsMade = (achievements.interactiveRewindsMade || 0) + 1;
+      break;
+    case 'interactive_story_published':
+      if (metadata?.endingCount) {
+        updates.maxInteractiveEndingsInStory = Math.max(
+          achievements.maxInteractiveEndingsInStory || 0,
+          metadata.endingCount
+        );
+      }
+      break;
+    case 'club_member_joined':
+      if (metadata?.memberCount) {
+        updates.maxClubMembers = Math.max(
+          achievements.maxClubMembers || 0,
+          metadata.memberCount
+        );
+      }
+      break;
   }
 
   if (Object.keys(updates).length > 0) {
@@ -550,6 +598,9 @@ export async function syncUserAchievements(uid: string): Promise<{
   let realCompletedStories = 0;
   let realMaxChaptersInStory = 0;
   let realSoundtrackChapters = 0;
+  let realTotalWords = currentAchievements.totalWordsWritten || 0;
+  let realMaxInteractiveEndings = currentAchievements.maxInteractiveEndingsInStory || 0;
+  let calculatedStoryWords = 0;
   let reached100Reads = false;
   let reached1000Reads = false;
   let reached20CommentsOnChapter = false;
@@ -564,12 +615,17 @@ export async function syncUserAchievements(uid: string): Promise<{
 
     storiesSnap.forEach(sDoc => {
       const data = sDoc.data();
-      const isPublished = data.status === 'published' || data.status === 'completed';
+      const isPublished = data.status === 'ongoing' || data.status === 'completed' || data.status === 'published';
       const readsCount = data.stats?.views || data.stats?.readsCount || 0;
 
       if (readsCount >= 100) reached100Reads = true;
       if (readsCount >= 1000) reached1000Reads = true;
       if ((data.stats?.commentCount || 0) >= 20) reached20CommentsOnChapter = true;
+
+      // Kelime sayısı toplamı
+      if (typeof data.stats?.totalWords === 'number' && data.stats.totalWords > 0) {
+        calculatedStoryWords += data.stats.totalWords;
+      }
 
       if (data.status === 'completed') {
         realCompletedStories += 1;
@@ -586,6 +642,18 @@ export async function syncUserAchievements(uid: string): Promise<{
           const chapCount = data.stats?.chapterCount || data.stats?.chaptersCount || data.chaptersCount || 0;
           realPublishedChapters += chapCount;
         }
+      } else if (data.format === 'interactive') {
+        const chapCount = data.stats?.chapterCount || data.stats?.chaptersCount || data.chaptersCount || 0;
+        if (isPublished) {
+          realPublishedChapters += chapCount;
+          if (chapCount > realMaxChaptersInStory) {
+            realMaxChaptersInStory = chapCount;
+          }
+        }
+        const endingCount = data.stats?.endingCount || 0;
+        if (endingCount > realMaxInteractiveEndings) {
+          realMaxInteractiveEndings = endingCount;
+        }
       } else {
         const chapCount = data.stats?.chapterCount || data.stats?.chaptersCount || data.chaptersCount || 0;
         if (isPublished) {
@@ -596,6 +664,7 @@ export async function syncUserAchievements(uid: string): Promise<{
         }
       }
     });
+    realTotalWords = Math.max(realTotalWords, calculatedStoryWords);
   } catch (err) {
     console.warn("Hikaye istatistikleri senkronize edilemedi:", err);
   }
@@ -615,14 +684,19 @@ export async function syncUserAchievements(uid: string): Promise<{
 
     universesSnap.forEach(uDoc => {
       const uData = uDoc.data();
-      const storyIds = uData.storyIds || [];
+      const storyIds = uData.connectedStoryIds || uData.storyIds || [];
       if (storyIds.length >= 2) {
         validUniverses += 1;
       }
-      if (Array.isArray(uData.characters)) {
-        realCharactersCount += uData.characters.length;
-      }
-      if (Array.isArray(uData.codexEntries || uData.codex)) {
+      const charCount = typeof uData.stats?.characterCount === 'number'
+        ? uData.stats.characterCount
+        : (Array.isArray(uData.characters) ? uData.characters.length : 0);
+      realCharactersCount += charCount;
+
+      const codexCount = (uData.stats?.glossaryCount || 0) + (uData.stats?.loreCount || 0) + (uData.stats?.locationCount || 0);
+      if (codexCount > 0) {
+        realCodexCount += codexCount;
+      } else if (Array.isArray(uData.codexEntries || uData.codex)) {
         realCodexCount += (uData.codexEntries || uData.codex).length;
       }
     });
@@ -683,14 +757,36 @@ export async function syncUserAchievements(uid: string): Promise<{
     // Mevcut sayacı koru
   }
 
+  // 6. Kaydedilen Alıntıları Senkronize Et
+  let realQuotesCount = currentAchievements.quotesShared || 0;
+  try {
+    const quotesCol = collection(db, 'users', uid, 'saved_quotes');
+    const quotesSnap = await getCountFromServer(quotesCol);
+    realQuotesCount = Math.max(realQuotesCount, quotesSnap.data().count);
+  } catch {
+    // Mevcut sayacı koru
+  }
+
+  // 7. Okuma serisi kontrolü (Kopuksa sıfırla)
+  const today = getTodayString();
+  const yesterday = getYesterdayString();
+  let currentReadStreak = currentAchievements.consecutiveReadDays || 0;
+  if (currentAchievements.lastReadDate && currentAchievements.lastReadDate !== today && currentAchievements.lastReadDate !== yesterday) {
+    currentReadStreak = 0;
+  }
+
   const updates: Partial<UserAchievements> = {
+    totalWordsWritten: Math.max(currentAchievements.totalWordsWritten || 0, realTotalWords),
     publishedChapters: Math.max(currentAchievements.publishedChapters || 0, realPublishedChapters),
     publishedShortStories: Math.max(currentAchievements.publishedShortStories || 0, realPublishedShortStories),
     publishedWebtoons: Math.max(currentAchievements.publishedWebtoons || 0, realPublishedWebtoons),
     completedStories: Math.max(currentAchievements.completedStories || 0, realCompletedStories),
     maxChaptersInStory: Math.max(currentAchievements.maxChaptersInStory || 0, realMaxChaptersInStory),
+    maxInteractiveEndingsInStory: Math.max(currentAchievements.maxInteractiveEndingsInStory || 0, realMaxInteractiveEndings),
     storiesInLibrary: realLibraryCount,
     chaptersRead: realChaptersRead,
+    quotesShared: realQuotesCount,
+    consecutiveReadDays: currentReadStreak,
     universesCreated: realUniversesCount,
     charactersCreated: Math.max(currentAchievements.charactersCreated || 0, realCharactersCount),
     codexEntriesCreated: Math.max(currentAchievements.codexEntriesCreated || 0, realCodexCount),

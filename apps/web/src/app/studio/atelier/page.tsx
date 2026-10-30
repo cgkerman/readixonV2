@@ -223,22 +223,32 @@ export default function StudioAtelierPage() {
 
   // Yayına Al / Yayından Kaldır
   const handleTogglePublish = async () => {
-    if (!site || !firebaseUser) return;
+    if (!site || !firebaseUser || isSaving) return;
 
     const newStatus = !site.isPublished;
-    const updated = { ...site, isPublished: newStatus };
+    const updated: AuthorSite = { 
+      ...site, 
+      isPublished: newStatus,
+      userId: firebaseUser.uid 
+    };
+    
     setSite(updated);
+    setIsSaving(true);
 
     try {
-      await setAuthorSitePublishedStatus(firebaseUser.uid, newStatus);
+      // Tüm site konfigürasyonunu yeni yayın durumuyla kaydet
+      await saveAuthorSite(updated);
       if (newStatus) {
         toast.success('Tebrikler! Kişisel web siteniz başarıyla yayına alındı! 🎉');
       } else {
         toast.info('Siteniz taslak moduna alındı ve yayından kaldırıldı.');
       }
     } catch (err: any) {
+      console.error('Yayın durumu değiştirme hatası:', err);
       toast.error('Yayın durumu güncellenirken hata oluştu.');
       setSite({ ...site, isPublished: !newStatus });
+    } finally {
+      setIsSaving(false);
     }
   };
 

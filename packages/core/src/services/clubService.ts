@@ -257,12 +257,18 @@ export async function joinClub(clubId: string, userId: string): Promise<ClubMemb
     updatedAt: serverTimestamp(),
   });
 
-  // Kulüp 5 üyeye ulaştıysa kurucuya Kulüp Lideri rozeti tanımla
+  // Kulüp üye sayısı güncellendiğinde başarım ilerlemesini kaydet ve 5 üyede Kulüp Lideri rozeti ver
   getDoc(clubRef).then(snap => {
     if (snap.exists()) {
       const cData = snap.data() as Club;
-      if ((cData.stats?.membersCount || 0) >= 5 && cData.creatorId) {
-        import('./achievementService').then(m => m.awardBadge(cData.creatorId, 'club_leader')).catch(() => {});
+      const memberCount = cData.stats?.membersCount || 1;
+      if (cData.creatorId) {
+        import('./achievementService').then(m => {
+          m.trackInteraction(cData.creatorId, 'club_member_joined', { memberCount }).catch(() => {});
+          if (memberCount >= 5) {
+            m.awardBadge(cData.creatorId, 'club_leader').catch(() => {});
+          }
+        }).catch(() => {});
       }
     }
   }).catch(() => {});

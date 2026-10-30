@@ -802,7 +802,7 @@ export function getBadgeProgress(
       current = achievements.publishedWebtoons || 0;
       break;
     case 'labyrinth_master':
-      current = achievements.interactiveEndingsFound || 0;
+      current = achievements.maxInteractiveEndingsInStory || 0;
       break;
     case 'editorial_pen':
       current = achievements.publishedColumns || 0;
@@ -833,8 +833,12 @@ export function getBadgeProgress(
       current = achievements.interactiveChoicesMade || 0;
       break;
     case 'butterfly_effect':
-    case 'time_traveler':
       current = achievements.interactiveEndingsFound || 0;
+      break;
+    case 'time_traveler':
+      current = (achievements.interactiveRewindsMade || 0) > 0 
+        ? Math.max(achievements.interactiveRewindsMade || 0, 2) 
+        : Math.min(achievements.interactiveChoicesMade || 0, 2);
       break;
     case 'panel_hunter':
       current = achievements.webtoonChaptersRead || 0;
@@ -863,7 +867,7 @@ export function getBadgeProgress(
       current = achievements.curatedListLikes || 0;
       break;
     case 'club_leader':
-      current = achievements.clubsOwned || 0;
+      current = achievements.maxClubMembers || (achievements.clubsOwned ? 1 : 0);
       break;
     case 'campfire_chat':
       current = achievements.clubMessagesSent || 0;

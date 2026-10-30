@@ -419,6 +419,25 @@ export default function ReadPage() {
 
   // Bölüm geçişi (doğrudan ve sayfa başı sıfırlama ile)
   const handleNavigateChapter = (targetChapterId: string) => {
+    // Navigasyon öncesi mevcut bölümün okunma tamamlanma durumunu garantile
+    if (firebaseUser && chapter) {
+      const isCompleted = scrollProgress > 75 || Boolean(chapter.isEnding);
+      if (isCompleted) {
+        syncReadingProgress(
+          firebaseUser.uid,
+          storyId,
+          chapterId,
+          scrollProgress,
+          true,
+          story?.format === 'interactive'
+            ? {
+                pathHistoryStep: chapterId,
+                discoveredEndingId: chapter.isEnding ? chapterId : undefined
+              }
+            : undefined
+        );
+      }
+    }
     flushReadingAnalytics();
     window.scrollTo({ top: 0, behavior: 'instant' });
     router.push(`/read/${storyId}/${targetChapterId}`);
@@ -845,10 +864,6 @@ export default function ReadPage() {
         }
       });
 
-      if (nowLiked) {
-        trackInteraction(firebaseUser.uid, 'like_given').catch(console.error);
-      }
-
       // Update story lists cache so feed/explore pages reflect total story likes
       const updateStoryLikes = (oldData: any) => {
         if (!oldData) return oldData;
@@ -1017,7 +1032,8 @@ export default function ReadPage() {
       const scrollTop = window.scrollY;
       const docHeight = document.body.scrollHeight;
       const winHeight = window.innerHeight;
-      const scrollPercent = scrollTop / (docHeight - winHeight);
+      const scrollableDist = docHeight - winHeight;
+      const scrollPercent = scrollableDist > 20 ? (scrollTop / scrollableDist) : 1;
       setScrollProgress(Math.min(100, Math.max(0, Math.round(scrollPercent * 100))));
 
       // Zen / Odak Modu: Aşağı kaydırınca üst bar yumuşakça gizlenir, yukarı kaydırınca belirir
@@ -1029,6 +1045,8 @@ export default function ReadPage() {
       lastScrollY.current = scrollTop;
     };
 
+    handleScroll();
+
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -1038,7 +1056,8 @@ export default function ReadPage() {
     if (!firebaseUser || loading || !chapter) return;
 
     const timeoutId = setTimeout(() => {
-      const isCompleted = scrollProgress > 90 || Boolean(chapter.isEnding);
+      const isShortChapter = typeof window !== 'undefined' && (document.body.scrollHeight - window.innerHeight <= 40);
+      const isCompleted = scrollProgress > 85 || isShortChapter || Boolean(chapter.isEnding);
       syncReadingProgress(
         firebaseUser.uid,
         storyId,
@@ -1052,7 +1071,7 @@ export default function ReadPage() {
             }
           : undefined
       );
-    }, 2000); // 2 saniye debounce
+    }, 1000); // 1 saniye debounce
 
     return () => clearTimeout(timeoutId);
   }, [scrollProgress, firebaseUser, loading, chapterId, storyId, chapter, story?.format]);

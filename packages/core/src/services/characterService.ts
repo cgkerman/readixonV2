@@ -63,6 +63,14 @@ export const createCharacter = async (storyId: string, data: Partial<Character>)
   };
   
   await setDoc(newDocRef, character);
+
+  // Karakter başarımı (Karakter Simyacısı)
+  getDoc(doc(db, 'stories', storyId)).then(sSnap => {
+    if (sSnap.exists() && sSnap.data().authorId) {
+      import('./achievementService').then(m => m.trackInteraction(sSnap.data().authorId, 'character_created')).catch(() => {});
+    }
+  }).catch(() => {});
+
   return newDocRef.id;
 };
 

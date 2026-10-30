@@ -13,6 +13,22 @@ export const incrementStoryView = async (storyId: string) => {
     await updateDoc(storyRef, {
       'stats.views': increment(1)
     });
+
+    // 100 veya 1000 okuma rozetleri kontrolü (İlk Kalabalık)
+    getDoc(storyRef).then(snap => {
+      if (snap.exists()) {
+        const sData = snap.data();
+        const views = sData.stats?.views || 0;
+        if (sData.authorId) {
+          if (views >= 100) {
+            import('./achievementService').then(m => m.awardBadge(sData.authorId, 'first_crowd_100')).catch(() => {});
+          }
+          if (views >= 1000) {
+            import('./achievementService').then(m => m.awardBadge(sData.authorId, 'first_crowd_1000')).catch(() => {});
+          }
+        }
+      }
+    }).catch(() => {});
   } catch (error: any) {
     if (error?.code !== 'permission-denied') {
       console.error("Hikaye görüntülenme sayısı artırılamadı:", error);
@@ -263,10 +279,10 @@ export const addChapterComment = async (
         if (storySnap.exists()) {
           const storyData = storySnap.data();
           const chapterData = chapterSnap.exists() ? chapterSnap.data() : null;
-          const currentCommentCount = (chapterData?.stats?.commentCount || 0) + 1;
+          const currentCommentCount = chapterData?.stats?.commentCount || 1;
 
           // 1. İlk Ses (first_voice): Bölümün ilk yorumu mu?
-          if (currentCommentCount <= 1 && storyData.authorId !== userId) {
+          if (currentCommentCount <= 1 && storyData.authorId !== userId && !replyToId) {
             awardBadge(userId, 'first_voice').catch(() => {});
           }
 
@@ -426,13 +442,31 @@ export const toggleChapterCommentLike = async (userId: string, storyId: string, 
         likes: increment(1)
       });
 
-      // Bildirim gönder
+      // Beğeni sayacını takip et (Cömert Okur)
+      import('./achievementService').then(m => {
+        m.trackInteraction(userId, 'like_given').catch(() => {});
+      }).catch(() => {});
+
+      // Bildirim gönder & Yazar beğenisi kontrolü
       try {
         const commentSnap = await getDoc(commentRef);
         const userProfile = await getUserProfile(userId);
         
         if (commentSnap.exists() && userProfile) {
           const commentData = commentSnap.data();
+
+          // Eğer yorumu beğenen kişi hikayenin yazarıysa -> Yazarın Gözdesi (authors_favorite) rozeti ver!
+          if (commentData.userId && commentData.userId !== userId) {
+            const storyRef = doc(db, 'stories', storyId);
+            getDoc(storyRef).then(sSnap => {
+              if (sSnap.exists() && sSnap.data().authorId === userId) {
+                import('./achievementService').then(m => {
+                  m.awardBadge(commentData.userId, 'authors_favorite').catch(() => {});
+                }).catch(() => {});
+              }
+            }).catch(() => {});
+          }
+
           await createNotification({
             userId: commentData.userId,
             actorId: userId,
