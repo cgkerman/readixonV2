@@ -1,4 +1,3 @@
-
 import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, getCountFromServer } from 'firebase/firestore';
 import { db } from '../firebase';
 import { USERS_COLLECTION } from './userService';
@@ -90,7 +89,7 @@ async function updateAchievements(uid: string, updates: Partial<UserAchievements
     await updateDoc(userRef, firestoreUpdates);
   } catch (err: any) {
     // Fallback: Belge veya achievements alanı mevcut değilse güvenle merge et
-    await setDoc(userRef, firestoreUpdates, { merge: true }).catch((e: any) => {
+    await setDoc(userRef, { achievements: updates }, { merge: true }).catch((e: any) => {
       console.error("Başarım güncellenirken kritik hata:", e);
     });
   }
